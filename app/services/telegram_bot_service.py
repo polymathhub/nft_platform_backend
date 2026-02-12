@@ -26,7 +26,13 @@ class TelegramBotService:
 
     def __init__(self):
         self.token = settings.telegram_bot_token
-        self.api_url = f"{self.BASE_URL}{self.token}"
+        if not self.token:
+            logger.warning("Telegram bot token not configured; Telegram features disabled")
+            self.api_url = None
+            self.enabled = False
+        else:
+            self.api_url = f"{self.BASE_URL}{self.token}"
+            self.enabled = True
 
     async def send_message(
         self,
@@ -36,6 +42,9 @@ class TelegramBotService:
         reply_markup: Optional[Dict[str, Any]] = None,
     ) -> bool:
         logger.warning(f"[TELEGRAM] send_message called: chat_id={chat_id}, text_length={len(text)}")
+        if not getattr(self, "enabled", False) or not self.api_url:
+            logger.warning("Telegram bot disabled or token missing; skipping send_message")
+            return False
         try:
             async with aiohttp.ClientSession() as session:
                 payload = {

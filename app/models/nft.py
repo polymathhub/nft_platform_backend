@@ -82,7 +82,7 @@ class NFT(Base):
     royalty_percentage = Column(Integer, default=0, nullable=False)
     
     # Rarity and attributes
-    attributes = Column(JSON, nullable=True, default={})  # {trait_name: trait_value, ...}
+    attributes = Column(JSON, nullable=True, default=dict)  # {trait_name: trait_value, ...}
     rarity_score = Column(Float, nullable=True, default=None)  # 0-100 score
     rarity_tier = Column(
         Enum(RarityTier),
@@ -90,7 +90,7 @@ class NFT(Base):
         default=None,
     )
     
-    nft_metadata = Column(JSON, nullable=True, default={})
+    nft_metadata = Column(JSON, nullable=True, default=dict)
     transaction_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

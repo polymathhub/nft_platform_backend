@@ -111,6 +111,44 @@ mypy app/
 alembic upgrade head
 ```
 
+## Start (simple)
+
+Use the included helper scripts to start the app easily.
+
+- Development (auto-reload):
+
+	- Linux/macOS:
+
+		```bash
+		./start.sh
+		```
+
+	- Windows PowerShell:
+
+		```powershell
+		.\start.ps1
+		```
+
+- Production (Gunicorn + Uvicorn workers):
+
+	- Linux/macOS:
+
+		```bash
+		ENV=production PORT=8000 WORKERS=4 ./start.sh
+		```
+
+	- Windows PowerShell:
+
+		```powershell
+		.\start.ps1 -Env production -Port 8000 -Workers 4
+		```
+
+Notes:
+
+- The scripts will load variables from `.env` if present.
+- On Windows, use PowerShell to run `start.ps1`; on Unix use `start.sh` (make it executable: `chmod +x start.sh`).
+- If you prefer to run `uvicorn` or `gunicorn` manually, the commands are shown above.
+
 ## Production
 
 Set `DEBUG=False`, use production DB, real RPC endpoints, secrets manager.
@@ -120,3 +158,26 @@ gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker
 ```
 
 Or Docker: `docker build -t nft-backend . && docker run -p 8000:8000 --env-file .env nft-backend`
+
+## Production deployment examples
+
+- Docker Compose (build and run):
+
+```bash
+docker-compose up -d --build
+```
+
+- Systemd (example):
+
+1. Copy the provided unit file to `/etc/systemd/system/nft-backend.service` and update `WorkingDirectory` and `EnvironmentFile` paths.
+
+```bash
+sudo cp deployment/systemd/nft-backend.service.example /etc/systemd/system/nft-backend.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now nft-backend
+```
+
+Notes:
+
+- The `Dockerfile` and `docker-compose.yml` are included in the repository root.
+- The systemd file is an example; adjust `User`, `Group`, paths, and resource limits as required by your environment.

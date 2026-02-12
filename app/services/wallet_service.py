@@ -63,7 +63,7 @@ class WalletService:
             encrypted_private_key=None,
             encrypted_mnemonic=encrypted_mnemonic,
             is_primary=is_primary,
-            metadata={
+            wallet_metadata={
                 "created_by": "api",
                 "wallet_type": wallet_type.value,
             },

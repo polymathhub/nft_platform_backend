@@ -38,5 +38,4 @@ pydantic[email]
 psycopg2
 asyncpg
 python-telegram-bot==20.7
-pysha3
 pycryptodome
