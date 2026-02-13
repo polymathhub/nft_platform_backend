@@ -18,14 +18,17 @@ from app.services.nft_service import NFTService
 from app.services.marketplace_service import MarketplaceService
 from app.services.wallet_service import WalletService
 from app.services.walletconnect_service import WalletConnectService
+from app.services.telegram_dashboard_service import TelegramDashboardService
 from app.utils.telegram_security import verify_telegram_data
 from app.utils.telegram_keyboards import (
     build_start_keyboard,
+    build_dashboard_keyboard,
     build_main_menu_keyboard,
     build_wallet_keyboard,
     build_blockchain_keyboard,
     build_nft_operations_keyboard,
     build_marketplace_keyboard,
+    build_quick_mint_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -139,24 +142,34 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
     # Map button presses to commands
     button_mapping = {
-        "🚀 Get Started": "/menu",
+        "🚀 Get Started": "/dashboard",
+        "📊 Dashboard": "/dashboard",
         "📋 Menu": "/menu",
+        "⚡ Quick Mint": "/quick-mint",
+        "📤 Send": "/transfer",
+        "📤 Send NFT": "/transfer",
+        "📥 Receive": "/receive",
         "🎨 Mint NFT": "/mint",
+        "🎨 Start Minting": "/mint",
         "👝 Wallets": "/wallets",
         "📜 My NFTs": "/mynfts",
+        "🖼️ My NFTs": "/mynfts",
         "🛍️ Marketplace": "/browse",
         "📊 My Listings": "/mylistings",
+        "📈 My Listings": "/mylistings",
         "❓ Help": "/help",
         "➕ Create Wallet": "/wallet-create",
         "📥 Import Wallet": "/wallet-import",
         "📋 List Wallets": "/wallets",
         "⭐ Set Primary": "/set-primary",
+        "◀️ Back to Dashboard": "/dashboard",
+        "◀️ Back": "/dashboard",
         "◀️ Back to Menu": "/start",
         "🔍 Browse": "/browse",
         "💬 Make Offer": "/offer",
         "❌ Cancel Listing": "/cancel-listing",
-        "📤 Transfer": "/transfer",
         "🔥 Burn": "/burn",
+        "❓ How to Mint": "/mint-help",
     }
     
     # Convert button text to command if applicable
@@ -169,9 +182,21 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         logger.warning(f"[TELEGRAM] Processing /start command from {username}")
         await send_welcome_start(chat_id, username)
     
+    elif text.startswith("/dashboard"):
+        logger.warning(f"[TELEGRAM] Processing /dashboard command from {username}")
+        await send_dashboard(db, chat_id, user, username)
+    
     elif text.startswith("/menu"):
         logger.warning(f"[TELEGRAM] Processing /menu command from {username}")
         await send_main_menu(chat_id, username)
+    
+    elif text.startswith("/quick-mint"):
+        logger.warning(f"[TELEGRAM] Processing /quick-mint command from {username}")
+        await send_quick_mint_screen(db, chat_id, user)
+    
+    elif text.startswith("/receive"):
+        logger.warning(f"[TELEGRAM] Processing /receive command from {username}")
+        await send_receive_menu(db, chat_id, user)
 
     # Wallet-related commands (check specific before general)
     elif text.startswith("/wallet-import"):
@@ -279,6 +304,9 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
             nft_id = parts[1]
             await bot_service.send_nft_status(db, chat_id, nft_id)
 
+    elif text.startswith("/mint-help"):
+        await send_mint_help(chat_id)
+
     elif text.startswith("/help"):
         await send_help_message(chat_id)
 
@@ -321,6 +349,100 @@ async def send_main_menu(chat_id: int, username: str) -> None:
         reply_markup=build_main_menu_keyboard()
     )
     logger.warning(f"[TELEGRAM] bot_service.send_message returned: {result}")
+
+
+async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: str) -> None:
+    """Send premium dashboard with user stats."""
+    logger.warning(f"[TELEGRAM] Sending dashboard for {username}")
+    try:
+        # Get user stats
+        stats = await TelegramDashboardService.get_user_dashboard_stats(db, user.id)
+        message = TelegramDashboardService.format_dashboard_message(username, stats)
+        
+        await bot_service.send_message(
+            chat_id,
+            message,
+            reply_markup=build_dashboard_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error sending dashboard: {e}")
+        await bot_service.send_message(chat_id, "❌ Error loading dashboard")
+
+
+async def send_quick_mint_screen(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Send quick mint screen with wallet suggestion."""
+    logger.warning(f"[TELEGRAM] Sending quick mint screen")
+    try:
+        wallet = await TelegramDashboardService.build_quick_mint_message(db, user.id)
+        
+        if not wallet:
+            await bot_service.send_message(
+                chat_id,
+                "❌ No wallet found. Create one first:\n\n<code>/wallet-create ethereum</code>",
+                reply_markup=build_dashboard_keyboard()
+            )
+            return
+        
+        message = TelegramDashboardService.format_quick_mint_message(wallet)
+        await bot_service.send_message(
+            chat_id,
+            message,
+            reply_markup=build_quick_mint_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error sending quick mint: {e}")
+        await bot_service.send_message(chat_id, "❌ Error loading quick mint")
+
+
+async def send_receive_menu(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Send receive wallet menu."""
+    logger.warning(f"[TELEGRAM] Sending receive menu")
+    try:
+        wallets = await bot_service.get_user_wallets(db, user.id)
+        
+        if not wallets:
+            await bot_service.send_message(
+                chat_id,
+                "❌ No wallets found. Create one first:\n\n<code>/wallet-create ethereum</code>"
+            )
+            return
+        
+        message = "<b>📥 Receive NFT or Tokens</b>\n\nSelect a wallet to receive to:\n\n"
+        for i, wallet in enumerate(wallets, 1):
+            message += (
+                f"{i}. <b>{wallet.blockchain.value.upper()}</b>\n"
+                f"   Address: <code>{wallet.address}</code>\n\n"
+            )
+        
+        message += "Share your wallet address above with the sender.\n\n<b>⚠️ Warning:</b> Only receive on the correct blockchain!"
+        await bot_service.send_message(
+            chat_id,
+            message,
+            reply_markup=build_dashboard_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error sending receive menu: {e}")
+        await bot_service.send_message(chat_id, "❌ Error loading receive menu")
+
+
+async def send_mint_help(chat_id: int) -> None:
+    """Send mint help guide."""
+    message = (
+        "<b>🎨 How to Mint NFTs</b>\n\n"
+        "<b>Step 1: Prepare</b>\n"
+        "• Have an image URL ready\n"
+        "• Have a wallet created\n\n"
+        "<b>Step 2: Click Quick Mint</b>\n"
+        "• Or use: <code>/mint wallet_id name</code>\n\n"
+        "<b>Step 3: Add Details</b>\n"
+        "• Name your NFT\n"
+        "• Add description (optional)\n"
+        "• Add image URL (optional)\n\n"
+        "<b>Step 4: Confirm & Wait</b>\n"
+        "• Check status: <code>/status nft_id</code>\n\n"
+        "<b>💡 Tip:</b> Use Quick Mint for fastest experience!"
+    )
+    await bot_service.send_message(chat_id, message, reply_markup=build_dashboard_keyboard())
 
 
 async def send_help_message(chat_id: int) -> None:

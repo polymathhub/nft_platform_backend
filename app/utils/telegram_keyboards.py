@@ -8,11 +8,26 @@ def build_start_keyboard() -> Dict[str, Any]:
     return {
         "keyboard": [
             [{"text": "🚀 Get Started"}],
-            [{"text": "📋 Menu"}, {"text": "❓ Help"}],
+            [{"text": "� Dashboard"}, {"text": "❓ Help"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
         "input_field_placeholder": "Tap to begin...",
+    }
+
+
+def build_dashboard_keyboard() -> Dict[str, Any]:
+    """Build premium dashboard keyboard."""
+    return {
+        "keyboard": [
+            [{"text": "⚡ Quick Mint"}, {"text": "📤 Send"}],
+            [{"text": "📥 Receive"}, {"text": "👛 Wallets"}],
+            [{"text": "🖼️ My NFTs"}, {"text": "🛍️ Marketplace"}],
+            [{"text": "📈 My Listings"}, {"text": "❓ Help"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+        "input_field_placeholder": "Select an action...",
     }
 
 
@@ -36,7 +51,19 @@ def build_wallet_keyboard() -> Dict[str, Any]:
         "keyboard": [
             [{"text": "➕ Create Wallet"}, {"text": "📥 Import Wallet"}],
             [{"text": "📋 List Wallets"}, {"text": "⭐ Set Primary"}],
-            [{"text": "◀️ Back to Menu"}],
+            [{"text": "◀️ Back to Dashboard"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_quick_mint_keyboard() -> Dict[str, Any]:
+    """Build quick mint keyboard."""
+    return {
+        "keyboard": [
+            [{"text": "🎨 Start Minting"}, {"text": "📤 Send NFT"}],
+            [{"text": "❓ How to Mint"}, {"text": "◀️ Back"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
