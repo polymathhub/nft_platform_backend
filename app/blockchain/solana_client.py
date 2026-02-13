@@ -170,7 +170,7 @@ class SolanaClient:
             # For now, log the intent and return a placeholder
             logger.warning(
                 f"Solana transfer prepared but not yet broadcast. "
-                f\"Requires manual signing and submission via web3.js or similar\"
+                f"Requires manual signing and submission via web3.js or similar"
             )
             return None
             
