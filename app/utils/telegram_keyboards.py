@@ -1,23 +1,4 @@
-"""Telegram keyboard builders for ReplyKeyboardMarkup (CTA buttons).
 
-This module provides CTA (Call-To-Action) keyboards using ReplyKeyboardMarkup:
-
-Features of CTA Keyboards (ReplyKeyboardMarkup):
-- Buttons appear below the message input field
-- User presses button and it sends the button text as a message
-- Persists between messages
-- Ideal for general navigation and menu systems
-- Buttons are clickable alternatives to typing commands
-- Clean, intuitive user experience
-
-Usage:
-- Each keyboard builder returns a dict with 'keyboard' structure
-- Keyboard is a 2D list of button rows
-- Each button is a dict with 'text' property
-- Additional options: resize_keyboard, one_time_keyboard, input_field_placeholder
-
-This approach provides reliable, user-friendly navigation without callback complexity.
-"""
 
 from typing import Dict, List, Any
 
