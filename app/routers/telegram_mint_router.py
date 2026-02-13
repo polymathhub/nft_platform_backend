@@ -142,10 +142,13 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
     elif text.startswith("/wallet-create"):
         parts = text.split()
+        logger.warning(f"[ROUTER] /wallet-create command parsed: parts={parts}")
         if len(parts) < 2:
+            logger.warning(f"[ROUTER] No blockchain specified in /wallet-create")
             await bot_service.send_wallet_creation_guide(chat_id)
         else:
             blockchain = parts[1].lower()
+            logger.warning(f"[ROUTER] Calling handle_wallet_create_command with blockchain={blockchain}")
             await handle_wallet_create_command(db, chat_id, user, blockchain)
 
     elif text.startswith("/wallet-import"):
@@ -517,13 +520,15 @@ async def handle_wallet_create_command(
     db: AsyncSession, chat_id: int, user: User, blockchain: str
 ) -> None:
     """Handle /wallet-create command with proper wallet generation."""
-    logger.info(f"[WALLET] Creating wallet for user {user.id}, blockchain: {blockchain}")
+    logger.warning(f"[HANDLER] handle_wallet_create_command called: user_id={user.id}, blockchain={blockchain}")
     
     await bot_service.send_message(chat_id, f"⏳ Creating {blockchain.upper()} wallet...")
+    logger.warning(f"[HANDLER] Sent 'Creating wallet' message")
     
     wallet, error = await bot_service.handle_wallet_create(
         db=db, chat_id=chat_id, user=user, blockchain=blockchain
     )
+    logger.warning(f"[HANDLER] handle_wallet_create returned: wallet={wallet is not None}, error={error}")
     
     if wallet:
         logger.info(f"✓ Wallet created successfully: {wallet.id}")
