@@ -3,9 +3,15 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
+from sqlalchemy import select
 from app.database import get_db_session
 from app.utils.auth import get_current_user
 from app.services.marketplace_service import MarketplaceService
+from app.models import Escrow, User
+from app.models.marketplace import Offer, Listing
+from app.services.wallet_service import WalletService
+from app.utils.blockchain_utils import USDTHelper
+from app.config import get_settings
 from app.schemas.marketplace import (
     ListingRequest,
     ListingResponse,
@@ -323,6 +329,107 @@ async def get_listings_by_rarity(
         "per_page": limit,
         "items": [ListingWithRarity.model_validate(l) for l in listings],
     }
+
+
+
+@router.post("/escrows/{escrow_id}/release")
+async def release_escrow(
+    escrow_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Escrow).where(Escrow.id == escrow_id))
+    escrow = result.scalar_one_or_none()
+    if not escrow:
+        raise HTTPException(status_code=404, detail="Escrow not found")
+
+    if escrow.seller_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to release this escrow")
+
+    released, err = await WalletService.release_escrow(db=db, escrow_id=escrow_id)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {"status": "released", "escrow_id": str(escrow_id)}
+
+
+@router.post("/escrows/{escrow_id}/refund")
+async def refund_escrow(
+    escrow_id: UUID,
+    reason: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Escrow).where(Escrow.id == escrow_id))
+    escrow = result.scalar_one_or_none()
+    if not escrow:
+        raise HTTPException(status_code=404, detail="Escrow not found")
+
+    if escrow.buyer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to refund this escrow")
+
+    refunded, err = await WalletService.refund_escrow(db=db, escrow_id=escrow_id, reason=reason)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {"status": "refunded", "escrow_id": str(escrow_id)}
+
+
+@router.post("/offers/{offer_id}/deposit")
+async def offer_deposit_info(
+    offer_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    # Return deposit address/instructions for buyer to send external funds
+    result = await db.execute(select(Offer).where(Offer.id == offer_id))
+    offer = result.scalar_one_or_none()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if offer.buyer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Find listing to determine blockchain
+    listing_res = await db.execute(select(Listing).where(Listing.id == offer.listing_id))
+    listing = listing_res.scalar_one_or_none()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    settings = get_settings()
+    platform_addr = settings.platform_wallets.get(listing.blockchain.lower()) if hasattr(settings, 'platform_wallets') else None
+    if not platform_addr:
+        raise HTTPException(status_code=500, detail="Platform wallet not configured for this blockchain")
+
+    contract = USDTHelper.get_usdt_contract(listing.blockchain, settings)
+
+    return {
+        "deposit_address": platform_addr,
+        "amount": float(offer.offer_price),
+        "currency": offer.currency,
+        "token_contract": contract,
+        "instructions": "Send the exact amount of USDT from your external wallet to the deposit address. After sending, use /deposit-confirm <offer_id> <tx_hash> to confirm."
+    }
+
+
+@router.post("/offers/{offer_id}/confirm-deposit")
+async def offer_confirm_deposit(
+    offer_id: UUID,
+    tx_hash: str,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    # Only buyer may confirm their deposit
+    result = await db.execute(select(Offer).where(Offer.id == offer_id))
+    offer = result.scalar_one_or_none()
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if offer.buyer_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    escrow, err = await WalletService.verify_deposit_for_offer(db=db, offer_id=offer_id, tx_hash=tx_hash)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {"status": "held", "escrow_id": str(escrow.id)}
 
 
 @router.get("/listings/sorted-by-rarity")

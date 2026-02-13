@@ -3,16 +3,21 @@ from typing import Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from app.models import User, Wallet
+from app.models import User, Wallet, NFT, Collection
 from app.models import Escrow
 from app.models.wallet import BlockchainType, WalletType
 from app.utils.security import encrypt_sensitive_data, decrypt_sensitive_data
 from app.config import get_settings
+from app.utils.blockchain_utils import USDTHelper
+from app.blockchain.ethereum_client import EthereumClient
+from app.models.marketplace import Offer, Listing
+from app.models import EscrowStatus
 import os
 import base64
 import hashlib
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from cryptography.hazmat.primitives import serialization
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -216,7 +221,7 @@ class WalletService:
                 amount=amount,
                 currency=currency,
                 commission_amount=commission,
-                status="held",
+                status=EscrowStatus.HELD,
             )
             db.add(escrow)
             await db.commit()
@@ -232,21 +237,258 @@ class WalletService:
         escrow_id: UUID,
         tx_hash: Optional[str] = None,
     ) -> tuple[Optional[Escrow], Optional[str]]:
+        # Load escrow and related records
         try:
-            result = await db.execute(select(Escrow).where(Escrow.id == escrow_id))
-            escrow = result.scalar_one_or_none()
+            res = await db.execute(select(Escrow).where(Escrow.id == escrow_id))
+            escrow = res.scalar_one_or_none()
             if not escrow:
                 return None, "Escrow not found"
-            escrow.status = "released"
+
+            # Default: mark released and return if no on-chain payout possible
+            listing_res = await db.execute(select(Listing).where(Listing.id == escrow.listing_id))
+            listing = listing_res.scalar_one_or_none()
+
+            offer_res = await db.execute(select(Offer).where(Offer.id == escrow.offer_id))
+            offer = offer_res.scalar_one_or_none()
+
+            nft = None
+            royalty_amount = 0
+            if listing:
+                nft_res = await db.execute(select(NFT).where(NFT.id == listing.nft_id))
+                nft = nft_res.scalar_one_or_none()
+                if nft and offer:
+                    royalty_amount = float(offer.offer_price) * (nft.royalty_percentage / 100)
+
+            # If this is a USDT escrow on an EVM chain and platform has keys configured, attempt on-chain payouts
+            if escrow.currency and escrow.currency.upper() == "USDT" and listing and listing.blockchain.lower() in ("ethereum", "polygon", "arbitrum", "optimism", "avalanche", "base"):
+                chain_key = listing.blockchain.lower()
+                platform_key = getattr(settings, "platform_private_keys", {}).get(chain_key)
+                platform_addr = getattr(settings, "platform_wallets", {}).get(chain_key)
+                contract = USDTHelper.get_usdt_contract(listing.blockchain, settings)
+
+                if platform_key and platform_addr and contract and offer:
+                    client = EthereumClient()
+                    # compute amounts
+                    commission = float(escrow.commission_amount or 0)
+                    total_amount = float(escrow.amount)
+                    royalty = float(royalty_amount or 0)
+                    seller_amount = total_amount - commission - royalty
+
+                    if seller_amount < 0:
+                        return None, "Computed seller payout is negative"
+
+                    seller_addr = listing.seller_address
+
+                    # convert to raw token units
+                    seller_raw = USDTHelper.parse_usdt(seller_amount)
+                    royalty_raw = USDTHelper.parse_usdt(royalty)
+
+                    payout_tx = None
+                    royalty_tx = None
+
+                    # Send seller payout from platform custody
+                    try:
+                        payout_tx, payout_err = await client.send_erc20_transfer(platform_key, contract, seller_addr, seller_raw)
+                        if payout_err:
+                            logger.error(f"Seller payout failed for escrow {escrow.id}: {payout_err}")
+                    except Exception as e:
+                        payout_tx = None
+                        payout_err = str(e)
+                        logger.error(f"Seller payout exception for escrow {escrow.id}: {e}")
+
+                    # Send royalty if applicable to collection creator
+                    if royalty > 0 and nft and nft.collection_id:
+                        # find collection creator primary wallet
+                        from app.models import Collection, User as UserModel
+
+                        coll_res = await db.execute(select(Collection).where(Collection.id == nft.collection_id))
+                        collection = coll_res.scalar_one_or_none()
+                        if collection:
+                            creator_res = await db.execute(select(UserModel).where(UserModel.id == collection.creator_id))
+                            creator = creator_res.scalar_one_or_none()
+                            if creator:
+                                # get creator primary wallet for chain
+                                creator_wallet_res = await db.execute(select(Wallet).where(and_(Wallet.user_id == creator.id, Wallet.blockchain == listing.blockchain)))
+                                creator_wallet = creator_wallet_res.scalar_one_or_none()
+                                if creator_wallet and creator_wallet.address:
+                                    try:
+                                        royalty_tx, royalty_err = await client.send_erc20_transfer(platform_key, contract, creator_wallet.address, royalty_raw)
+                                        if royalty_err:
+                                            logger.error(f"Royalty payout failed for escrow {escrow.id}: {royalty_err}")
+                                    except Exception as e:
+                                        royalty_tx = None
+                                        royalty_err = str(e)
+                                        logger.error(f"Royalty payout exception for escrow {escrow.id}: {e}")
+
+                    # Update escrow metadata with payout txs
+                    meta = escrow.escrow_metadata or {}
+                    if payout_tx:
+                        meta["payout_tx"] = payout_tx
+                    else:
+                        meta["payout_error"] = payout_err if 'payout_err' in locals() else "unknown"
+                    if royalty_tx:
+                        meta["royalty_tx"] = royalty_tx
+                    elif 'royalty_err' in locals() and royalty_err:
+                        meta["royalty_error"] = royalty_err
+                    escrow.escrow_metadata = meta
+                    escrow.tx_hash = tx_hash or escrow.tx_hash
+                    escrow.status = EscrowStatus.RELEASED
+                    escrow.updated_at = datetime.utcnow()
+                    await db.commit()
+                    await db.refresh(escrow)
+                    return escrow, None
+
+            # Fallback: just mark released without on-chain payout
+            escrow.status = EscrowStatus.RELEASED
             if tx_hash:
                 escrow.tx_hash = tx_hash
+            escrow.updated_at = datetime.utcnow()
             await db.commit()
             await db.refresh(escrow)
             return escrow, None
         except Exception as e:
-            logger.error(f"Failed to release escrow: {e}")
+            logger.error(f"Failed to release escrow: {e}", exc_info=True)
             return None, str(e)
 
+
+    @staticmethod
+    async def refund_escrow(db: AsyncSession, escrow_id: UUID, reason: Optional[str] = None):
+        result = await db.execute(select(Escrow).where(Escrow.id == escrow_id))
+        escrow = result.scalar_one_or_none()
+        if not escrow:
+            return False, "Escrow not found"
+
+        if escrow.status not in (EscrowStatus.HELD, EscrowStatus.PENDING, EscrowStatus.DISPUTED):
+            return False, f"Cannot refund escrow with status {escrow.status}"
+
+        escrow.status = EscrowStatus.REFUNDED
+        meta = escrow.escrow_metadata or {}
+        meta["refund_reason"] = reason
+        escrow.escrow_metadata = meta
+        escrow.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(escrow)
+        return True, None
+
+    @staticmethod
+    async def create_escrow_pending(
+        db: AsyncSession,
+        listing_id: UUID,
+        offer_id: UUID,
+        buyer_id: UUID,
+        seller_id: UUID,
+        amount: float,
+        currency: str,
+        commission_pct: float = 0.02,
+    ) -> tuple[Optional[Escrow], Optional[str]]:
+        """Create an escrow record with status PENDING while awaiting external deposit."""
+        try:
+            commission = round(amount * commission_pct, 8)
+            escrow = Escrow(
+                listing_id=listing_id,
+                offer_id=offer_id,
+                buyer_id=buyer_id,
+                seller_id=seller_id,
+                amount=amount,
+                currency=currency,
+                commission_amount=commission,
+                status=EscrowStatus.PENDING,
+            )
+            db.add(escrow)
+            await db.commit()
+            await db.refresh(escrow)
+            return escrow, None
+        except Exception as e:
+            logger.error(f"Failed to create pending escrow: {e}")
+            return None, str(e)
+
+    @staticmethod
+    async def verify_deposit_for_offer(db: AsyncSession, offer_id: UUID, tx_hash: str) -> tuple[Optional[Escrow], Optional[str]]:
+        """Verify external deposit (tx_hash) and mark escrow HELD if valid.
+
+        Currently supports EVM USDT verification by checking Transfer logs against platform address.
+        """
+        # Find escrow
+        res = await db.execute(select(Escrow).where(Escrow.offer_id == offer_id))
+        escrow = res.scalar_one_or_none()
+        if not escrow:
+            return None, "Escrow not found for offer"
+
+        if escrow.status not in (EscrowStatus.PENDING, EscrowStatus.DISPUTED):
+            return None, f"Escrow not in pending state: {escrow.status}"
+
+        # Load offer/listing to determine blockchain
+        offer_res = await db.execute(select(Offer).where(Offer.id == offer_id))
+        offer = offer_res.scalar_one_or_none()
+        if not offer:
+            return None, "Offer not found"
+
+        listing_res = await db.execute(select(Listing).where(Listing.id == offer.listing_id))
+        listing = listing_res.scalar_one_or_none()
+        if not listing:
+            return None, "Listing not found"
+
+        # Only USDT supported for deposit verification for now
+        if offer.currency.upper() != "USDT":
+            return None, "Only USDT deposits are supported currently"
+
+        # Only EVM chains supported in verification implementation
+        if listing.blockchain.lower() not in ("ethereum", "polygon", "arbitrum", "optimism", "avalanche", "base"):
+            return None, f"Deposit verification not implemented for {listing.blockchain}"
+
+        # Determine USDT contract and platform address
+        contract = USDTHelper.get_usdt_contract(listing.blockchain, settings)
+        platform_addr = settings.platform_wallets.get(listing.blockchain.lower()) if hasattr(settings, 'platform_wallets') else None
+        if not contract or not platform_addr:
+            return None, "Platform configuration missing for deposit verification"
+
+        # Fetch tx receipt
+        client = EthereumClient()
+        receipt = await client.get_transaction_receipt(tx_hash)
+        if not receipt:
+            return None, "Transaction not found"
+
+        # Transfer event signature
+        transfer_sig = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+
+        logs = receipt.get("logs", [])
+        expected_amount_raw = USDTHelper.parse_usdt(float(escrow.amount))
+
+        found = False
+        for log in logs:
+            # Match token contract
+            log_addr = log.get("address", "").lower()
+            if log_addr != contract.lower():
+                continue
+            topics = log.get("topics", [])
+            if not topics or topics[0].lower() != transfer_sig:
+                continue
+            # topics[2] is to address (padded). Compare last 40 hex chars
+            if len(topics) < 3:
+                continue
+            to_topic = topics[2]
+            # remove 0x
+            to_hex = to_topic[2:] if to_topic.startswith("0x") else to_topic
+            to_addr = "0x" + to_hex[-40:]
+            if to_addr.lower() != platform_addr.lower():
+                continue
+            # parse data value
+            data = log.get("data", "0x0")
+            value = int(data, 16) if isinstance(data, str) and data.startswith("0x") else int(data)
+            if value >= expected_amount_raw:
+                found = True
+                break
+
+        if not found:
+            return None, "No matching USDT transfer to platform address found in transaction"
+
+        # Mark escrow held
+        escrow.status = EscrowStatus.HELD
+        escrow.tx_hash = tx_hash
+        escrow.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(escrow)
+        return escrow, None
     # ------------------ Wallet generation helpers ------------------
     @staticmethod
     async def generate_evm_wallet(

@@ -64,6 +64,23 @@ class Settings(BaseSettings):
     usdt_contract_base: str = Field(default="0xfde4C96c1286F4B9D7d4A537B9949cFfDA43a26d")
     usdt_decimals: int = Field(default=6)
     usdt_min_transaction: float = Field(default=1.0)
+
+    # Platform custodial wallets for receiving deposits, keyed by blockchain name lower-case
+    platform_wallets: dict[str, str] = Field(default={})
+
+    # Platform private keys for signing payouts (secret). Map blockchain lower-case -> hex private key (0x...)
+    platform_private_keys: dict[str, str] = Field(default={})
+    
+    # Commission settings
+    commission_rate: float = Field(default=0.02)  # 2% default
+    commission_wallet_ton: str = Field(default="TMUSBPnZrpcgjaQM2eyugmoPTDf6EfibFd")
+    commission_wallet_trc20: str = Field(default="0x892b8ba9c9566f22217e74d661d95eff56aa2ba6")
+    commission_wallet_erc20: str = Field(default="0x892b8ba9c9566f22217e74d661d95eff56aa2ba6")
+    commission_wallet_solana: str = Field(default="3PFSpY3MeLXVxzJT7KY8AVSjG99v3dQnDjNwH6msYoAg")
+    
+    # Admin credentials
+    admin_password: str = Field(default="Firdavs")
+    
     cors_allow_headers: list[str] = Field(default=[
         "Content-Type",
         "Authorization",

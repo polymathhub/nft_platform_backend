@@ -2,6 +2,11 @@ import logging
 import aiohttp
 from typing import Optional, Dict, Any, List
 from app.config import get_settings
+from web3 import Web3, HTTPProvider
+from eth_account import Account
+from eth_account.messages import encode_defunct
+from hexbytes import HexBytes
+import asyncio
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -11,6 +16,11 @@ class EthereumClient:
     def __init__(self, rpc_url: str = settings.ethereum_rpc_url):
         self.rpc_url = rpc_url
         self.request_id = 1
+        # Web3 instance for on-chain interactions
+        try:
+            self.w3 = Web3(HTTPProvider(self.rpc_url, request_kwargs={"timeout": 30}))
+        except Exception:
+            self.w3 = None
 
     async def call_rpc(self, method: str, params: List[Any]) -> Optional[Dict[str, Any]]:
         # Make JSON-RPC call to blockchain
@@ -156,6 +166,73 @@ class EthereumClient:
         except Exception as e:
             logger.error(f"Transaction send error: {e}")
             return None
+
+    async def send_erc20_transfer(self, private_key: str, contract_address: str, to_address: str, amount_raw: int, gas: int | None = None) -> tuple[Optional[str], Optional[str]]:
+        """Async wrapper to build, sign and send ERC-20 transfer using web3 in a thread.
+
+        Returns tuple (tx_hash, error_message).
+        """
+        if not self.w3:
+            return None, "Web3 provider not initialized"
+
+        def _sync_send():
+            try:
+                acct = Account.from_key(private_key)
+                from_address = acct.address
+
+                # Normalize addresses
+                if not contract_address.startswith("0x"):
+                    caddr = "0x" + contract_address
+                else:
+                    caddr = contract_address
+                if not to_address.startswith("0x"):
+                    taddr = "0x" + to_address
+                else:
+                    taddr = to_address
+
+                # ERC-20 transfer method selector + params
+                method_id = "a9059cbb"  # transfer(address,uint256)
+                to_padded = taddr[2:].rjust(64, "0")
+                value_hex = hex(amount_raw)[2:].rjust(64, "0")
+                data = HexBytes("0x" + method_id + to_padded + value_hex)
+
+                nonce = self.w3.eth.get_transaction_count(from_address)
+
+                tx = {
+                    "to": Web3.to_checksum_address(caddr),
+                    "value": 0,
+                    "data": data,
+                    "nonce": nonce,
+                }
+
+                try:
+                    tx["gasPrice"] = self.w3.eth.gas_price
+                except Exception:
+                    tx["gasPrice"] = int(self.w3.to_wei(20, "gwei"))
+
+                if gas:
+                    tx["gas"] = gas
+                else:
+                    try:
+                        tx["gas"] = self.w3.eth.estimate_gas(tx)
+                    except Exception:
+                        tx["gas"] = 200_000
+
+                try:
+                    tx["chainId"] = self.w3.eth.chain_id
+                except Exception:
+                    tx["chainId"] = 1
+
+                signed = Account.sign_transaction(tx, private_key)
+                raw = self.w3.eth.send_raw_transaction(signed.rawTransaction)
+                return raw.hex(), None
+            except Exception as e:
+                return None, str(e)
+
+        tx_hash, err = await asyncio.to_thread(_sync_send)
+        if err:
+            logger.error(f"Failed to send ERC20 transfer: {err}")
+        return tx_hash, err
 
     async def mint_nft(
         self,

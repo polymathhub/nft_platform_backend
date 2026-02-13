@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc
-from app.models import NFT, User, Wallet, Collection, RarityTier
+from app.models import NFT, User, Wallet, Collection, RarityTier, Escrow
 from app.models.marketplace import Listing, Offer, Order, ListingStatus, OfferStatus, OrderStatus
 from app.models.nft import NFTStatus
 from app.config import get_settings
@@ -188,7 +188,24 @@ class MarketplaceService:
             offer_id=offer_id,
             nft_id=offer.nft_id,
             seller_id=listing.seller_id,
-        # Create escrow record to represent held funds (platform custody simulation)
+        # Create a pending escrow awaiting external deposit
+        try:
+            escrow, err = await WalletService.create_escrow_pending(
+                db=db,
+                listing_id=listing_id,
+                offer_id=offer.id,
+                buyer_id=buyer_id,
+                seller_id=listing.seller_id,
+                amount=offer_price,
+                currency=currency,
+                commission_pct=0.02,
+            )
+            if err:
+                logger.warning(f"Failed to create pending escrow for offer {offer.id}: {err}")
+        except Exception as e:
+            logger.error(f"Unexpected error creating pending escrow for offer {offer.id}: {e}")
+
+        return offer, None
         try:
             escrow, err = await WalletService.create_escrow_hold(
                 db=db,

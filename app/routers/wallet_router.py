@@ -299,6 +299,65 @@ async def set_primary_wallet(
         )
 
 
+@router.get("/user/{user_id}/balance")
+async def get_user_balance(
+    user_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """
+    Get total USDT balance across all user's wallets.
+    Returns balance per blockchain and total balance.
+    """
+    try:
+        from app.models import User, Wallet
+        
+        uid = UUID(user_id)
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == uid))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Get all user wallets
+        wallets_result = await db.execute(
+            select(Wallet).where(Wallet.user_id == uid)
+        )
+        wallets = wallets_result.scalars().all()
+        
+        balance_data = {
+            "user_id": str(uid),
+            "username": user.username,
+            "total_balance_usd": 0.0,
+            "wallets": [],
+        }
+        
+        for wallet in wallets:
+            wallet_info = {
+                "wallet_id": str(wallet.id),
+                "address": wallet.address[:10] + "..." + wallet.address[-10:],
+                "blockchain": wallet.blockchain.value,
+                "is_primary": wallet.is_primary,
+                "balance": wallet.wallet_metadata.get("balance", 0.0) if wallet.wallet_metadata else 0.0,
+            }
+            balance_data["wallets"].append(wallet_info)
+            balance_data["total_balance_usd"] += wallet_info["balance"]
+        
+        return balance_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get user balance error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get balance: {str(e)}",
+        )
+
+
 @router.delete("/{wallet_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_wallet(
     wallet_id: UUID,

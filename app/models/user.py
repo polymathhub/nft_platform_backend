@@ -1,8 +1,15 @@
-from sqlalchemy import Column, String, DateTime, Boolean, Index
+from sqlalchemy import Column, String, DateTime, Boolean, Index, Enum
 from datetime import datetime
 import uuid
+from enum import Enum as PyEnum
 from app.database import Base
 from app.database.types import GUID
+
+
+class UserRole(PyEnum):
+    """User role enumeration."""
+    ADMIN = "admin"
+    USER = "user"
 
 
 class User(Base):
@@ -24,6 +31,7 @@ class User(Base):
     avatar_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     is_verified = Column(Boolean, default=False, nullable=False)
+    user_role = Column(Enum(UserRole), default=UserRole.USER, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_login = Column(DateTime, nullable=True)

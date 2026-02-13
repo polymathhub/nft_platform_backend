@@ -35,6 +35,15 @@ from app.utils.telegram_keyboards import (
     build_marketplace_cta_keyboard,
     build_blockchain_cta_keyboard,
     build_confirmation_cta_keyboard,
+    build_balance_cta_keyboard,
+    build_main_actions_keyboard,
+    build_admin_password_keyboard,
+    build_admin_dashboard_keyboard,
+    build_commission_settings_keyboard,
+    build_user_management_keyboard,
+    build_statistics_keyboard,
+    build_backup_utilities_keyboard,
+    build_blockchain_selection_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,6 +155,14 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
     logger.debug(f"User authenticated: {user.id}")
 
+    # Check if user is entering admin password
+    if hasattr(handle_admin_login, "_pending_admins") and chat_id in handle_admin_login._pending_admins:
+        pending = handle_admin_login._pending_admins[chat_id]
+        if pending.get("step") == "waiting_password":
+            logger.warning(f"[ADMIN] Processing password input from {username}")
+            await handle_admin_password_input(db, chat_id, user, text)
+            return
+
     # Map button presses to commands
     button_mapping = {
         # Start/Menu buttons
@@ -154,6 +171,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "📋 Menu": "/menu",
 
         # Dashboard CTA buttons
+        "💰 Balance": "/balance",
         "⚡ Quick Mint": "/quick-mint",
         "📤 Send": "/transfer",
         "📤 Send NFT": "/transfer",
@@ -164,8 +182,51 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "📝 My NFTs": "/mynfts",
         "📊 My Listings": "/mylistings",
         "📈 My Listings": "/mylistings",
+        "� Listings": "/mylistings",
         "🛍️ Marketplace": "/browse",
         "❓ Help": "/help",
+
+        # Balance actions
+        "🔄 Refresh": "/balance",
+        "💰 Deposit USDT": "/deposit",
+
+        # Admin buttons
+        "⚙️ Admin": "/admin-login",
+        "🚪 Logout": "/admin-logout",
+
+        # Admin Dashboard buttons
+        "💰 Commission": "/admin-commission",
+        "👥 Users": "/admin-users",
+        "📊 Statistics": "/admin-stats",
+        "💾 Backup": "/admin-backup",
+
+        # Commission Settings buttons
+        "📈 View Rate": "/admin-view-rate",
+        "✏️ Edit Rate": "/admin-edit-rate",
+        "🏪 View Wallets": "/admin-view-wallets",
+        "🔄 Update Wallet": "/admin-update-wallet",
+
+        # User Management buttons
+        "➕ Make Admin": "/admin-make-admin",
+        "➖ Remove Admin": "/admin-remove-admin",
+        "🚫 Suspend User": "/admin-suspend",
+        "✅ Activate User": "/admin-activate",
+
+        # Statistics buttons
+        "📈 System Stats": "/admin-system-stats",
+        "📋 Audit Logs": "/admin-audit-logs",
+        "👨‍💼 Admin List": "/admin-list-admins",
+        "💚 Health Check": "/admin-health-check",
+
+        # Backup buttons
+        "📥 Export Backup": "/admin-export-backup",
+        "🔧 Maintenance": "/admin-maintenance",
+
+        # Blockchain selection
+        "TON": "admin-blockchain:ton",
+        "TRC20": "admin-blockchain:trc20",
+        "ERC20": "admin-blockchain:erc20",
+        "Solana": "admin-blockchain:solana",
 
         # Wallet CTA buttons
         "👝 Wallets": "/wallets",
@@ -199,7 +260,6 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "◎ Solana": "blockchain:solana",
         "Solana": "blockchain:solana",
         "💎 TON": "blockchain:ton",
-        "TON": "blockchain:ton",
         "₿ Bitcoin": "blockchain:bitcoin",
         "Bitcoin": "blockchain:bitcoin",
 
@@ -211,6 +271,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "◀️ Back to Dashboard": "/dashboard",
         "◀️ Back": "/dashboard",
         "◀️ Back to Menu": "/start",
+        "◀️ Back to Admin": "/admin-dashboard",
         "◀️ Cancel": "/start",
         "❓ How to Mint": "/mint-help",
     }
@@ -218,6 +279,13 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     # Convert button text to command if applicable
     if text in button_mapping:
         text = button_mapping[text]
+
+    # Wire CTA: when user presses 'Make Offer' we show deposit instructions if applicable
+    if text == "/offer":
+        # convert to command-like: ask user to provide listing id and amount or use quick flow
+        # We'll prompt the user for listing id in chat
+        await bot_service.send_message(chat_id, "To make an offer, reply with: /offer <listing_id> <amount>")
+        return
         logger.warning(f"[ROUTER] Button pressed, converted to command: {text}")
 
     # Parse command - CHECK SPECIFIC COMMANDS BEFORE GENERAL ONES
@@ -228,6 +296,10 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     elif text.startswith("/dashboard"):
         logger.warning(f"[TELEGRAM] Processing /dashboard command from {username}")
         await send_dashboard(db, chat_id, user, username)
+    
+    elif text.startswith("/balance"):
+        logger.warning(f"[TELEGRAM] Processing /balance command from {username}")
+        await send_balance(db, chat_id, user)
     
     elif text.startswith("/menu"):
         logger.warning(f"[TELEGRAM] Processing /menu command from {username}")
@@ -353,6 +425,28 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     elif text.startswith("/help"):
         await send_help_message(chat_id)
 
+    # Admin commands
+    elif text.startswith("/admin-login"):
+        await handle_admin_login(db, chat_id, user)
+    
+    elif text.startswith("/admin-logout"):
+        await handle_admin_logout(chat_id, user)
+    
+    elif text.startswith("/admin-dashboard"):
+        await handle_admin_dashboard(db, chat_id, user)
+    
+    elif text.startswith("/admin-commission"):
+        await handle_admin_commission(db, chat_id, user)
+    
+    elif text.startswith("/admin-users"):
+        await handle_admin_users(db, chat_id, user)
+    
+    elif text.startswith("/admin-stats"):
+        await handle_admin_stats(db, chat_id, user)
+    
+    elif text.startswith("/admin-backup"):
+        await handle_admin_backup(db, chat_id, user)
+
     else:
         await bot_service.send_message(
             chat_id,
@@ -416,6 +510,291 @@ async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: s
     except Exception as e:
         logger.error(f"[DASHBOARD] Error sending dashboard: {type(e).__name__}: {e}", exc_info=True)
         await bot_service.send_message(chat_id, f"❌ Error loading dashboard: {str(e)}")
+
+
+async def send_balance(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Send user's USDT balance across all wallets."""
+    logger.warning(f"[TELEGRAM] Sending balance for user {user.id}")
+    try:
+        from app.models import Wallet
+        from sqlalchemy import select
+        
+        # Get all user wallets
+        wallets_result = await db.execute(
+            select(Wallet).where(Wallet.user_id == user.id)
+        )
+        wallets = wallets_result.scalars().all()
+        
+        if not wallets:
+            await bot_service.send_message(
+                chat_id,
+                "❌ No wallets found. Create one first:\n\n<code>/wallet-create ethereum</code>",
+                reply_markup=build_balance_cta_keyboard()
+            )
+            return
+        
+        # Build balance message
+        message = "<b>💰 Your USDT Balance</b>\n\n"
+        total_balance = 0.0
+        
+        for wallet in wallets:
+            balance = wallet.wallet_metadata.get("balance", 0.0) if wallet.wallet_metadata else 0.0
+            total_balance += balance
+            
+            message += (
+                f"<b>{wallet.blockchain.value.upper()}</b>\n"
+                f"  Address: <code>{wallet.address[:15]}...{wallet.address[-10:]}</code>\n"
+                f"  💵 Balance: <b>${balance:.2f}</b>\n"
+                f"{'  ⭐ Primary' if wallet.is_primary else ''}\n\n"
+            )
+        
+        message += f"<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        message += f"<b>Total Balance: ${total_balance:.2f} USDT</b>\n"
+        message += f"<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        
+        await bot_service.send_message(
+            chat_id,
+            message,
+            reply_markup=build_balance_cta_keyboard()
+        )
+        logger.warning(f"[BALANCE] Balance sent successfully")
+    except Exception as e:
+        logger.error(f"[BALANCE] Error sending balance: {type(e).__name__}: {e}", exc_info=True)
+        await bot_service.send_message(chat_id, f"❌ Error loading balance: {str(e)}")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ADMIN HANDLERS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async def handle_admin_login(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Start admin login flow - prompt for password."""
+    logger.warning(f"[ADMIN] Admin login attempt by user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminService
+    
+    message = (
+        "<b>🔐 Admin Login</b>\n\n"
+        "Please enter your admin password to continue.\n\n"
+        "<i>Password is private and will not be stored.</i>"
+    )
+    
+    await bot_service.send_message(
+        chat_id,
+        message,
+        reply_markup=build_admin_password_keyboard()
+    )
+    
+    # Store a temporary state that we're waiting for password
+    # Note: In production, use Redis to store state
+    if not hasattr(handle_admin_login, "_pending_admins"):
+        handle_admin_login._pending_admins = {}
+    handle_admin_login._pending_admins[chat_id] = {"user_id": user.id, "username": user.username, "step": "waiting_password"}
+
+
+async def handle_admin_password_input(db: AsyncSession, chat_id: int, user: User, password: str) -> None:
+    """Validate admin password and create session if correct."""
+    logger.warning(f"[ADMIN] Password submission from user {user.id}")
+    
+    from app.config import settings
+    from app.services.telegram_admin_service import TelegramAdminSession, TelegramAdminService
+    
+    # Validate password
+    if password != settings.admin_password:
+        logger.warning(f"[ADMIN] Invalid password attempt from user {user.id}")
+        await bot_service.send_message(
+            chat_id,
+            "❌ Invalid password. Access denied.",
+            reply_markup=build_dashboard_cta_keyboard()
+        )
+        
+        # Clear pending state
+        if hasattr(handle_admin_login, "_pending_admins") and chat_id in handle_admin_login._pending_admins:
+            del handle_admin_login._pending_admins[chat_id]
+        return
+    
+    # Password correct - create session
+    logger.warning(f"[ADMIN] Correct password, creating session for user {user.id}")
+    TelegramAdminSession.create_session(chat_id, user.id, user.username)
+    
+    # Show admin dashboard
+    await handle_admin_dashboard(db, chat_id, user)
+
+
+async def handle_admin_logout(chat_id: int, user: User) -> None:
+    """End admin session."""
+    logger.warning(f"[ADMIN] Admin logout for user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminSession
+    
+    TelegramAdminSession.logout(chat_id)
+    
+    await bot_service.send_message(
+        chat_id,
+        "✅ Logged out from admin panel.",
+        reply_markup=build_dashboard_cta_keyboard()
+    )
+
+
+async def handle_admin_dashboard(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Show admin dashboard - check if user is logged in."""
+    logger.warning(f"[ADMIN] Dashboard access by user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminSession, TelegramAdminService
+    
+    # Check if user is logged in
+    if not TelegramAdminSession.is_admin_logged_in(chat_id):
+        logger.warning(f"[ADMIN] User {user.id} not logged in for dashboard")
+        await bot_service.send_message(
+            chat_id,
+            "❌ You are not logged in to admin panel. Please use /admin-login",
+            reply_markup=build_dashboard_cta_keyboard()
+        )
+        return
+    
+    # Format and send dashboard
+    dashboard_msg = TelegramAdminService.format_admin_dashboard()
+    
+    await bot_service.send_message(
+        chat_id,
+        dashboard_msg,
+        reply_markup=build_admin_dashboard_keyboard()
+    )
+
+
+async def handle_admin_commission(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Show commission management menu."""
+    logger.warning(f"[ADMIN] Commission menu for user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminSession
+    from app.config import settings
+    
+    # Check if user is logged in
+    if not TelegramAdminSession.is_admin_logged_in(chat_id):
+        await bot_service.send_message(
+            chat_id,
+            "❌ You are not logged in to admin panel.",
+            reply_markup=build_dashboard_cta_keyboard()
+        )
+        return
+    
+    message = (
+        "<b>💰 Commission Settings</b>\n\n"
+        f"<b>Current Rate:</b> {settings.commission_rate * 100:.1f}%\n\n"
+        f"<b>Wallets Configured:</b>\n"
+        f"  • TON: <code>{settings.commission_wallet_ton[:20]}...</code>\n"
+        f"  • TRC20: <code>{settings.commission_wallet_trc20[:20]}...</code>\n"
+        f"  • ERC20: <code>{settings.commission_wallet_erc20[:20]}...</code>\n"
+        f"  • Solana: <code>{settings.commission_wallet_solana[:20]}...</code>\n\n"
+        "Use buttons to manage commission settings."
+    )
+    
+    await bot_service.send_message(
+        chat_id,
+        message,
+        reply_markup=build_commission_settings_keyboard()
+    )
+
+
+async def handle_admin_users(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Show user management menu."""
+    logger.warning(f"[ADMIN] User management menu for user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminSession
+    from app.models import User as UserModel
+    from sqlalchemy import select
+    
+    # Check if user is logged in
+    if not TelegramAdminSession.is_admin_logged_in(chat_id):
+        await bot_service.send_message(
+            chat_id,
+            "❌ You are not logged in to admin panel.",
+            reply_markup=build_dashboard_cta_keyboard()
+        )
+        return
+    
+    # Get user count
+    result = await db.execute(select(UserModel))
+    users = result.scalars().all()
+    
+    message = (
+        "<b>👥 User Management</b>\n\n"
+        f"<b>Total Users:</b> {len(users)}\n\n"
+        "Use buttons to manage users (promote, demote, suspend, activate)."
+    )
+    
+    await bot_service.send_message(
+        chat_id,
+        message,
+        reply_markup=build_user_management_keyboard()
+    )
+
+
+async def handle_admin_stats(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Show statistics menu."""
+    logger.warning(f"[ADMIN] Statistics menu for user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminSession
+    from app.models import User as UserModel, NFT, Wallet
+    from sqlalchemy import select, func
+    
+    # Check if user is logged in
+    if not TelegramAdminSession.is_admin_logged_in(chat_id):
+        await bot_service.send_message(
+            chat_id,
+            "❌ You are not logged in to admin panel.",
+            reply_markup=build_dashboard_cta_keyboard()
+        )
+        return
+    
+    # Get statistics
+    user_count = await db.scalar(select(func.count(UserModel.id)))
+    nft_count = await db.scalar(select(func.count(NFT.id)))
+    wallet_count = await db.scalar(select(func.count(Wallet.id)))
+    
+    message = (
+        "<b>📊 Statistics</b>\n\n"
+        f"<b>Users:</b> {user_count or 0}\n"
+        f"<b>NFTs Minted:</b> {nft_count or 0}\n"
+        f"<b>Wallets Created:</b> {wallet_count or 0}\n\n"
+        "Use buttons to view detailed statistics and audit logs."
+    )
+    
+    await bot_service.send_message(
+        chat_id,
+        message,
+        reply_markup=build_statistics_keyboard()
+    )
+
+
+async def handle_admin_backup(db: AsyncSession, chat_id: int, user: User) -> None:
+    """Show backup utilities menu."""
+    logger.warning(f"[ADMIN] Backup menu for user {user.id}")
+    
+    from app.services.telegram_admin_service import TelegramAdminSession
+    
+    # Check if user is logged in
+    if not TelegramAdminSession.is_admin_logged_in(chat_id):
+        await bot_service.send_message(
+            chat_id,
+            "❌ You are not logged in to admin panel.",
+            reply_markup=build_dashboard_cta_keyboard()
+        )
+        return
+    
+    message = (
+        "<b>💾 Backup & Utilities</b>\n\n"
+        "Options:\n"
+        "  • <b>Export Backup:</b> Download all platform data as JSON\n"
+        "  • <b>Maintenance:</b> System maintenance tools\n\n"
+        "Use buttons to proceed."
+    )
+    
+    await bot_service.send_message(
+        chat_id,
+        message,
+        reply_markup=build_backup_utilities_keyboard()
+    )
 
 
 async def send_quick_mint_screen(db: AsyncSession, chat_id: int, user: User) -> None:

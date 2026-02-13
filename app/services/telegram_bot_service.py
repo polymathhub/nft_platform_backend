@@ -20,6 +20,7 @@ from app.utils.telegram_keyboards import (
     build_nft_operations_keyboard,
     build_marketplace_keyboard,
 )
+from app.utils.blockchain_utils import USDTHelper
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -539,6 +540,20 @@ class TelegramBotService:
                 f"<b>Status:</b> {offer.status}"
             )
             await self.send_message(int(chat_id), success_message)
+            # Provide deposit instructions if USDT and platform supports external deposit
+            try:
+                if offer.currency.upper() == "USDT":
+                    platform_addr = settings.platform_wallets.get(listing.blockchain.lower()) if hasattr(settings, 'platform_wallets') else None
+                    contract = USDTHelper.get_usdt_contract(listing.blockchain, settings)
+                    if platform_addr:
+                        instr = (
+                            f"💳 To complete your offer, send {offer.offer_price} {offer.currency} from your external wallet to {platform_addr} (token contract: {contract}).\n"
+                            f"After sending, confirm the deposit with: /deposit-confirm {offer.id} <tx_hash>"
+                        )
+                        await self.send_message(int(chat_id), instr)
+            except Exception:
+                logger.exception("Failed to send deposit instructions")
+
             return offer, "Offer successful"
 
         except ValueError as e:

@@ -14,6 +14,7 @@ from app.routers import (
     notification_router,
     marketplace_router,
     attestation_router,
+    admin_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -101,6 +102,7 @@ app.include_router(nft_router, prefix="/api/v1")
 app.include_router(notification_router, prefix="/api/v1")
 app.include_router(marketplace_router, prefix="/api/v1")
 app.include_router(attestation_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 
 
 

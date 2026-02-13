@@ -20,6 +20,18 @@ async def auto_migrate():
     from app.database.connection import engine  # import AFTER init_db()
     if engine is None:
         raise RuntimeError("Database engine is not initialized")
+
+    # Prefer Alembic migrations when available (production-ready)
+    try:
+        from alembic.config import Config
+        from alembic import command
+        cfg = Config("alembic.ini")
+        command.upgrade(cfg, "head")
+        logger.info("Alembic migrations applied successfully")
+        return
+    except Exception as e:
+        logger.warning(f"Alembic upgrade failed or not available: {e}. Falling back to create_all()")
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

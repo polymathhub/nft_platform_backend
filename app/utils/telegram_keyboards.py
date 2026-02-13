@@ -162,8 +162,8 @@ def build_dashboard_cta_keyboard() -> Dict[str, Any]:
     """Build CTA keyboard for dashboard with action buttons."""
     return {
         "keyboard": [
-            [{"text": "⚡ Quick Mint"}, {"text": "📤 Send NFT"}],
-            [{"text": "📥 Receive"}, {"text": "👝 Wallets"}],
+            [{"text": "💰 Balance"}, {"text": "⚡ Quick Mint"}],
+            [{"text": "📤 Send NFT"}, {"text": "👝 Wallets"}],
             [{"text": "🖼️ My NFTs"}, {"text": "🛍️ Marketplace"}],
             [{"text": "📈 My Listings"}, {"text": "❓ Help"}],
         ],
@@ -251,6 +251,123 @@ def build_custom_cta_keyboard(buttons: List[List[str]]) -> Dict[str, Any]:
     keyboard = [[{"text": btn} for btn in row] for row in buttons]
     return {
         "keyboard": keyboard,
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_balance_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for balance viewing and refresh."""
+    return {
+        "keyboard": [
+            [{"text": "🔄 Refresh"}, {"text": "👝 My Wallets"}],
+            [{"text": "💰 Deposit USDT"}, {"text": "📤 Send"}],
+            [{"text": "🛍️ Marketplace"}, {"text": "◀️ Back"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_main_actions_keyboard() -> Dict[str, Any]:
+    """Build keyboard with all main actions."""
+    return {
+        "keyboard": [
+            [{"text": "💰 Balance"}, {"text": "🎨 Mint"}],
+            [{"text": "📜 My NFTs"}, {"text": "🛍️ Marketplace"}],
+            [{"text": "👝 Wallets"}, {"text": "📈 Listings"}],
+            [{"text": "⚙️ Admin"}, {"text": "❓ Help"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_admin_password_keyboard() -> Dict[str, Any]:
+    """Build keyboard for admin password prompt."""
+    return {
+        "keyboard": [
+            [{"text": "◀️ Cancel"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+        "input_field_placeholder": "Enter admin password...",
+    }
+
+
+def build_admin_dashboard_keyboard() -> Dict[str, Any]:
+    """Build keyboard for admin dashboard."""
+    return {
+        "keyboard": [
+            [{"text": "💰 Commission"}, {"text": "👥 Users"}],
+            [{"text": "📊 Statistics"}, {"text": "💾 Backup"}],
+            [{"text": "🚪 Logout"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_commission_settings_keyboard() -> Dict[str, Any]:
+    """Build keyboard for commission settings."""
+    return {
+        "keyboard": [
+            [{"text": "📈 View Rate"}, {"text": "✏️ Edit Rate"}],
+            [{"text": "🏪 View Wallets"}, {"text": "🔄 Update Wallet"}],
+            [{"text": "◀️ Back to Admin"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_user_management_keyboard() -> Dict[str, Any]:
+    """Build keyboard for user management."""
+    return {
+        "keyboard": [
+            [{"text": "➕ Make Admin"}, {"text": "➖ Remove Admin"}],
+            [{"text": "🚫 Suspend User"}, {"text": "✅ Activate User"}],
+            [{"text": "◀️ Back to Admin"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_statistics_keyboard() -> Dict[str, Any]:
+    """Build keyboard for statistics."""
+    return {
+        "keyboard": [
+            [{"text": "📈 System Stats"}, {"text": "📋 Audit Logs"}],
+            [{"text": "👨‍💼 Admin List"}, {"text": "💚 Health Check"}],
+            [{"text": "◀️ Back to Admin"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_backup_utilities_keyboard() -> Dict[str, Any]:
+    """Build keyboard for backup & utilities."""
+    return {
+        "keyboard": [
+            [{"text": "📥 Export Backup"}],
+            [{"text": "🔧 Maintenance"}],
+            [{"text": "◀️ Back to Admin"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+    }
+
+
+def build_blockchain_selection_keyboard() -> Dict[str, Any]:
+    """Build keyboard for blockchain selection in admin panel."""
+    return {
+        "keyboard": [
+            [{"text": "TON"}, {"text": "TRC20"}],
+            [{"text": "ERC20"}, {"text": "Solana"}],
+            [{"text": "◀️ Back"}],
+        ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
     }

@@ -5,6 +5,7 @@ from app.routers.notification_router import router as notification_router
 from app.routers.marketplace_router import router as marketplace_router
 from app.routers.attestation_router import router as attestation_router
 from app.routers.telegram_mint_router import router as telegram_mint_router
+from app.routers.admin_router import router as admin_router
 
 __all__ = [
     "auth_router",
@@ -13,4 +14,6 @@ __all__ = [
     "notification_router",
     "marketplace_router",
     "attestation_router",
-    "telegram_mint_router",]
+    "telegram_mint_router",
+    "admin_router",
+]
