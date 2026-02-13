@@ -129,16 +129,20 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
     logger.debug(f"User authenticated: {user.id}")
 
-    # Parse command
+    # Parse command - CHECK SPECIFIC COMMANDS BEFORE GENERAL ONES
     if text.startswith("/start"):
         logger.warning(f"[TELEGRAM] Processing /start command from {username}")
         await send_main_menu(chat_id, username)
 
-    elif text.startswith("/wallet"):
-        await bot_service.send_wallet_list(db, chat_id, user.id)
-
-    elif text.startswith("/wallets"):
-        await bot_service.send_wallet_list(db, chat_id, user.id)
+    # Wallet-related commands (check specific before general)
+    elif text.startswith("/wallet-import"):
+        parts = text.split(maxsplit=2)
+        if len(parts) < 3:
+            await bot_service.send_wallet_creation_guide(chat_id)
+        else:
+            blockchain = parts[1].lower()
+            address = parts[2]
+            await handle_wallet_import_command(db, chat_id, user, blockchain, address)
 
     elif text.startswith("/wallet-create"):
         parts = text.split()
@@ -151,14 +155,11 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
             logger.warning(f"[ROUTER] Calling handle_wallet_create_command with blockchain={blockchain}")
             await handle_wallet_create_command(db, chat_id, user, blockchain)
 
-    elif text.startswith("/wallet-import"):
-        parts = text.split(maxsplit=2)
-        if len(parts) < 3:
-            await bot_service.send_wallet_creation_guide(chat_id)
-        else:
-            blockchain = parts[1].lower()
-            address = parts[2]
-            await handle_wallet_import_command(db, chat_id, user, blockchain, address)
+    elif text.startswith("/wallet"):
+        await bot_service.send_wallet_list(db, chat_id, user.id)
+
+    elif text.startswith("/wallets"):
+        await bot_service.send_wallet_list(db, chat_id, user.id)
 
     elif text.startswith("/connect-wallet"):
         # /connect-wallet <blockchain>
