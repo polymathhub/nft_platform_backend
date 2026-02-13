@@ -40,7 +40,5 @@ asyncpg
 python-telegram-bot==20.7
 pycryptodome
 
-# Web3 libs for on-chain payouts
-web3==6.12.0
+web3==7.0.0
 eth-account==0.13.7
-hexbytes==0.3.1
