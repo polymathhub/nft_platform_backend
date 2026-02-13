@@ -20,43 +20,56 @@ class TelegramDashboardService:
     async def get_user_dashboard_stats(db: AsyncSession, user_id: UUID) -> Dict[str, Any]:
         """Get user dashboard statistics."""
         try:
+            logger.warning(f"[DASHBOARD_SERVICE] Starting to get stats for user {user_id}")
+            
             # Get wallet count
+            logger.warning(f"[DASHBOARD_SERVICE] Querying wallets...")
             wallets = await db.execute(
                 select(Wallet).where(Wallet.user_id == user_id)
             )
             wallet_count = len(wallets.scalars().all())
+            logger.warning(f"[DASHBOARD_SERVICE] Found {wallet_count} wallets")
 
             # Get NFT count
+            logger.warning(f"[DASHBOARD_SERVICE] Querying NFTs...")
             nfts = await db.execute(
                 select(NFT).where(NFT.user_id == user_id)
             )
             nft_count = len(nfts.scalars().all())
+            logger.warning(f"[DASHBOARD_SERVICE] Found {nft_count} NFTs")
             
             # Get minted NFTs
+            logger.warning(f"[DASHBOARD_SERVICE] Querying minted NFTs...")
             minted = await db.execute(
                 select(NFT).where(
                     and_(NFT.user_id == user_id, NFT.status == "minted")
                 )
             )
             minted_count = len(minted.scalars().all())
+            logger.warning(f"[DASHBOARD_SERVICE] Found {minted_count} minted NFTs")
 
             # Get active listings
+            logger.warning(f"[DASHBOARD_SERVICE] Querying listings...")
             listings = await db.execute(
                 select(Listing).where(
                     and_(Listing.seller_id == user_id, Listing.status == ListingStatus.ACTIVE)
                 )
             )
             listings_count = len(listings.scalars().all())
+            logger.warning(f"[DASHBOARD_SERVICE] Found {listings_count} active listings")
 
-            return {
+            result = {
                 "wallets": wallet_count,
                 "nfts": nft_count,
                 "minted": minted_count,
                 "active_listings": listings_count,
-                "total_value_usd": 0,  # Can be calculated from listings
+                "total_value_usd": 0,
             }
+            logger.warning(f"[DASHBOARD_SERVICE] Returning stats: {result}")
+            return result
+            
         except Exception as e:
-            logger.error(f"Error getting dashboard stats: {e}")
+            logger.error(f"[DASHBOARD_SERVICE] Error getting dashboard stats: {type(e).__name__}: {e}", exc_info=True)
             return {
                 "wallets": 0,
                 "nfts": 0,
