@@ -148,33 +148,59 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
     # Map button presses to commands
     button_mapping = {
+        # Start/Menu buttons
         "🚀 Get Started": "/dashboard",
         "📊 Dashboard": "/dashboard",
         "📋 Menu": "/menu",
+        
+        # Dashboard CTA buttons
         "⚡ Quick Mint": "/quick-mint",
         "📤 Send": "/transfer",
         "📤 Send NFT": "/transfer",
         "📥 Receive": "/receive",
-        "🎨 Mint NFT": "/mint",
-        "🎨 Start Minting": "/mint",
-        "👝 Wallets": "/wallets",
-        "📜 My NFTs": "/mynfts",
         "🖼️ My NFTs": "/mynfts",
+        "📜 View My NFTs": "/mynfts",
         "🛍️ Marketplace": "/browse",
-        "📊 My Listings": "/mylistings",
         "📈 My Listings": "/mylistings",
         "❓ Help": "/help",
+        
+        # Wallet CTA buttons
+        "👝 Wallets": "/wallets",
+        "➕ Create New": "/wallet-create",
         "➕ Create Wallet": "/wallet-create",
+        "📥 Import": "/wallet-import",
         "📥 Import Wallet": "/wallet-import",
+        "📋 List All": "/wallets",
         "📋 List Wallets": "/wallets",
         "⭐ Set Primary": "/set-primary",
+        
+        # NFT CTA buttons
+        "🎨 Mint NFT": "/mint",
+        "🎨 Start Minting": "/mint",
+        "📤 Transfer": "/transfer",
+        "🔥 Burn": "/burn",
+        "🛍️ List for Sale": "/list",
+        
+        # Marketplace CTA buttons  
+        "🔍 Browse": "/browse",
+        "❤️ Favorites": "/browse",
+        "💬 Make Offer": "/offer",
+        "📊 My Listings": "/mylistings",
+        "❌ Cancel Listing": "/cancel-listing",
+        
+        # Blockchain selector buttons
+        "⟡ Ethereum": "blockchain:ethereum",
+        "🔶 Polygon": "blockchain:polygon",
+        "◎ Solana": "blockchain:solana",
+        "💎 TON": "blockchain:ton",
+        "₿ Bitcoin": "blockchain:bitcoin",
+        
+        # Confirmation/Navigation buttons
+        "✅ Confirm": "confirm:yes",
+        "❌ Cancel": "/start",
         "◀️ Back to Dashboard": "/dashboard",
         "◀️ Back": "/dashboard",
         "◀️ Back to Menu": "/start",
-        "🔍 Browse": "/browse",
-        "💬 Make Offer": "/offer",
-        "❌ Cancel Listing": "/cancel-listing",
-        "🔥 Burn": "/burn",
         "❓ How to Mint": "/mint-help",
     }
     
