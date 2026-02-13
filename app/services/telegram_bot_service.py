@@ -615,10 +615,9 @@ class TelegramBotService:
         user: User,
         blockchain: str,
     ) -> tuple[Optional[Wallet], Optional[str]]:
-        """Handle wallet creation for a blockchain."""
+        """Handle wallet creation for a blockchain using proper key generation."""
         try:
-            from app.models.wallet import BlockchainType, WalletType
-            import hashlib
+            from app.models.wallet import BlockchainType
             
             blockchain_lower = blockchain.lower()
             try:
@@ -628,43 +627,56 @@ class TelegramBotService:
                 await self.send_message(chat_id, message)
                 return None, message
             
-            user_hash = hashlib.sha256(f"{user.id}{blockchain_lower}".encode()).hexdigest()[:16]
-            blockchain_address = f"0x{user_hash}"
+            # Use proper wallet generation based on blockchain
+            wallet = None
+            error = None
             
-            wallet_metadata = {
+            if blockchain_type == BlockchainType.ETHEREUM:
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.POLYGON:
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.ARBITRUM:
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.OPTIMISM:
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.BASE:
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.AVALANCHE:
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.TON:
+                wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.SOLANA:
+                wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, make_primary=True)
+            elif blockchain_type == BlockchainType.BITCOIN:
+                wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, make_primary=True)
+            
+            if error or not wallet:
+                message = f"❌ Wallet creation failed: {error or 'Unknown error'}"
+                logger.error(f"Wallet creation error for user {user.id}, blockchain {blockchain_lower}: {error}")
+                await self.send_message(chat_id, message)
+                return None, error
+            
+            # Update metadata
+            wallet_metadata = getattr(wallet, "wallet_metadata", {}) or {}
+            wallet_metadata.update({
                 "name": f"{blockchain.capitalize()} Wallet",
                 "created_via": "telegram",
-                "wallet_index": 1
-            }
-            
-            wallet, error = await WalletService.create_wallet(
-                db=db,
-                user_id=user.id,
-                blockchain=blockchain_type,
-                wallet_type=WalletType.SELF_CUSTODY,
-                address=blockchain_address,
-                is_primary=True,
-                public_key=None,
-                mnemonic=None,
-            )
-            
-            if error:
-                message = f"❌ Wallet creation failed: {error}"
-                await self.send_message(chat_id, message)
-                return None, message
-            
+                "wallet_index": 1,
+            })
             wallet.wallet_metadata = wallet_metadata
             await db.commit()
             await db.refresh(wallet)
+            
+            logger.info(f"✓ Wallet created: user_id={user.id}, blockchain={blockchain_lower}, address={wallet.address[:20]}...")
             
             success_message = (
                 f"✅ <b>Wallet Created Successfully!</b>\n\n"
                 f"<b>🔗 Blockchain:</b> <code>{blockchain.upper()}</code>\n"
                 f"<b>📍 Address:</b> <code>{wallet.address}</code>\n"
-                f"<b>📋 Type:</b> Self-Custody\n"
+                f"<b>📋 Type:</b> Custodial (Secure)\n"
                 f"<b>🆔 Wallet ID:</b> <code>{str(wallet.id)}</code>\n"
                 f"<b>⭐ Primary:</b> Yes\n\n"
-                f"<i>Keep your address safe. You can use this wallet for minting and trading.</i>"
+                f"<i>Your wallet is ready! Use it to mint NFTs or trade on the marketplace.</i>"
             )
             await self.send_message(chat_id, success_message)
             return wallet, None

@@ -516,14 +516,25 @@ async def handle_transfer_command(
 async def handle_wallet_create_command(
     db: AsyncSession, chat_id: int, user: User, blockchain: str
 ) -> None:
-    await bot_service.send_message(chat_id, f"⏳ Creating wallet for {blockchain}...")
+    """Handle /wallet-create command with proper wallet generation."""
+    logger.info(f"[WALLET] Creating wallet for user {user.id}, blockchain: {blockchain}")
+    
+    await bot_service.send_message(chat_id, f"⏳ Creating {blockchain.upper()} wallet...")
+    
     wallet, error = await bot_service.handle_wallet_create(
         db=db, chat_id=chat_id, user=user, blockchain=blockchain
     )
+    
     if wallet:
-        logger.info(f"Wallet created successfully for user {user.id}")
+        logger.info(f"✓ Wallet created successfully: {wallet.id}")
+        # Show the new wallet in the wallet list
+        await bot_service.send_wallet_list(db, chat_id, user.id)
     else:
-        logger.warning(f"Failed to create wallet: {error}")
+        logger.error(f"✗ Wallet creation failed: {error}")
+        await bot_service.send_message(
+            chat_id,
+            f"❌ Failed to create wallet: {error or 'Unknown error'}\n\nPlease try again or contact support."
+        )
 
 
 async def handle_wallet_import_command(
