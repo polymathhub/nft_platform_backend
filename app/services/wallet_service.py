@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from app.models import User, Wallet
+from app.models import Escrow
 from app.models.wallet import BlockchainType, WalletType
 from app.utils.security import encrypt_sensitive_data, decrypt_sensitive_data
 from app.config import get_settings
@@ -187,6 +188,64 @@ class WalletService:
     ) -> Optional[Wallet]:
         result = await db.execute(select(Wallet).where(Wallet.id == wallet_id))
         return result.scalar_one_or_none()
+
+    # ------------------ Escrow / Hold helpers ------------------
+    @staticmethod
+    async def create_escrow_hold(
+        db: AsyncSession,
+        listing_id: UUID,
+        offer_id: UUID,
+        buyer_id: UUID,
+        seller_id: UUID,
+        amount: float,
+        currency: str,
+        commission_pct: float = 0.02,
+    ) -> tuple[Optional[Escrow], Optional[str]]:
+        """Create an escrow record representing funds held by platform custody.
+
+        Note: Actual on-chain custody operations are out of scope for this helper;
+        this records the intent and marks funds as HELD so business logic can proceed.
+        """
+        try:
+            commission = round(amount * commission_pct, 8)
+            escrow = Escrow(
+                listing_id=listing_id,
+                offer_id=offer_id,
+                buyer_id=buyer_id,
+                seller_id=seller_id,
+                amount=amount,
+                currency=currency,
+                commission_amount=commission,
+                status="held",
+            )
+            db.add(escrow)
+            await db.commit()
+            await db.refresh(escrow)
+            return escrow, None
+        except Exception as e:
+            logger.error(f"Failed to create escrow hold: {e}")
+            return None, str(e)
+
+    @staticmethod
+    async def release_escrow(
+        db: AsyncSession,
+        escrow_id: UUID,
+        tx_hash: Optional[str] = None,
+    ) -> tuple[Optional[Escrow], Optional[str]]:
+        try:
+            result = await db.execute(select(Escrow).where(Escrow.id == escrow_id))
+            escrow = result.scalar_one_or_none()
+            if not escrow:
+                return None, "Escrow not found"
+            escrow.status = "released"
+            if tx_hash:
+                escrow.tx_hash = tx_hash
+            await db.commit()
+            await db.refresh(escrow)
+            return escrow, None
+        except Exception as e:
+            logger.error(f"Failed to release escrow: {e}")
+            return None, str(e)
 
     # ------------------ Wallet generation helpers ------------------
     @staticmethod

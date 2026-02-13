@@ -5,6 +5,7 @@ from app.models.transaction import Transaction, TransactionType, TransactionStat
 from app.models.marketplace import Listing, Offer, Order, ListingStatus, OfferStatus, OrderStatus
 from app.models.attestation import Attestation, AttestationType, AttestationStatus
 from app.models.collection import Collection
+from app.models.escrow import Escrow, EscrowStatus
 
 __all__ = [
     "User",
@@ -28,4 +29,6 @@ __all__ = [
     "AttestationType",
     "AttestationStatus",
     "Collection",
+    "Escrow",
+    "EscrowStatus",
 ]
