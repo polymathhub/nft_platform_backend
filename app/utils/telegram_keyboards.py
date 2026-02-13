@@ -1,21 +1,22 @@
-"""Telegram keyboard builders for ReplyKeyboardMarkup (CTA buttons) and InlineKeyboardMarkup.
+"""Telegram keyboard builders for ReplyKeyboardMarkup (CTA buttons).
 
-This module provides two types of Telegram keyboards:
+This module provides CTA (Call-To-Action) keyboards using ReplyKeyboardMarkup:
 
-1. ReplyKeyboardMarkup (Traditional):
-   - Buttons appear below the message input field
-   - User presses button and it sends the button text as a message
-   - Persists between messages
-   - Better for general navigation
+Features of CTA Keyboards (ReplyKeyboardMarkup):
+- Buttons appear below the message input field
+- User presses button and it sends the button text as a message
+- Persists between messages
+- Ideal for general navigation and menu systems
+- Buttons are clickable alternatives to typing commands
+- Clean, intuitive user experience
 
-2. InlineKeyboardMarkup (Inline - NEW):
-   - Buttons appear directly attached to the message
-   - Uses callback_data instead of text messages
-   - Buttons trigger callback_query updates (no spam messages)
-   - Buttons disappear after use (unless preserved)
-   - Better for specific message actions (confirm, select, etc.)
+Usage:
+- Each keyboard builder returns a dict with 'keyboard' structure
+- Keyboard is a 2D list of button rows
+- Each button is a dict with 'text' property
+- Additional options: resize_keyboard, one_time_keyboard, input_field_placeholder
 
-For interactive dashboards and action menus, prefer inline keyboards!
+This approach provides reliable, user-friendly navigation without callback complexity.
 """
 
 from typing import Dict, List, Any
@@ -173,150 +174,102 @@ def remove_keyboard() -> Dict[str, Any]:
     }
 
 
-# ============== INLINE KEYBOARDS (with callback_data) ==============
+# ============== CTA KEYBOARDS (ReplyKeyboardMarkup with text buttons) ==============
 
 
-def build_dashboard_inline_keyboard() -> Dict[str, Any]:
-    """Build inline keyboard for dashboard with action buttons."""
+def build_dashboard_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for dashboard with action buttons."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "⚡ Quick Mint", "callback_data": "action:quick_mint"},
-                {"text": "📤 Send NFT", "callback_data": "action:transfer"},
-            ],
-            [
-                {"text": "📥 Receive", "callback_data": "action:receive"},
-                {"text": "👝 Wallets", "callback_data": "action:wallets"},
-            ],
-            [
-                {"text": "🖼️ My NFTs", "callback_data": "action:mynfts"},
-                {"text": "🛍️ Marketplace", "callback_data": "action:browse"},
-            ],
-            [
-                {"text": "📈 My Listings", "callback_data": "action:mylistings"},
-                {"text": "❓ Help", "callback_data": "action:help"},
-            ],
-        ]
+        "keyboard": [
+            [{"text": "⚡ Quick Mint"}, {"text": "📤 Send NFT"}],
+            [{"text": "📥 Receive"}, {"text": "👝 Wallets"}],
+            [{"text": "🖼️ My NFTs"}, {"text": "🛍️ Marketplace"}],
+            [{"text": "📈 My Listings"}, {"text": "❓ Help"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+        "input_field_placeholder": "Select an action...",
     }
 
 
-def build_wallet_inline_keyboard() -> Dict[str, Any]:
-    """Build inline keyboard for wallet management."""
+def build_wallet_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for wallet management."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "➕ Create New", "callback_data": "wallet:create"},
-                {"text": "📥 Import", "callback_data": "wallet:import"},
-            ],
-            [
-                {"text": "📋 List All", "callback_data": "wallet:list"},
-                {"text": "⭐ Set Primary", "callback_data": "wallet:set_primary"},
-            ],
-            [
-                {"text": "◀️ Back", "callback_data": "action:dashboard"},
-            ],
-        ]
+        "keyboard": [
+            [{"text": "➕ Create New"}, {"text": "📥 Import"}],
+            [{"text": "📋 List All"}, {"text": "⭐ Set Primary"}],
+            [{"text": "◀️ Back to Dashboard"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
     }
 
 
-def build_nft_inline_keyboard() -> Dict[str, Any]:
-    """Build inline keyboard for NFT actions."""
+def build_nft_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for NFT actions."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "🎨 Mint NFT", "callback_data": "nft:mint"},
-                {"text": "📜 View My NFTs", "callback_data": "nft:list"},
-            ],
-            [
-                {"text": "📤 Transfer", "callback_data": "nft:transfer"},
-                {"text": "🔥 Burn", "callback_data": "nft:burn"},
-            ],
-            [
-                {"text": "🛍️ List for Sale", "callback_data": "nft:list_sale"},
-                {"text": "◀️ Back", "callback_data": "action:dashboard"},
-            ],
-        ]
+        "keyboard": [
+            [{"text": "🎨 Mint NFT"}, {"text": "📜 View My NFTs"}],
+            [{"text": "📤 Transfer"}, {"text": "🔥 Burn"}],
+            [{"text": "🛍️ List for Sale"}],
+            [{"text": "◀️ Back to Dashboard"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
     }
 
 
-def build_marketplace_inline_keyboard() -> Dict[str, Any]:
-    """Build inline keyboard for marketplace."""
+def build_marketplace_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for marketplace."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "🔍 Browse", "callback_data": "market:browse"},
-                {"text": "❤️ Favorites", "callback_data": "market:favorites"},
-            ],
-            [
-                {"text": "💬 Make Offer", "callback_data": "market:offer"},
-                {"text": "📊 My Listings", "callback_data": "market:mylistings"},
-            ],
-            [
-                {"text": "◀️ Back", "callback_data": "action:dashboard"},
-            ],
-        ]
+        "keyboard": [
+            [{"text": "🔍 Browse"}, {"text": "❤️ Favorites"}],
+            [{"text": "💬 Make Offer"}, {"text": "📊 My Listings"}],
+            [{"text": "◀️ Back to Dashboard"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
     }
 
 
-def build_confirmation_inline_keyboard(action_id: str = "") -> Dict[str, Any]:
-    """Build yes/no confirmation inline keyboard."""
+def build_blockchain_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for blockchain selection."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "✅ Confirm", "callback_data": f"confirm:yes:{action_id}"},
-                {"text": "❌ Cancel", "callback_data": f"confirm:no:{action_id}"},
-            ],
-        ]
+        "keyboard": [
+            [{"text": "⟡ Ethereum"}, {"text": "🔶 Polygon"}],
+            [{"text": "◎ Solana"}, {"text": "💎 TON"}],
+            [{"text": "₿ Bitcoin"}, {"text": "❌ Cancel"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True,
     }
 
 
-def build_blockchain_inline_keyboard() -> Dict[str, Any]:
-    """Build inline keyboard for blockchain selection."""
+def build_confirmation_cta_keyboard() -> Dict[str, Any]:
+    """Build CTA keyboard for yes/no confirmation."""
     return {
-        "inline_keyboard": [
-            [
-                {"text": "⟡ Ethereum", "callback_data": "blockchain:ethereum"},
-                {"text": "🔶 Polygon", "callback_data": "blockchain:polygon"},
-            ],
-            [
-                {"text": "◎ Solana", "callback_data": "blockchain:solana"},
-                {"text": "💎 TON", "callback_data": "blockchain:ton"},
-            ],
-            [
-                {"text": "₿ Bitcoin", "callback_data": "blockchain:bitcoin"},
-                {"text": "❌ Cancel", "callback_data": "action:cancel"},
-            ],
-        ]
+        "keyboard": [
+            [{"text": "✅ Confirm"}, {"text": "❌ Cancel"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True,
     }
 
 
-def build_custom_inline_keyboard(buttons: List[List[Dict[str, str]]]) -> Dict[str, Any]:
+def build_custom_cta_keyboard(buttons: List[List[str]]) -> Dict[str, Any]:
     """
-    Build custom inline keyboard from button list.
+    Build custom CTA keyboard from button list.
     
     Args:
-        buttons: 2D list of button dicts with 'text' and 'callback_data' keys
-                Example: [[{"text": "Button1", "callback_data": "action:1"}]]
+        buttons: 2D list of button texts
+                Example: [["Button1", "Button2"], ["Button3"]]
     
     Returns:
-        InlineKeyboardMarkup dict
+        ReplyKeyboardMarkup dict
     """
+    keyboard = [[{"text": btn} for btn in row] for row in buttons]
     return {
-        "inline_keyboard": buttons
-    }
-
-
-def build_url_inline_keyboard(buttons: List[List[Dict[str, str]]]) -> Dict[str, Any]:
-    """
-    Build inline keyboard with URL buttons.
-    
-    Args:
-        buttons: 2D list of button dicts with 'text' and 'url' keys
-                Example: [[{"text": "Visit", "url": "https://example.com"}]]
-    
-    Returns:
-        InlineKeyboardMarkup dict with URL buttons
-    """
-    return {
-        "inline_keyboard": buttons
+        "keyboard": keyboard,
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
     }

@@ -29,13 +29,12 @@ from app.utils.telegram_keyboards import (
     build_nft_operations_keyboard,
     build_marketplace_keyboard,
     build_quick_mint_keyboard,
-    # Inline keyboards (with callback buttons)
-    build_dashboard_inline_keyboard,
-    build_wallet_inline_keyboard,
-    build_nft_inline_keyboard,
-    build_marketplace_inline_keyboard,
-    build_blockchain_inline_keyboard,
-    build_confirmation_inline_keyboard,
+    build_dashboard_cta_keyboard,
+    build_wallet_cta_keyboard,
+    build_nft_cta_keyboard,
+    build_marketplace_cta_keyboard,
+    build_blockchain_cta_keyboard,
+    build_confirmation_cta_keyboard,
 )
 
 logger = logging.getLogger(__name__)
@@ -349,17 +348,17 @@ async def send_main_menu(chat_id: int, username: str) -> None:
         f"Use the buttons below to navigate or type commands.\n\n"
         f"<b>What would you like to do?</b>"
     )
-    logger.warning(f"[TELEGRAM] Calling bot_service.send_message with inline menu keyboard...")
+    logger.warning(f"[TELEGRAM] Calling bot_service.send_message with CTA menu keyboard...")
     result = await bot_service.send_message(
         chat_id, 
         message,
-        reply_markup=build_dashboard_inline_keyboard()
+        reply_markup=build_dashboard_cta_keyboard()
     )
     logger.warning(f"[TELEGRAM] bot_service.send_message returned: {result}")
 
 
 async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: str) -> None:
-    """Send premium dashboard with user stats and inline action buttons."""
+    """Send premium dashboard with user stats and CTA action buttons."""
     logger.warning(f"[TELEGRAM] Sending dashboard for {username}")
     try:
         # Get user stats
@@ -368,15 +367,15 @@ async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: s
         logger.warning(f"[DASHBOARD] Stats retrieved: {stats}")
         
         message = TelegramDashboardService.format_dashboard_message(username, stats)
-        logger.warning(f"[DASHBOARD] Message formatted, sending with inline keyboard")
+        logger.warning(f"[DASHBOARD] Message formatted, sending with CTA keyboard")
         
-        # Use inline keyboard with callback buttons (buttons attached to message)
+        # Use CTA keyboard with text buttons (below message input)
         await bot_service.send_message(
             chat_id,
             message,
-            reply_markup=build_dashboard_inline_keyboard()
+            reply_markup=build_dashboard_cta_keyboard()
         )
-        logger.warning(f"[DASHBOARD] Dashboard sent successfully with inline buttons")
+        logger.warning(f"[DASHBOARD] Dashboard sent successfully with CTA buttons")
     except Exception as e:
         logger.error(f"[DASHBOARD] Error sending dashboard: {type(e).__name__}: {e}", exc_info=True)
         await bot_service.send_message(chat_id, f"❌ Error loading dashboard: {str(e)}")
