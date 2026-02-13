@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from uuid import UUID
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 from app.database import get_db_session
@@ -210,8 +210,8 @@ async def update_commission_rate(
 
 @router.post("/commission-wallet/{blockchain}")
 async def update_commission_wallet_for_blockchain(
-    blockchain: str,
-    wallet: str = Field(..., min_length=20),
+    blockchain: str = Path(...),
+    wallet: str = Body(..., min_length=20),
     db: AsyncSession = Depends(get_db_session),
     admin: User = Depends(get_admin_user),
     http_request: Request = None,
