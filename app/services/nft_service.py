@@ -150,7 +150,12 @@ class NFTService:
             
             # Call appropriate mint method based on blockchain type
             mint_response = None
-            if nft.blockchain in ["solana", "ton"]:
+            if nft.blockchain == "solana":
+                mint_response = await blockchain_client.mint_nft(
+                    creator_address=nft.owner_address,
+                    nft_metadata=blockchain_metadata,
+                )
+            elif nft.blockchain == "ton":
                 mint_response = await blockchain_client.mint_nft(
                     owner_address=nft.owner_address,
                     nft_metadata=blockchain_metadata,
