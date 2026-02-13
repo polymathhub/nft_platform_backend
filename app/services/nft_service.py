@@ -183,7 +183,7 @@ class NFTService:
             
             # For now, update with provided or default values
             tx_hash = transaction_hash or mint_response.get("transaction_hash") or f"pending-{nft.id}"
-            contract_addr = contract_address or settings.nft_contract_address or None
+            contract_addr = contract_address or mint_response.get("contract_address") or None
             token_addr = token_id or mint_response.get("token_id") or None
             
             # Step 5: Update NFT record with blockchain confirmation
