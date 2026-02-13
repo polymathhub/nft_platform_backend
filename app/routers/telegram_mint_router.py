@@ -160,6 +160,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "📥 Receive": "/receive",
         "🖼️ My NFTs": "/mynfts",
         "📜 View My NFTs": "/mynfts",
+        "📜 My NFTs": "/mynfts",
         "📝 My NFTs": "/mynfts",
         "📊 My Listings": "/mylistings",
         "📈 My Listings": "/mylistings",
