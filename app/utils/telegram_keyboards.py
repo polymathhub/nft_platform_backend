@@ -3,6 +3,19 @@
 from typing import Dict, List, Any
 
 
+def build_start_keyboard() -> Dict[str, Any]:
+    """Build start/welcome keyboard with main CTA."""
+    return {
+        "keyboard": [
+            [{"text": "🚀 Get Started"}],
+            [{"text": "📋 Menu"}, {"text": "❓ Help"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False,
+        "input_field_placeholder": "Tap to begin...",
+    }
+
+
 def build_main_menu_keyboard() -> Dict[str, Any]:
     """Build main menu keyboard with categories."""
     return {

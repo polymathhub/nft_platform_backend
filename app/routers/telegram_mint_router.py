@@ -20,6 +20,7 @@ from app.services.wallet_service import WalletService
 from app.services.walletconnect_service import WalletConnectService
 from app.utils.telegram_security import verify_telegram_data
 from app.utils.telegram_keyboards import (
+    build_start_keyboard,
     build_main_menu_keyboard,
     build_wallet_keyboard,
     build_blockchain_keyboard,
@@ -138,6 +139,8 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
     # Map button presses to commands
     button_mapping = {
+        "🚀 Get Started": "/menu",
+        "📋 Menu": "/menu",
         "🎨 Mint NFT": "/mint",
         "👝 Wallets": "/wallets",
         "📜 My NFTs": "/mynfts",
@@ -154,7 +157,6 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "❌ Cancel Listing": "/cancel-listing",
         "📤 Transfer": "/transfer",
         "🔥 Burn": "/burn",
-        "📥 Import Wallet": "/wallet-import",
     }
     
     # Convert button text to command if applicable
@@ -165,6 +167,10 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     # Parse command - CHECK SPECIFIC COMMANDS BEFORE GENERAL ONES
     if text.startswith("/start"):
         logger.warning(f"[TELEGRAM] Processing /start command from {username}")
+        await send_welcome_start(chat_id, username)
+    
+    elif text.startswith("/menu"):
+        logger.warning(f"[TELEGRAM] Processing /menu command from {username}")
         await send_main_menu(chat_id, username)
 
     # Wallet-related commands (check specific before general)
@@ -281,6 +287,24 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
             chat_id,
             "Unknown command. Use /help to see available commands.",
         )
+
+
+async def send_welcome_start(chat_id: int, username: str) -> None:
+    """Send welcome message with start CTA button."""
+    logger.warning(f"[TELEGRAM] send_welcome_start called for chat_id={chat_id}, username={username}")
+    message = (
+        f"<b>🚀 Welcome to NFT Platform!</b>\n\n"
+        f"Hello <b>{username}</b>, welcome! 👋\n\n"
+        f"This is your gateway to minting, trading, and managing NFTs across multiple blockchains.\n\n"
+        f"<b>Let's get started!</b>"
+    )
+    logger.warning(f"[TELEGRAM] Sending start CTA button...")
+    result = await bot_service.send_message(
+        chat_id, 
+        message,
+        reply_markup=build_start_keyboard()
+    )
+    logger.warning(f"[TELEGRAM] Welcome start sent: {result}")
 
 
 async def send_main_menu(chat_id: int, username: str) -> None:
