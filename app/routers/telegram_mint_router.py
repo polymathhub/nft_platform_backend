@@ -356,17 +356,22 @@ async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: s
     logger.warning(f"[TELEGRAM] Sending dashboard for {username}")
     try:
         # Get user stats
+        logger.warning(f"[DASHBOARD] Getting stats for user {user.id}")
         stats = await TelegramDashboardService.get_user_dashboard_stats(db, user.id)
+        logger.warning(f"[DASHBOARD] Stats retrieved: {stats}")
+        
         message = TelegramDashboardService.format_dashboard_message(username, stats)
+        logger.warning(f"[DASHBOARD] Message formatted, sending keyboard")
         
         await bot_service.send_message(
             chat_id,
             message,
             reply_markup=build_dashboard_keyboard()
         )
+        logger.warning(f"[DASHBOARD] Dashboard sent successfully")
     except Exception as e:
-        logger.error(f"Error sending dashboard: {e}")
-        await bot_service.send_message(chat_id, "❌ Error loading dashboard")
+        logger.error(f"[DASHBOARD] Error sending dashboard: {type(e).__name__}: {e}", exc_info=True)
+        await bot_service.send_message(chat_id, f"❌ Error loading dashboard: {str(e)}")
 
 
 async def send_quick_mint_screen(db: AsyncSession, chat_id: int, user: User) -> None:
