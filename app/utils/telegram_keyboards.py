@@ -8,7 +8,7 @@ def build_start_keyboard() -> Dict[str, Any]:
     return {
         "keyboard": [
             [{"text": "🚀 Get Started"}],
-            [{"text": "� Dashboard"}, {"text": "❓ Help"}],
+            [{"text": "📊 Dashboard"}, {"text": "❓ Help"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
