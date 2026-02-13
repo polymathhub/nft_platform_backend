@@ -619,17 +619,23 @@ class TelegramBotService:
         try:
             from app.models.wallet import BlockchainType
             
+            logger.info(f"[WALLET_CREATE] START: user_id={user.id}, blockchain={blockchain}, chat_id={chat_id}")
+            
             blockchain_lower = blockchain.lower()
             try:
                 blockchain_type = BlockchainType(blockchain_lower)
-            except ValueError:
+                logger.info(f"[WALLET_CREATE] Blockchain type recognized: {blockchain_type}")
+            except ValueError as e:
                 message = f"❌ Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
+                logger.error(f"[WALLET_CREATE] Invalid blockchain: {e}")
                 await self.send_message(chat_id, message)
                 return None, message
             
             # Use proper wallet generation based on blockchain
             wallet = None
             error = None
+            
+            logger.info(f"[WALLET_CREATE] Calling generation function for {blockchain_type.value}")
             
             if blockchain_type == BlockchainType.ETHEREUM:
                 wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
@@ -650,9 +656,11 @@ class TelegramBotService:
             elif blockchain_type == BlockchainType.BITCOIN:
                 wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, make_primary=True)
             
+            logger.info(f"[WALLET_CREATE] Generation returned: wallet={wallet is not None}, error={error}")
+            
             if error or not wallet:
                 message = f"❌ Wallet creation failed: {error or 'Unknown error'}"
-                logger.error(f"Wallet creation error for user {user.id}, blockchain {blockchain_lower}: {error}")
+                logger.error(f"[WALLET_CREATE] FAILED: {message}")
                 await self.send_message(chat_id, message)
                 return None, error
             
@@ -667,7 +675,7 @@ class TelegramBotService:
             await db.commit()
             await db.refresh(wallet)
             
-            logger.info(f"✓ Wallet created: user_id={user.id}, blockchain={blockchain_lower}, address={wallet.address[:20]}...")
+            logger.info(f"[WALLET_CREATE] SUCCESS: wallet_id={wallet.id}, address={wallet.address[:20]}...")
             
             success_message = (
                 f"✅ <b>Wallet Created Successfully!</b>\n\n"
@@ -682,7 +690,7 @@ class TelegramBotService:
             return wallet, None
             
         except Exception as e:
-            logger.error(f"Error in handle_wallet_create: {e}", exc_info=True)
+            logger.error(f"[WALLET_CREATE] EXCEPTION: {type(e).__name__}: {e}", exc_info=True)
             message = f"❌ An error occurred: {str(e)}"
             await self.send_message(chat_id, message)
             return None, str(e)
