@@ -9,16 +9,37 @@ from cryptography.fernet import Fernet, InvalidToken
 
 logger = logging.getLogger(__name__)
 
+# Password hashing schemes - try bcrypt/argon2, fallback to pbkdf2
+_schemes = ["pbkdf2_sha256"]  # Always available as fallback
+
 try:
     import bcrypt
-    _schemes = ["pbkdf2_sha256", "bcrypt_sha256"]
-except Exception:
-    _schemes = ["pbkdf2_sha256"]
+    _schemes.insert(0, "bcrypt_sha256")
+    logger.info("bcrypt available - using bcrypt_sha256 scheme")
+except ImportError:
+    logger.warning(
+        "bcrypt not available. Install for better security: pip install bcrypt. "
+        "Falling back to pbkdf2_sha256."
+    )
+except Exception as e:
+    logger.warning(f"Could not import bcrypt: {e}. Using pbkdf2_sha256 fallback.")
+
+# Try argon2 (more secure, better for Python 3.12+)
+try:
+    import argon2
+    _schemes.insert(0, "argon2")
+    logger.info("argon2 available - using argon2 scheme (recommended)")
+except ImportError:
+    logger.debug("argon2 not available. Install for better security: pip install argon2-cffi")
+except Exception as e:
+    logger.debug(f"Could not import argon2: {e}")
 
 pwd_context = CryptContext(
     schemes=_schemes,
     deprecated="auto",
     pbkdf2_sha256__rounds=30000,
+    argon2__time_cost=2,
+    argon2__memory_cost=65536,
 )
 
 
