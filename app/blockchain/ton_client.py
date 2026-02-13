@@ -116,7 +116,7 @@ class TONClient:
             Transaction hash if successful, None if failed
         
         Note: TON NFT transfers require TonPy library and proper encoding.
-        \"\"\"
+        """
         try:
             logger.info(
                 f"TON NFT transfer requested - from: {from_address}, "
