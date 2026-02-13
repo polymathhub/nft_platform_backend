@@ -153,9 +153,10 @@ class TelegramBotService:
                 f"<b>Name:</b> {nft.name}\n"
                 f"<b>ID:</b> <code>{nft.global_nft_id}</code>\n"
                 f"<b>Blockchain:</b> {nft.blockchain}\n"
-                f"<b>Status:</b> {nft.status}"
+                f"<b>Status:</b> {nft.status}\n\n"
+                f"<b>What's next?</b> Use the buttons below."
             )
-            await self.send_message(int(chat_id), success_message)
+            await self.send_message(int(chat_id), success_message, reply_markup=build_nft_operations_keyboard())
             return nft, "Minting successful"
 
         except ValueError as e:
@@ -190,7 +191,6 @@ class TelegramBotService:
             )
 
         message = "<b>👛 Your Wallets:</b>\n\n"
-        from app.ui.designer import build_wallet_selector
         
         wallet_data = []
         for i, wallet in enumerate(wallets, 1):
@@ -206,8 +206,8 @@ class TelegramBotService:
                 'blockchain': wallet.blockchain.value
             })
         
-        keyboard = build_wallet_selector(wallet_data)
-        return await self.send_message(chat_id, message, reply_markup=keyboard)
+        message += "Use the buttons below to manage your wallets"
+        return await self.send_message(chat_id, message, reply_markup=build_wallet_keyboard())
 
     async def send_start_message(self, chat_id: int, username: str) -> bool:
         """Send welcome message with available commands."""
@@ -331,7 +331,7 @@ class TelegramBotService:
                 "❌ You don't have any unminted NFTs available for selling.\n\nMint an NFT first with /mint command.",
             )
 
-        message = "<b>Your Available NFTs:</b>\n\n"
+        message = "<b>📜 Your Available NFTs</b>\n\n"
         for i, nft in enumerate(nfts[:10], 1):
             message += (
                 f"{i}. <b>{nft.name}</b>\n"
@@ -343,8 +343,8 @@ class TelegramBotService:
         if len(nfts) > 10:
             message += f"... and {len(nfts) - 10} more\n"
 
-        message += "\nUse <code>/list &lt;nft_id&gt; &lt;price&gt; [currency]</code> to list an NFT"
-        return await self.send_message(chat_id, message)
+        message += "\nUse the buttons below to manage or list an NFT"
+        return await self.send_message(chat_id, message, reply_markup=build_nft_operations_keyboard())
 
     async def send_marketplace_listings(
         self, db: AsyncSession, chat_id: int, limit: int = 10
@@ -365,7 +365,7 @@ class TelegramBotService:
                 "❌ No active listings in marketplace.",
             )
 
-        message = "<b>Active Marketplace Listings:</b>\n\n"
+        message = "<b>🛍️ Active Marketplace Listings</b>\n\n"
         for i, (listing, nft) in enumerate(listings, 1):
             message += (
                 f"{i}. <b>{nft.name}</b>\n"
@@ -375,10 +375,10 @@ class TelegramBotService:
             )
 
         if await db.execute(select(Listing).where(Listing.status == ListingStatus.ACTIVE)) and len(listings) >= limit:
-            message += f"Use /browse to see more listings\n"
+            message += f"More listings available - use buttons below\n\n"
 
-        message += "\nUse <code>/offer &lt;listing_id&gt; &lt;price&gt;</code> to make an offer"
-        return await self.send_message(chat_id, message)
+        message += "Use the buttons below to interact with the marketplace"
+        return await self.send_message(chat_id, message, reply_markup=build_marketplace_keyboard())
 
     async def send_user_listings(
         self, db: AsyncSession, chat_id: int, user_id: UUID
@@ -396,7 +396,7 @@ class TelegramBotService:
                 "❌ You have no active listings.",
             )
 
-        message = "<b>Your Listings:</b>\n\n"
+        message = "<b>📊 Your Listings</b>\n\n"
         for i, (listing, nft) in enumerate(listings, 1):
             status_emoji = "🟢" if listing.status == ListingStatus.ACTIVE else "🔴"
             message += (
@@ -406,7 +406,8 @@ class TelegramBotService:
                 f"   Listing ID: <code>{listing.id}</code>\n\n"
             )
 
-        message += "\nUse <code>/cancel-listing &lt;listing_id&gt;</code> to cancel a listing"
+        message += "Use the buttons below to manage your listings"
+        return await self.send_message(chat_id, message, reply_markup=build_marketplace_keyboard())
         return await self.send_message(chat_id, message)
 
     async def handle_list_nft(
@@ -682,9 +683,9 @@ class TelegramBotService:
                 f"<b>📋 Type:</b> Custodial (Secure)\n"
                 f"<b>🆔 Wallet ID:</b> <code>{str(wallet.id)}</code>\n"
                 f"<b>⭐ Primary:</b> Yes\n\n"
-                f"<i>Your wallet is ready! Use it to mint NFTs or trade on the marketplace.</i>"
+                f"<i>Your wallet is ready! Use it to mint NFTs.</i>"
             )
-            await self.send_message(chat_id, success_message)
+            await self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard())
             return wallet, None
             
         except Exception as e:
@@ -745,7 +746,7 @@ class TelegramBotService:
                 f"<b>⭐ Primary:</b> Yes\n\n"
                 f"<i>Your wallet has been added to your account.</i>"
             )
-            await self.send_message(chat_id, success_message)
+            await self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard())
             return wallet, None
             
         except Exception as e:
