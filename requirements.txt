@@ -40,5 +40,5 @@ asyncpg
 python-telegram-bot==20.7
 pycryptodome
 
-web3==7.0.0
-eth-account==0.13.7
+web3==6.20.0
+eth-account==0.10.0
