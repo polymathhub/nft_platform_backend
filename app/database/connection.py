@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
