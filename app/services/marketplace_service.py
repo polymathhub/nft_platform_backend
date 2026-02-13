@@ -184,44 +184,10 @@ class MarketplaceService:
         platform_fee = offer.offer_price * 0.02
 
         order = Order(
-            listing_id=listing_id,
+            listing_id=offer.listing_id,
             offer_id=offer_id,
             nft_id=offer.nft_id,
             seller_id=listing.seller_id,
-        # Create a pending escrow awaiting external deposit
-        try:
-            escrow, err = await WalletService.create_escrow_pending(
-                db=db,
-                listing_id=listing_id,
-                offer_id=offer.id,
-                buyer_id=buyer_id,
-                seller_id=listing.seller_id,
-                amount=offer_price,
-                currency=currency,
-                commission_pct=0.02,
-            )
-            if err:
-                logger.warning(f"Failed to create pending escrow for offer {offer.id}: {err}")
-        except Exception as e:
-            logger.error(f"Unexpected error creating pending escrow for offer {offer.id}: {e}")
-
-        return offer, None
-        try:
-            escrow, err = await WalletService.create_escrow_hold(
-                db=db,
-                listing_id=listing_id,
-                offer_id=offer.id,
-                buyer_id=buyer_id,
-                seller_id=listing.seller_id,
-                amount=offer_price,
-                currency=currency,
-                commission_pct=0.02,
-            )
-            if err:
-                logger.warning(f"Failed to create escrow for offer {offer.id}: {err}")
-        except Exception as e:
-            logger.error(f"Unexpected error creating escrow for offer {offer.id}: {e}")
-
             buyer_id=offer.buyer_id,
             amount=offer.offer_price,
             currency=offer.currency,
@@ -231,6 +197,24 @@ class MarketplaceService:
             royalty_amount=royalty_amount,
             platform_fee=platform_fee,
         )
+        
+        # Create a pending escrow awaiting external deposit
+        try:
+            escrow, err = await WalletService.create_escrow_pending(
+                db=db,
+                listing_id=offer.listing_id,
+                offer_id=offer.id,
+                buyer_id=offer.buyer_id,
+                seller_id=listing.seller_id,
+                amount=offer.offer_price,
+                currency=offer.currency,
+                commission_pct=0.02,
+            )
+            if err:
+                logger.warning(f"Failed to create pending escrow for offer {offer.id}: {err}")
+        except Exception as e:
+            logger.error(f"Unexpected error creating pending escrow for offer {offer.id}: {e}")
+
         db.add(order)
 
         offer.status = OfferStatus.ACCEPTED
