@@ -152,7 +152,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "🚀 Get Started": "/dashboard",
         "📊 Dashboard": "/dashboard",
         "📋 Menu": "/menu",
-        
+
         # Dashboard CTA buttons
         "⚡ Quick Mint": "/quick-mint",
         "📤 Send": "/transfer",
@@ -160,10 +160,12 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "📥 Receive": "/receive",
         "🖼️ My NFTs": "/mynfts",
         "📜 View My NFTs": "/mynfts",
-        "🛍️ Marketplace": "/browse",
+        "📝 My NFTs": "/mynfts",
+        "📊 My Listings": "/mylistings",
         "📈 My Listings": "/mylistings",
+        "🛍️ Marketplace": "/browse",
         "❓ Help": "/help",
-        
+
         # Wallet CTA buttons
         "👝 Wallets": "/wallets",
         "➕ Create New": "/wallet-create",
@@ -173,34 +175,42 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         "📋 List All": "/wallets",
         "📋 List Wallets": "/wallets",
         "⭐ Set Primary": "/set-primary",
-        
+
         # NFT CTA buttons
         "🎨 Mint NFT": "/mint",
         "🎨 Start Minting": "/mint",
         "📤 Transfer": "/transfer",
         "🔥 Burn": "/burn",
         "🛍️ List for Sale": "/list",
-        
-        # Marketplace CTA buttons  
+
+        # Marketplace CTA buttons
         "🔍 Browse": "/browse",
         "❤️ Favorites": "/browse",
         "💬 Make Offer": "/offer",
         "📊 My Listings": "/mylistings",
         "❌ Cancel Listing": "/cancel-listing",
-        
-        # Blockchain selector buttons
+
+        # Blockchain selector buttons (plain and emoji variants)
         "⟡ Ethereum": "blockchain:ethereum",
+        "Ethereum": "blockchain:ethereum",
         "🔶 Polygon": "blockchain:polygon",
+        "Polygon": "blockchain:polygon",
         "◎ Solana": "blockchain:solana",
+        "Solana": "blockchain:solana",
         "💎 TON": "blockchain:ton",
+        "TON": "blockchain:ton",
         "₿ Bitcoin": "blockchain:bitcoin",
-        
-        # Confirmation/Navigation buttons
+        "Bitcoin": "blockchain:bitcoin",
+
+        # Confirmation/Navigation buttons (plain and emoji variants)
         "✅ Confirm": "confirm:yes",
+        "✅ Yes": "confirm:yes",
         "❌ Cancel": "/start",
+        "❌ No": "/start",
         "◀️ Back to Dashboard": "/dashboard",
         "◀️ Back": "/dashboard",
         "◀️ Back to Menu": "/start",
+        "◀️ Cancel": "/start",
         "❓ How to Mint": "/mint-help",
     }
     
@@ -417,7 +427,7 @@ async def send_quick_mint_screen(db: AsyncSession, chat_id: int, user: User) -> 
             await bot_service.send_message(
                 chat_id,
                 "❌ No wallet found. Create one first:\n\n<code>/wallet-create ethereum</code>",
-                reply_markup=build_dashboard_keyboard()
+                reply_markup=build_dashboard_cta_keyboard()
             )
             return
         
@@ -425,7 +435,7 @@ async def send_quick_mint_screen(db: AsyncSession, chat_id: int, user: User) -> 
         await bot_service.send_message(
             chat_id,
             message,
-            reply_markup=build_quick_mint_keyboard()
+            reply_markup=build_dashboard_cta_keyboard()
         )
     except Exception as e:
         logger.error(f"Error sending quick mint: {e}")
@@ -480,7 +490,7 @@ async def send_mint_help(chat_id: int) -> None:
         "• Check status: <code>/status nft_id</code>\n\n"
         "<b>💡 Tip:</b> Use Quick Mint for fastest experience!"
     )
-    await bot_service.send_message(chat_id, message, reply_markup=build_dashboard_keyboard())
+    await bot_service.send_message(chat_id, message, reply_markup=build_dashboard_cta_keyboard())
 
 
 async def send_help_message(chat_id: int) -> None:
