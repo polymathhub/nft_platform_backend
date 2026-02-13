@@ -19,6 +19,13 @@ from app.services.marketplace_service import MarketplaceService
 from app.services.wallet_service import WalletService
 from app.services.walletconnect_service import WalletConnectService
 from app.utils.telegram_security import verify_telegram_data
+from app.utils.telegram_keyboards import (
+    build_main_menu_keyboard,
+    build_wallet_keyboard,
+    build_blockchain_keyboard,
+    build_nft_operations_keyboard,
+    build_marketplace_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter( tags=["telegram"])
@@ -128,6 +135,32 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         return
 
     logger.debug(f"User authenticated: {user.id}")
+
+    # Map button presses to commands
+    button_mapping = {
+        "🎨 Mint NFT": "/mint",
+        "👝 Wallets": "/wallets",
+        "📜 My NFTs": "/mynfts",
+        "🛍️ Marketplace": "/browse",
+        "📊 My Listings": "/mylistings",
+        "❓ Help": "/help",
+        "➕ Create Wallet": "/wallet-create",
+        "📥 Import Wallet": "/wallet-import",
+        "📋 List Wallets": "/wallets",
+        "⭐ Set Primary": "/set-primary",
+        "◀️ Back to Menu": "/start",
+        "🔍 Browse": "/browse",
+        "💬 Make Offer": "/offer",
+        "❌ Cancel Listing": "/cancel-listing",
+        "📤 Transfer": "/transfer",
+        "🔥 Burn": "/burn",
+        "📥 Import Wallet": "/wallet-import",
+    }
+    
+    # Convert button text to command if applicable
+    if text in button_mapping:
+        text = button_mapping[text]
+        logger.warning(f"[ROUTER] Button pressed, converted to command: {text}")
 
     # Parse command - CHECK SPECIFIC COMMANDS BEFORE GENERAL ONES
     if text.startswith("/start"):
@@ -253,25 +286,16 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 async def send_main_menu(chat_id: int, username: str) -> None:
     logger.warning(f"[TELEGRAM] send_main_menu called for chat_id={chat_id}, username={username}")
     message = (
-        f"<b>Welcome to NFT Platform, {username}! 🚀</b>\n\n"
-        f"<b>📌 Main Menu:</b>\n\n"
-        f"<b>NFT Operations:</b>\n"
-        f"• <code>/mint</code> - Mint new NFT (with image URL)\n"
-        f"• <code>/mynfts</code> - View your NFTs\n"
-        f"• <code>/status &lt;id&gt;</code> - Check NFT status\n\n"
-        f"<b>Marketplace:</b>\n"
-        f"• <code>/browse</code> - Browse listings\n"
-        f"• <code>/list &lt;nft_id&gt; &lt;price&gt;</code> - List NFT\n"
-        f"• <code>/mylistings</code> - Your listings\n"
-        f"• <code>/offer &lt;listing_id&gt; &lt;price&gt;</code> - Make offer\n\n"
-        f"<b>Wallet:</b>\n"
-        f"• <code>/wallets</code> - List wallets\n"
-        f"• <code>/set-primary &lt;id&gt;</code> - Set primary wallet\n\n"
-        f"<b>More:</b>\n"
-        f"• <code>/help</code> - Full command list\n"
+        f"<b>🚀 Welcome to NFT Platform, {username}!</b>\n\n"
+        f"Use the buttons below to navigate or type commands.\n\n"
+        f"<b>What would you like to do?</b>"
     )
-    logger.warning(f"[TELEGRAM] Calling bot_service.send_message...")
-    result = await bot_service.send_message(chat_id, message)
+    logger.warning(f"[TELEGRAM] Calling bot_service.send_message with main menu keyboard...")
+    result = await bot_service.send_message(
+        chat_id, 
+        message,
+        reply_markup=build_main_menu_keyboard()
+    )
     logger.warning(f"[TELEGRAM] bot_service.send_message returned: {result}")
 
 

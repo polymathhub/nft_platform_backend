@@ -14,6 +14,12 @@ from app.config import get_settings
 from app.services.nft_service import NFTService
 from app.services.marketplace_service import MarketplaceService
 from app.services.wallet_service import WalletService
+from app.utils.telegram_keyboards import (
+    build_wallet_keyboard,
+    build_blockchain_keyboard,
+    build_nft_operations_keyboard,
+    build_marketplace_keyboard,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -591,22 +597,14 @@ class TelegramBotService:
     async def send_wallet_creation_guide(self, chat_id: int) -> bool:
         """Send wallet creation guide."""
         message = (
-            "<b>📱 Wallet Management</b>\n\n"
-            "Commands:\n"
-            "<code>/wallets</code> - List your wallets\n"
+            "<b>� Wallet Management</b>\n\n"
+            "Choose an option from the keyboard below or use commands:\n"
             "<code>/wallet-create &lt;blockchain&gt;</code> - Create new wallet\n"
-            "<code>/wallet-import &lt;blockchain&gt; &lt;address&gt;</code> - Import wallet\n"
-            "<code>/set-primary &lt;wallet_id&gt;</code> - Set primary wallet\n\n"
+            "<code>/wallet-import &lt;blockchain&gt; &lt;address&gt;</code> - Import wallet\n\n"
             "<b>Supported Blockchains:</b>\n"
-            "• ethereum\n"
-            "• solana\n"
-            "• polygon\n"
-            "• ton\n"
-            "• bitcoin\n\n"
-            "Example:\n"
-            "<code>/wallet-create ethereum</code>"
+            "ethereum, solana, polygon, ton, bitcoin"
         )
-        return await self.send_message(chat_id, message)
+        return await self.send_message(chat_id, message, reply_markup=build_wallet_keyboard())
 
     async def handle_wallet_create(
         self,
