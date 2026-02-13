@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from uuid import UUID
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 from app.database import get_db_session
@@ -176,7 +176,7 @@ async def get_commission_settings(
 
 @router.post("/commission-rate")
 async def update_commission_rate(
-    rate: Decimal = Field(..., ge=0, le=100),
+    rate: Decimal = Body(..., ge=0, le=100),
     db: AsyncSession = Depends(get_db_session),
     admin: User = Depends(get_admin_user),
     http_request: Request = None,
