@@ -20,16 +20,28 @@ router = APIRouter(prefix="/wallets", tags=["wallets"])
 
 
 async def get_current_user_id(authorization: str = None) -> UUID:
+    """
+    Extract user ID from authorization header.
+    
+    Note: Full token verification should be implemented.
+    Currently accepts user_id via header for development.
+    """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="missing auth",
+            detail="Missing or invalid authorization header",
         )
     token = authorization.replace("Bearer ", "")
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token verification not implemented in router",
-    )
+    try:
+        # TODO: Implement proper JWT token verification
+        # For now, accept token as user_id for development
+        return UUID(token)
+    except (ValueError, AttributeError) as e:
+        logger.warning(f"Invalid token format: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
 
 
 @router.post("/create", response_model=WalletResponse)
@@ -88,15 +100,64 @@ async def create_wallet(
 
 @router.post("/import", response_model=WalletResponse)
 async def import_wallet(
+    user_id: str,
     request: ImportWalletRequest,
     db: AsyncSession = Depends(get_db_session),
-    authorization: str = None,
 ) -> WalletResponse:
-    # Authentication is TODO; accept explicit user_id in header or query for now
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Import endpoint is not implemented in this environment",
-    )
+    """
+    Import an existing wallet for a user.
+    
+    Args:
+        user_id: User UUID as string
+        request: Wallet import request with blockchain, address, and optional private key
+    """
+    try:
+        from app.models import User
+        
+        uid = UUID(user_id)
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == uid))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Import wallet
+        wallet, error = await WalletService.import_wallet(
+            db=db,
+            user_id=uid,
+            blockchain=request.blockchain,
+            address=request.address,
+            private_key=request.private_key,
+            name=request.name or f"Imported {request.blockchain.capitalize()} Wallet"
+        )
+        
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to import wallet: {error}",
+            )
+        
+        return WalletResponse.model_validate({
+            "id": wallet.id,
+            "blockchain": wallet.blockchain.value,
+            "address": wallet.address,
+            "is_primary": wallet.is_primary,
+            "is_active": wallet.is_active,
+            "created_at": wallet.created_at,
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Import wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to import wallet: {str(e)}",
+        )
 
 
 @router.get("", response_model=list[WalletResponse])
@@ -179,23 +240,110 @@ async def get_wallet_details(
 
 @router.post("/set-primary", response_model=WalletResponse)
 async def set_primary_wallet(
+    user_id: str,
     request: SetPrimaryWalletRequest,
     db: AsyncSession = Depends(get_db_session),
-    authorization: str = None,
 ) -> WalletResponse:
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Endpoint requires proper authentication setup",
-    )
+    """
+    Set a wallet as the primary wallet for a user.
+    
+    Args:
+        user_id: User UUID as string
+        request: Request containing wallet_id to set as primary
+    """
+    try:
+        from app.models import User
+        
+        uid = UUID(user_id)
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == uid))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Set primary wallet
+        wallet, error = await WalletService.set_primary_wallet(
+            db=db,
+            wallet_id=request.wallet_id,
+            user_id=uid,
+        )
+        
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to set primary wallet: {error}",
+            )
+        
+        return WalletResponse.model_validate({
+            "id": wallet.id,
+            "blockchain": wallet.blockchain.value,
+            "address": wallet.address,
+            "is_primary": wallet.is_primary,
+            "is_active": wallet.is_active,
+            "created_at": wallet.created_at,
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Set primary wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to set primary wallet: {str(e)}",
+        )
 
 
 @router.delete("/{wallet_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_wallet(
     wallet_id: UUID,
+    user_id: str,
     db: AsyncSession = Depends(get_db_session),
-    authorization: str = None,
 ):
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Endpoint requires proper authentication setup",
-    )
+    """
+    Deactivate a wallet for a user.
+    
+    Args:
+        wallet_id: Wallet UUID
+        user_id: User UUID as string
+    """
+    try:
+        from app.models import User
+        
+        uid = UUID(user_id)
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == uid))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Deactivate wallet
+        success, error = await WalletService.deactivate_wallet(
+            db=db,
+            wallet_id=wallet_id,
+            user_id=uid,
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to deactivate wallet: {error}",
+            )
+        
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Deactivate wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to deactivate wallet: {str(e)}",
+        )

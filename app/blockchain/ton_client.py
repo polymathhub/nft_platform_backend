@@ -104,13 +104,34 @@ class TONClient:
         to_address: str,
         nft_address: str,
     ) -> Optional[str]:
-        """Transfer an NFT on TON blockchain."""
+        """
+        Transfer an NFT on TON blockchain.
+        
+        Args:
+            from_address: Sender TON wallet address
+            to_address: Recipient TON wallet address
+            nft_address: NFT contract address on TON
+        
+        Returns:
+            Transaction hash if successful, None if failed
+        
+        Note: TON NFT transfers require TonPy library and proper encoding.
+        \"\"\"
         try:
-            logger.info(f"TON NFT transfer initiated - from: {from_address}, to: {to_address}")
-            # Placeholder implementation
+            logger.info(
+                f"TON NFT transfer requested - from: {from_address}, "
+                f"to: {to_address}, nft: {nft_address}"
+            )
+            
+            if not from_address or not to_address or not nft_address:
+                logger.error("Transfer requires valid addresses")
+                return None
+            
+            # Production requires: TonPy integration, message building, signing
+            logger.warning("TON transfer prepared but not yet broadcast")
             return None
         except Exception as e:
-            logger.error(f"TON NFT transfer error: {e}")
+            logger.error(f"TON NFT transfer error: {e}", exc_info=True)
             return None
 
     async def get_contract_code(self, address: str) -> Optional[str]:

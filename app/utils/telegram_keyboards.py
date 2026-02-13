@@ -21,7 +21,7 @@ def build_dashboard_keyboard() -> Dict[str, Any]:
     return {
         "keyboard": [
             [{"text": "⚡ Quick Mint"}, {"text": "📤 Send"}],
-            [{"text": "📥 Receive"}, {"text": "👛 Wallets"}],
+            [{"text": "📥 Receive"}, {"text": "👝 Wallets"}],
             [{"text": "🖼️ My NFTs"}, {"text": "🛍️ Marketplace"}],
             [{"text": "📈 My Listings"}, {"text": "❓ Help"}],
         ],

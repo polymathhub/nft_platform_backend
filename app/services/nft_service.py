@@ -170,21 +170,33 @@ class NFTService:
                 return None, f"Unsupported blockchain type: {nft.blockchain}"
             
             if not mint_response:
-                logger.warning(f"Blockchain mint response is None for {nft.blockchain}")
-                mint_response = {"status": "pending"}
+                logger.warning(
+                    f"Blockchain client returned no response for {nft.blockchain} mint. "
+                    f"Transaction was not submitted to blockchain."
+                )
+                # Don't create a fake transaction hash
+                return None, (
+                    f"Minting not completed: {nft.blockchain} blockchain integration incomplete. "
+                    f"Operation requires manual blockchain submission via web3.js or similar."
+                )
             
             logger.info(f"Blockchain mint response: {mint_response}")
             
-            # Step 4: For this implementation, we'll simulate confirmation
-            # In production, we would:
-            #  Monitor blockchain for transaction confirmation
-            #  Extract actual token_id and contract_address from blockchain response
-            # Wait for required block confirmations
+            # Verify we have actual transaction data
+            tx_hash = transaction_hash or mint_response.get("transaction_hash")
+            if not tx_hash:
+                logger.warning(
+                    f"No transaction hash in mint response for {nft.blockchain}. "
+                    f"Blockchain integration may not be complete."
+                )
+                # Return pending but with clear indication this needs completion
+                return None, (
+                    f"Mint incomplete: No transaction hash returned from {nft.blockchain} "
+                    f"blockchain client. Implementation requires web3 signing."
+                )
             
-            # For now, update with provided or default values
-            tx_hash = transaction_hash or mint_response.get("transaction_hash") or f"pending-{nft.id}"
-            contract_addr = contract_address or mint_response.get("contract_address") or None
-            token_addr = token_id or mint_response.get("token_id") or None
+            contract_addr = contract_address or mint_response.get("contract_address")
+            token_addr = token_id or mint_response.get("token_id")
             
             # Step 5: Update NFT record with blockchain confirmation
             updated_nft, update_error = await NFTService.update_nft_after_mint(

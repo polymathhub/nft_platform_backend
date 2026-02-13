@@ -190,24 +190,25 @@ class EthereumClient:
             # Pad owner address to 32 bytes
             padded_address = owner_address[2:].zfill(64)
             
-            # For a complete implementation, you would:
-            # 1. Encode the metadata_uri properly (string type in Solidity)
-            # 2. Use the contract ABI if provided
-            # 3. Estimate gas, get gas price, sign the transaction
-            # 4. Send the signed transaction
-            # For now, log the mint request
             logger.info(
                 f"Ethereum NFT mint request - contract: {contract_address}, "
                 f"owner: {owner_address}, metadata: {metadata_uri}"
             )
+            
+            # For production: requires web3.py or similar to:
+            # 1. Build ABI-encoded transaction
+            # 2. Estimate gas and fetch current gas price
+            # 3. Sign transaction with private key
+            # 4. Submit to blockchain
+            # 5. Return actual transaction hash from network
             
             return {
                 "status": "pending",
                 "contract_address": contract_address,
                 "owner_address": owner_address,
                 "metadata_uri": metadata_uri,
-                "message": "Mint transaction prepared (signing required)"
+                "message": "Mint transaction prepared - requires web3.py integration for signing/submission"
             }
         except Exception as e:
-            logger.error(f"Ethereum NFT mint error: {e}")
+            logger.error(f"Ethereum NFT mint error: {e}", exc_info=True)
             return None

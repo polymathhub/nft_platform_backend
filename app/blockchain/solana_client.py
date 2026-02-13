@@ -130,10 +130,53 @@ class SolanaClient:
         to_address: str,
         nft_mint: str,
     ) -> Optional[str]:
-        logger.info(
-            f"Solana NFT transfer placeholder - from: {from_address}, to: {to_address}"
-        )
-        return None
+        """
+        Transfer an NFT on Solana.
+        
+        Args:
+            from_address: Sender's Solana wallet address
+            to_address: Recipient's Solana wallet address  
+            nft_mint: The mint address of the NFT to transfer
+        
+        Returns:
+            Transaction hash if successful, None if failed
+        
+        Note: This requires:
+        - SPL Token Program to find/create associated token accounts
+        - Transaction signing with the sender's private key
+        - Network submission via RPC
+        
+        Current implementation logs the request and requires manual execution.
+        """
+        try:
+            logger.info(
+                f"Solana NFT transfer requested - from: {from_address}, "
+                f"to: {to_address}, nft_mint: {nft_mint}"
+            )
+            
+            # Validate addresses
+            if not from_address or not to_address or not nft_mint:
+                logger.error("Transfer requires valid from_address, to_address, and nft_mint")
+                return None
+            
+            # In a complete implementation, this would:
+            # 1. Create associated token accounts if needed
+            # 2. Build a transfer instruction using SPL Token program
+            # 3. Sign the transaction with the sender's private key
+            # 4. Send via RPC and wait for confirmation
+            # 5. Return the actual transaction signature
+            # 6. Update database with transaction hash
+            
+            # For now, log the intent and return a placeholder
+            logger.warning(
+                f"Solana transfer prepared but not yet broadcast. "
+                f\"Requires manual signing and submission via web3.js or similar\"
+            )
+            return None
+            
+        except Exception as e:
+            logger.error(f"Solana NFT transfer error: {e}", exc_info=True)
+            return None
 
     async def get_nft_metadata(
         self,
