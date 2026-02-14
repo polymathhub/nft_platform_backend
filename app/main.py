@@ -33,11 +33,11 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()           # 1️⃣ Initialize engine
+    await init_db()           
     from app.utils.startup import auto_migrate
-    await auto_migrate()      # 2️⃣ Migrate tables
+    await auto_migrate()      
     from app.utils.startup import setup_telegram_webhook
-    await setup_telegram_webhook()  # 3️⃣ Telegram
+    await setup_telegram_webhook() 
 
     yield
 
@@ -63,12 +63,22 @@ app.add_middleware(HTTPSEnforcementMiddleware)
 app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
 
 """CORS"""
+# Build allowed origins - include same-origin for web app
+cors_origins = settings.allowed_origins.copy() if settings.allowed_origins else []
+# Always allow same-origin requests (important for internal web app)
+if "http://localhost" not in ",".join(cors_origins):
+    cors_origins.extend([
+        "http://localhost",
+        "http://localhost:8000",
+        "http://127.0.0.1",
+        "http://127.0.0.1:8000",
+    ])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=settings.cors_allow_headers,
 )
 

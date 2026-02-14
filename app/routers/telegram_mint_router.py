@@ -1449,27 +1449,28 @@ async def web_app_init(
     Initialize Telegram Web App session.
     Verify init data and authenticate user.
     
-    The init_data comes from Telegram WebApp.initData
+    The init_data comes from Telegram WebApp.initData (query param)
     """
-    import hashlib
-    import hmac
     from urllib.parse import parse_qs
+    import json
 
+    # Parse init_data query string into dictionary
+    params = parse_qs(init_data)
+    
+    # Convert parsed params to simple dict (parse_qs returns lists)
+    data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+    
     # Verify Telegram data signature
-    if not verify_telegram_data(init_data):
+    if not verify_telegram_data(data_dict):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Telegram data signature",
         )
 
-    # Parse init data
-    params = parse_qs(init_data)
-    user_data = None
-    
     # Extract user data from init_data
-    if "user" in params:
-        import json
-        user_data = json.loads(params["user"][0])
+    user_data = None
+    if "user" in data_dict:
+        user_data = json.loads(data_dict["user"])
 
     if not user_data:
         raise HTTPException(

@@ -78,7 +78,14 @@
 
     // Create new request promise
     pendingRequests[url] = fetch(url, options)
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const text = await r.text();
+          console.error(`API error ${r.status}:`, text);
+          throw new Error(`API error ${r.status}: ${text}`);
+        }
+        return r.json();
+      })
       .then(data => {
         // Cache for 60 seconds
         cache[url] = { data, expires: Date.now() + 60000 };
@@ -87,6 +94,7 @@
       })
       .catch(err => {
         delete pendingRequests[url];
+        console.error(`Fetch error for ${url}:`, err);
         throw err;
       });
 
