@@ -1220,6 +1220,57 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
         else:
             await bot_service.send_message(chat_id, "❌ You are not authorized for admin actions.")
 
+    # Support inline CTA callbacks that carry plain command strings (e.g. "/wallets", "/balance")
+    elif data.startswith("/"):
+        # Route inline command callbacks to existing handlers
+        cmd = data
+        try:
+            if cmd == "/wallets" or cmd == "/wallet":
+                await bot_service.send_wallet_list(db, chat_id, user.id)
+
+            elif cmd == "/balance":
+                await send_balance(db, chat_id, user)
+
+            elif cmd == "/quick-mint":
+                await send_quick_mint_screen(db, chat_id, user)
+
+            elif cmd == "/transfer":
+                # open transfer flow (prompt)
+                await handle_transfer_command(db, chat_id, user, cmd)
+
+            elif cmd == "/mynfts":
+                await bot_service.send_user_nfts(db, chat_id, user.id)
+
+            elif cmd == "/browse":
+                await bot_service.send_marketplace_listings(db, chat_id)
+
+            elif cmd == "/mylistings":
+                await bot_service.send_user_listings(db, chat_id, user.id)
+
+            elif cmd == "/mint":
+                await handle_mint_command(db, chat_id, user, cmd)
+
+            elif cmd == "/deposit":
+                # simple deposit instructions
+                await bot_service.send_message(
+                    chat_id,
+                    "To deposit USDT, send funds to your primary wallet address or use the on-ramp services listed in the app dashboard.",
+                )
+
+            elif cmd == "/help":
+                await bot_service.send_message(chat_id, "Send /start to see available commands or visit the help page.")
+
+        except Exception as e:
+            logger.error(f"Error handling inline command callback {cmd}: {e}")
+    
+    elif data.startswith("offer_listing_"):
+        listing_id = data.replace("offer_listing_", "")
+        # Prompt user to submit an offer using the standard command format
+        await bot_service.send_message(
+            chat_id,
+            f"To make an offer for listing <code>{listing_id}</code>, reply with:\n/offer {listing_id} <amount>",
+        )
+
 
 async def get_or_create_telegram_user(
     db: AsyncSession, telegram_user: TelegramUser

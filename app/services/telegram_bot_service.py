@@ -375,6 +375,7 @@ class TelegramBotService:
             )
 
         message = "<b>🛍️ Active Marketplace Listings</b>\n\n"
+        inline_keyboard = []
         for i, (listing, nft) in enumerate(listings, 1):
             message += (
                 f"{i}. <b>{nft.name}</b>\n"
@@ -383,11 +384,21 @@ class TelegramBotService:
                 f"   Listing ID: <code>{listing.id}</code>\n\n"
             )
 
+            # Per-listing inline buttons
+            inline_keyboard.append([
+                {"text": "MAKE OFFER", "callback_data": f"offer_listing_{listing.id}"},
+                {"text": "VIEW NFT", "callback_data": f"view_nft_{nft.id}"},
+            ])
+
         if await db.execute(select(Listing).where(Listing.status == ListingStatus.ACTIVE)) and len(listings) >= limit:
             message += f"More listings available - use buttons below\n\n"
 
+        # Add a generic browse more button
+        inline_keyboard.append([{"text": "BROWSE MORE", "callback_data": "/browse"}])
+
         message += "Use the buttons below to interact with the marketplace"
-        return await self.send_message(chat_id, message, reply_markup=build_marketplace_keyboard())
+        reply_markup = {"inline_keyboard": inline_keyboard}
+        return await self.send_message(chat_id, message, reply_markup=reply_markup)
 
     async def send_user_listings(
         self, db: AsyncSession, chat_id: int, user_id: UUID
