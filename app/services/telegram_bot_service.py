@@ -84,6 +84,51 @@ class TelegramBotService:
             logger.error(f"Error sending message to {chat_id}: {e}", exc_info=True)
             return False
 
+    async def send_photo(
+        self,
+        chat_id: int,
+        photo_url: str,
+        caption: str = "",
+        parse_mode: str = "HTML",
+        reply_markup: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Send a photo to a Telegram chat."""
+        logger.warning(f"[TELEGRAM] send_photo called: chat_id={chat_id}, photo_url={photo_url}")
+        if not getattr(self, "enabled", False) or not self.api_url:
+            logger.warning("Telegram bot disabled or token missing; skipping send_photo")
+            return False
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {
+                    "chat_id": chat_id,
+                    "photo": photo_url,
+                }
+                if caption:
+                    payload["caption"] = caption
+                    payload["parse_mode"] = parse_mode
+                if reply_markup:
+                    payload["reply_markup"] = reply_markup
+
+                logger.warning(f"[TELEGRAM] Posting to {self.api_url}/sendPhoto")
+                async with session.post(
+                    f"{self.api_url}/sendPhoto",
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as response:
+                    logger.warning(f"[TELEGRAM] Response status: {response.status}")
+                    if response.status == 200:
+                        logger.warning(f"[TELEGRAM] Photo sent successfully to {chat_id}")
+                        return True
+                    else:
+                        error_text = await response.text()
+                        logger.error(
+                            f"Failed to send photo to {chat_id}: {response.status} - {error_text}"
+                        )
+                        return False
+        except Exception as e:
+            logger.error(f"Error sending photo to {chat_id}: {e}", exc_info=True)
+            return False
+
     async def send_notification(
         self,
         user: User,

@@ -484,11 +484,12 @@ async def send_welcome_start(chat_id: int, username: str) -> None:
     # Build dashboard with web_app button
     keyboard = build_start_dashboard_inline(settings.telegram_webapp_url)
     
-    # Send welcome message with dashboard buttons
-    logger.warning(f"[TELEGRAM] Sending /start dashboard with web_app button...")
-    result = await bot_service.send_message(
+    # Send welcome message with photo and dashboard buttons
+    logger.warning(f"[TELEGRAM] Sending /start dashboard with banner image and web_app button...")
+    result = await bot_service.send_photo(
         chat_id, 
-        message,
+        settings.banner_image_url,
+        caption=message,
         reply_markup=keyboard
     )
     logger.warning(f"[TELEGRAM] Welcome /start dashboard sent: {result}")
