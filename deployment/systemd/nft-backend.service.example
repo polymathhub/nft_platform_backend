@@ -1,0 +1,16 @@
+[Unit]
+Description=NFT Backend (Gunicorn + Uvicorn workers)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/nft-backend
+EnvironmentFile=/var/www/nft-backend/.env
+ExecStart=/usr/local/bin/gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

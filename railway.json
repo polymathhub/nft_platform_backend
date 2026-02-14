@@ -1,0 +1,31 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+  },
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Telegram bot token",
+      "required": true
+    },
+    "TELEGRAM_WEBHOOK_SECRET": {
+      "description": "Telegram webhook secret (optional)",
+      "required": false
+    },
+    "DATABASE_URL": {
+      "description": "Your database connection URL",
+      "required": true
+    },
+    "RPC_URL": {
+      "description": "RPC URL for blockchain node",
+      "required": true
+    },
+    "PRIVATE_KEY": {
+      "description": "Private key for minting",
+      "required": true
+    }
+  }
+}

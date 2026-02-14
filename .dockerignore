@@ -1,0 +1,29 @@
+# Exclude Git metadata and local envs from docker build context
+.git
+.gitignore
+.venv
+venv
+env
+ENV
+
+# Python cache and build artifacts
+__pycache__
+*.pyc
+.pytest_cache
+build
+dist
+
+# Tests (not needed in production images)
+tests/
+
+# Environment files and secrets
+.env
+.env.*
+
+# Editor folders
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
