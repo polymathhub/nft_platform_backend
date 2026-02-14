@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZIPMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -21,7 +21,8 @@ from app.routers import (
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 
-# Middleware
+"""Middleware"""
+
 from app.security_middleware import (
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
@@ -53,15 +54,16 @@ app = FastAPI(
 """
 Security & request middleware
 """
-app.add_middleware(GZIPMiddleware, minimum_size=1024)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(HTTPSEnforcementMiddleware)
 
-# Serve Telegram Web App static files at /web-app
+# Serve Telegram Web App static files at /web-app"""
 app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
 
-# CORS
+"""CORS"""
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -71,7 +73,8 @@ app.add_middleware(
 )
 
 
-# Root endpoints
+"""Root endpoints"""
+
 @app.get("/")
 async def root_get():
     return {"message": "Server is running", "status": "ok"}
@@ -81,8 +84,8 @@ async def root_get():
 async def root_post(data: dict):
     return {"message": "POST received", "data": data}
 
+""" Health check endpoint"""
 
-# Health check endpoint
 @app.get("/health")
 async def health_check():
     return {
@@ -91,16 +94,16 @@ async def health_check():
         "database_url": "configured" if settings.database_url else "not configured",
     }
 
-# Include routers
+"""Include routers"""
+
 app.include_router(
     telegram_mint_router,
     prefix="/api/v1/telegram",
     tags=["telegram"]
 )
 
-# ======================
-# ROUTERS
-# ======================
+
+"""routers"""
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(wallet_router, prefix="/api/v1")
