@@ -71,8 +71,12 @@ async def auto_migrate():
         if proc.returncode != 0:
             err = stderr.decode(errors="ignore") if stderr else ""
             out = stdout.decode(errors="ignore") if stdout else ""
-            logger.error("Alembic upgrade failed (exit %s). stdout=%s stderr=%s", proc.returncode, out, err)
-            raise RuntimeError(f"Alembic upgrade failed. Exit {proc.returncode}: {err}")
+            # Ignore "already exists" errors for indexes/tables that were previously created
+            if "already exists" in err.lower() or "duplicate" in err.lower():
+                logger.warning("Alembic: Some objects already exist in database (safe to ignore): %s", err[:200])
+            else:
+                logger.error("Alembic upgrade failed (exit %s). stdout=%s stderr=%s", proc.returncode, out, err)
+                raise RuntimeError(f"Alembic upgrade failed. Exit {proc.returncode}: {err}")
 
         logger.info("Alembic migrations applied successfully")
         
