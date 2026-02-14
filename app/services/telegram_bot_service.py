@@ -109,22 +109,24 @@ class TelegramBotService:
                 if reply_markup:
                     payload["reply_markup"] = reply_markup
 
-                logger.warning(f"[TELEGRAM] Posting to {self.api_url}/sendPhoto")
+                logger.warning(f"[TELEGRAM] Posting to {self.api_url}/sendPhoto with payload: {payload}")
                 async with session.post(
                     f"{self.api_url}/sendPhoto",
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
-                    logger.warning(f"[TELEGRAM] Response status: {response.status}")
+                    response_text = await response.text()
+                    logger.warning(f"[TELEGRAM] Response status: {response.status}, body: {response_text}")
                     if response.status == 200:
                         logger.warning(f"[TELEGRAM] Photo sent successfully to {chat_id}")
                         return True
                     else:
-                        error_text = await response.text()
                         logger.error(
-                            f"Failed to send photo to {chat_id}: {response.status} - {error_text}"
+                            f"Failed to send photo to {chat_id}: {response.status} - {response_text}"
                         )
-                        return False
+                        # Fallback: send as text message if photo fails
+                        logger.warning(f"[TELEGRAM] Falling back to text message due to photo send failure")
+                        return await self.send_message(chat_id, caption, parse_mode, reply_markup)
         except Exception as e:
             logger.error(f"Error sending photo to {chat_id}: {e}", exc_info=True)
             return False
