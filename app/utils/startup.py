@@ -23,10 +23,29 @@ async def auto_migrate():
 
     # Prefer Alembic migrations when available (production-ready)
     try:
-        from alembic.config import Config
-        from alembic import command
-        cfg = Config("alembic.ini")
-        command.upgrade(cfg, "head")
+        # Run Alembic in a separate process to avoid interacting with the
+        # application's running event loop (prevents "coroutine was never awaited").
+        import sys
+        import asyncio
+        from asyncio.subprocess import PIPE
+        from pathlib import Path
+
+        project_root = Path(__file__).resolve().parents[2]
+
+        cmd = [sys.executable, "-m", "alembic", "upgrade", "head"]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
+        )
+
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            err = stderr.decode(errors="ignore") if stderr else ""
+            out = stdout.decode(errors="ignore") if stdout else ""
+            logger.error("Alembic upgrade failed (exit %s). stdout=%s stderr=%s", proc.returncode, out, err)
+            raise RuntimeError(f"Database migrations failed. Application cannot start. Exit {proc.returncode}: {err}")
+
         logger.info("Alembic migrations applied successfully")
         return
     except Exception as e:
