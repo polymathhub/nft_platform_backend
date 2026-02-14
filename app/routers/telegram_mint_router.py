@@ -1216,7 +1216,9 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
         if not user:
             return
         if getattr(user, 'user_role', None) and str(user.user_role).upper().endswith('ADMIN'):
-            await bot_service.send_message(chat_id, "Opening admin dashboard...", reply_markup=build_admin_dashboard_keyboard())
+            # Show inline admin dashboard for richer UI
+            from app.utils.telegram_keyboards import build_admin_dashboard_inline
+            await bot_service.send_message(chat_id, "Opening admin dashboard...", reply_markup=build_admin_dashboard_inline())
         else:
             await bot_service.send_message(chat_id, "❌ You are not authorized for admin actions.")
 
@@ -1262,6 +1264,22 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
 
         except Exception as e:
             logger.error(f"Error handling inline command callback {cmd}: {e}")
+    
+    # Admin inline navigation callbacks
+    elif data == "admin-commission":
+        await handle_admin_commission(db, chat_id, user)
+
+    elif data == "admin-users":
+        await handle_admin_users(db, chat_id, user)
+
+    elif data == "admin-stats":
+        await handle_admin_stats(db, chat_id, user)
+
+    elif data == "admin-backup":
+        await handle_admin_backup(db, chat_id, user)
+
+    elif data == "admin-logout":
+        await handle_admin_logout(chat_id, user)
     
     elif data.startswith("offer_listing_"):
         listing_id = data.replace("offer_listing_", "")

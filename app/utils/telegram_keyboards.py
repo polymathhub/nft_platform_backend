@@ -404,6 +404,52 @@ def build_blockchain_selection_keyboard() -> Dict[str, Any]:
     }
 
 
+def build_admin_dashboard_inline() -> Dict[str, Any]:
+    """Inline keyboard for admin dashboard navigation."""
+    rows = [
+        [("COMMISSION", "admin-commission"), ("USERS", "admin-users")],
+        [("STATISTICS", "admin-stats"), ("BACKUP", "admin-backup")],
+        [("LOGOUT", "admin-logout")],
+    ]
+    return build_cta_inline(rows)
+
+
+def build_commission_inline() -> Dict[str, Any]:
+    rows = [
+        [("VIEW RATE", "/admin-view-rate"), ("EDIT RATE", "/admin-edit-rate")],
+        [("VIEW WALLETS", "/admin-view-wallets"), ("UPDATE WALLET", "/admin-update-wallet")],
+        [("BACK", "admin-dashboard")],
+    ]
+    return build_cta_inline(rows)
+
+
+def build_user_management_inline() -> Dict[str, Any]:
+    rows = [
+        [("MAKE ADMIN", "admin-make-admin"), ("REMOVE ADMIN", "admin-remove-admin")],
+        [("SUSPEND", "admin-suspend"), ("ACTIVATE", "admin-activate")],
+        [("BACK", "admin-dashboard")],
+    ]
+    return build_cta_inline(rows)
+
+
+def build_statistics_inline() -> Dict[str, Any]:
+    rows = [
+        [("SYSTEM STATS", "/admin-system-stats"), ("AUDIT LOGS", "/admin-audit-logs")],
+        [("ADMIN LIST", "/admin-list-admins"), ("HEALTH CHECK", "/admin-health-check")],
+        [("BACK", "admin-dashboard")],
+    ]
+    return build_cta_inline(rows)
+
+
+def build_backup_inline() -> Dict[str, Any]:
+    rows = [
+        [("EXPORT BACKUP", "/admin-export-backup")],
+        [("MAINTENANCE", "/admin-maintenance")],
+        [("BACK", "admin-dashboard")],
+    ]
+    return build_cta_inline(rows)
+
+
 def build_cta_inline(button_rows: List[List[tuple]]) -> Dict[str, Any]:
     """Build a generic inline CTA keyboard.
 
