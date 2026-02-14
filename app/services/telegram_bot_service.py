@@ -213,9 +213,22 @@ class TelegramBotService:
 
         # Build inline keyboard with per-wallet actions and a Create CTA.
         # Include Admin button only if the user has admin role.
-        include_admin = getattr(user_id, 'is_admin', False) if not isinstance(user_id, UUID) else False
-        # We can't check admin flag here because we only receive user_id; the router will include admin button via callback
-        return await self.send_message(chat_id, message, reply_markup=build_wallets_inline_keyboard(wallet_data))
+        include_admin = False
+        try:
+            # Fetch user from DB and check role if available
+            from app.models import User as UserModel
+
+            user_res = await db.execute(select(UserModel).where(UserModel.id == user_id))
+            user_obj = user_res.scalar_one_or_none()
+            if user_obj and getattr(user_obj, 'user_role', None):
+                # user_role can be an Enum or string
+                role_val = str(user_obj.user_role).upper()
+                if 'ADMIN' in role_val:
+                    include_admin = True
+        except Exception:
+            include_admin = False
+
+        return await self.send_message(chat_id, message, reply_markup=build_wallets_inline_keyboard(wallet_data, include_admin=include_admin))
 
     async def send_start_message(self, chat_id: int, username: str) -> bool:
         """Send welcome message with available commands."""
