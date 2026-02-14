@@ -30,7 +30,8 @@ async def auto_migrate():
         logger.info("Alembic migrations applied successfully")
         return
     except Exception as e:
-        logger.error(f"Alembic upgrade failed or not available: {e}. Database schema must be initialized separately.")
+        logger.error(f"Alembic migrations failed: {e}")
+        raise RuntimeError(f"Database migrations failed. Application cannot start. Error: {e}") from e
 
 
 
