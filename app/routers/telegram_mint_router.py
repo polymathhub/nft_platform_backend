@@ -1251,6 +1251,14 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
             elif cmd == "/mylistings":
                 await bot_service.send_user_listings(db, chat_id, user.id)
 
+            elif cmd == "/wallet-create":
+                # Inline CTA: prompt user to choose blockchain for wallet creation
+                await bot_service.send_message(
+                    chat_id,
+                    "To create a wallet, choose a blockchain or use the command:\n/wallet-create <blockchain>",
+                    reply_markup=build_blockchain_cta_keyboard(),
+                )
+
             elif cmd == "/mint":
                 await handle_mint_command(db, chat_id, user, cmd)
 
