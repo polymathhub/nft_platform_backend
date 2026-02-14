@@ -191,6 +191,124 @@
             email: 'dev@example.com'
           }
         };
+        
+        // Add mock data for development
+        state.wallets = [
+          {
+            id: 'wallet-1',
+            name: 'Ethereum Wallet',
+            blockchain: 'ethereum',
+            address: '0x1234567890abcdef1234567890abcdef12345678',
+            is_primary: true,
+            created_at: '2024-01-15T10:30:00'
+          },
+          {
+            id: 'wallet-2',
+            name: 'Solana Wallet',
+            blockchain: 'solana',
+            address: 'So11111111111111111111111111111111111111112',
+            is_primary: false,
+            created_at: '2024-01-20T14:22:00'
+          },
+          {
+            id: 'wallet-3',
+            name: 'Polygon Wallet',
+            blockchain: 'polygon',
+            address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+            is_primary: false,
+            created_at: '2024-02-01T08:15:00'
+          }
+        ];
+        
+        state.nfts = [
+          {
+            id: 'nft-1',
+            name: 'Cosmic Nebula #42',
+            global_nft_id: 'cosmic-42',
+            description: 'A stunning visualization of a cosmic nebula',
+            blockchain: 'ethereum',
+            status: 'minted',
+            image_url: 'https://picsum.photos/400/400?random=1',
+            collection: { name: 'Space Series' },
+            minted_at: '2024-01-10T11:00:00',
+            created_at: '2024-01-10T11:00:00'
+          },
+          {
+            id: 'nft-2',
+            name: 'Digital Art Genesis #1',
+            global_nft_id: 'art-genesis-1',
+            description: 'The first piece in the Digital Art Genesis collection',
+            blockchain: 'solana',
+            status: 'minted',
+            image_url: 'https://picsum.photos/400/400?random=2',
+            collection: { name: 'Digital Art Genesis' },
+            minted_at: '2024-02-05T15:30:00',
+            created_at: '2024-02-05T15:30:00'
+          },
+          {
+            id: 'nft-3',
+            name: 'Pixel Dreams #88',
+            global_nft_id: 'pixel-88',
+            description: 'Retro pixel art meets modern blockchain',
+            blockchain: 'polygon',
+            status: 'minted',
+            image_url: 'https://picsum.photos/400/400?random=3',
+            collection: { name: 'Pixel Dreams' },
+            minted_at: '2024-02-10T09:45:00',
+            created_at: '2024-02-10T09:45:00'
+          },
+          {
+            id: 'nft-4',
+            name: 'Abstract Waves #15',
+            global_nft_id: 'waves-15',
+            description: 'Flowing abstract waves in motion',
+            blockchain: 'ethereum',
+            status: 'minted',
+            image_url: 'https://picsum.photos/400/400?random=4',
+            collection: { name: 'Abstract Series' },
+            minted_at: '2024-02-12T13:20:00',
+            created_at: '2024-02-12T13:20:00'
+          }
+        ];
+        
+        state.listings = [
+          {
+            id: 'listing-1',
+            nft_id: 'nft-1',
+            nft: state.nfts[0],
+            nft_name: 'Cosmic Nebula #42',
+            price: 2.5,
+            currency: 'ETH',
+            blockchain: 'ethereum',
+            status: 'active',
+            image_url: 'https://picsum.photos/400/400?random=1',
+            active: true
+          },
+          {
+            id: 'listing-2',
+            nft_id: 'nft-2',
+            nft: state.nfts[1],
+            nft_name: 'Digital Art Genesis #1',
+            price: 125.0,
+            currency: 'SOL',
+            blockchain: 'solana',
+            status: 'active',
+            image_url: 'https://picsum.photos/400/400?random=2',
+            active: true
+          },
+          {
+            id: 'listing-3',
+            nft_id: 'nft-3',
+            nft: state.nfts[2],
+            nft_name: 'Pixel Dreams #88',
+            price: 850.0,
+            currency: 'MATIC',
+            blockchain: 'polygon',
+            status: 'active',
+            image_url: 'https://picsum.photos/400/400?random=3',
+            active: true
+          }
+        ];
       } else {
         // Production mode: authenticate with backend
         authResponse = await cachedFetch(`${API_BASE}/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
@@ -242,12 +360,18 @@
 
   async function loadDashboardData() {
     try {
-      // Use optimized combined endpoint instead of 3 separate calls
-      const data = await cachedFetch(`${API_BASE}/telegram/web-app/dashboard-data?user_id=${state.user.id}`);
+      const isDevelopment = !window.Telegram?.WebApp;
+      
+      // Skip API call in development mode since we already have mock data
+      if (!isDevelopment) {
+        // Use optimized combined endpoint instead of 3 separate calls
+        const data = await cachedFetch(`${API_BASE}/telegram/web-app/dashboard-data?user_id=${state.user.id}`);
 
-      state.wallets = Array.isArray(data.wallets) ? data.wallets : [];
-      state.nfts = Array.isArray(data.nfts) ? data.nfts : [];
-      state.listings = Array.isArray(data.listings) ? data.listings : [];
+        state.wallets = Array.isArray(data.wallets) ? data.wallets : [];
+        state.nfts = Array.isArray(data.nfts) ? data.nfts : [];
+        state.listings = Array.isArray(data.listings) ? data.listings : [];
+      }
+      // else: use already-loaded mock data from initApp()
 
       updateDashboard();
       updateWalletsList();
