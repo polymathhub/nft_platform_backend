@@ -1,47 +1,215 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="NFT Platform — Create, mint, and trade digital assets on multiple blockchains." />
-  <title>NFT Platform — Web App</title>
-  <link rel="stylesheet" href="./styles.css">
+  <meta name="description" content="NFT Platform — Create, mint, trade, and manage digital assets across multiple blockchains." />
+  <title>NFT Platform</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div id="app" class="container">
-    <header class="header">
-      <h1>NFT Platform</h1>
-      <p class="subtitle">Create, mint, and trade digital assets</p>
-    </header>
+  <div id="app" class="app">
+    <!-- Navigation Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">NFT</div>
+        <span class="logo-text">Platform</span>
+      </div>
 
-    <main class="main">
-      <div id="status" class="status">Initializing Web App...</div>
-      
-      <section id="user" class="card user-card" hidden>
-        <h2 id="userName"></h2>
-        <div class="muted" id="userHandle"></div>
-      </section>
+      <div class="nav-menu">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="wallets">
+          <span class="nav-icon">💼</span>
+          <span class="nav-label">Wallets</span>
+        </a>
+        <a href="#" class="nav-item" data-page="nfts">
+          <span class="nav-icon">🎨</span>
+          <span class="nav-label">My NFTs</span>
+        </a>
+        <a href="#" class="nav-item" data-page="mint">
+          <span class="nav-icon">✨</span>
+          <span class="nav-label">Create NFT</span>
+        </a>
+        <a href="#" class="nav-item" data-page="marketplace">
+          <span class="nav-icon">🛒</span>
+          <span class="nav-label">Marketplace</span>
+        </a>
+        <a href="#" class="nav-item" data-page="profile">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">Profile</span>
+        </a>
+      </div>
 
-      <section id="wallets" class="card wallets-card" hidden>
-        <h3>Your Wallets</h3>
-        <div id="walletsList"></div>
-      </section>
+      <div class="sidebar-footer">
+        <small>v1.0.0</small>
+      </div>
+    </nav>
 
-      <section id="actions" class="card actions" hidden>
-        <h3>Actions</h3>
-        <div class="grid">
-          <button id="createWallet" class="btn">Create Wallet</button>
-          <button id="importWallet" class="btn">Import Wallet</button>
-          <button id="browseNFTs" class="btn">Browse NFTs</button>
-          <button id="viewMarketplace" class="btn">Marketplace</button>
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button id="menuToggle" class="menu-toggle">☰</button>
+          <h1 id="pageTitle" class="page-title">Dashboard</h1>
         </div>
-      </section>
-    </main>
+        <div class="top-bar-right">
+          <div class="user-info" id="userInfo">Loading...</div>
+        </div>
+      </header>
 
-    <footer class="footer">
-      <small>NFT Platform Web App — Powered by Telegram 🚀</small>
-    </footer>
+      <!-- Status Alert -->
+      <div id="status" class="status-alert">Initializing Web App...</div>
+
+      <!-- Page Container -->
+      <div class="page-container">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active">
+          <div class="grid-2col">
+            <div class="card">
+              <h3>Portfolio Value</h3>
+              <div class="metric-value" id="portfolioValue">$0.00</div>
+              <small class="muted">Total NFT value</small>
+            </div>
+            <div class="card">
+              <h3>Total NFTs</h3>
+              <div class="metric-value" id="totalNfts">0</div>
+              <small class="muted">In your collection</small>
+            </div>
+          </div>
+          <div class="grid-2col">
+            <div class="card">
+              <h3>Wallets</h3>
+              <div class="metric-value" id="totalWallets">0</div>
+              <small class="muted">Connected wallets</small>
+            </div>
+            <div class="card">
+              <h3>Listings</h3>
+              <div class="metric-value" id="totalListings">0</div>
+              <small class="muted">NFTs for sale</small>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Recent Activity</h3>
+            <div id="recentActivity" class="activity-list"><p class="muted">No recent activity</p></div>
+          </div>
+        </div>
+
+        <!-- Wallets Page -->
+        <div id="wallets-page" class="page">
+          <div class="page-header">
+            <h2>Wallet Management</h2>
+            <div class="button-group">
+              <button id="createWalletBtn" class="btn btn-primary">Create Wallet</button>
+              <button id="importWalletBtn" class="btn btn-secondary">Import Wallet</button>
+            </div>
+          </div>
+          <div id="walletsList" class="grid-auto">Loading wallets...</div>
+        </div>
+
+        <!-- NFTs Page -->
+        <div id="nfts-page" class="page">
+          <div class="page-header">
+            <h2>My NFT Collection</h2>
+            <div class="filter-group">
+              <select id="nftFilter" class="input-select">
+                <option value="all">All NFTs</option>
+                <option value="listed">Listed for Sale</option>
+                <option value="unlisted">Not Listed</option>
+              </select>
+            </div>
+          </div>
+          <div id="nftList" class="grid-3col">loading...</div>
+        </div>
+
+        <!-- Mint Page -->
+        <div id="mint-page" class="page">
+          <div class="page-header">
+            <h2>Create New NFT</h2>
+          </div>
+          <div class="form-container">
+            <div class="form-group">
+              <label>Select Wallet</label>
+              <select id="mintWalletSelect" class="input-select">Loading wallets...</select>
+            </div>
+            <div class="form-group">
+              <label>NFT Name *</label>
+              <input id="mintName" type="text" class="input-text" placeholder="Enter NFT name" />
+            </div>
+            <div class="form-group">
+              <label>Description *</label>
+              <textarea id="mintDesc" class="input-text" placeholder="Describe your NFT" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Image URL</label>
+              <input id="mintImage" type="url" class="input-text" placeholder="https://example.com/image.jpg" />
+            </div>
+            <div class="form-group">
+              <label>Attributes (JSON)</label>
+              <textarea id="mintAttributes" class="input-text" placeholder='{\"trait\": \"value\"}' rows="3"></textarea>
+            </div>
+            <button id="mintNftBtn" class="btn btn-primary btn-block">Create NFT</button>
+          </div>
+        </div>
+
+        <!-- Marketplace Page -->
+        <div id="marketplace-page" class="page">
+          <div class="page-header">
+            <h2>NFT Marketplace</h2>
+            <div class="filter-group">
+              <input type="text" id="searchMarketplace" class="input-text" placeholder="Search NFTs..." />
+              <select id="sortMarketplace" class="input-select">
+                <option value="newest">Newest</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="popular">Most Popular</option>
+              </select>
+            </div>
+          </div>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="listings">Available</button>
+            <button class="tab-btn" data-tab="mylistings">My Listings</button>
+          </div>
+          <div id="marketplaceListings" class="grid-3col">Loading listings...</div>
+          <div id="myListings" class="grid-3col" style="display:none;">Loading your listings...</div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profile-page" class="page">
+          <div class="page-header">
+            <h2>My Profile</h2>
+          </div>
+          <div class="grid-2col">
+            <div class="card">
+              <h3>Account Information</h3>
+              <div id="profileInfo" class="profile-section">Loading profile...</div>
+            </div>
+            <div class="card">
+              <h3>Statistics</h3>
+              <div id="profileStats" class="stats-grid">Loading stats...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
+
+  <!-- Modals -->
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="closeModal">×</button>
+      <h2 id="modalTitle">Modal Title</h2>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Powered by <strong>Gifted Forge</strong> • NFT Platform v1.0</p>
+  </footer>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="./app.js"></script>
