@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db, close_db
@@ -54,6 +55,9 @@ Security & request middleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(HTTPSEnforcementMiddleware)
+
+# Serve Telegram Web App static files at /web-app
+app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
 
 # CORS
 app.add_middleware(

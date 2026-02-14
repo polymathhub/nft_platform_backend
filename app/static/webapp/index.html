@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NFT Platform — Web App</title>
+  <link rel="stylesheet" href="/web-app/styles.css">
+</head>
+<body>
+  <div id="app" class="container">
+    <header class="header">
+      <h1>NFT Platform</h1>
+      <p class="subtitle">Telegram Web App — Wallets & Minting</p>
+    </header>
+
+    <main class="main">
+      <div id="status" class="status">Initializing...</div>
+      <section id="user" class="card user-card" hidden></section>
+      <section id="wallets" class="card wallets-card" hidden></section>
+      <section id="actions" class="card actions" hidden></section>
+    </main>
+
+    <footer class="footer">
+      <small>Built for Telegram Web App</small>
+    </footer>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="/web-app/app.js"></script>
+</body>
+</html>
