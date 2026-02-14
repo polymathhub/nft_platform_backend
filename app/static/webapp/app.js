@@ -159,23 +159,46 @@
     
     showStatus('Initializing NFT Platform...', 'info', true);
 
-    if (!window.Telegram?.WebApp) {
+    // Check if in Telegram context or development mode
+    const isDevelopment = !window.Telegram?.WebApp;
+    const initData = window.Telegram?.WebApp?.initData || window.Telegram?.WebApp?.initDataUnsafe;
+    
+    if (!isDevelopment && !initData) {
       showStatus('Please open this app from Telegram', 'error', false);
       return;
     }
 
-    window.Telegram.WebApp.ready();
+    if (!isDevelopment) {
+      window.Telegram.WebApp.ready();
+    }
+    
     showStatus('Authenticating...', 'info', true);
 
     try {
-      const initData = window.Telegram.WebApp.initData || window.Telegram.WebApp.initDataUnsafe;
-      if (!initData) throw new Error('No auth data');
+      let authResponse;
+      
+      if (isDevelopment) {
+        // Development mode: use mock authentication
+        console.warn('Running in development mode (not in Telegram)');
+        authResponse = {
+          success: true,
+          user: {
+            id: 'dev-user-123',
+            telegram_id: 123456789,
+            telegram_username: 'developer',
+            first_name: 'Test',
+            last_name: 'User',
+            email: 'dev@example.com'
+          }
+        };
+      } else {
+        // Production mode: authenticate with backend
+        authResponse = await cachedFetch(`${API_BASE}/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
+      }
 
-      const res = await cachedFetch(`${API_BASE}/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
+      if (!authResponse.success) throw new Error(authResponse.error || 'Auth failed');
 
-      if (!res.success) throw new Error(res.error || 'Auth failed');
-
-      state.user = res.user;
+      state.user = authResponse.user;
       
       if (window.performance && window.performance.mark) {
         performance.mark('auth-complete');
@@ -201,6 +224,7 @@
       
       setTimeout(() => status.classList.add('hidden'), 2000);
     } catch (err) {
+      console.error('Init error:', err);
       showStatus(`Error: ${err.message}`, 'error', false);
     }
   }
@@ -208,10 +232,12 @@
   // ========== UPDATE UI ==========
   function updateUserInfo() {
     const name = state.user?.first_name || state.user?.telegram_username || 'User';
-    document.getElementById('userInfo').innerHTML = `
-      <strong>${truncate(name, 15)}</strong>
-      <small>@${truncate(state.user?.telegram_username || 'user', 12)}</small>
-    `;
+    if (document.getElementById('userInfo')) {
+      document.getElementById('userInfo').innerHTML = `
+        <strong>${truncate(name, 15)}</strong>
+        <small>@${truncate(state.user?.telegram_username || 'user', 12)}</small>
+      `;
+    }
   }
 
   async function loadDashboardData() {
@@ -229,16 +255,26 @@
       updateMarketplace();
     } catch (err) {
       console.error('Load data error:', err);
-      showStatus('Failed to load data', 'error', false);
+      // Provide default empty data to allow UI to render
+      state.wallets = [];
+      state.nfts = [];
+      state.listings = [];
+      updateDashboard();
+      updateWalletsList();
+      updateNftsList();
+      updateMarketplace();
+      showStatus('Data loaded (empty)', 'info', false);
     }
   }
 
   function updateDashboard() {
     const portfolioValue = state.nfts.length * 100;
-    document.getElementById('portfolioValue').textContent = '$' + portfolioValue.toFixed(2);
-    document.getElementById('totalNfts').textContent = state.nfts.length;
-    document.getElementById('totalWallets').textContent = state.wallets.length;
-    document.getElementById('totalListings').textContent = state.listings.filter(l => l.active).length;
+    
+    // Safely update DOM elements, checking existence first
+    if (document.getElementById('portfolioValue')) document.getElementById('portfolioValue').textContent = '$' + portfolioValue.toFixed(2);
+    if (document.getElementById('totalNfts')) document.getElementById('totalNfts').textContent = state.nfts.length;
+    if (document.getElementById('totalWallets')) document.getElementById('totalWallets').textContent = state.wallets.length;
+    if (document.getElementById('totalListings')) document.getElementById('totalListings').textContent = state.listings.filter(l => l.active).length;
 
     const activity = `
       <div class="activity-item">
@@ -246,7 +282,7 @@
         <span class="activity-time">Just now</span>
       </div>
     `;
-    document.getElementById('recentActivity').innerHTML = activity;
+    if (document.getElementById('recentActivity')) document.getElementById('recentActivity').innerHTML = activity;
 
     const profileInfo = `
       <div class="profile-item">
@@ -262,7 +298,7 @@
         <strong>${state.wallets.length}</strong>
       </div>
     `;
-    document.getElementById('profileInfo').innerHTML = profileInfo;
+    if (document.getElementById('profileInfo')) document.getElementById('profileInfo').innerHTML = profileInfo;
 
     const stats = `
       <div class="stat-item">
@@ -282,7 +318,7 @@
         <div class="stat-label">Value</div>
       </div>
     `;
-    document.getElementById('profileStats').innerHTML = stats;
+    if (document.getElementById('profileStats')) document.getElementById('profileStats').innerHTML = stats;
   }
 
   function updateWalletsList() {
@@ -298,7 +334,9 @@
         </div>
       </div>
     `).join('');
-    document.getElementById('walletsList').innerHTML = html || '<p class="muted">No wallets yet</p>';
+    if (document.getElementById('walletsList')) {
+      document.getElementById('walletsList').innerHTML = html || '<p class="muted">No wallets yet</p>';
+    }
   }
 
   function updateNftsList() {
@@ -312,7 +350,9 @@
         </div>
       </div>
     `).join('');
-    document.getElementById('nftList').innerHTML = html || '<p class="muted">No NFTs yet</p>';
+    if (document.getElementById('nftList')) {
+      document.getElementById('nftList').innerHTML = html || '<p class="muted">No NFTs yet</p>';
+    }
   }
 
   function updateMarketplace() {
@@ -327,7 +367,9 @@
         </div>
       </div>
     `).join('');
-    document.getElementById('marketplaceListings').innerHTML = html || '<p class="muted">No listings</p>';
+    if (document.getElementById('marketplaceListings')) {
+      document.getElementById('marketplaceListings').innerHTML = html || '<p class="muted">No listings</p>';
+    }
   }
 
   // ========== EVENT LISTENERS ==========
@@ -340,17 +382,27 @@
       });
     });
 
-    // Modal
-    document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('modalOverlay').addEventListener('click', closeModal);
+    // Modal (safely check for elements)
+    if (document.getElementById('closeModal')) {
+      document.getElementById('closeModal').addEventListener('click', closeModal);
+    }
+    if (document.getElementById('modalOverlay')) {
+      document.getElementById('modalOverlay').addEventListener('click', closeModal);
+    }
 
     // Wallet buttons
-    document.getElementById('createWalletBtn').addEventListener('click', showCreateWalletModal);
-    document.getElementById('importWalletBtn').addEventListener('click', showImportWalletModal);
+    if (document.getElementById('createWalletBtn')) {
+      document.getElementById('createWalletBtn').addEventListener('click', showCreateWalletModal);
+    }
+    if (document.getElementById('importWalletBtn')) {
+      document.getElementById('importWalletBtn').addEventListener('click', showImportWalletModal);
+    }
 
     // Mint form
     populateMintWalletSelect();
-    document.getElementById('mintNftBtn').addEventListener('click', submitMintForm);
+    if (document.getElementById('mintNftBtn')) {
+      document.getElementById('mintNftBtn').addEventListener('click', submitMintForm);
+    }
 
     // Marketplace tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -358,11 +410,15 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         if (btn.dataset.tab === 'listings') {
-          document.getElementById('marketplaceListings').style.display = 'grid';
-          document.getElementById('myListings').style.display = 'none';
+          const mlisting = document.getElementById('marketplaceListings');
+          const mmy = document.getElementById('myListings');
+          if (mlisting) mlisting.style.display = 'grid';
+          if (mmy) mmy.style.display = 'none';
         } else {
-          document.getElementById('marketplaceListings').style.display = 'none';
-          document.getElementById('myListings').style.display = 'grid';
+          const mlisting = document.getElementById('marketplaceListings');
+          const mmy = document.getElementById('myListings');
+          if (mlisting) mlisting.style.display = 'none';
+          if (mmy) mmy.style.display = 'grid';
         }
       });
     });
@@ -376,6 +432,8 @@
 
   function populateMintWalletSelect() {
     const select = document.getElementById('mintWalletSelect');
+    if (!select) return;  // Exit if element doesn't exist
+    
     if (!state.wallets.length) {
       select.innerHTML = '<option>Create a wallet first</option>';
       return;
@@ -386,9 +444,18 @@
   }
 
   async function submitMintForm() {
-    const name = document.getElementById('mintName').value.trim();
-    const desc = document.getElementById('mintDesc').value.trim();
-    const walletId = document.getElementById('mintWalletSelect').value;
+    const nameEl = document.getElementById('mintName');
+    const descEl = document.getElementById('mintDesc');
+    const walletEl = document.getElementById('mintWalletSelect');
+    
+    if (!nameEl || !descEl || !walletEl) {
+      console.warn('Mint form elements not found');
+      return;
+    }
+    
+    const name = nameEl.value.trim();
+    const desc = descEl.value.trim();
+    const walletId = walletEl.value;
 
     if (!name || !desc || !walletId) {
       showStatus('Please fill in all required fields', 'error', false);
@@ -410,8 +477,8 @@
       const data = await res.json();
       if (data.success) {
         showStatus('NFT created successfully!', 'success', false);
-        document.getElementById('mintName').value = '';
-        document.getElementById('mintDesc').value = '';
+        nameEl.value = '';
+        descEl.value = '';
         // Clear cache and reload
         Object.keys(cache).forEach(k => delete cache[k]);
         await loadDashboardData();
