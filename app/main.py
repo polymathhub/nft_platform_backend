@@ -54,12 +54,12 @@ app = FastAPI(
 """
 Security & request middleware
 """
-app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(HTTPSEnforcementMiddleware)
 
-# Serve Telegram Web App static files at /web-app"""
+"""Serve Telegram Web App static files at /web-app"""
 app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
 
 """CORS"""

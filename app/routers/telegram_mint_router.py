@@ -1636,6 +1636,7 @@ async def web_app_get_dashboard_data(
         select(NFT)
         .where(NFT.user_id == user_uuid)
         .order_by(NFT.created_at.desc())
+        .limit(50)  # Limit to 50 NFTs for faster loading
     )
     nfts = nfts_result.scalars().all()
 

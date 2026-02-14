@@ -30,10 +30,26 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "form-action 'self'"
         )
         
-        if request.url.path.startswith("/api/") and request.method != "GET":
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-            response.headers["Pragma"] = "no-cache"
-            response.headers["Expires"] = "0"
+        # Intelligent caching based on request type and path
+        if request.url.path.startswith("/api/"):
+            # Allow caching for GET requests to safe endpoints (60 seconds)
+            if request.method == "GET":
+                # Cache dashboard data and read-only endpoints
+                if any(path in request.url.path for path in [
+                    "/web-app/dashboard-data",
+                    "/web-app/init",
+                    "/health",
+                    "/nft/",
+                    "/wallet/",
+                    "/marketplace/listings"
+                ]):
+                    response.headers["Cache-Control"] = "public, max-age=60"
+                    response.headers["ETag"] = getattr(response, '_etag', None) or ""
+            else:
+                # Disable caching for mutations (POST, PUT, PATCH, DELETE)
+                response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
         
         return response
 
