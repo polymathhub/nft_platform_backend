@@ -501,17 +501,32 @@ def build_main_actions_inline() -> Dict[str, Any]:
 
 
 def build_start_dashboard_inline(webapp_url: str) -> Dict[str, Any]:
-    """Build /start dashboard with web_app launcher button (Blum-style).
+    """Build premium /start dashboard with web_app launcher.
+    
+    Card-style layout:
+    ┌──────────────────────┐
+    │   Open App (WebApp)  │
+    ├──────────────────────┤
+    │ Wallets  |  Mint NFT │
+    ├──────────────────────┤
+    │   Marketplace        │
+    └──────────────────────┘
     
     Args:
         webapp_url: Full HTTPS URL to the Telegram Web App
     
     Returns:
-        InlineKeyboardMarkup with web_app button + shortcuts
+        InlineKeyboardMarkup with professional, minimal design
     """
     inline_keyboard = [
-        [{"text": "🚀 Launch App", "web_app": {"url": webapp_url}}],
-        [{"text": "💼 Wallet", "callback_data": "/wallets"}, {"text": "🎨 Mint", "callback_data": "/mint"}],
-        [{"text": "🛒 Marketplace", "callback_data": "/browse"}, {"text": "⚙️ Settings", "callback_data": "/help"}],
+        # Primary CTA: Web App launcher (full width)
+        [{"text": "Open App", "web_app": {"url": webapp_url}}],
+        # Secondary CTAs: Wallet / Mint (2 columns)
+        [
+            {"text": "Wallets", "callback_data": "/wallets"},
+            {"text": "Mint NFT", "callback_data": "/mint"}
+        ],
+        # Tertiary CTA: Marketplace (full width)
+        [{"text": "Marketplace", "callback_data": "/browse"}],
     ]
     return {"inline_keyboard": inline_keyboard}

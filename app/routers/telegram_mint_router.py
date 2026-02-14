@@ -475,10 +475,10 @@ async def send_welcome_start(chat_id: int, username: str) -> None:
     settings = get_settings()
     
     message = (
-        f"<b>🚀 Welcome to NFT Platform!</b>\n\n"
-        f"Hello <b>{username}</b>! 👋\n\n"
-        f"<b>Your gateway to minting, trading, and managing NFTs.</b>\n\n"
-        f"📱 Tap <b>Launch App</b> to open the Web App, or use shortcuts below."
+        f"<b>Welcome to NFT Platform</b>\n\n"
+        f"Hello {username}.\n\n"
+        f"<b>Manage wallets, mint NFTs, and trade on a single platform.</b>\n\n"
+        f"Tap <b>Open App</b> below to get started, or use the shortcuts."
     )
     
     # Build dashboard with web_app button
