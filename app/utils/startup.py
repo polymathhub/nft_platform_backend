@@ -30,10 +30,7 @@ async def auto_migrate():
         logger.info("Alembic migrations applied successfully")
         return
     except Exception as e:
-        logger.warning(f"Alembic upgrade failed or not available: {e}. Falling back to create_all()")
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        logger.error(f"Alembic upgrade failed or not available: {e}. Database schema must be initialized separately.")
 
 
 
