@@ -30,13 +30,16 @@ from app.utils.telegram_keyboards import (
     build_marketplace_keyboard,
     build_quick_mint_keyboard,
     build_dashboard_cta_keyboard,
+    build_dashboard_cta_inline,
     build_wallet_cta_keyboard,
     build_nft_cta_keyboard,
     build_marketplace_cta_keyboard,
     build_blockchain_cta_keyboard,
     build_confirmation_cta_keyboard,
     build_balance_cta_keyboard,
+    build_balance_cta_inline,
     build_main_actions_keyboard,
+    build_main_actions_inline,
     build_admin_password_keyboard,
     build_admin_dashboard_keyboard,
     build_commission_settings_keyboard,
@@ -504,7 +507,7 @@ async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: s
         await bot_service.send_message(
             chat_id,
             message,
-            reply_markup=build_dashboard_cta_keyboard()
+            reply_markup=build_dashboard_cta_inline()
         )
         logger.warning(f"[DASHBOARD] Dashboard sent successfully with CTA buttons")
     except Exception as e:
@@ -529,7 +532,7 @@ async def send_balance(db: AsyncSession, chat_id: int, user: User) -> None:
             await bot_service.send_message(
                 chat_id,
                 "❌ No wallets found. Create one first:\n\n<code>/wallet-create ethereum</code>",
-                reply_markup=build_balance_cta_keyboard()
+                reply_markup=build_balance_cta_inline()
             )
             return
         
@@ -555,7 +558,7 @@ async def send_balance(db: AsyncSession, chat_id: int, user: User) -> None:
         await bot_service.send_message(
             chat_id,
             message,
-            reply_markup=build_balance_cta_keyboard()
+            reply_markup=build_balance_cta_inline()
         )
         logger.warning(f"[BALANCE] Balance sent successfully")
     except Exception as e:
@@ -1196,6 +1199,26 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
                 f"<b>Created:</b> {wallet.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
             )
             await bot_service.send_message(chat_id, message)
+
+    elif data == "wallet_create":
+        # Prompt user for wallet creation options and show blockchain choices
+        await bot_service.send_message(
+            chat_id,
+            "To create a wallet, choose a blockchain or use the command:\n/wallet-create <blockchain>",
+            reply_markup=build_blockchain_cta_keyboard(),
+        )
+
+    elif data == "admin_dashboard":
+        # Only allow if user is admin - check DB
+        from sqlalchemy import select
+        result = await db.execute(select(User).where(User.telegram_id == str(callback.from_user.id)))
+        user = result.scalar_one_or_none()
+        if not user:
+            return
+        if getattr(user, 'user_role', None) and str(user.user_role).upper().endswith('ADMIN'):
+            await bot_service.send_message(chat_id, "Opening admin dashboard...", reply_markup=build_admin_dashboard_keyboard())
+        else:
+            await bot_service.send_message(chat_id, "❌ You are not authorized for admin actions.")
 
 
 async def get_or_create_telegram_user(

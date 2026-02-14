@@ -16,7 +16,7 @@ def upgrade() -> None:
         bind = op.get_bind()
 
         # Create collections table if missing
-        bind.execute(
+        op.execute(
                 """
                 CREATE TABLE IF NOT EXISTS collections (
                     id VARCHAR(36) PRIMARY KEY,
@@ -39,18 +39,18 @@ def upgrade() -> None:
                 );
                 """
         )
-        bind.execute("CREATE INDEX IF NOT EXISTS ix_collections_creator ON collections (creator_id);")
-        bind.execute("CREATE INDEX IF NOT EXISTS ix_collections_blockchain ON collections (blockchain);")
-        bind.execute("CREATE INDEX IF NOT EXISTS ix_collections_floor_price ON collections (floor_price);")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_collections_creator ON collections (creator_id);")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_collections_blockchain ON collections (blockchain);")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_collections_floor_price ON collections (floor_price);")
 
         # Add columns to nfts table if missing
-        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS collection_id VARCHAR(36);")
-        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS attributes JSONB;")
-        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_score DOUBLE PRECISION;")
-        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_tier VARCHAR(50);")
+        op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS collection_id VARCHAR(36);")
+        op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS attributes JSONB;")
+        op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_score DOUBLE PRECISION;")
+        op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_tier VARCHAR(50);")
 
         # Add foreign key constraint if missing
-        bind.execute(
+        op.execute(
                 """
                 DO $$
                 BEGIN
@@ -63,9 +63,9 @@ def upgrade() -> None:
                 """
         )
 
-        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_collection ON nfts (collection_id);")
-        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_tier ON nfts (rarity_tier);")
-        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_score ON nfts (rarity_score);")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_nfts_collection ON nfts (collection_id);")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_tier ON nfts (rarity_tier);")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_score ON nfts (rarity_score);")
 
 
 def downgrade() -> None:

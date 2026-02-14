@@ -11,8 +11,6 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from app.config import get_settings
 
-settings = get_settings()
-
 # SQLAlchemy ORM base class
 Base = declarative_base()
 
@@ -23,6 +21,7 @@ AsyncSessionLocal: async_sessionmaker | None = None
 
 async def init_db():
     global engine, AsyncSessionLocal
+    settings = get_settings()
 
     engine = create_async_engine(
         settings.database_url,

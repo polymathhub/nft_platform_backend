@@ -19,6 +19,8 @@ from app.utils.telegram_keyboards import (
     build_blockchain_keyboard,
     build_nft_operations_keyboard,
     build_marketplace_keyboard,
+    build_wallets_inline_keyboard,
+    build_main_actions_inline,
 )
 from app.utils.blockchain_utils import USDTHelper
 
@@ -206,9 +208,14 @@ class TelegramBotService:
                 'name': f"{wallet.blockchain.value.upper()}",
                 'blockchain': wallet.blockchain.value
             })
-        
+
         message += "Use the buttons below to manage your wallets"
-        return await self.send_message(chat_id, message, reply_markup=build_wallet_keyboard())
+
+        # Build inline keyboard with per-wallet actions and a Create CTA.
+        # Include Admin button only if the user has admin role.
+        include_admin = getattr(user_id, 'is_admin', False) if not isinstance(user_id, UUID) else False
+        # We can't check admin flag here because we only receive user_id; the router will include admin button via callback
+        return await self.send_message(chat_id, message, reply_markup=build_wallets_inline_keyboard(wallet_data))
 
     async def send_start_message(self, chat_id: int, username: str) -> bool:
         """Send welcome message with available commands."""
@@ -225,7 +232,8 @@ class TelegramBotService:
             f"2️⃣ Use a wallet ID to mint NFTs\n"
             f"3️⃣ Track minting status with /status\n"
         )
-        return await self.send_message(chat_id, message)
+        # Use inline CTA main actions to present beautiful CTAs
+        return await self.send_message(chat_id, message, reply_markup=build_main_actions_inline())
 
     async def send_nft_status(
         self, db: AsyncSession, chat_id: int, nft_id: str

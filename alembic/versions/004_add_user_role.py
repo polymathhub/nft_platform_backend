@@ -19,7 +19,7 @@ def upgrade() -> None:
     enum_type.create(bind, checkfirst=True)
 
     # Add user_role column safely if missing
-    bind.execute(
+    op.execute(
         """
         ALTER TABLE users
         ADD COLUMN IF NOT EXISTS user_role userrole DEFAULT 'user' NOT NULL;
@@ -27,7 +27,7 @@ def upgrade() -> None:
     )
 
     # Create index if not exists
-    bind.execute(
+    op.execute(
         "CREATE INDEX IF NOT EXISTS ix_users_user_role ON users (user_role);"
     )
 

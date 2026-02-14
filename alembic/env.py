@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 
 from alembic import context
 
-# Import models for auto-migration
-from app.database.connection import Base
+# Avoid importing the application package (which requires runtime settings).
+# We don't need `target_metadata` for running existing migrations; leave as None.
 
 # this is the Alembic Config object, which provides
 # the values of the [alembic] section of the .ini
@@ -20,16 +20,22 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    try:
+        fileConfig(config.config_file_name)
+    except Exception:
+        # If alembic.ini doesn't include logging sections, skip logging config.
+        pass
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+target_metadata = None
 
 # Obtain DB URL from alembic.ini or environment
-sqlalchemy_url = config.get_main_option("sqlalchemy.url") or os.getenv("DATABASE_URL")
+raw_sqlalchemy_url = config.get_main_option("sqlalchemy.url") or os.getenv("DATABASE_URL")
+# Expand any ${VAR} or $VAR references in the alembic.ini value.
+sqlalchemy_url = os.path.expandvars(raw_sqlalchemy_url) if raw_sqlalchemy_url else None
 
 def _make_async_url(url: str) -> str:
     if not url:

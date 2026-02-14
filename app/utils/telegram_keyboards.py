@@ -148,6 +148,37 @@ def build_custom_keyboard(buttons: List[List[str]]) -> Dict[str, Any]:
     }
 
 
+def build_wallets_inline_keyboard(wallets: List[dict], include_admin: bool = False) -> Dict[str, Any]:
+    """Build an inline keyboard listing wallets with action buttons.
+
+    Args:
+        wallets: list of dicts with keys 'id' and 'name'
+        include_admin: whether to include an Admin button row
+
+    Returns:
+        InlineKeyboardMarkup dict
+    """
+    inline_keyboard = []
+    for i, w in enumerate(wallets, 1):
+        label = f"{i}. {w.get('name', 'Wallet')}"
+        inline_keyboard.append([
+            {"text": label, "callback_data": f"wallet_info_{w['id']}"},
+            {"text": "MINT", "callback_data": f"mint_wallet_{w['id']}"},
+        ])
+
+    # CTA row: create wallet
+    inline_keyboard.append([
+        {"text": "CREATE WALLET", "callback_data": "wallet_create"},
+    ])
+
+    if include_admin:
+        inline_keyboard.append([
+            {"text": "ADMIN", "callback_data": "admin_dashboard"},
+        ])
+
+    return {"inline_keyboard": inline_keyboard}
+
+
 def remove_keyboard() -> Dict[str, Any]:
     """Build keyboard removal (hide keyboard)."""
     return {
@@ -371,3 +402,53 @@ def build_blockchain_selection_keyboard() -> Dict[str, Any]:
         "resize_keyboard": True,
         "one_time_keyboard": False,
     }
+
+
+def build_cta_inline(button_rows: List[List[tuple]]) -> Dict[str, Any]:
+    """Build a generic inline CTA keyboard.
+
+    Args:
+        button_rows: list of rows, each a list of (label, callback_data) tuples
+
+    Returns:
+        InlineKeyboardMarkup dict
+    """
+    inline_keyboard = []
+    for row in button_rows:
+        inline_row = []
+        for label, cb in row:
+            inline_row.append({"text": label, "callback_data": cb})
+        inline_keyboard.append(inline_row)
+    return {"inline_keyboard": inline_keyboard}
+
+
+def build_dashboard_cta_inline() -> Dict[str, Any]:
+    """Modern inline CTA keyboard for dashboard actions."""
+    rows = [
+        [("BALANCE", "/balance"), ("QUICK MINT", "/quick-mint")],
+        [("SEND NFT", "/transfer"), ("WALLETS", "/wallets")],
+        [("MY NFTS", "/mynfts"), ("MARKETPLACE", "/browse")],
+        [("MY LISTINGS", "/mylistings"), ("HELP", "/help")],
+    ]
+    return build_cta_inline(rows)
+
+
+def build_balance_cta_inline() -> Dict[str, Any]:
+    """Inline CTA keyboard for balance view with suggested next steps."""
+    rows = [
+        [("REFRESH", "/balance") , ("MY WALLETS", "/wallets")],
+        [("DEPOSIT USDT", "/deposit"), ("SEND", "/transfer")],
+        [("MARKETPLACE", "/browse"), ("BACK", "/dashboard")],
+    ]
+    return build_cta_inline(rows)
+
+
+def build_main_actions_inline() -> Dict[str, Any]:
+    """Inline main actions keyboard with Admin CTA."""
+    rows = [
+        [("BALANCE", "/balance"), ("MINT", "/mint")],
+        [("MY NFTS", "/mynfts"), ("MARKETPLACE", "/browse")],
+        [("WALLETS", "/wallets"), ("LISTINGS", "/mylistings")],
+        [("ADMIN", "/admin-login"), ("HELP", "/help")],
+    ]
+    return build_cta_inline(rows)
