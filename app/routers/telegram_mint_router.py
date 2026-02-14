@@ -1344,11 +1344,10 @@ async def set_webhook(webhook_url: str) -> dict:
         "message": f"Webhook set to {webhook_url}",
     }
 
-@router.post("/webhook")
-async def telegram_webhook(update: dict):
-    # handle Telegram update
-    return {"status": "ok"}
-    
+# NOTE: the real `/webhook` handler is defined earlier in this file
+# (handles message and callback_query payloads). This stub removed
+# to avoid overriding the real webhook endpoint which prevents
+# callback queries (inline buttons) from being processed.
 @router.post("/webhook/delete")
 async def delete_webhook() -> dict:
     """Delete Telegram webhook (admin only)."""
