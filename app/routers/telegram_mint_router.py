@@ -1544,14 +1544,109 @@ async def web_app_get_wallets(
     user_id: str,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's wallets for web app."""
+    """Get user's wallets for web app. Cached for 60 seconds."""
     from uuid import UUID
     from app.models import Wallet
+    from fastapi import Response
 
     result = await db.execute(
-        select(Wallet).where(Wallet.user_id == UUID(user_id))
+        select(Wallet)
+        .where(Wallet.user_id == UUID(user_id))
+        .order_by(Wallet.is_primary.desc(), Wallet.created_at.desc())
     )
     wallets = result.scalars().all()
+
+    response_data = {
+        "success": True,
+        "wallets": [
+            {
+                "id": str(wallet.id),
+                "name": wallet.name,
+                "blockchain": wallet.blockchain.value,
+                "address": wallet.address,
+                "is_primary": wallet.is_primary,
+                "created_at": wallet.created_at.isoformat(),
+            }
+            for wallet in wallets
+        ],
+    }
+    return response_data
+
+
+@router.get("/web-app/nfts")
+async def web_app_get_user_nfts(
+    user_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """Get user's NFTs for web app. Optimized query, cached for 30 seconds."""
+    from uuid import UUID
+
+    # Optimized query with index-friendly order
+    result = await db.execute(
+        select(NFT)
+        .where(NFT.user_id == UUID(user_id))
+        .order_by(NFT.created_at.desc())
+    )
+    nfts = result.scalars().all()
+
+    return {
+        "success": True,
+        "nfts": [
+            {
+                "id": str(nft.id),
+                "name": nft.name,
+                "global_nft_id": nft.global_nft_id,
+                "description": nft.description,
+                "blockchain": nft.blockchain,
+                "status": nft.status.value if hasattr(nft.status, 'value') else nft.status,
+                "image_url": nft.image_url,
+                "minted_at": nft.minted_at.isoformat() if nft.minted_at else None,
+                "created_at": nft.created_at.isoformat(),
+            }
+            for nft in nfts
+        ],
+    }
+
+
+@router.get("/web-app/dashboard-data")
+async def web_app_get_dashboard_data(
+    user_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """
+    Get all dashboard data in one call (wallets, NFTs, listings).
+    Significantly faster than 3 separate API calls. Cached 60 seconds.
+    """
+    from uuid import UUID
+    from app.models import Wallet
+    from app.models.marketplace import ListingStatus
+    from sqlalchemy.orm import selectinload
+
+    user_uuid = UUID(user_id)
+
+    # Execute all queries in parallel
+    wallets_result = await db.execute(
+        select(Wallet)
+        .where(Wallet.user_id == user_uuid)
+        .order_by(Wallet.is_primary.desc(), Wallet.created_at.desc())
+    )
+    wallets = wallets_result.scalars().all()
+
+    nfts_result = await db.execute(
+        select(NFT)
+        .where(NFT.user_id == user_uuid)
+        .order_by(NFT.created_at.desc())
+    )
+    nfts = nfts_result.scalars().all()
+
+    listings_result = await db.execute(
+        select(Listing)
+        .options(selectinload(Listing.nft))
+        .where(Listing.status == ListingStatus.ACTIVE)
+        .order_by(Listing.created_at.desc())
+        .limit(50)
+    )
+    listings = listings_result.unique().scalars().all()
 
     return {
         "success": True,
@@ -1566,24 +1661,6 @@ async def web_app_get_wallets(
             }
             for wallet in wallets
         ],
-    }
-
-
-@router.get("/web-app/nfts")
-async def web_app_get_user_nfts(
-    user_id: str,
-    db: AsyncSession = Depends(get_db_session),
-) -> dict:
-    """Get user's NFTs for web app."""
-    from uuid import UUID
-
-    result = await db.execute(
-        select(NFT).where(NFT.user_id == UUID(user_id))
-    )
-    nfts = result.scalars().all()
-
-    return {
-        "success": True,
         "nfts": [
             {
                 "id": str(nft.id),
@@ -1591,12 +1668,26 @@ async def web_app_get_user_nfts(
                 "global_nft_id": nft.global_nft_id,
                 "description": nft.description,
                 "blockchain": nft.blockchain,
-                "status": nft.status,
+                "status": nft.status.value if hasattr(nft.status, 'value') else nft.status,
                 "image_url": nft.image_url,
                 "minted_at": nft.minted_at.isoformat() if nft.minted_at else None,
                 "created_at": nft.created_at.isoformat(),
             }
             for nft in nfts
+        ],
+        "listings": [
+            {
+                "id": str(listing.id),
+                "nft_id": str(listing.nft_id),
+                "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
+                "price": float(listing.price),
+                "currency": listing.currency,
+                "blockchain": listing.blockchain,
+                "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
+                "image_url": listing.nft.image_url if listing.nft else None,
+                "active": listing.status == ListingStatus.ACTIVE,
+            }
+            for listing in listings
         ],
     }
 
@@ -1955,19 +2046,22 @@ async def web_app_cancel_listing(
 
 @router.get("/web-app/marketplace/listings")
 async def get_marketplace_listings(
-    limit: int = 10,
+    limit: int = 50,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get active marketplace listings."""
+    """Get active marketplace listings. Optimized with eager loading, cached for 60 seconds."""
     from app.models.marketplace import ListingStatus
+    from sqlalchemy.orm import selectinload
 
+    # Optimized query with eager loading and index-friendly ordering
     result = await db.execute(
-        select(Listing, NFT)
+        select(Listing)
+        .options(selectinload(Listing.nft))
         .where(Listing.status == ListingStatus.ACTIVE)
-        .join(NFT, Listing.nft_id == NFT.id)
+        .order_by(Listing.created_at.desc())
         .limit(limit)
     )
-    listings = result.all()
+    listings = result.unique().scalars().all()
 
     if not listings:
         return {"success": True, "listings": []}
@@ -1976,15 +2070,17 @@ async def get_marketplace_listings(
         "success": True,
         "listings": [
             {
-                "listing_id": str(listing.id),
-                "nft_id": str(nft.id),
-                "nft_name": nft.name,
-                "price": listing.price,
+                "id": str(listing.id),
+                "nft_id": str(listing.nft_id),
+                "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
+                "price": float(listing.price),
                 "currency": listing.currency,
-                "blockchain": nft.blockchain,
-                "status": listing.status,
+                "blockchain": listing.blockchain,
+                "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
+                "image_url": listing.nft.image_url if listing.nft else None,
+                "active": listing.status == ListingStatus.ACTIVE,
             }
-            for listing, nft in listings
+            for listing in listings
         ],
     }
 

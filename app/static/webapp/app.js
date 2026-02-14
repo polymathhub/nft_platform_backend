@@ -164,15 +164,12 @@
 
   async function loadDashboardData() {
     try {
-      const [wallets, nfts, listings] = await Promise.all([
-        cachedFetch(`${API_BASE}/wallets?user_id=${state.user.id}`),
-        cachedFetch(`${API_BASE}/telegram/web-app/nfts?user_id=${state.user.id}`),
-        cachedFetch(`${API_BASE}/telegram/web-app/marketplace/listings`)
-      ]);
+      // Use optimized combined endpoint instead of 3 separate calls
+      const data = await cachedFetch(`${API_BASE}/telegram/web-app/dashboard-data?user_id=${state.user.id}`);
 
-      state.wallets = Array.isArray(wallets) ? wallets : [];
-      state.nfts = Array.isArray(nfts) ? nfts : [];
-      state.listings = Array.isArray(listings) ? listings : [];
+      state.wallets = Array.isArray(data.wallets) ? data.wallets : [];
+      state.nfts = Array.isArray(data.nfts) ? data.nfts : [];
+      state.listings = Array.isArray(data.listings) ? data.listings : [];
 
       updateDashboard();
       updateWalletsList();
