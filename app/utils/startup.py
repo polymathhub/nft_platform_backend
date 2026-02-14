@@ -4,6 +4,7 @@ Webhook-only mode (no polling).
 """
 
 import logging
+import os
 
 from app.config import get_settings
 from app.utils.telegram_webhook import TelegramWebhookManager
@@ -21,20 +22,21 @@ async def auto_migrate():
     if engine is None:
         raise RuntimeError("Database engine is not initialized")
 
-    # Prefer Alembic migrations when available (production-ready)
+    auto_flag = os.getenv("AUTO_MIGRATE", "false").lower() in ("1", "true", "yes")
+    if not auto_flag:
+        logger.info("AUTO_MIGRATE is not enabled; skipping Alembic migrations. Set AUTO_MIGRATE=true to enable.")
+        return
+
     try:
-        # Run Alembic CLI in a separate process to avoid event-loop issues.
         import sys
         import asyncio
         from asyncio.subprocess import PIPE
         from pathlib import Path
-        from sqlalchemy import text
 
         project_root = Path(__file__).resolve().parents[2]
 
-        # Always inspect the DB for alembic_version first to avoid running
-        # migrations against an existing, unversioned schema which would
-        # attempt to re-create tables (causing DuplicateTableError).
+        # If database has application tables but no alembic_version, stamp instead of upgrading
+        from sqlalchemy import text
         async with engine.connect() as conn:
             result = await conn.execute(
                 text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
@@ -42,9 +44,7 @@ async def auto_migrate():
             alembic_table_exists = bool(result.scalar())
 
             if not alembic_table_exists:
-                # Check for presence of known application tables — if any exist,
-                # assume the DB schema was created outside Alembic. Do not mutate.
-                check_tables = ["collections", "users", "nfts"]
+                check_tables = ["collections", "users", "nfts", "wallets", "transactions", "listings", "offers", "orders"]
                 in_clause = ",".join([f"'{t}'" for t in check_tables])
                 res = await conn.execute(
                     text(f"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name IN ({in_clause}))")
@@ -52,21 +52,22 @@ async def auto_migrate():
                 some_tables_exist = bool(res.scalar())
 
                 if some_tables_exist:
-                    msg = (
-                        "Database already contains application tables but is not versioned by Alembic. "
-                        "Automatic migrations are disabled to avoid duplicate-creation errors. "
-                        "Please either run migrations manually or stamp the DB with the current head. "
-                        "Example commands (run from project root):\n"
-                        "  python -m alembic current\n"
-                        "  python -m alembic upgrade head\n"
-                        "  OR to mark DB as up-to-date without applying SQL (only when you're sure):\n"
-                        "  python -m alembic stamp head\n"
+                    # Stamp the DB to head to avoid attempting to re-create existing tables
+                    cmd_stamp = [sys.executable, "-m", "alembic", "stamp", "head"]
+                    proc_stamp = await asyncio.create_subprocess_exec(
+                        *cmd_stamp, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
                     )
-                    logger.error(msg)
-                    raise RuntimeError(msg)
+                    s_out, s_err = await proc_stamp.communicate()
+                    if proc_stamp.returncode != 0:
+                        serr = s_err.decode(errors="ignore") if s_err else ""
+                        sout = s_out.decode(errors="ignore") if s_out else ""
+                        logger.error("Alembic stamp failed. stdout=%s stderr=%s", sout, serr)
+                        raise RuntimeError(f"Alembic stamp failed: {serr}")
 
-        # If alembic_version exists (or no app tables detected), proceed.
-        # Run `alembic current` (diagnostic) then `alembic upgrade head`.
+                    logger.info("Alembic version table missing but application tables exist — stamped DB to head to align migrations.")
+                    return
+
+        # Run alembic current (diagnostic) then upgrade head
         cmd_current = [sys.executable, "-m", "alembic", "current"]
         proc_cur = await asyncio.create_subprocess_exec(
             *cmd_current, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
@@ -84,12 +85,12 @@ async def auto_migrate():
             err = stderr.decode(errors="ignore") if stderr else ""
             out = stdout.decode(errors="ignore") if stdout else ""
             logger.error("Alembic upgrade failed (exit %s). stdout=%s stderr=%s", proc.returncode, out, err)
-            raise RuntimeError(f"Database migrations failed. Application cannot start. Exit {proc.returncode}: {err}")
+            raise RuntimeError(f"Alembic upgrade failed. Exit {proc.returncode}: {err}")
 
         logger.info("Alembic migrations applied successfully")
         return
     except Exception as e:
-        logger.error(f"Alembic migrations failed: {e}")
+        logger.error("Alembic migrations failed: %s", e)
         raise RuntimeError(f"Database migrations failed. Application cannot start. Error: {e}") from e
 
 

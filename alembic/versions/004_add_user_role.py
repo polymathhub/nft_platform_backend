@@ -14,22 +14,22 @@ depends_on = None
 def upgrade() -> None:
     """Add user_role column to users table."""
     # Create the enum type if it doesn't exist
+    bind = op.get_bind()
     enum_type = postgresql.ENUM('admin', 'user', name='userrole', create_type=False)
-    enum_type.create(op.get_bind(), checkfirst=True)
-    
-    # Add user_role column with default value USER
-    op.add_column(
-        'users',
-        sa.Column(
-            'user_role',
-            sa.Enum('admin', 'user', name='userrole'),
-            nullable=False,
-            server_default='user'
-        )
+    enum_type.create(bind, checkfirst=True)
+
+    # Add user_role column safely if missing
+    bind.execute(
+        """
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS user_role userrole DEFAULT 'user' NOT NULL;
+        """
     )
-    
-    # Create index on user_role column
-    op.create_index('ix_users_user_role', 'users', ['user_role'])
+
+    # Create index if not exists
+    bind.execute(
+        "CREATE INDEX IF NOT EXISTS ix_users_user_role ON users (user_role);"
+    )
 
 
 def downgrade() -> None:
