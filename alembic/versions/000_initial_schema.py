@@ -26,186 +26,202 @@ depends_on = None
 
 def upgrade() -> None:
     """Create all base tables."""
-    
-    # Create users table
-    op.create_table(
-        'users',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('email', sa.String(255), nullable=False, unique=True),
-        sa.Column('username', sa.String(100), nullable=False, unique=True),
-        sa.Column('hashed_password', sa.String(255), nullable=False),
-        sa.Column('telegram_id', sa.String(50), nullable=True, unique=True),
-        sa.Column('telegram_username', sa.String(100), nullable=True),
-        sa.Column('full_name', sa.String(255), nullable=True),
-        sa.Column('avatar_url', sa.String(500), nullable=True),
-        sa.Column('is_active', sa.Boolean(), default=True, nullable=False),
-        sa.Column('is_verified', sa.Boolean(), default=False, nullable=False),
-        sa.Column('user_role', sa.Enum('admin', 'user', name='userrole'), default='user', nullable=False),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('last_login', sa.DateTime(), nullable=True),
-    )
-    op.create_index('ix_users_is_active', 'users', ['is_active'])
-    op.create_index('ix_users_user_role', 'users', ['user_role'])
-    op.create_index('ix_users_username_active', 'users', ['username', 'is_active'])
-    
-    # Create wallets table
-    op.create_table(
-        'wallets',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('blockchain', sa.String(50), nullable=False),
-        sa.Column('wallet_type', sa.String(50), default='custodial', nullable=False),
-        sa.Column('address', sa.String(255), nullable=False, unique=True),
-        sa.Column('public_key', sa.String(500), nullable=True),
-        sa.Column('encrypted_private_key', sa.String(1000), nullable=True),
-        sa.Column('encrypted_mnemonic', sa.String(1000), nullable=True),
-        sa.Column('is_primary', sa.Boolean(), default=False, nullable=False),
-        sa.Column('is_active', sa.Boolean(), default=True, nullable=False),
-        sa.Column('wallet_metadata', postgresql.JSONB, nullable=True, server_default='{}'),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_wallets_user_id', 'wallets', ['user_id'])
-    op.create_index('ix_wallets_user_blockchain', 'wallets', ['user_id', 'blockchain'])
-    op.create_index('ix_wallets_address', 'wallets', ['address'])
-    
-    # Create nfts table
-    op.create_table(
-        'nfts',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('global_nft_id', sa.String(255), nullable=False, unique=True),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('wallet_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('collection_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column('name', sa.String(255), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('blockchain', sa.String(50), nullable=False),
-        sa.Column('contract_address', sa.String(255), nullable=True),
-        sa.Column('token_id', sa.String(255), nullable=True),
-        sa.Column('mint_address', sa.String(255), nullable=True),
-        sa.Column('owner_address', sa.String(255), nullable=False),
-        sa.Column('status', sa.String(50), default='pending', nullable=False),
-        sa.Column('is_locked', sa.Boolean(), default=False, nullable=False),
-        sa.Column('lock_reason', sa.String(50), nullable=True),
-        sa.Column('locked_until', sa.DateTime(), nullable=True),
-        sa.Column('ipfs_hash', sa.String(255), nullable=True),
-        sa.Column('image_url', sa.String(500), nullable=True),
-        sa.Column('attributes', postgresql.JSONB, nullable=True),
-        sa.Column('rarity_score', sa.Float(), nullable=True),
-        sa.Column('rarity_tier', sa.String(50), nullable=True),
-        sa.Column('transaction_hash', sa.String(255), nullable=True),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['wallet_id'], ['wallets.id']),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_nfts_user_id', 'nfts', ['user_id'])
-    op.create_index('ix_nfts_wallet_id', 'nfts', ['wallet_id'])
-    op.create_index('ix_nfts_name', 'nfts', ['name'])
-    op.create_index('ix_nfts_status', 'nfts', ['status'])
-    op.create_index('ix_nfts_token_id', 'nfts', ['token_id'])
-    
-    # Create transactions table
-    op.create_table(
-        'transactions',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('nft_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column('wallet_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('tx_hash', sa.String(255), nullable=True),
-        sa.Column('tx_type', sa.String(50), nullable=False),
-        sa.Column('status', sa.String(50), default='pending', nullable=False),
-        sa.Column('blockchain', sa.String(50), nullable=False),
-        sa.Column('from_address', sa.String(255), nullable=False),
-        sa.Column('to_address', sa.String(255), nullable=False),
-        sa.Column('amount', sa.Numeric(precision=20, scale=8), nullable=True),
-        sa.Column('gas_fee', sa.Numeric(precision=20, scale=8), nullable=True),
-        sa.Column('error_message', sa.Text(), nullable=True),
-        sa.Column('metadata', postgresql.JSONB, nullable=True),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['nft_id'], ['nfts.id'], ondelete='SET NULL'),
-        sa.ForeignKeyConstraint(['wallet_id'], ['wallets.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_transactions_user_id', 'transactions', ['user_id'])
-    op.create_index('ix_transactions_tx_hash', 'transactions', ['tx_hash'])
-    op.create_index('ix_transactions_status', 'transactions', ['status'])
-    
-    # Create listings table
-    op.create_table(
-        'listings',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('nft_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('seller_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('seller_address', sa.String(255), nullable=False),
-        sa.Column('price', sa.Float(), nullable=False),
-        sa.Column('currency', sa.String(50), nullable=False),
-        sa.Column('blockchain', sa.String(50), nullable=False),
-        sa.Column('status', sa.String(50), default='active', nullable=False),
-        sa.Column('expires_at', sa.DateTime(), nullable=True),
-        sa.Column('listing_metadata', postgresql.JSONB, nullable=True, server_default='{}'),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(['nft_id'], ['nfts.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_listings_nft_id', 'listings', ['nft_id'])
-    op.create_index('ix_listings_seller_id', 'listings', ['seller_id'])
-    op.create_index('ix_listings_status', 'listings', ['status'])
-    op.create_index('ix_listings_blockchain', 'listings', ['blockchain'])
-    
-    # Create offers table
-    op.create_table(
-        'offers',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('nft_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('buyer_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('seller_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('offer_amount', sa.Float(), nullable=False),
-        sa.Column('currency', sa.String(50), nullable=False),
-        sa.Column('status', sa.String(50), default='pending', nullable=False),
-        sa.Column('expires_at', sa.DateTime(), nullable=True),
-        sa.Column('offer_metadata', postgresql.JSONB, nullable=True, server_default='{}'),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(['nft_id'], ['nfts.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['buyer_id'], ['users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_offers_nft_id', 'offers', ['nft_id'])
-    op.create_index('ix_offers_buyer_id', 'offers', ['buyer_id'])
-    op.create_index('ix_offers_status', 'offers', ['status'])
-    
-    # Create orders table
-    op.create_table(
-        'orders',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column('listing_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column('offer_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column('buyer_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('seller_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('amount', sa.Numeric(precision=18, scale=6), nullable=False),
-        sa.Column('currency', sa.String(32), nullable=False),
-        sa.Column('status', sa.String(32), nullable=False),
-        sa.Column('tx_hash', sa.String(256), nullable=True),
-        sa.Column('metadata', postgresql.JSONB, nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.ForeignKeyConstraint(['buyer_id'], ['users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index('ix_orders_buyer_id', 'orders', ['buyer_id'])
-    op.create_index('ix_orders_seller_id', 'orders', ['seller_id'])
-    op.create_index('ix_orders_status', 'orders', ['status'])
+        # Use idempotent DDL so running migrations against an existing schema is safe
+        bind = op.get_bind()
+
+        # Ensure enum types exist
+        bind.execute(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
+                        CREATE TYPE userrole AS ENUM ('admin','user');
+                    END IF;
+                END$$;
+                """
+        )
+
+        # Create users table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id UUID PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    username VARCHAR(100) UNIQUE NOT NULL,
+                    hashed_password VARCHAR(255) NOT NULL,
+                    telegram_id VARCHAR(50) UNIQUE,
+                    telegram_username VARCHAR(100),
+                    full_name VARCHAR(255),
+                    avatar_url VARCHAR(500),
+                    is_active BOOLEAN NOT NULL DEFAULT true,
+                    is_verified BOOLEAN NOT NULL DEFAULT false,
+                    user_role userrole NOT NULL DEFAULT 'user',
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    last_login TIMESTAMP WITHOUT TIME ZONE
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_users_is_active ON users (is_active);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_users_user_role ON users (user_role);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_users_username_active ON users (username, is_active);")
+
+        # Create wallets table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wallets (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL,
+                    blockchain VARCHAR(50) NOT NULL,
+                    wallet_type VARCHAR(50) NOT NULL DEFAULT 'custodial',
+                    address VARCHAR(255) UNIQUE NOT NULL,
+                    public_key VARCHAR(500),
+                    encrypted_private_key VARCHAR(1000),
+                    encrypted_mnemonic VARCHAR(1000),
+                    is_primary BOOLEAN NOT NULL DEFAULT false,
+                    is_active BOOLEAN NOT NULL DEFAULT true,
+                    wallet_metadata JSONB DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_wallets_user_id ON wallets (user_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_wallets_user_blockchain ON wallets (user_id, blockchain);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_wallets_address ON wallets (address);")
+
+        # Create nfts table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS nfts (
+                    id UUID PRIMARY KEY,
+                    global_nft_id VARCHAR(255) UNIQUE NOT NULL,
+                    user_id UUID NOT NULL,
+                    wallet_id UUID NOT NULL,
+                    collection_id UUID,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    blockchain VARCHAR(50) NOT NULL,
+                    contract_address VARCHAR(255),
+                    token_id VARCHAR(255),
+                    mint_address VARCHAR(255),
+                    owner_address VARCHAR(255) NOT NULL,
+                    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+                    is_locked BOOLEAN NOT NULL DEFAULT false,
+                    lock_reason VARCHAR(50),
+                    locked_until TIMESTAMP WITHOUT TIME ZONE,
+                    ipfs_hash VARCHAR(255),
+                    image_url VARCHAR(500),
+                    attributes JSONB,
+                    rarity_score FLOAT,
+                    rarity_tier VARCHAR(50),
+                    transaction_hash VARCHAR(255),
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_user_id ON nfts (user_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_wallet_id ON nfts (wallet_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_name ON nfts (name);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_status ON nfts (status);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_token_id ON nfts (token_id);")
+
+        # Create transactions table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL,
+                    nft_id UUID,
+                    wallet_id UUID NOT NULL,
+                    tx_hash VARCHAR(255),
+                    tx_type VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+                    blockchain VARCHAR(50) NOT NULL,
+                    from_address VARCHAR(255) NOT NULL,
+                    to_address VARCHAR(255) NOT NULL,
+                    amount NUMERIC(20,8),
+                    gas_fee NUMERIC(20,8),
+                    error_message TEXT,
+                    metadata JSONB,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_transactions_user_id ON transactions (user_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_transactions_tx_hash ON transactions (tx_hash);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_transactions_status ON transactions (status);")
+
+        # Create listings table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS listings (
+                    id UUID PRIMARY KEY,
+                    nft_id UUID NOT NULL,
+                    seller_id UUID NOT NULL,
+                    seller_address VARCHAR(255) NOT NULL,
+                    price DOUBLE PRECISION NOT NULL,
+                    currency VARCHAR(50) NOT NULL,
+                    blockchain VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) NOT NULL DEFAULT 'active',
+                    expires_at TIMESTAMP WITHOUT TIME ZONE,
+                    listing_metadata JSONB DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_listings_nft_id ON listings (nft_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_listings_seller_id ON listings (seller_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_listings_status ON listings (status);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_listings_blockchain ON listings (blockchain);")
+
+        # Create offers table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS offers (
+                    id UUID PRIMARY KEY,
+                    nft_id UUID NOT NULL,
+                    buyer_id UUID NOT NULL,
+                    seller_id UUID NOT NULL,
+                    offer_amount DOUBLE PRECISION NOT NULL,
+                    currency VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+                    expires_at TIMESTAMP WITHOUT TIME ZONE,
+                    offer_metadata JSONB DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_offers_nft_id ON offers (nft_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_offers_buyer_id ON offers (buyer_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_offers_status ON offers (status);")
+
+        # Create orders table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS orders (
+                    id UUID PRIMARY KEY,
+                    listing_id UUID,
+                    offer_id UUID,
+                    buyer_id UUID NOT NULL,
+                    seller_id UUID NOT NULL,
+                    amount NUMERIC(18,6) NOT NULL,
+                    currency VARCHAR(32) NOT NULL,
+                    status VARCHAR(32) NOT NULL,
+                    tx_hash VARCHAR(256),
+                    metadata JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_orders_buyer_id ON orders (buyer_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_orders_seller_id ON orders (seller_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);")
 
 
 def downgrade() -> None:

@@ -13,54 +13,59 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create collections table
-    op.create_table(
-        'collections',
-        sa.Column('id', sa.String(36), nullable=False),
-        sa.Column('creator_id', sa.String(36), nullable=False),
-        sa.Column('name', sa.String(255), nullable=False),
-        sa.Column('description', sa.String(500), nullable=True),
-        sa.Column('blockchain', sa.String(50), nullable=False),
-        sa.Column('contract_address', sa.String(255), nullable=True, unique=True),
-        sa.Column('floor_price', sa.Float(), nullable=True),
-        sa.Column('average_price', sa.Float(), nullable=True),
-        sa.Column('ceiling_price', sa.Float(), nullable=True),
-        sa.Column('total_volume', sa.Float(), default=0, nullable=False),
-        sa.Column('total_sales', sa.Integer(), default=0, nullable=False),
-        sa.Column('rarity_weights', sa.JSON(), nullable=True),
-        sa.Column('collection_metadata', sa.JSON(), nullable=True),
-        sa.Column('image_url', sa.String(500), nullable=True),
-        sa.Column('banner_url', sa.String(500), nullable=True),
-        sa.Column('created_at', sa.DateTime(), default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(['creator_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('id'),
-    )
-    op.create_index('ix_collections_creator', 'collections', ['creator_id'])
-    op.create_index('ix_collections_blockchain', 'collections', ['blockchain'])
-    op.create_index('ix_collections_floor_price', 'collections', ['floor_price'])
-    
-    # Add columns to nfts table
-    op.add_column('nfts', sa.Column('collection_id', sa.String(36), nullable=True))
-    op.add_column('nfts', sa.Column('attributes', sa.JSON(), nullable=True))
-    op.add_column('nfts', sa.Column('rarity_score', sa.Float(), nullable=True))
-    op.add_column('nfts', sa.Column('rarity_tier', sa.String(50), nullable=True))
-    
-    # Add foreign key constraint
-    op.create_foreign_key(
-        'fk_nfts_collection_id',
-        'nfts',
-        'collections',
-        ['collection_id'],
-        ['id'],
-        ondelete='SET NULL'
-    )
-    
-    # Add indexes
-    op.create_index('ix_nfts_collection', 'nfts', ['collection_id'])
-    op.create_index('ix_nfts_rarity_tier', 'nfts', ['rarity_tier'])
-    op.create_index('ix_nfts_rarity_score', 'nfts', ['rarity_score'])
+        bind = op.get_bind()
+
+        # Create collections table if missing
+        bind.execute(
+                """
+                CREATE TABLE IF NOT EXISTS collections (
+                    id VARCHAR(36) PRIMARY KEY,
+                    creator_id VARCHAR(36) NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    description VARCHAR(500),
+                    blockchain VARCHAR(50) NOT NULL,
+                    contract_address VARCHAR(255) UNIQUE,
+                    floor_price DOUBLE PRECISION,
+                    average_price DOUBLE PRECISION,
+                    ceiling_price DOUBLE PRECISION,
+                    total_volume DOUBLE PRECISION DEFAULT 0 NOT NULL,
+                    total_sales INTEGER DEFAULT 0 NOT NULL,
+                    rarity_weights JSON,
+                    collection_metadata JSON,
+                    image_url VARCHAR(500),
+                    banner_url VARCHAR(500),
+                    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+                );
+                """
+        )
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_collections_creator ON collections (creator_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_collections_blockchain ON collections (blockchain);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_collections_floor_price ON collections (floor_price);")
+
+        # Add columns to nfts table if missing
+        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS collection_id VARCHAR(36);")
+        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS attributes JSONB;")
+        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_score DOUBLE PRECISION;")
+        bind.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_tier VARCHAR(50);")
+
+        # Add foreign key constraint if missing
+        bind.execute(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint WHERE conname = 'fk_nfts_collection_id'
+                    ) THEN
+                        ALTER TABLE nfts ADD CONSTRAINT fk_nfts_collection_id FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE SET NULL;
+                    END IF;
+                END$$;
+                """
+        )
+
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_collection ON nfts (collection_id);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_tier ON nfts (rarity_tier);")
+        bind.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_score ON nfts (rarity_score);")
 
 
 def downgrade() -> None:

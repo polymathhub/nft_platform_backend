@@ -52,20 +52,7 @@ async def auto_migrate():
                 some_tables_exist = bool(res.scalar())
 
                 if some_tables_exist:
-                    # Stamp the DB to head to avoid attempting to re-create existing tables
-                    cmd_stamp = [sys.executable, "-m", "alembic", "stamp", "head"]
-                    proc_stamp = await asyncio.create_subprocess_exec(
-                        *cmd_stamp, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
-                    )
-                    s_out, s_err = await proc_stamp.communicate()
-                    if proc_stamp.returncode != 0:
-                        serr = s_err.decode(errors="ignore") if s_err else ""
-                        sout = s_out.decode(errors="ignore") if s_out else ""
-                        logger.error("Alembic stamp failed. stdout=%s stderr=%s", sout, serr)
-                        raise RuntimeError(f"Alembic stamp failed: {serr}")
-
-                    logger.info("Alembic version table missing but application tables exist — stamped DB to head to align migrations.")
-                    return
+                    logger.info("Database contains application tables but no alembic_version. Proceeding to run idempotent migrations (upgrade head).")
 
         # Run alembic current (diagnostic) then upgrade head
         cmd_current = [sys.executable, "-m", "alembic", "current"]
