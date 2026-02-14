@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZIPMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -52,6 +53,7 @@ app = FastAPI(
 """
 Security & request middleware
 """
+app.add_middleware(GZIPMiddleware, minimum_size=1024)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(HTTPSEnforcementMiddleware)

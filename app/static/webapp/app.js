@@ -93,10 +93,31 @@
     return pendingRequests[url];
   }
 
-  // Debounce function for rapid calls
-  function debounce(key, fn, delay = 300) {
-    clearTimeout(debounceTimers[key]);
-    debounceTimers[key] = setTimeout(fn, delay);
+  // Performance: Intersection Observer for lazy loading images
+  function setupLazyLoading() {
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          if (img.dataset.src) {
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            imageObserver.unobserve(img);
+          }
+        }
+      });
+    }, { rootMargin: '50px' });
+
+    document.querySelectorAll('img[data-src]').forEach(img => imageObserver.observe(img));
+  }
+
+  // Debounced function to prevent excessive re-renders
+  function debounceRender(fn, delay = 300) {
+    let timeoutId;
+    return function(...args) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn(...args), delay);
+    };
   }
 
   // ========== PAGE NAVIGATION ==========
@@ -124,6 +145,10 @@
 
   // ========== INITIALIZE APP ==========
   async function initApp() {
+    if (window.performance && window.performance.mark) {
+      performance.mark('app-start');
+    }
+    
     showStatus('Initializing NFT Platform...', 'info', true);
 
     if (!window.Telegram?.WebApp) {
@@ -143,10 +168,29 @@
       if (!res.success) throw new Error(res.error || 'Auth failed');
 
       state.user = res.user;
+      
+      if (window.performance && window.performance.mark) {
+        performance.mark('auth-complete');
+      }
+      
       showStatus('Connected successfully!', 'success', false);
       updateUserInfo();
       setupEventListeners();
+      setupLazyLoading();
+      
+      // Load dashboard data
+      if (window.performance && window.performance.mark) {
+        performance.mark('data-load-start');
+      }
+      
       await loadDashboardData();
+      
+      if (window.performance && window.performance.mark) {
+        performance.mark('data-load-complete');
+        performance.measure('auth-time', 'app-start', 'auth-complete');
+        performance.measure('data-load-time', 'data-load-start', 'data-load-complete');
+      }
+      
       setTimeout(() => status.classList.add('hidden'), 2000);
     } catch (err) {
       showStatus(`Error: ${err.message}`, 'error', false);
