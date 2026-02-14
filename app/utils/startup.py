@@ -23,21 +23,62 @@ async def auto_migrate():
 
     # Prefer Alembic migrations when available (production-ready)
     try:
-        # Run Alembic in a separate process to avoid interacting with the
-        # application's running event loop (prevents "coroutine was never awaited").
+        # Run Alembic CLI in a separate process to avoid event-loop issues.
         import sys
         import asyncio
         from asyncio.subprocess import PIPE
         from pathlib import Path
+        from sqlalchemy import text
 
         project_root = Path(__file__).resolve().parents[2]
 
-        cmd = [sys.executable, "-m", "alembic", "upgrade", "head"]
-
-        proc = await asyncio.create_subprocess_exec(
-            *cmd, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
+        # First, check current alembic revision
+        cmd_current = [sys.executable, "-m", "alembic", "current"]
+        proc_cur = await asyncio.create_subprocess_exec(
+            *cmd_current, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
         )
+        cur_out, cur_err = await proc_cur.communicate()
 
+        # If `alembic current` succeeded, proceed with upgrade
+        if proc_cur.returncode == 0:
+            logger.info("Alembic current: %s", cur_out.decode(errors="ignore"))
+        else:
+            # `alembic current` failed. Inspect DB: is `alembic_version` present?
+            async with engine.connect() as conn:
+                result = await conn.execute(
+                    text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
+                )
+                alembic_table_exists = bool(result.scalar())
+
+                if not alembic_table_exists:
+                    # Check for presence of known application tables — if any exist,
+                    # assume the DB schema was created outside Alembic. Do not mutate.
+                    check_tables = ["collections", "users", "nfts"]
+                    in_clause = ",".join([f"'{t}'" for t in check_tables])
+                    res = await conn.execute(
+                        text(f"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name IN ({in_clause}))")
+                    )
+                    some_tables_exist = bool(res.scalar())
+
+                    if some_tables_exist:
+                        msg = (
+                            "Database already contains application tables but is not versioned by Alembic. "
+                            "Automatic migrations are disabled to avoid duplicate-creation errors. "
+                            "Please either run migrations manually or stamp the DB with the current head. "
+                            "Example commands (run from project root):\n"
+                            "  python -m alembic current\n"
+                            "  python -m alembic upgrade head\n"
+                            "  OR to mark DB as up-to-date without applying SQL (only when you're sure):\n"
+                            "  python -m alembic stamp head\n"
+                        )
+                        logger.error(msg)
+                        raise RuntimeError(msg)
+
+        # Run upgrade now that sanity checks passed
+        cmd_upgrade = [sys.executable, "-m", "alembic", "upgrade", "head"]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd_upgrade, stdout=PIPE, stderr=PIPE, cwd=str(project_root)
+        )
         stdout, stderr = await proc.communicate()
 
         if proc.returncode != 0:
