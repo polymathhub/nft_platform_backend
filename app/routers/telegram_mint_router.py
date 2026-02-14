@@ -233,6 +233,8 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
         # Wallet CTA buttons
         "👝 Wallets": "/wallets",
+        "👝 My Wallets": "/wallets",
+        "MY WALLETS": "/wallets",
         "➕ Create New": "/wallet-create",
         "➕ Create Wallet": "/wallet-create",
         "📥 Import": "/wallet-import",
