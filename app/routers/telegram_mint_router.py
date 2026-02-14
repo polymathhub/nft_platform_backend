@@ -285,6 +285,13 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     if text in button_mapping:
         text = button_mapping[text]
 
+    # Handle blockchain reply-keyboard tokens like 'blockchain:ethereum'
+    if text.startswith("blockchain:"):
+        blockchain = text.split(":", 1)[1]
+        logger.warning(f"[ROUTER] Detected blockchain selection from reply keyboard: {blockchain}")
+        await handle_wallet_create_command(db, chat_id, user, blockchain)
+        return
+
     # Wire CTA: when user presses 'Make Offer' we show deposit instructions if applicable
     if text == "/offer":
         # convert to command-like: ask user to provide listing id and amount or use quick flow
@@ -1210,6 +1217,11 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
             reply_markup=build_blockchain_cta_keyboard(),
         )
 
+    elif data.startswith("select_blockchain:"):
+        # Inline blockchain selector from UI designer
+        blockchain = data.split(":", 1)[1]
+        await handle_wallet_create_command(db, chat_id, user, blockchain)
+
     elif data == "admin_dashboard":
         # Only allow if user is admin - check DB
         from sqlalchemy import select
@@ -1261,6 +1273,9 @@ async def handle_callback_query(db: AsyncSession, callback: TelegramCallbackQuer
 
             elif cmd == "/mint":
                 await handle_mint_command(db, chat_id, user, cmd)
+
+            elif cmd == "/wallets" or cmd == "/wallet":
+                await bot_service.send_wallet_list(db, chat_id, user.id)
 
             elif cmd == "/deposit":
                 # simple deposit instructions
