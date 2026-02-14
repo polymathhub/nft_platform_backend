@@ -24,7 +24,12 @@ async def auto_migrate():
 
     auto_flag = os.getenv("AUTO_MIGRATE", "false").lower() in ("1", "true", "yes")
     if not auto_flag:
-        logger.info("AUTO_MIGRATE is not enabled; skipping Alembic migrations. Set AUTO_MIGRATE=true to enable.")
+        logger.info("AUTO_MIGRATE is not enabled; attempting fallback table creation. Set AUTO_MIGRATE=true to enable Alembic migrations.")
+        # Fallback: create tables using SQLAlchemy metadata (safe, uses checkfirst=True)
+        from app.database.connection import Base
+        async with engine.begin() as conn:
+            await conn.run_sync(lambda c: Base.metadata.create_all(c, checkfirst=True))
+        logger.info("Tables created/verified via SQLAlchemy metadata")
         return
 
     try:

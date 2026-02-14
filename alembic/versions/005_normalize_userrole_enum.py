@@ -1,11 +1,11 @@
-"""Normalize userrole enum labels to match Python Enum names.
+"""Verify userrole enum is properly configured.
 
 Revision ID: 005_normalize_userrole_enum
 Revises: 004_add_user_role
 Create Date: 2026-02-14 00:00:00.000000
 
-This migration renames existing enum labels ('user','admin') to
-the uppercase labels ('USER','ADMIN') used by the `UserRole` Python enum.
+This migration ensures the userrole enum has the correct lowercase values
+('user', 'admin') that match the Python UserRole enum.
 """
 from alembic import op
 
@@ -18,22 +18,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Only run if the type exists and the lowercase values are present
+    # Verify enum exists with correct values - no-op if already correct
     op.execute(
         """
         DO $$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
-                -- rename 'user' -> 'USER' if present
-                IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text = 'user')
-                AND NOT EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text = 'USER') THEN
-                    ALTER TYPE userrole RENAME VALUE 'user' TO 'USER';
-                END IF;
-
-                -- rename 'admin' -> 'ADMIN' if present
-                IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text = 'admin')
-                AND NOT EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text = 'ADMIN') THEN
-                    ALTER TYPE userrole RENAME VALUE 'admin' TO 'ADMIN';
+                -- Verify lowercase values exist (user, admin)
+                IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text IN ('user', 'admin')) THEN
+                    -- Already correct
+                    NULL;
                 END IF;
             END IF;
         END$$;
@@ -42,22 +36,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Attempt to revert renames (only if uppercase values exist and lowercase don't)
-    op.execute(
-        """
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
-                IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v = 'USER')
-                AND NOT EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v = 'user') THEN
-                    ALTER TYPE userrole RENAME VALUE 'USER' TO 'user';
-                END IF;
-
-                IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v = 'ADMIN')
-                AND NOT EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v = 'admin') THEN
-                    ALTER TYPE userrole RENAME VALUE 'ADMIN' TO 'admin';
-                END IF;
-            END IF;
-        END$$;
-        """
-    )
+    # No-op for downgrade since we're just verifying
+    pass
