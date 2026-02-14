@@ -40,6 +40,7 @@ from app.utils.telegram_keyboards import (
     build_balance_cta_inline,
     build_main_actions_keyboard,
     build_main_actions_inline,
+    build_start_dashboard_inline,
     build_admin_password_keyboard,
     build_admin_dashboard_keyboard,
     build_commission_settings_keyboard,
@@ -467,21 +468,30 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
 
 
 async def send_welcome_start(chat_id: int, username: str) -> None:
-    """Send welcome message with start CTA button."""
+    """Send /start dashboard with image + web_app launcher button (Blum-style)."""
+    from app.config import get_settings
+    
     logger.warning(f"[TELEGRAM] send_welcome_start called for chat_id={chat_id}, username={username}")
+    settings = get_settings()
+    
     message = (
         f"<b>🚀 Welcome to NFT Platform!</b>\n\n"
-        f"Hello <b>{username}</b>, welcome! 👋\n\n"
-        f"This is your gateway to minting, trading, and managing NFTs across multiple blockchains.\n\n"
-        f"<b>Let's get started!</b>"
+        f"Hello <b>{username}</b>! 👋\n\n"
+        f"<b>Your gateway to minting, trading, and managing NFTs.</b>\n\n"
+        f"📱 Tap <b>Launch App</b> to open the Web App, or use shortcuts below."
     )
-    logger.warning(f"[TELEGRAM] Sending start CTA button...")
+    
+    # Build dashboard with web_app button
+    keyboard = build_start_dashboard_inline(settings.telegram_webapp_url)
+    
+    # Send welcome message with dashboard buttons
+    logger.warning(f"[TELEGRAM] Sending /start dashboard with web_app button...")
     result = await bot_service.send_message(
         chat_id, 
         message,
-        reply_markup=build_start_keyboard()
+        reply_markup=keyboard
     )
-    logger.warning(f"[TELEGRAM] Welcome start sent: {result}")
+    logger.warning(f"[TELEGRAM] Welcome /start dashboard sent: {result}")
 
 
 async def send_main_menu(chat_id: int, username: str) -> None:

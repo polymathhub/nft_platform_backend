@@ -75,10 +75,63 @@ async def auto_migrate():
             raise RuntimeError(f"Alembic upgrade failed. Exit {proc.returncode}: {err}")
 
         logger.info("Alembic migrations applied successfully")
+        
+        # After Alembic migrations, ensure user_role column exists (for backward compatibility)
+        await ensure_user_role_column()
         return
     except Exception as e:
         logger.error("Alembic migrations failed: %s", e)
         raise RuntimeError(f"Database migrations failed. Application cannot start. Error: {e}") from e
+
+
+async def ensure_user_role_column():
+    """
+    Safely check if user_role column exists on users table.
+    If missing, add it with default value 'user' and create the enum type if needed.
+    This is a safeguard for deployments where migrations haven't fully applied.
+    """
+    from app.database.connection import engine
+    from sqlalchemy import text
+    
+    if engine is None:
+        logger.warning("Database engine not initialized; skipping user_role column check")
+        return
+    
+    try:
+        async with engine.connect() as conn:
+            # Check if user_role column exists
+            result = await conn.execute(
+                text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_schema='public' AND table_name='users' AND column_name='user_role'
+                    )
+                """)
+            )
+            column_exists = bool(result.scalar())
+            
+            if column_exists:
+                logger.info("✓ user_role column already exists on users table")
+                return
+            
+            logger.info("! user_role column missing; adding it safely...")
+            
+            # Add the enum type if it doesn't exist
+            await conn.execute(text(
+                "CREATE TYPE IF NOT EXISTS userrole AS ENUM ('user', 'admin')"
+            ))
+            
+            # Add the column with default value
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role userrole DEFAULT 'user' NOT NULL"
+            ))
+            
+            await conn.commit()
+            logger.info("✓ user_role column added successfully")
+            
+    except Exception as e:
+        logger.warning(f"Failed to ensure user_role column (non-fatal): {e}")
+        # Don't raise; this is a safeguard and shouldn't block startup if migrations handle it
 
 
 

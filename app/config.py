@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     telegram_webhook_url: Optional[str] = Field(default=None)  # Ngrok or public URL
     telegram_auto_setup_webhook: bool = Field(default=False)  # Auto-setup webhook on startup
     telegram_webhook_secret: Optional[str] = Field(default=None)  # Secret token for webhook validation
+    telegram_webapp_url: str = Field(default="https://nftplatformbackend-production-b67d.up.railway.app/web-app/")  # Telegram Web App URL
+    banner_image_url: str = Field(default="https://via.placeholder.com/800x400?text=NFT+Platform")  # /start banner image
 
     ipfs_api_url: str = Field(default="http://localhost:5001")
     ipfs_gateway_url: str = Field(default="https://gateway.pinata.cloud/ipfs")

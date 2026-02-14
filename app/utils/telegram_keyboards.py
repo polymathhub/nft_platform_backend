@@ -498,3 +498,20 @@ def build_main_actions_inline() -> Dict[str, Any]:
         [("ADMIN", "/admin-login"), ("HELP", "/help")],
     ]
     return build_cta_inline(rows)
+
+
+def build_start_dashboard_inline(webapp_url: str) -> Dict[str, Any]:
+    """Build /start dashboard with web_app launcher button (Blum-style).
+    
+    Args:
+        webapp_url: Full HTTPS URL to the Telegram Web App
+    
+    Returns:
+        InlineKeyboardMarkup with web_app button + shortcuts
+    """
+    inline_keyboard = [
+        [{"text": "🚀 Launch App", "web_app": {"url": webapp_url}}],
+        [{"text": "💼 Wallet", "callback_data": "/wallets"}, {"text": "🎨 Mint", "callback_data": "/mint"}],
+        [{"text": "🛒 Marketplace", "callback_data": "/browse"}, {"text": "⚙️ Settings", "callback_data": "/help"}],
+    ]
+    return {"inline_keyboard": inline_keyboard}
