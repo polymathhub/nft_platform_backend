@@ -18,27 +18,21 @@
 
       <div class="nav-menu">
         <a href="#" class="nav-item active" data-page="dashboard">
-          <span class="nav-icon">📊</span>
           <span class="nav-label">Dashboard</span>
         </a>
         <a href="#" class="nav-item" data-page="wallets">
-          <span class="nav-icon">💼</span>
           <span class="nav-label">Wallets</span>
         </a>
         <a href="#" class="nav-item" data-page="nfts">
-          <span class="nav-icon">🎨</span>
           <span class="nav-label">My NFTs</span>
         </a>
         <a href="#" class="nav-item" data-page="mint">
-          <span class="nav-icon">✨</span>
           <span class="nav-label">Create NFT</span>
         </a>
         <a href="#" class="nav-item" data-page="marketplace">
-          <span class="nav-icon">🛒</span>
           <span class="nav-label">Marketplace</span>
         </a>
         <a href="#" class="nav-item" data-page="profile">
-          <span class="nav-icon">👤</span>
           <span class="nav-label">Profile</span>
         </a>
       </div>
@@ -53,7 +47,7 @@
       <!-- Top Bar -->
       <header class="top-bar">
         <div class="top-bar-left">
-          <button id="menuToggle" class="menu-toggle">☰</button>
+          <button id="menuToggle" class="menu-toggle">Menu</button>
           <h1 id="pageTitle" class="page-title">Dashboard</h1>
         </div>
         <div class="top-bar-right">
@@ -61,8 +55,11 @@
         </div>
       </header>
 
-      <!-- Status Alert -->
-      <div id="status" class="status-alert">Initializing Web App...</div>
+      <!-- Status Alert with Spinner -->
+      <div id="status" class="status-alert">
+        <span class="spinner" id="statusSpinner"></span>
+        <span id="statusText">Initializing Web App...</span>
+      </div>
 
       <!-- Page Container -->
       <div class="page-container">
@@ -71,24 +68,32 @@
           <div class="grid-2col">
             <div class="card">
               <h3>Portfolio Value</h3>
-              <div class="metric-value" id="portfolioValue">$0.00</div>
+              <div class="metric-value" id="portfolioValue">
+                <span class="skeleton skeleton-metric"></span>
+              </div>
               <small class="muted">Total NFT value</small>
             </div>
             <div class="card">
               <h3>Total NFTs</h3>
-              <div class="metric-value" id="totalNfts">0</div>
+              <div class="metric-value" id="totalNfts">
+                <span class="skeleton skeleton-metric"></span>
+              </div>
               <small class="muted">In your collection</small>
             </div>
           </div>
           <div class="grid-2col">
             <div class="card">
               <h3>Wallets</h3>
-              <div class="metric-value" id="totalWallets">0</div>
+              <div class="metric-value" id="totalWallets">
+                <span class="skeleton skeleton-metric"></span>
+              </div>
               <small class="muted">Connected wallets</small>
             </div>
             <div class="card">
               <h3>Listings</h3>
-              <div class="metric-value" id="totalListings">0</div>
+              <div class="metric-value" id="totalListings">
+                <span class="skeleton skeleton-metric"></span>
+              </div>
               <small class="muted">NFTs for sale</small>
             </div>
           </div>
@@ -107,7 +112,11 @@
               <button id="importWalletBtn" class="btn btn-secondary">Import Wallet</button>
             </div>
           </div>
-          <div id="walletsList" class="grid-auto">Loading wallets...</div>
+          <div id="walletsList" class="grid-auto">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+          </div>
         </div>
 
         <!-- NFTs Page -->
@@ -122,7 +131,11 @@
               </select>
             </div>
           </div>
-          <div id="nftList" class="grid-3col">loading...</div>
+          <div id="nftList" class="grid-3col">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+          </div>
         </div>
 
         <!-- Mint Page -->
@@ -173,8 +186,15 @@
             <button class="tab-btn active" data-tab="listings">Available</button>
             <button class="tab-btn" data-tab="mylistings">My Listings</button>
           </div>
-          <div id="marketplaceListings" class="grid-3col">Loading listings...</div>
-          <div id="myListings" class="grid-3col" style="display:none;">Loading your listings...</div>
+          <div id="marketplaceListings" class="grid-3col">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+          </div>
+          <div id="myListings" class="grid-3col" style="display:none;">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+          </div>
         </div>
 
         <!-- Profile Page -->
@@ -185,11 +205,17 @@
           <div class="grid-2col">
             <div class="card">
               <h3>Account Information</h3>
-              <div id="profileInfo" class="profile-section">Loading profile...</div>
+              <div id="profileInfo" class="profile-section">
+                <div class="skeleton skeleton-text"></div>
+                <div class="skeleton skeleton-text"></div>
+              </div>
             </div>
             <div class="card">
               <h3>Statistics</h3>
-              <div id="profileStats" class="stats-grid">Loading stats...</div>
+              <div id="profileStats" class="stats-grid">
+                <div class="skeleton skeleton-metric"></div>
+                <div class="skeleton skeleton-metric"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -199,10 +225,12 @@
 
   <!-- Modals -->
   <div id="modal" class="modal" style="display:none;">
+    <div class="modal-overlay" id="modalOverlay"></div>
     <div class="modal-content">
       <button class="modal-close" id="closeModal">×</button>
       <h2 id="modalTitle">Modal Title</h2>
       <div id="modalBody"></div>
+      <span class="modal-spinner spinner" id="modalSpinner" style="display:none;"></span>
     </div>
   </div>
 
