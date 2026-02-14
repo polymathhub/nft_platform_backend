@@ -3,29 +3,47 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="NFT Platform — Create, mint, and trade digital assets on multiple blockchains." />
   <title>NFT Platform — Web App</title>
-  <link rel="stylesheet" href="/web-app/styles.css">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div id="app" class="container">
     <header class="header">
       <h1>NFT Platform</h1>
-      <p class="subtitle">Telegram Web App — Wallets & Minting</p>
+      <p class="subtitle">Create, mint, and trade digital assets</p>
     </header>
 
     <main class="main">
-      <div id="status" class="status">Initializing...</div>
-      <section id="user" class="card user-card" hidden></section>
-      <section id="wallets" class="card wallets-card" hidden></section>
-      <section id="actions" class="card actions" hidden></section>
+      <div id="status" class="status">Initializing Web App...</div>
+      
+      <section id="user" class="card user-card" hidden>
+        <h2 id="userName"></h2>
+        <div class="muted" id="userHandle"></div>
+      </section>
+
+      <section id="wallets" class="card wallets-card" hidden>
+        <h3>Your Wallets</h3>
+        <div id="walletsList"></div>
+      </section>
+
+      <section id="actions" class="card actions" hidden>
+        <h3>Actions</h3>
+        <div class="grid">
+          <button id="createWallet" class="btn">Create Wallet</button>
+          <button id="importWallet" class="btn">Import Wallet</button>
+          <button id="browseNFTs" class="btn">Browse NFTs</button>
+          <button id="viewMarketplace" class="btn">Marketplace</button>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
-      <small>Built for Telegram Web App</small>
+      <small>NFT Platform Web App — Powered by Telegram 🚀</small>
     </footer>
   </div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="/web-app/app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
