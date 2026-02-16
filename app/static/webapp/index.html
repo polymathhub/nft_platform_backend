@@ -242,44 +242,61 @@
         <!-- Help Page -->
         <div id="help-page" class="page">
           <div class="page-header">
-            <h2>Help & Testing Guide</h2>
+            <h2>Need Help?</h2>
           </div>
           <div class="card">
-            <h3>Testing Outside Telegram</h3>
-            <p>To test the web app locally without Telegram:</p>
+            <h3>Getting Started</h3>
             <ol style="margin-left: 20px;">
-              <li>Get a test user ID by visiting: <code style="display:block;margin:10px 0;padding:10px;background:var(--bg-base);border-radius:4px;">/api/v1/telegram/web-app/test-user</code></li>
-              <li>Copy the returned <code>id</code> value</li>
-              <li>Add it to the URL: <code style="display:block;margin:10px 0;padding:10px;background:var(--bg-base);border-radius:4px;">?user_id=PASTE_ID_HERE</code></li>
-              <li>Full URL example: <code style="display:block;margin:10px 0;padding:10px;background:var(--bg-base);border-radius:4px;">http://localhost:8000/web-app/?user_id=550e8400-e29b-41d4-a716-446655440000</code></li>
+              <li>Open Telegram and find our NFT Platform bot</li>
+              <li>Click the Web App button to launch this interface</li>
+              <li>Telegram will automatically authenticate your session</li>
+              <li>Create or import a wallet to start managing NFTs</li>
             </ol>
           </div>
           <div class="card">
-            <h3>Production: Telegram Mode</h3>
-            <p>In production, the web app works through Telegram:</p>
-            <ol style="margin-left: 20px;">
-              <li>Open Telegram bot</li>
-              <li>Click <strong>Web App</strong> button</li>
-              <li>Telegram automatically authenticates your session</li>
-              <li>Web app loads with your data</li>
-            </ol>
+            <h3>Creating a Wallet</h3>
+            <p>Go to the <strong>Wallets</strong> page and:</p>
+            <ul style="margin-left: 20px;">
+              <li>Click <strong>Create Wallet</strong> to generate a new wallet on any blockchain</li>
+              <li>Or click <strong>Import Wallet</strong> to add an existing wallet address</li>
+              <li>Set one wallet as <strong>Primary</strong> for minting and operations</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Minting NFTs</h3>
+            <p>Go to <strong>Create NFT</strong> to mint new digital assets:</p>
+            <ul style="margin-left: 20px;">
+              <li>Select a wallet and blockchain</li>
+              <li>Enter NFT name and description</li>
+              <li>Upload an image (optional)</li>
+              <li>Add attributes in JSON format (optional)</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Trading NFTs</h3>
+            <p>Browse the <strong>Marketplace</strong> to buy NFTs or sell your own:</p>
+            <ul style="margin-left: 20px;">
+              <li>View available listings and make offers</li>
+              <li>List your NFTs for sale from your collection</li>
+              <li>Manage all transactions from your profile</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Supported Blockchains</h3>
+            <ul style="margin-left: 20px;">
+              <li><strong>Ethereum</strong> - Major NFT platform</li>
+              <li><strong>Polygon</strong> - Low-fee transactions</li>
+              <li><strong>Solana</strong> - High-speed operations</li>
+              <li><strong>TON</strong> - Telegram blockchain integration</li>
+            </ul>
           </div>
           <div class="card">
             <h3>Troubleshooting</h3>
             <ul style="margin-left: 20px;">
-              <li><strong>Data not loading?</strong> Check browser console (F12) for errors</li>
-              <li><strong>API calls failing?</strong> Verify backend is running on /api/v1</li>
-              <li><strong>Wallets not showing?</strong> Create a wallet first from the Wallets page</li>
-              <li><strong>CORS errors?</strong> Backend may need CORS configuration</li>
-            </ul>
-          </div>
-          <div class="card">
-            <h3>API Endpoints</h3>
-            <ul style="margin-left: 20px;">
-              <li><code>/api/v1/telegram/web-app/init</code> - Authenticate via Telegram</li>
-              <li><code>/api/v1/telegram/web-app/dashboard-data</code> - Get user's data</li>
-              <li><code>/api/v1/telegram/web-app/test-user</code> - Create test user</li>
-              <li><code>/api/v1/telegram/web-app/mint</code> - Mint NFT</li>
+              <li><strong>Data not loading?</strong> Check your internet connection and refresh</li>
+              <li><strong>Wallet creation failed?</strong> Ensure you have a stable connection</li>
+              <li><strong>Seeing empty marketplace?</strong> Check back soon for new listings</li>
+              <li><strong>Need more help?</strong> Open browser console (F12) to see error details</li>
             </ul>
           </div>
         </div>

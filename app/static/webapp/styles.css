@@ -335,6 +335,32 @@ html, body {
   margin-bottom: 8px;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.stat-box {
+  background: rgba(124, 92, 255, 0.05);
+  border: 1px solid rgba(124, 92, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
 .grid-2col {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -485,6 +511,18 @@ html, body {
   background: rgba(124, 92, 255, 0.2);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.blockchain-badge.primary-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
 }
 
 .wallet-address {
