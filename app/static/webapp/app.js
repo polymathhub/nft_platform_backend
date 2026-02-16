@@ -7,7 +7,6 @@
     wallets: [],
     nfts: [],
     listings: [],
-    myListings: [],
     currentPage: 'dashboard'
   };
 
@@ -18,22 +17,98 @@
   const modal = document.getElementById('modal');
   const modalSpinner = document.getElementById('modalSpinner');
 
-  // Request caching and debouncing
+  // Request caching
   const cache = {};
   const pendingRequests = {};
-  let debounceTimers = {};
+  
+  // ========== API SERVICE ==========
+  const API = {
+    async callEndpoint(urlOrPath, options = {}) {
+      const url = urlOrPath.startsWith('http') ? urlOrPath : `${API_BASE}${urlOrPath}`;
+      try {
+        const response = await fetch(url, {
+          method: options.method || 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...options.headers 
+          },
+          body: options.body ? JSON.stringify(options.body) : undefined
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          const errorMsg = response.status === 401 ? 'Unauthorized' : `HTTP ${response.status}`;
+          throw new Error(`${errorMsg}: ${errorText}`);
+        }
+        return await response.json();
+      } catch (err) {
+        console.error(`API Error [${url}]:`, err);
+        throw err;
+      }
+    },
+
+    async initSession(initData) {
+      return this.callEndpoint(`/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
+    },
+
+    async getUser(userId) {
+      return this.callEndpoint(`/telegram/web-app/user?user_id=${userId}`);
+    },
+
+    async getWallets(userId) {
+      return this.callEndpoint(`/telegram/web-app/wallets?user_id=${userId}`);
+    },
+
+    async getNFTs(userId) {
+      return this.callEndpoint(`/telegram/web-app/nfts?user_id=${userId}`);
+    },
+
+    async getDashboardData(userId) {
+      return this.callEndpoint(`/telegram/web-app/dashboard-data?user_id=${userId}`);
+    },
+
+    async getMarketplaceListings(limit = 100) {
+      return this.callEndpoint(`/marketplace/listings?limit=${limit}`);
+    },
+
+    async getUserListings(userId) {
+      return this.callEndpoint(`/marketplace/listings/user?user_id=${userId}`);
+    },
+
+    async createWallet(userId, blockchain) {
+      return this.callEndpoint('/telegram/web-app/set-primary', {
+        method: 'POST',
+        body: { user_id: userId, blockchain }
+      });
+    },
+
+    async mintNFT(userId, walletId, name, description) {
+      return this.callEndpoint('/telegram/web-app/mint', {
+        method: 'POST',
+        body: { user_id: userId, wallet_id: walletId, nft_name: name, nft_description: description }
+      });
+    },
+
+    async listNFT(userId, nftId, price, currency = 'ETH') {
+      return this.callEndpoint('/telegram/web-app/list-nft', {
+        method: 'POST',
+        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
+      });
+    }
+  };
 
   // ========== UTIL FUNCTIONS ==========
   function showStatus(msg, type = 'info', showSpinner = type === 'info') {
     statusText.textContent = msg;
     status.className = `status-alert ${type}`;
     statusSpinner.style.display = showSpinner ? 'inline-block' : 'none';
+    status.classList.remove('hidden');
     
     if (type !== 'info') {
       setTimeout(() => {
         status.classList.add('hidden');
         statusSpinner.style.display = 'none';
-      }, 4000);
+      }, 5000);
     }
   }
 
@@ -48,14 +123,6 @@
     modalSpinner.style.display = 'none';
   }
 
-  function showModalSpinner() {
-    modalSpinner.style.display = 'block';
-  }
-
-  function hideModalSpinner() {
-    modalSpinner.style.display = 'none';
-  }
-
   function truncate(str, len = 20) {
     return str && str.length > len ? str.slice(0, len - 3) + '...' : str;
   }
@@ -64,41 +131,12 @@
     return addr ? addr.slice(0, 6) + '...' + addr.slice(-4) : '—';
   }
 
-  // Optimized fetch with caching and deduplication
-  async function cachedFetch(url, options = {}) {
-    // Return cached response if available and not expired
-    if (cache[url] && cache[url].expires > Date.now()) {
-      return cache[url].data;
-    }
+  function showModalSpinner() {
+    modalSpinner.style.display = 'block';
+  }
 
-    // If request already in progress, return existing promise
-    if (pendingRequests[url]) {
-      return pendingRequests[url];
-    }
-
-    // Create new request promise
-    pendingRequests[url] = fetch(url, options)
-      .then(async r => {
-        if (!r.ok) {
-          const text = await r.text();
-          console.error(`API error ${r.status}:`, text);
-          throw new Error(`API error ${r.status}: ${text}`);
-        }
-        return r.json();
-      })
-      .then(data => {
-        // Cache for 60 seconds
-        cache[url] = { data, expires: Date.now() + 60000 };
-        delete pendingRequests[url];
-        return data;
-      })
-      .catch(err => {
-        delete pendingRequests[url];
-        console.error(`Fetch error for ${url}:`, err);
-        throw err;
-      });
-
-    return pendingRequests[url];
+  function hideModalSpinner() {
+    modalSpinner.style.display = 'none';
   }
 
   // Performance: Intersection Observer for lazy loading images
@@ -153,194 +191,44 @@
 
   // ========== INITIALIZE APP ==========
   async function initApp() {
-    if (window.performance && window.performance.mark) {
-      performance.mark('app-start');
-    }
-    
     showStatus('Initializing NFT Platform...', 'info', true);
 
-    // Check if in Telegram context or development mode
-    const isDevelopment = !window.Telegram?.WebApp;
-    const initData = window.Telegram?.WebApp?.initData || window.Telegram?.WebApp?.initDataUnsafe;
-    
-    if (!isDevelopment && !initData) {
-      showStatus('Please open this app from Telegram', 'error', false);
-      return;
-    }
-
-    if (!isDevelopment) {
-      window.Telegram.WebApp.ready();
-    }
-    
-    showStatus('Authenticating...', 'info', true);
-
     try {
-      let authResponse;
+      // Get Telegram init data
+      const initData = window.Telegram?.WebApp?.initData;
       
-      if (isDevelopment) {
-        // Development mode: use mock authentication
-        console.warn('Running in development mode (not in Telegram)');
-        authResponse = {
-          success: true,
-          user: {
-            id: 'dev-user-123',
-            telegram_id: 123456789,
-            telegram_username: 'developer',
-            first_name: 'Test',
-            last_name: 'User',
-            email: 'dev@example.com'
-          }
-        };
-        
-        // Add mock data for development
-        state.wallets = [
-          {
-            id: 'wallet-1',
-            name: 'Ethereum Wallet',
-            blockchain: 'ethereum',
-            address: '0x1234567890abcdef1234567890abcdef12345678',
-            is_primary: true,
-            created_at: '2024-01-15T10:30:00'
-          },
-          {
-            id: 'wallet-2',
-            name: 'Solana Wallet',
-            blockchain: 'solana',
-            address: 'So11111111111111111111111111111111111111112',
-            is_primary: false,
-            created_at: '2024-01-20T14:22:00'
-          },
-          {
-            id: 'wallet-3',
-            name: 'Polygon Wallet',
-            blockchain: 'polygon',
-            address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
-            is_primary: false,
-            created_at: '2024-02-01T08:15:00'
-          }
-        ];
-        
-        state.nfts = [
-          {
-            id: 'nft-1',
-            name: 'Cosmic Nebula #42',
-            global_nft_id: 'cosmic-42',
-            description: 'A stunning visualization of a cosmic nebula',
-            blockchain: 'ethereum',
-            status: 'minted',
-            image_url: 'https://picsum.photos/400/400?random=1',
-            collection: { name: 'Space Series' },
-            minted_at: '2024-01-10T11:00:00',
-            created_at: '2024-01-10T11:00:00'
-          },
-          {
-            id: 'nft-2',
-            name: 'Digital Art Genesis #1',
-            global_nft_id: 'art-genesis-1',
-            description: 'The first piece in the Digital Art Genesis collection',
-            blockchain: 'solana',
-            status: 'minted',
-            image_url: 'https://picsum.photos/400/400?random=2',
-            collection: { name: 'Digital Art Genesis' },
-            minted_at: '2024-02-05T15:30:00',
-            created_at: '2024-02-05T15:30:00'
-          },
-          {
-            id: 'nft-3',
-            name: 'Pixel Dreams #88',
-            global_nft_id: 'pixel-88',
-            description: 'Retro pixel art meets modern blockchain',
-            blockchain: 'polygon',
-            status: 'minted',
-            image_url: 'https://picsum.photos/400/400?random=3',
-            collection: { name: 'Pixel Dreams' },
-            minted_at: '2024-02-10T09:45:00',
-            created_at: '2024-02-10T09:45:00'
-          },
-          {
-            id: 'nft-4',
-            name: 'Abstract Waves #15',
-            global_nft_id: 'waves-15',
-            description: 'Flowing abstract waves in motion',
-            blockchain: 'ethereum',
-            status: 'minted',
-            image_url: 'https://picsum.photos/400/400?random=4',
-            collection: { name: 'Abstract Series' },
-            minted_at: '2024-02-12T13:20:00',
-            created_at: '2024-02-12T13:20:00'
-          }
-        ];
-        
-        state.listings = [
-          {
-            id: 'listing-1',
-            nft_id: 'nft-1',
-            nft: state.nfts[0],
-            nft_name: 'Cosmic Nebula #42',
-            price: 2.5,
-            currency: 'ETH',
-            blockchain: 'ethereum',
-            status: 'active',
-            image_url: 'https://picsum.photos/400/400?random=1',
-            active: true
-          },
-          {
-            id: 'listing-2',
-            nft_id: 'nft-2',
-            nft: state.nfts[1],
-            nft_name: 'Digital Art Genesis #1',
-            price: 125.0,
-            currency: 'SOL',
-            blockchain: 'solana',
-            status: 'active',
-            image_url: 'https://picsum.photos/400/400?random=2',
-            active: true
-          },
-          {
-            id: 'listing-3',
-            nft_id: 'nft-3',
-            nft: state.nfts[2],
-            nft_name: 'Pixel Dreams #88',
-            price: 850.0,
-            currency: 'MATIC',
-            blockchain: 'polygon',
-            status: 'active',
-            image_url: 'https://picsum.photos/400/400?random=3',
-            active: true
-          }
-        ];
-      } else {
-        // Production mode: authenticate with backend
-        authResponse = await cachedFetch(`${API_BASE}/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
+      if (!initData) {
+        console.error('No Telegram initData found');
+        showStatus('Error: Not running in Telegram context', 'error', false);
+        return;
       }
 
-      if (!authResponse.success) throw new Error(authResponse.error || 'Auth failed');
+      // Mark app as ready
+      if (window.Telegram?.WebApp?.ready) {
+        window.Telegram.WebApp.ready();
+      }
+      
+      showStatus('Authenticating...', 'info', true);
+      
+      // Authenticate with backend
+      const authResponse = await API.initSession(initData);
+      
+      if (!authResponse.success) {
+        throw new Error(authResponse.error || 'Authentication failed');
+      }
 
       state.user = authResponse.user;
       
-      if (window.performance && window.performance.mark) {
-        performance.mark('auth-complete');
-      }
-      
-      showStatus('Connected successfully!', 'success', false);
+      showStatus('Loading dashboard...', 'info', true);
       updateUserInfo();
       setupEventListeners();
-      setupLazyLoading();
       
-      // Load dashboard data
-      if (window.performance && window.performance.mark) {
-        performance.mark('data-load-start');
-      }
-      
+      // Load all dashboard data
       await loadDashboardData();
       
-      if (window.performance && window.performance.mark) {
-        performance.mark('data-load-complete');
-        performance.measure('auth-time', 'app-start', 'auth-complete');
-        performance.measure('data-load-time', 'data-load-start', 'data-load-complete');
-      }
-      
+      showStatus('Connected successfully!', 'success', false);
       setTimeout(() => status.classList.add('hidden'), 2000);
+      
     } catch (err) {
       console.error('Init error:', err);
       showStatus(`Error: ${err.message}`, 'error', false);
@@ -358,28 +246,28 @@
     }
   }
 
+  // ========== LOAD DATA ==========
   async function loadDashboardData() {
     try {
-      const isDevelopment = !window.Telegram?.WebApp;
+      showStatus('Loading your data...', 'info', true);
       
-      // Skip API call in development mode since we already have mock data
-      if (!isDevelopment) {
-        // Use optimized combined endpoint instead of 3 separate calls
-        const data = await cachedFetch(`${API_BASE}/telegram/web-app/dashboard-data?user_id=${state.user.id}`);
-
-        state.wallets = Array.isArray(data.wallets) ? data.wallets : [];
-        state.nfts = Array.isArray(data.nfts) ? data.nfts : [];
-        state.listings = Array.isArray(data.listings) ? data.listings : [];
-      }
-      // else: use already-loaded mock data from initApp()
+      const dashboardData = await API.getDashboardData(state.user.id);
+      
+      state.wallets = Array.isArray(dashboardData.wallets) ? dashboardData.wallets : [];
+      state.nfts = Array.isArray(dashboardData.nfts) ? dashboardData.nfts : [];
+      state.listings = Array.isArray(dashboardData.listings) ? dashboardData.listings : [];
 
       updateDashboard();
       updateWalletsList();
       updateNftsList();
       updateMarketplace();
+      
+      showStatus('Data loaded', 'success', false);
     } catch (err) {
       console.error('Load data error:', err);
-      // Provide default empty data to allow UI to render
+      showStatus(`Error loading data: ${err.message}`, 'error', false);
+      
+      // Show empty state
       state.wallets = [];
       state.nfts = [];
       state.listings = [];
@@ -387,26 +275,35 @@
       updateWalletsList();
       updateNftsList();
       updateMarketplace();
-      showStatus('Data loaded (empty)', 'info', false);
     }
   }
 
   function updateDashboard() {
-    const portfolioValue = state.nfts.length * 100;
+    // Calculate portfolio value from actual listing prices
+    const portfolioValue = state.listings.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0);
     
-    // Safely update DOM elements, checking existence first
-    if (document.getElementById('portfolioValue')) document.getElementById('portfolioValue').textContent = '$' + portfolioValue.toFixed(2);
-    if (document.getElementById('totalNfts')) document.getElementById('totalNfts').textContent = state.nfts.length;
-    if (document.getElementById('totalWallets')) document.getElementById('totalWallets').textContent = state.wallets.length;
-    if (document.getElementById('totalListings')) document.getElementById('totalListings').textContent = state.listings.filter(l => l.active).length;
+    if (document.getElementById('portfolioValue')) {
+      document.getElementById('portfolioValue').textContent = '$' + portfolioValue.toFixed(2);
+    }
+    if (document.getElementById('totalNfts')) {
+      document.getElementById('totalNfts').textContent = state.nfts.length;
+    }
+    if (document.getElementById('totalWallets')) {
+      document.getElementById('totalWallets').textContent = state.wallets.length;
+    }
+    if (document.getElementById('totalListings')) {
+      document.getElementById('totalListings').textContent = state.listings.filter(l => l.active || l.status === 'active').length;
+    }
 
     const activity = `
       <div class="activity-item">
-        <span class="activity-type">Platform Ready</span>
+        <span class="activity-type">Data synced</span>
         <span class="activity-time">Just now</span>
       </div>
     `;
-    if (document.getElementById('recentActivity')) document.getElementById('recentActivity').innerHTML = activity;
+    if (document.getElementById('recentActivity')) {
+      document.getElementById('recentActivity').innerHTML = activity || '<p class="muted">No activity yet</p>';
+    }
 
     const profileInfo = `
       <div class="profile-item">
@@ -418,11 +315,13 @@
         <strong>${state.user?.first_name || 'User'}</strong>
       </div>
       <div class="profile-item">
-        <span>Wallets Connected:</span>
+        <span>Wallets:</span>
         <strong>${state.wallets.length}</strong>
       </div>
     `;
-    if (document.getElementById('profileInfo')) document.getElementById('profileInfo').innerHTML = profileInfo;
+    if (document.getElementById('profileInfo')) {
+      document.getElementById('profileInfo').innerHTML = profileInfo;
+    }
 
     const stats = `
       <div class="stat-item">
@@ -434,7 +333,7 @@
         <div class="stat-label">Wallets</div>
       </div>
       <div class="stat-item">
-        <div class="stat-value">${state.listings.filter(l => l.active).length}</div>
+        <div class="stat-value">${state.listings.filter(l => l.active || l.status === 'active').length}</div>
         <div class="stat-label">Listings</div>
       </div>
       <div class="stat-item">
@@ -442,57 +341,72 @@
         <div class="stat-label">Value</div>
       </div>
     `;
-    if (document.getElementById('profileStats')) document.getElementById('profileStats').innerHTML = stats;
+    if (document.getElementById('profileStats')) {
+      document.getElementById('profileStats').innerHTML = stats;
+    }
   }
 
   function updateWalletsList() {
-    const html = state.wallets.map(w => `
-      <div class="card wallet-card">
-        <div class="wallet-blockchain">
-          <strong>${w.blockchain?.toUpperCase() || 'Wallet'}</strong>
-          ${w.is_primary ? '<span class="blockchain-badge">Primary</span>' : ''}
+    const html = state.wallets.length === 0 
+      ? '<p class="muted">No wallets yet. Create one to get started.</p>'
+      : state.wallets.map(w => `
+        <div class="card wallet-card">
+          <div class="wallet-blockchain">
+            <strong>${w.blockchain?.toUpperCase() || 'Wallet'}</strong>
+            ${w.is_primary ? '<span class="blockchain-badge">Primary</span>' : ''}
+          </div>
+          <div class="wallet-address">${formatAddr(w.address)}</div>
+          <div class="wallet-actions">
+            <button class="btn btn-secondary" onclick="window.showWalletDetails('${w.id}')">Details</button>
+          </div>
         </div>
-        <div class="wallet-address">${formatAddr(w.address)}</div>
-        <div class="wallet-actions">
-          <button class="btn btn-secondary" onclick="window.showWalletDetails('${w.id}')">Details</button>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    
     if (document.getElementById('walletsList')) {
-      document.getElementById('walletsList').innerHTML = html || '<p class="muted">No wallets yet</p>';
+      document.getElementById('walletsList').innerHTML = html;
     }
   }
 
   function updateNftsList() {
-    const html = state.nfts.map(nft => `
-      <div class="card nft-card">
-        <div class="nft-image">${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">No Image</div>'}</div>
-        <div class="nft-content">
-          <div class="nft-name">${truncate(nft.name, 25)}</div>
-          <div class="nft-collection">${nft.collection?.name || 'No Collection'}</div>
-          <div class="nft-price">$${(Math.random() * 10000).toFixed(0)}</div>
+    const html = state.nfts.length === 0
+      ? '<p class="muted">No NFTs yet. Create one to get started.</p>'
+      : state.nfts.map(nft => `
+        <div class="card nft-card">
+          <div class="nft-image">
+            ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">No Image</div>'}
+          </div>
+          <div class="nft-content">
+            <div class="nft-name">${truncate(nft.name, 25)}</div>
+            <div class="nft-collection">${nft.collection?.name || 'No Collection'}</div>
+            <div class="nft-price">${nft.status || 'Minted'}</div>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    
     if (document.getElementById('nftList')) {
-      document.getElementById('nftList').innerHTML = html || '<p class="muted">No NFTs yet</p>';
+      document.getElementById('nftList').innerHTML = html;
     }
   }
 
   function updateMarketplace() {
-    const html = state.listings.map(l => `
-      <div class="card nft-card">
-        <div class="nft-image">${l.nft?.image_url ? `<img src="${l.nft.image_url}" alt="NFT" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">Marketplace Item</div>'}</div>
-        <div class="nft-content">
-          <div class="nft-name">${truncate(l.nft?.name || 'NFT', 25)}</div>
-          <div class="nft-collection">${l.nft?.collection?.name || 'Unknown'}</div>
-          <div class="nft-price">$${l.price?.toFixed(2) || '0.00'}</div>
-          <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="window.viewListing('${l.id}')">View</button>
+    const html = state.listings.length === 0
+      ? '<p class="muted">No listings available</p>'
+      : state.listings.map(l => `
+        <div class="card nft-card">
+          <div class="nft-image">
+            ${l.nft?.image_url ? `<img src="${l.nft.image_url}" alt="NFT" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">Listing</div>'}
+          </div>
+          <div class="nft-content">
+            <div class="nft-name">${truncate(l.nft?.name || 'NFT', 25)}</div>
+            <div class="nft-collection">${l.nft?.collection?.name || 'Unknown'}</div>
+            <div class="nft-price">${l.price ? '$' + parseFloat(l.price).toFixed(2) : 'N/A'}</div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="window.viewListing('${l.id}')">View</button>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    
     if (document.getElementById('marketplaceListings')) {
-      document.getElementById('marketplaceListings').innerHTML = html || '<p class="muted">No listings</p>';
+      document.getElementById('marketplaceListings').innerHTML = html;
     }
   }
 
@@ -506,27 +420,22 @@
       });
     });
 
-    // Modal (safely check for elements)
-    if (document.getElementById('closeModal')) {
-      document.getElementById('closeModal').addEventListener('click', closeModal);
-    }
-    if (document.getElementById('modalOverlay')) {
-      document.getElementById('modalOverlay').addEventListener('click', closeModal);
-    }
+    // Modal controls
+    const closeModalBtn = document.getElementById('closeModal');
+    const modalOverlay = document.getElementById('modalOverlay');
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if (modalOverlay) modalOverlay.addEventListener('click', closeModal);
 
     // Wallet buttons
-    if (document.getElementById('createWalletBtn')) {
-      document.getElementById('createWalletBtn').addEventListener('click', showCreateWalletModal);
-    }
-    if (document.getElementById('importWalletBtn')) {
-      document.getElementById('importWalletBtn').addEventListener('click', showImportWalletModal);
-    }
+    const createWalletBtn = document.getElementById('createWalletBtn');
+    const importWalletBtn = document.getElementById('importWalletBtn');
+    if (createWalletBtn) createWalletBtn.addEventListener('click', ShowCreateWalletModal);
+    if (importWalletBtn) importWalletBtn.addEventListener('click', showImportWalletModal);
 
     // Mint form
     populateMintWalletSelect();
-    if (document.getElementById('mintNftBtn')) {
-      document.getElementById('mintNftBtn').addEventListener('click', submitMintForm);
-    }
+    const mintNftBtn = document.getElementById('mintNftBtn');
+    if (mintNftBtn) mintNftBtn.addEventListener('click', submitMintForm);
 
     // Marketplace tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -548,17 +457,20 @@
     });
 
     // Mobile menu toggle
-    document.getElementById('menuToggle').addEventListener('click', () => {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.style.left = sidebar.style.left === '0px' ? '-280px' : '0px';
-    });
+    const menuToggle = document.getElementById('menuToggle');
+    if (menuToggle) {
+      menuToggle.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.style.left = sidebar.style.left === '0px' ? '-280px' : '0px';
+      });
+    }
   }
 
   function populateMintWalletSelect() {
     const select = document.getElementById('mintWalletSelect');
-    if (!select) return;  // Exit if element doesn't exist
+    if (!select) return;
     
-    if (!state.wallets.length) {
+    if (!state.wallets || state.wallets.length === 0) {
       select.innerHTML = '<option>Create a wallet first</option>';
       return;
     }
@@ -577,8 +489,8 @@
       return;
     }
     
-    const name = nameEl.value.trim();
-    const desc = descEl.value.trim();
+    const name = nameEl.value?.trim();
+    const desc = descEl.value?.trim();
     const walletId = walletEl.value;
 
     if (!name || !desc || !walletId) {
@@ -588,26 +500,14 @@
 
     showStatus('Creating NFT...', 'info', true);
     try {
-      const res = await fetch(`${API_BASE}/telegram/web-app/mint`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: state.user.id,
-          wallet_id: walletId,
-          nft_name: name,
-          nft_description: desc
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await API.mintNFT(state.user.id, walletId, name, desc);
+      if (res.success) {
         showStatus('NFT created successfully!', 'success', false);
         nameEl.value = '';
         descEl.value = '';
-        // Clear cache and reload
-        Object.keys(cache).forEach(k => delete cache[k]);
         await loadDashboardData();
       } else {
-        throw new Error(data.error || 'Creation failed');
+        throw new Error(res.error || 'Creation failed');
       }
     } catch (err) {
       showStatus(`Error: ${err.message}`, 'error', false);
@@ -620,7 +520,7 @@
       <div class="form-group">
         <label>Select Blockchain</label>
         <select id="chainSelect" class="input-select">
-          ${chains.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('')}
+          ${chains.map(c => `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('')}
         </select>
       </div>
       <button class="btn btn-primary btn-block" onclick="window.createWallet()">Create Wallet</button>
@@ -649,21 +549,22 @@
   }
 
   window.createWallet = async function() {
-    const chain = document.getElementById('chainSelect').value;
+    const chain = document.getElementById('chainSelect')?.value;
+    if (!chain) {
+      showStatus('Please select a blockchain', 'error', false);
+      return;
+    }
+    
     showStatus(`Creating ${chain} wallet...`, 'info', true);
     showModalSpinner();
     try {
-      const res = await fetch(`${API_BASE}/wallets/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ user_id: state.user.id, blockchain: chain })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showStatus('Wallet created!', 'success', false);
+      const res = await API.createWallet(state.user.id, chain);
+      if (res.success) {
+        showStatus('Wallet created successfully!', 'success', false);
         closeModal();
-        Object.keys(cache).forEach(k => delete cache[k]);
         await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Creation failed');
       }
     } catch (err) {
       showStatus(`Error: ${err.message}`, 'error', false);
@@ -672,27 +573,24 @@
   };
 
   window.importWallet = async function() {
-    const addr = document.getElementById('importAddr').value.trim();
-    const chain = document.getElementById('importChain').value;
+    const addr = document.getElementById('importAddr')?.value?.trim();
+    const chain = document.getElementById('importChain')?.value;
+    
     if (!addr) {
       showStatus('Please enter an address', 'error', false);
       return;
     }
+    if (!chain) {
+      showStatus('Please select a blockchain', 'error', false);
+      return;
+    }
+    
     showStatus('Importing wallet...', 'info', true);
     showModalSpinner();
     try {
-      const res = await fetch(`${API_BASE}/wallets/import?user_id=${state.user.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blockchain: chain, address: addr, name: `${chain} Imported` })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showStatus('Wallet imported!', 'success', false);
-        closeModal();
-        Object.keys(cache).forEach(k => delete cache[k]);
-        await loadDashboardData();
-      }
+      // TODO: Add import endpoint to API service
+      showStatus('Import wallet functionality coming soon', 'info', false);
+      hideModalSpinner();
     } catch (err) {
       showStatus(`Error: ${err.message}`, 'error', false);
       hideModalSpinner();
@@ -701,32 +599,69 @@
 
   window.showWalletDetails = function(id) {
     const w = state.wallets.find(x => x.id === id);
-    if (!w) return;
+    if (!w) {
+      showStatus('Wallet not found', 'error', false);
+      return;
+    }
     showModal('Wallet Details', `
       <div class="profile-section">
         <div class="profile-item"><span>Blockchain:</span><strong>${w.blockchain?.toUpperCase()}</strong></div>
-        <div class="profile-item"><span>Address:</span><code style="word-break:break-all;">${w.address}</code></div>
+        <div class="profile-item"><span>Address:</span><code style="word-break:break-all;font-size:12px;">${w.address}</code></div>
         <div class="profile-item"><span>Primary:</span><strong>${w.is_primary ? 'Yes' : 'No'}</strong></div>
+        <div class="profile-item"><span>Created:</span><small>${new Date(w.created_at).toLocaleDateString()}</small></div>
       </div>
+      <button class="btn btn-secondary btn-block" onclick="window.closeModal()">Close</button>
     `);
   };
 
   window.viewListing = function(id) {
     const listing = state.listings.find(l => l.id === id);
-    if (!listing) return;
-    showModal('NFT Details', `
+    if (!listing) {
+      showStatus('Listing not found', 'error', false);
+      return;
+    }
+    showModal('NFT Listing', `
       <div class="profile-section">
         <div class="profile-item"><span>NFT:</span><strong>${listing.nft?.name || 'Unknown'}</strong></div>
-        <div class="profile-item"><span>Price:</span><strong>$${listing.price}</strong></div>
-        <div class="profile-item"><span>Status:</span><strong>${listing.active ? 'For Sale' : 'Inactive'}</strong></div>
+        <div class="profile-item"><span>Price:</span><strong>$${parseFloat(listing.price).toFixed(2)}</strong></div>
+        <div class="profile-item"><span>Blockchain:</span><strong>${listing.blockchain?.toUpperCase()}</strong></div>
+        <div class="profile-item"><span>Status:</span><strong>${listing.active || listing.status === 'active' ? 'For Sale' : 'Inactive'}</strong></div>
       </div>
-      <button class="btn btn-primary btn-block" onclick="window.closeModal()">Close</button>
+      <button class="btn btn-primary btn-block">Make Offer</button>
+      <button class="btn btn-secondary btn-block" onclick="window.closeModal()" style="margin-top:8px;">Close</button>
     `);
   };
 
   window.closeModal = closeModal;
 
-  // Initialize
-  initApp();
+  // ========== PAGE NAVIGATION ==========
+  function switchPage(pageName) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    const page = document.getElementById(`${pageName}-page`);
+    if (page) {
+      page.classList.add('active');
+      document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+    }
+
+    const titles = {
+      dashboard: 'Dashboard',
+      wallets: 'Wallet Management',
+      nfts: 'My NFT Collection',
+      mint: 'Create NFT',
+      marketplace: 'Marketplace',
+      profile: 'My Profile'
+    };
+    document.getElementById('pageTitle').textContent = titles[pageName] || 'NFT Platform';
+    state.currentPage = pageName;
+  }
+
+  // Initialize app when Telegram is ready
+  if (window.Telegram?.WebApp) {
+    window.Telegram.WebApp.ready();
+  }
+  
+  window.addEventListener('load', initApp);
 })();
 
