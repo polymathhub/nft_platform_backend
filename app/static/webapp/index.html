@@ -51,6 +51,9 @@
         <a href="#" class="nav-item" data-page="profile">
           <span class="nav-label">Profile</span>
         </a>
+        <a href="#" class="nav-item" data-page="help-page">
+          <span class="nav-label">Help</span>
+        </a>
       </div>
 
       <div class="sidebar-footer">
@@ -233,6 +236,51 @@
                 <div class="skeleton skeleton-metric"></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Help Page -->
+        <div id="help-page" class="page">
+          <div class="page-header">
+            <h2>Help & Testing Guide</h2>
+          </div>
+          <div class="card">
+            <h3>Testing Outside Telegram</h3>
+            <p>To test the web app locally without Telegram:</p>
+            <ol style="margin-left: 20px;">
+              <li>Get a test user ID by visiting: <code style="display:block;margin:10px 0;padding:10px;background:var(--bg-base);border-radius:4px;">/api/v1/telegram/web-app/test-user</code></li>
+              <li>Copy the returned <code>id</code> value</li>
+              <li>Add it to the URL: <code style="display:block;margin:10px 0;padding:10px;background:var(--bg-base);border-radius:4px;">?user_id=PASTE_ID_HERE</code></li>
+              <li>Full URL example: <code style="display:block;margin:10px 0;padding:10px;background:var(--bg-base);border-radius:4px;">http://localhost:8000/web-app/?user_id=550e8400-e29b-41d4-a716-446655440000</code></li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>Production: Telegram Mode</h3>
+            <p>In production, the web app works through Telegram:</p>
+            <ol style="margin-left: 20px;">
+              <li>Open Telegram bot</li>
+              <li>Click <strong>Web App</strong> button</li>
+              <li>Telegram automatically authenticates your session</li>
+              <li>Web app loads with your data</li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>Troubleshooting</h3>
+            <ul style="margin-left: 20px;">
+              <li><strong>Data not loading?</strong> Check browser console (F12) for errors</li>
+              <li><strong>API calls failing?</strong> Verify backend is running on /api/v1</li>
+              <li><strong>Wallets not showing?</strong> Create a wallet first from the Wallets page</li>
+              <li><strong>CORS errors?</strong> Backend may need CORS configuration</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>API Endpoints</h3>
+            <ul style="margin-left: 20px;">
+              <li><code>/api/v1/telegram/web-app/init</code> - Authenticate via Telegram</li>
+              <li><code>/api/v1/telegram/web-app/dashboard-data</code> - Get user's data</li>
+              <li><code>/api/v1/telegram/web-app/test-user</code> - Create test user</li>
+              <li><code>/api/v1/telegram/web-app/mint</code> - Mint NFT</li>
+            </ul>
           </div>
         </div>
       </div>

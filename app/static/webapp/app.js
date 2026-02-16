@@ -552,31 +552,52 @@
       showStatus('Starting app...', 'loading');
       log('App init started');
 
-      // Check Telegram
-      if (!window.Telegram?.WebApp) {
-        showStatus('Error: Not running in Telegram', 'error');
+      // Development mode: Check for test user ID in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const testUserId = urlParams.get('user_id');
+      
+      let authResponse = null;
+
+      if (testUserId) {
+        // Development/test mode - use provided user ID
+        log('📝 Development mode: Using test user ID from URL', 'info');
+        authResponse = {
+          success: true,
+          user: {
+            id: testUserId,
+            telegram_id: 999999,
+            telegram_username: 'test_user',
+            first_name: 'Test',
+            last_name: 'User'
+          }
+        };
+      } else if (window.Telegram?.WebApp) {
+        // Production mode - use Telegram
+        log('📱 Telegram mode: Using Telegram WebApp', 'info');
+        window.Telegram.WebApp.ready?.();
+
+        const initData = window.Telegram?.WebApp?.initData;
+        if (!initData) {
+          showStatus('Error: Telegram auth not available', 'error');
+          return;
+        }
+
+        // Auth via Telegram
+        showStatus('Authenticating...', 'loading');
+        authResponse = await API.initSession(initData);
+      } else {
+        // No Telegram and no test mode
+        showStatus('Error: Not running in Telegram. Use ?user_id=UUID for testing', 'error');
+        log('How to test: Add ?user_id=YOUR_USER_UUID_HERE to the URL', 'warn');
         return;
       }
-
-      window.Telegram.WebApp.ready?.();
-
-      // Get init data
-      const initData = window.Telegram?.WebApp?.initData;
-      if (!initData) {
-        showStatus('Error: Telegram auth not available', 'error');
-        return;
-      }
-
-      // Auth
-      showStatus('Authenticating...', 'loading');
-      const authResponse = await API.initSession(initData);
 
       if (!authResponse?.success) {
         throw new Error(authResponse?.error || 'Auth failed');
       }
 
       state.user = authResponse.user;
-      log(`User authenticated: ${state.user.id}`);
+      log(`User authenticated: ${state.user.telegram_username} (${state.user.id.slice(0, 8)}...)`);
 
       // Setup UI
       updateUserInfo();

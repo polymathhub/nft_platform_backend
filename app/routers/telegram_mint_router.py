@@ -2167,3 +2167,61 @@ async def handle_telegram_update(update: dict) -> None:
 
     except Exception as e:
         logger.error(f"Error processing Telegram update from polling: {e}", exc_info=True)
+
+# ==================== Web App Test Endpoint ====================
+
+@router.get("/web-app/test-user")
+async def get_or_create_test_user(
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """
+    Get or create a test user for web app testing (development mode).
+    This endpoint is for testing the web app outside of Telegram.
+    
+    Usage: 
+      1. Call this endpoint to create a test user
+      2. Use the returned user_id in the web app URL: ?user_id=UUID
+      3. Web app will load with the test user's data
+    
+    Returns the test user UUID and test data.
+    """
+    from app.services.auth_service import AuthService
+    
+    # Look for existing test user
+    result = await db.execute(
+        select(User).where(User.telegram_username == "test_user")
+    )
+    test_user = result.scalar_one_or_none()
+    
+    # Create test user if doesn't exist
+    if not test_user:
+        logger.info("Creating test user for web app testing")
+        test_user, error = await AuthService.authenticate_telegram(
+            db=db,
+            telegram_id=999999,
+            telegram_username="test_user",
+            first_name="Test",
+            last_name="User"
+        )
+        
+        if error or not test_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create test user: {error}"
+            )
+    
+    return {
+        "success": True,
+        "test_user": {
+            "id": str(test_user.id),
+            "username": test_user.telegram_username,
+            "first_name": test_user.first_name,
+            "last_name": test_user.last_name,
+        },
+        "instructions": {
+            "step_1": "Copy the test user ID above",
+            "step_2": f"Visit web app with: /web-app/index.html?user_id={str(test_user.id)}",
+            "step_3": "Web app will now load with test user's data",
+            "note": "This test mode is for development only. In production, use Telegram WebApp.initData"
+        }
+    }
