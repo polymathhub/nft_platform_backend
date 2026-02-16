@@ -1641,10 +1641,11 @@ async def web_app_get_dashboard_data(
     )
     nfts = nfts_result.scalars().all()
 
+    # Get user's own listings (what they are selling)
     listings_result = await db.execute(
         select(Listing)
         .options(selectinload(Listing.nft))
-        .where(Listing.status == ListingStatus.ACTIVE)
+        .where((Listing.seller_id == user_uuid) & (Listing.status == ListingStatus.ACTIVE))
         .order_by(Listing.created_at.desc())
         .limit(50)
     )

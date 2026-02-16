@@ -418,11 +418,19 @@
   // ========== LOAD DATA ==========
   async function loadDashboard() {
     try {
-      if (!state.user) return;
+      if (!state.user) {
+        showStatus('Error: User not authenticated', 'error');
+        return;
+      }
+      
       showStatus('Loading data...', 'loading');
+      log(`Loading dashboard for user: ${state.user.telegram_username} (${state.user.id.slice(0, 8)}...)`);
 
       const dashboardData = await API.getDashboardData(state.user.id);
-      log(`Dashboard response: ${JSON.stringify(dashboardData).slice(0, 100)}...`);
+      log(`Dashboard response received: success=${dashboardData?.success}`);
+      log(`  Wallets: ${dashboardData?.wallets?.length || 0}`);
+      log(`  NFTs: ${dashboardData?.nfts?.length || 0}`);
+      log(`  Own Listings: ${dashboardData?.listings?.length || 0}`);
 
       if (!dashboardData?.success) {
         throw new Error('Invalid response from server');
@@ -432,9 +440,12 @@
       state.nfts = dashboardData.nfts || [];
       state.listings = dashboardData.listings || [];
 
+      log(`State updated: wallets=${state.wallets.length}, nfts=${state.nfts.length}, listings=${state.listings.length}`);
+
       try {
         const marketData = await API.getMarketplaceListings(50);
         state.marketplaceListings = marketData?.listings || [];
+        log(`Marketplace listings loaded: ${state.marketplaceListings.length}`);
       } catch (e) {
         log(`Marketplace load failed: ${e.message}`, 'warn');
         state.marketplaceListings = [];
