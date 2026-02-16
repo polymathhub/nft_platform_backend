@@ -813,36 +813,97 @@
   window.pageActions = pageActions;
 
   // ========== INITIALIZATION ==========
-  async function init() {
+  
+  async function initWithTelegram() {
+    /**
+     * Initialize with real Telegram WebApp
+     */
+    if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
+      return null;
+    }
+
     try {
-      showStatus('Initializing NFT Platform...', 'loading');
-      log('Initialization started');
-
-      // Check for Telegram WebApp
-      if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
-        throw new Error('This app must be opened in Telegram');
-      }
-
-      // Initialize Telegram WebApp
       window.Telegram.WebApp.ready?.();
       window.Telegram.WebApp.expand?.();
 
       const initData = window.Telegram?.WebApp?.initData;
       if (!initData) {
-        throw new Error('Failed to get Telegram init data');
+        return null;
       }
 
-      log(`Init data received (${initData.length} bytes)`);
-      showStatus('Authenticating...', 'loading');
+      log(`Telegram init data received (${initData.length} bytes)`);
+      showStatus('Authenticating with Telegram...', 'loading');
 
-      // Get session and user
       const authResult = await API.initSession(initData);
       if (!authResult.success || !authResult.user) {
-        throw new Error(authResult.error || 'Authentication failed');
+        throw new Error(authResult.error || 'Telegram authentication failed');
       }
 
       state.user = authResult.user;
-      log(`Authenticated: ${state.user.telegram_username}`);
+      log(`Authenticated via Telegram: ${state.user.telegram_username}`);
+      return state.user;
+    } catch (err) {
+      log(`Telegram init error: ${err.message}`, 'error');
+      return null;
+    }
+  }
+
+  async function initWithTestUser() {
+    /**
+     * Initialize with test user (development/testing mode)
+     */
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const testUserId = params.get('user_id') || params.get('test_user');
+      
+      if (testUserId) {
+        log(`Loading user: ${testUserId}`);
+        showStatus('Loading user data...', 'loading');
+        
+        const result = await API._fetch(`/web-app/user?user_id=${testUserId}`);
+        if (result.success && result.user) {
+          state.user = result.user;
+          log(`User loaded: ${state.user.telegram_username}`);
+          return state.user;
+        }
+      }
+      
+      // Create/get test user
+      const testResult = await API._fetch('/web-app/test-user');
+      if (testResult.success && testResult.test_user) {
+        const userId = testResult.test_user.id;
+        log(`Using test user: ${userId}`);
+        
+        const userData = await API._fetch(`/web-app/user?user_id=${userId}`);
+        if (userData.success && userData.user) {
+          state.user = userData.user;
+          log(`Test user data loaded: ${state.user.telegram_username}`);
+          return state.user;
+        }
+      }
+      
+      return null;
+    } catch (err) {
+      log(`Test user init error: ${err.message}`, 'error');
+      return null;
+    }
+  }
+
+  async function init() {
+    try {
+      showStatus('Initializing NFT Platform...', 'loading');
+      log('Initialization started');
+
+      let user = await initWithTelegram();
+      
+      if (!user) {
+        log('Telegram not available, trying development mode...');
+        user = await initWithTestUser();
+      }
+      
+      if (!user) {
+        throw new Error('Authentication failed - open in Telegram or use development mode');
+      }
 
       // Update user info in header
       if (dom.userInfo) {
@@ -854,14 +915,14 @@
       await loadPageData('dashboard');
 
       showStatus('Ready!', 'success');
-      log('Initialization complete');
+      log('Initialization complete - user authenticated');
 
     } catch (err) {
       log(`Init error: ${err.message}`, 'error');
       showStatus(err.message, 'error');
       
       setTimeout(() => {
-        showStatus('Check browser console (F12) for details', 'info');
+        showStatus('Check F12 console for more info', 'info');
       }, 3000);
     }
   }

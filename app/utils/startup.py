@@ -147,10 +147,11 @@ async def ensure_user_role_column():
 async def setup_telegram_webhook() -> bool:
     """
     Setup Telegram webhook on application startup.
+    Non-fatal - app will start even if webhook setup fails.
     """
 
     if not settings.telegram_bot_token:
-        logger.warning("Telegram bot token not configured, skipping Telegram setup")
+        logger.info("Telegram bot token not configured, skipping Telegram webhook setup")
         return True
 
     logger.info("Initializing Telegram webhook integration...")
@@ -169,10 +170,10 @@ async def setup_telegram_webhook() -> bool:
             logger.info(f"Current Telegram webhook: {current_url}")
 
             if current_url == webhook_url:
-                logger.info("Webhook already correctly configured ✅")
+                logger.info("Webhook already correctly configured")
                 return True
 
-        logger.info("Setting Telegram webhook...")
+        logger.info("Attempting to set Telegram webhook...")
 
         success = await manager.set_webhook(
             webhook_url,
@@ -180,12 +181,12 @@ async def setup_telegram_webhook() -> bool:
         )
 
         if success:
-            logger.info("✅ Telegram webhook setup successful")
+            logger.info("Telegram webhook setup successful")
+            return True
+        else:
+            logger.warning("Failed to setup Telegram webhook - continuing startup anyway")
             return True
 
-        logger.error("❌ Failed to setup Telegram webhook")
-        return False
-
     except Exception as e:
-        logger.exception(f"Error during webhook setup: {e}")
-        return False
+        logger.warning(f"Telegram webhook setup failed (non-fatal): {e}")
+        return True
