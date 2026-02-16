@@ -20,7 +20,7 @@ from app.services.marketplace_service import MarketplaceService
 from app.services.wallet_service import WalletService
 from app.services.walletconnect_service import WalletConnectService
 from app.services.telegram_dashboard_service import TelegramDashboardService
-from app.utils.telegram_security import verify_telegram_data
+from app.utils.telegram_security import verify_telegram_data as verify_telegram_signature
 from app.utils.telegram_keyboards import (
     build_start_keyboard,
     build_dashboard_keyboard,
@@ -56,7 +56,107 @@ router = APIRouter( tags=["telegram"])
 bot_service = TelegramBotService()
 
 
-# ==================== Pydantic Models ====================
+# ==================== Dependency Functions ====================
+
+async def get_telegram_user_from_request(request: Request, db: AsyncSession = Depends(get_db_session)) -> dict:
+    """
+    Extract and authenticate Telegram user from request.
+    Supports both query parameter and body init_data.
+    """
+    from urllib.parse import parse_qs
+    import json
+    
+    # Try to get init_data from query params first
+    init_data_str = request.query_params.get("init_data")
+    
+    # If not in query, try to get from body (for POST requests)
+    if not init_data_str:
+        try:
+            body = await request.body()
+            if body:
+                # Try to parse as JSON
+                try:
+                    body_dict = json.loads(body)
+                    init_data_str = body_dict.get("init_data")
+                except:
+                    pass
+        except:
+            pass
+    
+    if not init_data_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing init_data",
+        )
+    
+    # Parse init_data query string into dictionary
+    params = parse_qs(init_data_str)
+    data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+    
+    # Verify Telegram data signature
+    if not verify_telegram_signature(data_dict):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Telegram signature",
+        )
+    
+    # Extract user data from init_data
+    user_data_str = data_dict.get("user")
+    if not user_data_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No user data in init_data",
+        )
+    
+    try:
+        user_data = json.loads(user_data_str)
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user data format",
+        )
+    
+    # Get or create user in database
+    telegram_id = user_data.get("id")
+    if not telegram_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing Telegram ID",
+        )
+    
+    # Try to find existing user
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # Create new user from Telegram data
+        from uuid import uuid4
+        user = User(
+            id=uuid4(),
+            telegram_id=telegram_id,
+            telegram_username=user_data.get("username", f"user{telegram_id}"),
+            first_name=user_data.get("first_name", ""),
+            last_name=user_data.get("last_name", ""),
+            full_name=user_data.get("first_name", "") + (" " + user_data.get("last_name", "")) if user_data.get("last_name") else user_data.get("first_name", "User"),
+            email=None,
+            avatar_url=None,
+            is_active=True,
+            is_verified=False,
+            user_role="user",
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    
+    return {
+        "user_id": str(user.id),
+        "telegram_id": user.telegram_id,
+        "telegram_username": user.telegram_username,
+        "user_obj": user,
+    }
+
 
 
 class TelegramUser(BaseModel):
@@ -1463,7 +1563,7 @@ async def web_app_init(
         data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
         
         # Verify Telegram data signature
-        if not verify_telegram_data(data_dict):
+        if not verify_telegram_signature(data_dict):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Telegram data signature",
@@ -2175,52 +2275,33 @@ async def get_my_listings(
 async def create_wallet_for_webapp(
     request: CreateWalletRequest,
     db: AsyncSession = Depends(get_db_session),
-    init_data: dict = Depends(verify_telegram_data),
+    auth: dict = Depends(get_telegram_user_from_request),
 ) -> dict:
     """
     Create a new wallet for the current user.
-    
-    Args:
-        request: CreateWalletRequest with blockchain and wallet_type
-        db: Database session
-        init_data: Verified Telegram WebApp init data
-    
-    Returns:
-        Success status with wallet details
+    Requires Telegram WebApp init_data for authentication.
     """
     try:
-        # Get user from init_data
-        user_id = init_data.get("user_id")
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not authenticated",
-            )
-        
-        # Verify user exists
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        user_id = auth["user_id"]
+        user = auth["user_obj"]
         
         # Create wallet using WalletService
         wallet, error = await WalletService.create_wallet(
             db=db,
-            user_id=user_id,
+            user_id=user.id,
             blockchain=request.blockchain.value,
             name=f"{request.blockchain.value.capitalize()} Wallet",
             is_primary=request.is_primary,
         )
         
         if error:
+            logger.error(f"Wallet creation error: {error}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to create wallet: {error}",
             )
+        
+        logger.info(f"Wallet created for user {user.telegram_username}: {wallet.id}")
         
         return {
             "success": True,
@@ -2247,42 +2328,20 @@ async def create_wallet_for_webapp(
 async def import_wallet_for_webapp(
     request: ImportWalletRequest,
     db: AsyncSession = Depends(get_db_session),
-    init_data: dict = Depends(verify_telegram_data),
+    auth: dict = Depends(get_telegram_user_from_request),
 ) -> dict:
     """
     Import an existing wallet for the current user.
-    
-    Args:
-        request: ImportWalletRequest with blockchain, address, and optional public_key
-        db: Database session
-        init_data: Verified Telegram WebApp init data
-    
-    Returns:
-        Success status with wallet details
+    Requires Telegram WebApp init_data for authentication.
     """
     try:
-        # Get user from init_data
-        user_id = init_data.get("user_id")
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not authenticated",
-            )
-        
-        # Verify user exists
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        user_id = auth["user_id"]
+        user = auth["user_obj"]
         
         # Import wallet using WalletService
         wallet, error = await WalletService.import_wallet(
             db=db,
-            user_id=user_id,
+            user_id=user.id,
             blockchain=request.blockchain.value,
             address=request.address,
             public_key=request.public_key,
@@ -2291,10 +2350,13 @@ async def import_wallet_for_webapp(
         )
         
         if error:
+            logger.error(f"Wallet import error: {error}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to import wallet: {error}",
             )
+        
+        logger.info(f"Wallet imported for user {user.telegram_username}: {wallet.id}")
         
         return {
             "success": True,
