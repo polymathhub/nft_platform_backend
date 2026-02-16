@@ -13,6 +13,7 @@ from sqlalchemy import select, and_
 from app.database import get_db_session
 from app.models import User, NFT
 from app.models.marketplace import Listing
+from app.schemas.wallet import CreateWalletRequest, ImportWalletRequest, WalletResponse
 from app.services.telegram_bot_service import TelegramBotService
 from app.services.nft_service import NFTService
 from app.services.marketplace_service import MarketplaceService
@@ -1503,9 +1504,11 @@ async def web_app_init(
                 "id": str(user.id),
                 "telegram_id": user.telegram_id,
                 "telegram_username": user.telegram_username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
+                "full_name": user.full_name or f"{user.first_name or ''} {user.last_name or ''}".strip() or user.telegram_username or "User",
+                "avatar_url": user.avatar_url,
                 "email": user.email,
+                "is_verified": user.is_verified,
+                "user_role": user.user_role.value if hasattr(user.user_role, 'value') else str(user.user_role),
                 "created_at": user.created_at.isoformat(),
             },
         }
@@ -2090,39 +2093,44 @@ async def get_marketplace_listings(
     limit: int = 50,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get active marketplace listings. Optimized with eager loading, cached for 60 seconds."""
+    """Get active marketplace listings with seller information."""
     from app.models.marketplace import ListingStatus
     from sqlalchemy.orm import selectinload
+    from uuid import UUID
 
     # Optimized query with eager loading and index-friendly ordering
     result = await db.execute(
-        select(Listing)
+        select(Listing, User)
         .options(selectinload(Listing.nft))
+        .outerjoin(User, Listing.seller_id == User.id)
         .where(Listing.status == ListingStatus.ACTIVE)
         .order_by(Listing.created_at.desc())
         .limit(limit)
     )
-    listings = result.unique().scalars().all()
+    rows = result.unique().all()
 
-    if not listings:
+    if not rows:
         return {"success": True, "listings": []}
+
+    listings = []
+    for listing, seller in rows:
+        listings.append({
+            "id": str(listing.id),
+            "nft_id": str(listing.nft_id),
+            "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
+            "price": float(listing.price),
+            "currency": listing.currency,
+            "blockchain": listing.blockchain,
+            "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
+            "image_url": listing.nft.image_url if listing.nft else None,
+            "active": listing.status == ListingStatus.ACTIVE,
+            "seller_id": str(listing.seller_id) if listing.seller_id else None,
+            "seller_name": seller.telegram_username or seller.full_name or "Anonymous" if seller else "Anonymous",
+        })
 
     return {
         "success": True,
-        "listings": [
-            {
-                "id": str(listing.id),
-                "nft_id": str(listing.nft_id),
-                "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
-                "price": float(listing.price),
-                "currency": listing.currency,
-                "blockchain": listing.blockchain,
-                "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
-                "image_url": listing.nft.image_url if listing.nft else None,
-                "active": listing.status == ListingStatus.ACTIVE,
-            }
-            for listing in listings
-        ],
+        "listings": listings,
     }
 
 
@@ -2159,6 +2167,154 @@ async def get_my_listings(
             for listing, nft in listings
         ],
     }
+
+
+# ==================== Wallet Management ====================
+
+@router.post("/web-app/create-wallet", response_model=dict)
+async def create_wallet_for_webapp(
+    request: CreateWalletRequest,
+    db: AsyncSession = Depends(get_db_session),
+    init_data: dict = Depends(verify_telegram_data),
+) -> dict:
+    """
+    Create a new wallet for the current user.
+    
+    Args:
+        request: CreateWalletRequest with blockchain and wallet_type
+        db: Database session
+        init_data: Verified Telegram WebApp init data
+    
+    Returns:
+        Success status with wallet details
+    """
+    try:
+        # Get user from init_data
+        user_id = init_data.get("user_id")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not authenticated",
+            )
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Create wallet using WalletService
+        wallet, error = await WalletService.create_wallet(
+            db=db,
+            user_id=user_id,
+            blockchain=request.blockchain.value,
+            name=f"{request.blockchain.value.capitalize()} Wallet",
+            is_primary=request.is_primary,
+        )
+        
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to create wallet: {error}",
+            )
+        
+        return {
+            "success": True,
+            "wallet": {
+                "id": str(wallet.id),
+                "name": wallet.name,
+                "blockchain": wallet.blockchain.value if hasattr(wallet.blockchain, 'value') else str(wallet.blockchain),
+                "address": wallet.address,
+                "is_primary": wallet.is_primary,
+                "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create wallet: {str(e)}",
+        )
+
+
+@router.post("/web-app/import-wallet", response_model=dict)
+async def import_wallet_for_webapp(
+    request: ImportWalletRequest,
+    db: AsyncSession = Depends(get_db_session),
+    init_data: dict = Depends(verify_telegram_data),
+) -> dict:
+    """
+    Import an existing wallet for the current user.
+    
+    Args:
+        request: ImportWalletRequest with blockchain, address, and optional public_key
+        db: Database session
+        init_data: Verified Telegram WebApp init data
+    
+    Returns:
+        Success status with wallet details
+    """
+    try:
+        # Get user from init_data
+        user_id = init_data.get("user_id")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not authenticated",
+            )
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Import wallet using WalletService
+        wallet, error = await WalletService.import_wallet(
+            db=db,
+            user_id=user_id,
+            blockchain=request.blockchain.value,
+            address=request.address,
+            public_key=request.public_key,
+            name=f"Imported {request.blockchain.value.capitalize()} Wallet",
+            is_primary=request.is_primary,
+        )
+        
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to import wallet: {error}",
+            )
+        
+        return {
+            "success": True,
+            "wallet": {
+                "id": str(wallet.id),
+                "name": wallet.name,
+                "blockchain": wallet.blockchain.value if hasattr(wallet.blockchain, 'value') else str(wallet.blockchain),
+                "address": wallet.address,
+                "is_primary": wallet.is_primary,
+                "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Import wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to import wallet: {str(e)}",
+        )
 
 
 # ==================== Polling Handler ====================
