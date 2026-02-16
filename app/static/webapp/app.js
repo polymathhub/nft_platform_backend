@@ -1,13 +1,13 @@
 /**
  * NFT Platform Web App - Production Ready
- * Fully functional Telegram + Development Mode Support
- * Senior-grade reliability and error handling
+ * Telegram WebApp Integration with Full Backend Support
+ * Mobile-First Responsive Design
  */
 
 (function() {
   'use strict';
 
-  console.log('🚀 NFT Platform Web App Starting...');
+  console.log('[NFT Platform] Web App Starting...');
 
   // ========== DOM REFERENCES ==========
   const status = document.getElementById('status');
@@ -16,9 +16,8 @@
   const modal = document.getElementById('modal');
   const modalOverlay = document.getElementById('modalOverlay');
 
-  // Check DOM is ready
   if (!status || !modal) {
-    console.error('❌ Required DOM elements not found');
+    console.error('[ERROR] Required DOM elements not found');
     document.body.innerHTML = '<h1>Error: Page failed to load. Please refresh.</h1>';
     return;
   }
@@ -35,15 +34,13 @@
     wallets: [],
     nfts: [],
     listings: [],
-    marketplaceListings: [],
-    myListings: [],
-    authMode: 'unknown' // 'telegram' or 'development'
+    marketplaceListings: []
   };
 
   // ========== UTILITIES ==========
   function log(msg, type = 'info') {
-    const emoji = { info: 'ℹ️', error: '❌', success: '✅', warn: '⚠️' };
-    console.log(`${emoji[type]} [${state.authMode.toUpperCase()}] ${msg}`);
+    const prefix = { info: '[INFO]', error: '[ERROR]', success: '[OK]', warn: '[WARN]' };
+    console.log(`${prefix[type]} ${msg}`);
   }
 
   function showStatus(msg, type = 'info') {
@@ -79,16 +76,15 @@
   }
 
   function truncate(str, len = 20) {
-    if (!str) return '—';
+    if (!str) return '-';
     return str.length > len ? str.slice(0, len - 3) + '...' : str;
   }
 
   function formatAddr(addr) {
-    if (!addr) return '—';
+    if (!addr) return '-';
     return addr.slice(0, 6) + '...' + addr.slice(-4);
   }
 
-  // Sleep utility for retries
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -97,7 +93,7 @@
   const API = {
     async fetch(endpoint, options = {}, attempt = 1) {
       const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
-      let timeoutId; // Declare outside try-catch for proper scope
+      let timeoutId;
       
       try {
         log(`[Attempt ${attempt}] Fetching: ${endpoint}`);
@@ -124,14 +120,13 @@
         }
 
         const data = await response.json();
-        log(`✓ ${endpoint}: OK`, 'success');
+        log(`Response OK: ${endpoint}`, 'success');
         return data;
       } catch (err) {
         if (timeoutId) clearTimeout(timeoutId);
         
-        // Retry on network errors (but not on 4xx/5xx)
         if (attempt < API_RETRY_ATTEMPTS && this.shouldRetry(err)) {
-          log(`Retry ${attempt}/${API_RETRY_ATTEMPTS}: ${endpoint}`, 'warn');
+          log(`Retrying ${attempt}/${API_RETRY_ATTEMPTS}: ${endpoint}`, 'warn');
           await sleep(API_RETRY_DELAY * attempt);
           return this.fetch(endpoint, options, attempt + 1);
         }
@@ -142,7 +137,6 @@
     },
 
     shouldRetry(err) {
-      // Retry on network errors, timeouts, but not 4xx/5xx
       const msg = err.message;
       return msg.includes('Failed to fetch') || 
              msg.includes('timeout') || 
@@ -152,10 +146,6 @@
 
     async initSession(initData) {
       return this.fetch(`/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
-    },
-
-    async getTestUser() {
-      return this.fetch(`/telegram/web-app/test-user`);
     },
 
     async getDashboardData(userId) {
@@ -238,7 +228,7 @@
   function updateUserInfo() {
     const userInfo = document.getElementById('userInfo');
     if (!userInfo) return;
-    const name = state.user?.first_name || state.user?.telegram_username || 'User';
+    const name = state.user?.full_name || state.user?.telegram_username || 'User';
     userInfo.innerHTML = `<strong>${truncate(name, 15)}</strong><small>@${truncate(state.user?.telegram_username || 'user', 12)}</small>`;
   }
 
@@ -460,20 +450,18 @@
   async function loadDashboard() {
     try {
       if (!state.user) {
-        showStatus('❌ User not authenticated', 'error');
+        showStatus('User not authenticated', 'error');
         return;
       }
       
-      showStatus('📊 Loading your dashboard data...', 'loading');
+      showStatus('Loading your dashboard data...', 'loading');
       log(`Fetching dashboard for: ${state.user.telegram_username}`);
 
-      // Fetch dashboard data with retry logic
       let dashboardData = null;
       try {
         dashboardData = await API.getDashboardData(state.user.id);
       } catch (err) {
         log(`Dashboard fetch error: ${err.message}`, 'error');
-        // Use empty data as fallback
         dashboardData = { success: true, wallets: [], nfts: [], listings: [] };
       }
 
@@ -486,37 +474,33 @@
       state.nfts = dashboardData.nfts || [];
       state.listings = dashboardData.listings || [];
 
-      log(`📦 Data loaded: ${state.wallets.length} wallets, ${state.nfts.length} NFTs, ${state.listings.length} listings`);
+      log(`Data loaded: ${state.wallets.length} wallets, ${state.nfts.length} NFTs, ${state.listings.length} listings`);
 
-      // Fetch marketplace listings (non-critical)
       try {
         const marketData = await API.getMarketplaceListings(50);
         state.marketplaceListings = marketData?.listings || [];
-        log(`🛍️ Marketplace loaded: ${state.marketplaceListings.length} listings`);
+        log(`Marketplace loaded: ${state.marketplaceListings.length} listings`);
       } catch (err) {
         log(`Marketplace load failed: ${err.message}`, 'warn');
         state.marketplaceListings = [];
       }
 
-      // Update UI
       updateDashboard();
       updateWalletsList();
       updateNftsList();
       updateMarketplace();
 
-      showStatus('✅ Dashboard ready!', 'success');
-      log('=== DASHBOARD FULLY LOADED ===');
+      showStatus('Dashboard ready!', 'success');
+      log('Dashboard fully loaded');
 
-      // Auto-hide status after 2 seconds
       setTimeout(() => {
         if (status) status.style.display = 'none';
       }, 2000);
 
     } catch (err) {
-      log(`💥 Dashboard load error: ${err.message}`, 'error');
-      showStatus(`⚠️ ${err.message}`, 'error');
+      log(`Dashboard load error: ${err.message}`, 'error');
+      showStatus(`${err.message}`, 'error');
       
-      // Still render empty state
       updateDashboard();
       updateWalletsList();
       updateNftsList();
@@ -526,7 +510,6 @@
 
   // ========== EVENTS ==========
   function setupEvents() {
-    // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
@@ -534,7 +517,6 @@
       });
     });
 
-    // Modal
     if (modalOverlay) {
       modalOverlay.addEventListener('click', closeModal);
     }
@@ -543,13 +525,11 @@
       closeBtn.addEventListener('click', closeModal);
     }
 
-    // Wallet buttons
     const createWalletBtn = document.getElementById('createWalletBtn');
     const importWalletBtn = document.getElementById('importWalletBtn');
     if (createWalletBtn) createWalletBtn.addEventListener('click', window.createWalletModal);
     if (importWalletBtn) importWalletBtn.addEventListener('click', window.importWalletModal);
 
-    // Mint button
     const mintBtn = document.getElementById('mintNftBtn');
     if (mintBtn) {
       mintBtn.addEventListener('click', async () => {
@@ -575,7 +555,6 @@
       });
     }
 
-    // Populate mint wallet dropdown
     const mintSelect = document.getElementById('mintWalletSelect');
     if (mintSelect && state.wallets.length) {
       mintSelect.innerHTML = state.wallets.map(w => 
@@ -583,7 +562,6 @@
       ).join('');
     }
 
-    // Marketplace tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -607,61 +585,19 @@
   // ========== INIT ==========
   async function init() {
     try {
-      showStatus('🔄 Initializing your NFT Dashboard...', 'loading');
-      log('=== APP INITIALIZATION START ===');
+      showStatus('Initializing NFT Dashboard...', 'loading');
+      log('App initialization started');
 
-      // Step 1: Detect authentication method
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlUserId = urlParams.get('user_id');
       const hasTelegram = typeof window.Telegram !== 'undefined' && window.Telegram?.WebApp;
       
-      log(`Telegram SDK loaded: ${hasTelegram}`);
-      log(`URL user_id parameter: ${urlUserId ? 'yes' : 'no'}`);
+      log(`Telegram SDK available: ${hasTelegram}`);
 
       let authResponse = null;
-      state.authMode = 'unknown';
 
-      // ========== AUTH FLOW ==========
-      
-      // Priority 1: URL parameter (development mode)
-      if (urlUserId) {
-        log('💻 DEVELOPMENT MODE: Using URL user_id parameter');
-        state.authMode = 'development';
-        
-        try {
-          // Validate UUID format
-          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(urlUserId)) {
-            throw new Error('Invalid UUID format in URL');
-          }
-
-          authResponse = {
-            success: true,
-            user: {
-              id: urlUserId,
-              telegram_id: 999999,
-              telegram_username: 'dev_user',
-              first_name: 'Developer',
-              last_name: 'Mode'
-            }
-          };
-
-          log(`✅ Development user loaded: ${urlUserId.slice(0, 8)}...`);
-        } catch (err) {
-          log(`❌ Invalid development mode setup: ${err.message}`, 'error');
-          showStatus(`Invalid UUID: ${err.message}`, 'error');
-          
-          // Offer to create test user
-          showStatus('Creating test user...', 'loading');
-          return initWithTestUser();
-        }
-      } 
-      // Priority 2: Telegram (production mode)
-      else if (hasTelegram) {
-        log('📱 TELEGRAM MODE: Using Telegram WebApp SDK');
-        state.authMode = 'telegram';
+      if (hasTelegram) {
+        log('Telegram mode: Using Telegram WebApp SDK');
 
         try {
-          // Initialize Telegram WebApp
           window.Telegram.WebApp.ready?.();
           window.Telegram.WebApp.expand?.();
           
@@ -672,7 +608,7 @@
           }
 
           log(`Telegram initData received (${initData.length} bytes)`);
-          showStatus('🔐 Authenticating with Telegram...', 'loading');
+          showStatus('Authenticating with Telegram...', 'loading');
           
           authResponse = await API.initSession(initData);
 
@@ -680,94 +616,43 @@
             throw new Error(authResponse?.error || 'Telegram authentication failed');
           }
 
-          log(`✅ Telegram authenticated: ${authResponse.user.telegram_username}`);
+          log(`Telegram authenticated: ${authResponse.user.telegram_username}`);
         } catch (err) {
           log(`Telegram auth failed: ${err.message}`, 'error');
-          log('Falling back to test user mode...', 'warn');
-          
-          // Fallback: Try to use test user
-          return initWithTestUser();
+          showStatus(`Authentication failed: ${err.message}`, 'error');
+          return;
         }
-      } 
-      // Priority 3: Fallback to test user
-      else {
-        log('⚠️ No Telegram SDK and no user_id parameter');
-        log('Creating test user for demonstration...', 'warn');
-        return initWithTestUser();
+      } else {
+        log('Telegram SDK not detected', 'warn');
+        showStatus('Please open this app inside Telegram', 'error');
+        return;
       }
 
-      // ========== VALIDATE RESPONSE ==========
       if (!authResponse?.success || !authResponse?.user) {
         throw new Error('Invalid authentication response');
       }
 
-      // ========== SET STATE ==========
       state.user = authResponse.user;
-      log(`✅ User authenticated: ${state.user.telegram_username} (${state.user.id.slice(0, 8)}...)`);
+      log(`User authenticated: ${state.user.telegram_username} (${state.user.id.slice(0, 8)}...)`);
 
-      // ========== LOAD UI ==========
       updateUserInfo();
       setupEvents();
 
-      // ========== LOAD DATA ==========
       await loadDashboard();
 
-      log('=== APP INITIALIZATION COMPLETE ===');
-      showStatus('✨ Ready!', 'success');
+      log('App initialization complete');
+      showStatus('Ready!', 'success');
 
     } catch (err) {
-      log(`💥 Init error: ${err.message}`, 'error');
-      showStatus(`❌ ${err.message}`, 'error');
+      log(`Init error: ${err.message}`, 'error');
+      showStatus(`${err.message}`, 'error');
       
-      // Show help message
       setTimeout(() => {
         showStatus('Need help? Check browser console (F12)', 'info');
       }, 3000);
     }
   }
 
-  // Fallback: Create and use test user
-  async function initWithTestUser() {
-    try {
-      showStatus('📊 Loading test user...', 'loading');
-      log('Requesting test user from server...');
-
-      const response = await API.getTestUser();
-
-      if (!response?.success || !response?.test_user) {
-        throw new Error('Failed to create test user');
-      }
-
-      const testUser = response.test_user;
-      log(`✅ Test user created: ${testUser.username} (${testUser.id.slice(0, 8)}...)`);
-
-      // Set state with test user
-      state.user = {
-        id: testUser.id,
-        telegram_id: 999999,
-        telegram_username: testUser.username,
-        first_name: testUser.first_name,
-        last_name: testUser.last_name
-      };
-      state.authMode = 'development';
-
-      // Load UI
-      updateUserInfo();
-      setupEvents();
-
-      // Load data
-      await loadDashboard();
-
-      log('=== APP INITIALIZED WITH TEST USER ===');
-      showStatus('✨ Page loaded!', 'success');
-
-    } catch (err) {
-      log(`Test user failed: ${err.message}`, 'error');
-      showStatus(`Cannot initialize: ${err.message}`, 'error');
-    }
-  }
-
-  // Start when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
