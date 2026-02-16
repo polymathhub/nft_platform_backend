@@ -148,7 +148,7 @@
       const method = options.method || 'GET';
       
       try {
-        log(`[Attempt ${attempt}] ${method} ${endpoint}`);
+        log(`[Attempt ${attempt}] ${method} ${url}`);
         
         let fetchOptions = {
           method,
@@ -164,18 +164,21 @@
         }
         
         const response = await fetch(url, fetchOptions);
+        const data = await response.json();
         
-        if (!response.ok && response.status !== 404) {
+        if (!response.ok) {
+          log(`${method} ${endpoint} failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
           if (attempt < CONFIG.RETRY_ATTEMPTS) {
             await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
             return this._fetch(endpoint, options, attempt + 1);
           }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw new Error(data.detail || `HTTP ${response.status}`);
         }
         
-        const data = await response.json();
+        log(`${method} ${endpoint} succeeded`, 'log');
         return data;
       } catch (err) {
+        log(`API error on attempt ${attempt}: ${err.message}`, 'error');
         if (attempt < CONFIG.RETRY_ATTEMPTS) {
           await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
           return this._fetch(endpoint, options, attempt + 1);
