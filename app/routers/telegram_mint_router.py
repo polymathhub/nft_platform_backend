@@ -1451,64 +1451,72 @@ async def web_app_init(
     
     The init_data comes from Telegram WebApp.initData (query param)
     """
-    from urllib.parse import parse_qs
-    import json
+    try:
+        from urllib.parse import parse_qs
+        import json
 
-    # Parse init_data query string into dictionary
-    params = parse_qs(init_data)
-    
-    # Convert parsed params to simple dict (parse_qs returns lists)
-    data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
-    
-    # Verify Telegram data signature
-    if not verify_telegram_data(data_dict):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Telegram data signature",
+        # Parse init_data query string into dictionary
+        params = parse_qs(init_data)
+        
+        # Convert parsed params to simple dict (parse_qs returns lists)
+        data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+        
+        # Verify Telegram data signature
+        if not verify_telegram_data(data_dict):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Telegram data signature",
+            )
+
+        # Extract user data from init_data
+        user_data = None
+        if "user" in data_dict:
+            user_data = json.loads(data_dict["user"])
+
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No user data provided",
+            )
+
+        # Get or create user
+        from app.services.auth_service import AuthService
+
+        user, error = await AuthService.authenticate_telegram(
+            db=db,
+            telegram_id=user_data.get("id"),
+            telegram_username=user_data.get("username", f"user_{user_data.get('id')}"),
+            first_name=user_data.get("first_name", ""),
+            last_name=user_data.get("last_name", ""),
         )
 
-    # Extract user data from init_data
-    user_data = None
-    if "user" in data_dict:
-        user_data = json.loads(data_dict["user"])
+        if error or not user:
+            logger.error(f"User authentication failed: {error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to authenticate user: {error or 'unknown error'}",
+            )
 
-    if not user_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No user data provided",
-        )
-
-    # Get or create user
-    from app.services.auth_service import AuthService
-
-    user, error = await AuthService.authenticate_telegram(
-        db=db,
-        telegram_id=user_data.get("id"),
-        telegram_username=user_data.get("username", f"user_{user_data.get('id')}"),
-        first_name=user_data.get("first_name", ""),
-        last_name=user_data.get("last_name", ""),
-    )
-
-    if error or not user:
+        return {
+            "success": True,
+            "user": {
+                "id": str(user.id),
+                "telegram_id": user.telegram_id,
+                "telegram_username": user.telegram_username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email,
+                "created_at": user.created_at.isoformat(),
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Web app init error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to authenticate user",
+            detail=f"Initialization failed: {str(e)}"
         )
-
-    return {
-        "success": True,
-        "user": {
-            "id": str(user.id),
-            "telegram_id": user.telegram_id,
-            "telegram_username": user.telegram_username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-            "created_at": user.created_at.isoformat(),
-        },
-    }
-
-
 @router.get("/web-app/user")
 async def web_app_get_user(
     user_id: str,
@@ -1618,81 +1626,111 @@ async def web_app_get_dashboard_data(
     Get all dashboard data in one call (wallets, NFTs, listings).
     Significantly faster than 3 separate API calls. Cached 60 seconds.
     """
-    from uuid import UUID
-    from app.models import Wallet
-    from app.models.marketplace import ListingStatus
-    from sqlalchemy.orm import selectinload
+    try:
+        from uuid import UUID
+        from app.models import Wallet
+        from app.models.marketplace import ListingStatus
+        from sqlalchemy.orm import selectinload
 
-    user_uuid = UUID(user_id)
+        # Validate UUID format
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid user_id format: {user_id}"
+            )
 
-    # Execute all queries in parallel
-    wallets_result = await db.execute(
-        select(Wallet)
-        .where(Wallet.user_id == user_uuid)
-        .order_by(Wallet.is_primary.desc(), Wallet.created_at.desc())
-    )
-    wallets = wallets_result.scalars().all()
+        # Execute all queries in parallel with error handling
+        try:
+            wallets_result = await db.execute(
+                select(Wallet)
+                .where(Wallet.user_id == user_uuid)
+                .order_by(Wallet.is_primary.desc(), Wallet.created_at.desc())
+            )
+            wallets = wallets_result.scalars().all()
+        except Exception as e:
+            logger.error(f"Failed to fetch wallets: {str(e)}")
+            wallets = []
 
-    nfts_result = await db.execute(
-        select(NFT)
-        .where(NFT.user_id == user_uuid)
-        .order_by(NFT.created_at.desc())
-        .limit(50)  # Limit to 50 NFTs for faster loading
-    )
-    nfts = nfts_result.scalars().all()
+        try:
+            nfts_result = await db.execute(
+                select(NFT)
+                .where(NFT.user_id == user_uuid)
+                .order_by(NFT.created_at.desc())
+                .limit(50)  # Limit to 50 NFTs for faster loading
+            )
+            nfts = nfts_result.scalars().all()
+        except Exception as e:
+            logger.error(f"Failed to fetch NFTs: {str(e)}")
+            nfts = []
 
-    # Get user's own listings (what they are selling)
-    listings_result = await db.execute(
-        select(Listing)
-        .options(selectinload(Listing.nft))
-        .where((Listing.seller_id == user_uuid) & (Listing.status == ListingStatus.ACTIVE))
-        .order_by(Listing.created_at.desc())
-        .limit(50)
-    )
-    listings = listings_result.unique().scalars().all()
+        # Get user's own listings (what they are selling)
+        try:
+            listings_result = await db.execute(
+                select(Listing)
+                .options(selectinload(Listing.nft))
+                .where((Listing.seller_id == user_uuid) & (Listing.status == ListingStatus.ACTIVE))
+                .order_by(Listing.created_at.desc())
+                .limit(50)
+            )
+            listings = listings_result.unique().scalars().all()
+        except Exception as e:
+            logger.error(f"Failed to fetch listings: {str(e)}")
+            listings = []
 
-    return {
-        "success": True,
-        "wallets": [
-            {
-                "id": str(wallet.id),
-                "name": wallet.name,
-                "blockchain": wallet.blockchain.value,
-                "address": wallet.address,
-                "is_primary": wallet.is_primary,
-                "created_at": wallet.created_at.isoformat(),
-            }
-            for wallet in wallets
-        ],
-        "nfts": [
-            {
-                "id": str(nft.id),
-                "name": nft.name,
-                "global_nft_id": nft.global_nft_id,
-                "description": nft.description,
-                "blockchain": nft.blockchain,
-                "status": nft.status.value if hasattr(nft.status, 'value') else nft.status,
-                "image_url": nft.image_url,
-                "minted_at": nft.minted_at.isoformat() if nft.minted_at else None,
-                "created_at": nft.created_at.isoformat(),
-            }
-            for nft in nfts
-        ],
-        "listings": [
-            {
-                "id": str(listing.id),
-                "nft_id": str(listing.nft_id),
-                "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
-                "price": float(listing.price),
-                "currency": listing.currency,
-                "blockchain": listing.blockchain,
-                "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
-                "image_url": listing.nft.image_url if listing.nft else None,
-                "active": listing.status == ListingStatus.ACTIVE,
-            }
-            for listing in listings
-        ],
-    }
+        return {
+            "success": True,
+            "wallets": [
+                {
+                    "id": str(wallet.id),
+                    "name": wallet.name,
+                    "blockchain": wallet.blockchain.value,
+                    "address": wallet.address,
+                    "is_primary": wallet.is_primary,
+                    "created_at": wallet.created_at.isoformat(),
+                }
+                for wallet in wallets
+            ],
+            "nfts": [
+                {
+                    "id": str(nft.id),
+                    "name": nft.name,
+                    "global_nft_id": nft.global_nft_id,
+                    "description": nft.description,
+                    "blockchain": nft.blockchain,
+                    "status": nft.status.value if hasattr(nft.status, 'value') else nft.status,
+                    "image_url": nft.image_url,
+                    "minted_at": nft.minted_at.isoformat() if nft.minted_at else None,
+                    "created_at": nft.created_at.isoformat(),
+                }
+                for nft in nfts
+            ],
+            "listings": [
+                {
+                    "id": str(listing.id),
+                    "nft_id": str(listing.nft_id),
+                    "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
+                    "price": float(listing.price),
+                    "currency": listing.currency,
+                    "blockchain": listing.blockchain,
+                    "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
+                    "image_url": listing.nft.image_url if listing.nft else None,
+                    "active": listing.status == ListingStatus.ACTIVE,
+                }
+                for listing in listings
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Dashboard data fetch error: {str(e)}", exc_info=True)
+        # Return empty state instead of 500 error
+        return {
+            "success": True,
+            "wallets": [],
+            "nfts": [],
+            "listings": [],
+            "error": f"Partial data load: {str(e)}"
+        }
 
 
 @router.post("/web-app/mint")
@@ -2185,43 +2223,53 @@ async def get_or_create_test_user(
     
     Returns the test user UUID and test data.
     """
-    from app.services.auth_service import AuthService
-    
-    # Look for existing test user
-    result = await db.execute(
-        select(User).where(User.telegram_username == "test_user")
-    )
-    test_user = result.scalar_one_or_none()
-    
-    # Create test user if doesn't exist
-    if not test_user:
-        logger.info("Creating test user for web app testing")
-        test_user, error = await AuthService.authenticate_telegram(
-            db=db,
-            telegram_id=999999,
-            telegram_username="test_user",
-            first_name="Test",
-            last_name="User"
-        )
+    try:
+        from app.services.auth_service import AuthService
         
-        if error or not test_user:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create test user: {error}"
+        # Look for existing test user
+        result = await db.execute(
+            select(User).where(User.telegram_username == "test_user")
+        )
+        test_user = result.scalar_one_or_none()
+
+        # Create test user if doesn't exist
+        if not test_user:
+            logger.info("Creating test user for web app testing")
+            test_user, error = await AuthService.authenticate_telegram(
+                db=db,
+                telegram_id=999999,
+                telegram_username="test_user",
+                first_name="Test",
+                last_name="User"
             )
-    
-    return {
-        "success": True,
-        "test_user": {
-            "id": str(test_user.id),
-            "username": test_user.telegram_username,
-            "first_name": test_user.first_name,
-            "last_name": test_user.last_name,
-        },
-        "instructions": {
-            "step_1": "Copy the test user ID above",
-            "step_2": f"Visit web app with: /web-app/index.html?user_id={str(test_user.id)}",
-            "step_3": "Web app will now load with test user's data",
-            "note": "This test mode is for development only. In production, use Telegram WebApp.initData"
+            
+            if error or not test_user:
+                error_msg = error or "Unknown error creating test user"
+                logger.error(f"Test user creation failed: {error_msg}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to create test user: {error_msg}"
+                )
+        
+        return {
+            "success": True,
+            "test_user": {
+                "id": str(test_user.id),
+                "username": test_user.telegram_username,
+                "full_name": test_user.full_name or test_user.username,
+            },
+            "instructions": {
+                "step_1": "Copy the test user ID above",
+                "step_2": f"Visit web app with: /web-app/?user_id={str(test_user.id)}",
+                "step_3": "Web app will now load with test user's data",
+                "note": "This test mode is for development only. In production, use Telegram WebApp.initData"
+            }
         }
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in test-user endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error: {str(e)}"
+        )
