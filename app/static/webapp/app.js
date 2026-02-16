@@ -7,6 +7,8 @@
     wallets: [],
     nfts: [],
     listings: [],
+    marketplaceListings: [],
+    myListings: [],
     currentPage: 'dashboard'
   };
 
@@ -68,24 +70,39 @@
     },
 
     async getMarketplaceListings(limit = 100) {
-      return this.callEndpoint(`/marketplace/listings?limit=${limit}`);
+      return this.callEndpoint(`/telegram/web-app/marketplace/listings?limit=${limit}`);
     },
 
-    async getUserListings(userId) {
-      return this.callEndpoint(`/marketplace/listings/user?user_id=${userId}`);
+    async getMyListings(userId) {
+      return this.callEndpoint(`/telegram/web-app/marketplace/mylistings?user_id=${userId}`);
     },
 
     async createWallet(userId, blockchain) {
-      return this.callEndpoint('/telegram/web-app/set-primary', {
+      return this.callEndpoint('/wallets/create', {
         method: 'POST',
-        body: { user_id: userId, blockchain }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ user_id: userId, blockchain }).toString()
       });
     },
 
-    async mintNFT(userId, walletId, name, description) {
+    async importWallet(userId, blockchain, address) {
+      return this.callEndpoint(`/wallets/import?user_id=${userId}`, {
+        method: 'POST',
+        body: { blockchain, address, name: `${blockchain} Imported` }
+      });
+    },
+
+    async setPrimaryWallet(userId, walletId) {
+      return this.callEndpoint('/telegram/web-app/set-primary', {
+        method: 'POST',
+        body: { user_id: userId, wallet_id: walletId }
+      });
+    },
+
+    async mintNFT(userId, walletId, nftName, nftDescription) {
       return this.callEndpoint('/telegram/web-app/mint', {
         method: 'POST',
-        body: { user_id: userId, wallet_id: walletId, nft_name: name, nft_description: description }
+        body: { user_id: userId, wallet_id: walletId, nft_name: nftName, nft_description: nftDescription }
       });
     },
 
@@ -93,6 +110,34 @@
       return this.callEndpoint('/telegram/web-app/list-nft', {
         method: 'POST',
         body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
+      });
+    },
+
+    async transferNFT(userId, nftId, toAddress) {
+      return this.callEndpoint('/telegram/web-app/transfer', {
+        method: 'POST',
+        body: { user_id: userId, nft_id: nftId, to_address: toAddress }
+      });
+    },
+
+    async burnNFT(userId, nftId) {
+      return this.callEndpoint('/telegram/web-app/burn', {
+        method: 'POST',
+        body: { user_id: userId, nft_id: nftId }
+      });
+    },
+
+    async makeOffer(userId, listingId, offerPrice) {
+      return this.callEndpoint('/telegram/web-app/make-offer', {
+        method: 'POST',
+        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice) }
+      });
+    },
+
+    async cancelListing(userId, listingId) {
+      return this.callEndpoint('/telegram/web-app/cancel-listing', {
+        method: 'POST',
+        body: { user_id: userId, listing_id: listingId }
       });
     }
   };
@@ -191,42 +236,56 @@
 
   // ========== INITIALIZE APP ==========
   async function initApp() {
-    showStatus('Initializing NFT Platform...', 'info', true);
+    console.log('Initializing app...');
+    showStatus('Starting NFT Platform...', 'info', true);
 
     try {
-      // Get Telegram init data
-      const initData = window.Telegram?.WebApp?.initData;
-      
-      if (!initData) {
-        console.error('No Telegram initData found');
-        showStatus('Error: Not running in Telegram context', 'error', false);
+      // Check Telegram context
+      if (!window.Telegram?.WebApp) {
+        console.error('Telegram WebApp not available');
+        showStatus('Error: Please open this app from Telegram', 'error', false);
         return;
       }
 
-      // Mark app as ready
-      if (window.Telegram?.WebApp?.ready) {
-        window.Telegram.WebApp.ready();
-      }
+      window.Telegram.WebApp.ready?.();
       
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        console.error('No Telegram initData found');
+        showStatus('Error: Telegram authentication failed. Please try again.', 'error', false);
+        return;
+      }
+
       showStatus('Authenticating...', 'info', true);
       
-      // Authenticate with backend
+      // Authenticate
       const authResponse = await API.initSession(initData);
-      
-      if (!authResponse.success) {
-        throw new Error(authResponse.error || 'Authentication failed');
+      if (!authResponse?.success) {
+        throw new Error(authResponse?.error || 'Authentication failed');
       }
 
       state.user = authResponse.user;
+      console.log('User authenticated:', state.user.id);
       
-      showStatus('Loading dashboard...', 'info', true);
+      // Setup UI
       updateUserInfo();
       setupEventListeners();
-      
-      // Load all dashboard data
-      await loadDashboardData();
-      
-      showStatus('Connected successfully!', 'success', false);
+      setupLazyLoading();
+
+      // Load data
+      showStatus('Loading data...', 'info', true);
+      try {
+        await loadDashboardData();
+        console.log('Dashboard data loaded');
+      } catch (dataErr) {
+        console.error('Data load failed, using empty state:', dataErr);
+        state.wallets = [];
+        state.nfts = [];
+        state.listings = [];
+        updateDashboard();
+      }
+
+      showStatus('Ready!', 'success', false);
       setTimeout(() => status.classList.add('hidden'), 2000);
       
     } catch (err) {
@@ -257,6 +316,24 @@
       state.nfts = Array.isArray(dashboardData.nfts) ? dashboardData.nfts : [];
       state.listings = Array.isArray(dashboardData.listings) ? dashboardData.listings : [];
 
+      // Also load full marketplace listings
+      try {
+        const marketplaceData = await API.getMarketplaceListings(100);
+        state.marketplaceListings = Array.isArray(marketplaceData.listings) ? marketplaceData.listings : [];
+      } catch (err) {
+        console.warn('Failed to load marketplace listings:', err);
+        state.marketplaceListings = [];
+      }
+
+      // Load user's listings
+      try {
+        const myListingsData = await API.getMyListings(state.user.id);
+        state.myListings = Array.isArray(myListingsData.listings) ? myListingsData.listings : [];
+      } catch (err) {
+        console.warn('Failed to load user listings:', err);
+        state.myListings = [];
+      }
+
       updateDashboard();
       updateWalletsList();
       updateNftsList();
@@ -271,6 +348,8 @@
       state.wallets = [];
       state.nfts = [];
       state.listings = [];
+      state.marketplaceListings = [];
+      state.myListings = [];
       updateDashboard();
       updateWalletsList();
       updateNftsList();
@@ -377,8 +456,11 @@
           </div>
           <div class="nft-content">
             <div class="nft-name">${truncate(nft.name, 25)}</div>
-            <div class="nft-collection">${nft.collection?.name || 'No Collection'}</div>
+            <div class="nft-collection">${nft.collection?.name || nft.blockchain || 'My NFT'}</div>
             <div class="nft-price">${nft.status || 'Minted'}</div>
+            <div style="display:flex;gap:4px;margin-top:8px;font-size:12px;">
+              <button class="btn btn-secondary" style="flex:1;padding:6px;border-radius:4px;font-size:11px;" onclick="window.showNFTActions('${nft.id}')">Actions</button>
+            </div>
           </div>
         </div>
       `).join('');
@@ -389,24 +471,43 @@
   }
 
   function updateMarketplace() {
-    const html = state.listings.length === 0
-      ? '<p class="muted">No listings available</p>'
-      : state.listings.map(l => `
+    const marketplaceListings = state.marketplaceListings && state.marketplaceListings.length > 0
+      ? state.marketplaceListings.map(l => `
         <div class="card nft-card">
           <div class="nft-image">
-            ${l.nft?.image_url ? `<img src="${l.nft.image_url}" alt="NFT" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">Listing</div>'}
+            ${l.image_url ? `<img src="${l.image_url}" alt="NFT" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">Listing</div>'}
           </div>
           <div class="nft-content">
-            <div class="nft-name">${truncate(l.nft?.name || 'NFT', 25)}</div>
-            <div class="nft-collection">${l.nft?.collection?.name || 'Unknown'}</div>
+            <div class="nft-name">${truncate(l.nft_name || 'NFT', 25)}</div>
+            <div class="nft-collection">${l.blockchain ? l.blockchain.toUpperCase() : 'Unknown'}</div>
             <div class="nft-price">${l.price ? '$' + parseFloat(l.price).toFixed(2) : 'N/A'}</div>
             <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="window.viewListing('${l.id}')">View</button>
           </div>
         </div>
-      `).join('');
+      `).join('')
+      : '<p class="muted">No listings available</p>';
     
+    const myListings = state.myListings && state.myListings.length > 0
+      ? state.myListings.map(l => `
+        <div class="card nft-card">
+          <div class="nft-image">
+            ${l.image_url ? `<img src="${l.image_url}" alt="NFT" loading="lazy">` : '<div style="background:var(--bg-base);display:flex;align-items:center;justify-content:center;height:100%;">Listing</div>'}
+          </div>
+          <div class="nft-content">
+            <div class="nft-name">${truncate(l.nft_name || 'NFT', 25)}</div>
+            <div class="nft-collection">${l.blockchain ? l.blockchain.toUpperCase() : 'Unknown'}</div>
+            <div class="nft-price">${l.price ? '$' + parseFloat(l.price).toFixed(2) : 'N/A'}</div>
+            <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="window.cancelMyListing('${l.id}')">Cancel</button>
+          </div>
+        </div>
+      `).join('')
+      : '<p class="muted">You have no active listings</p>';
+
     if (document.getElementById('marketplaceListings')) {
-      document.getElementById('marketplaceListings').innerHTML = html;
+      document.getElementById('marketplaceListings').innerHTML = marketplaceListings;
+    }
+    if (document.getElementById('myListings')) {
+      document.getElementById('myListings').innerHTML = myListings;
     }
   }
 
@@ -607,30 +708,229 @@
       <div class="profile-section">
         <div class="profile-item"><span>Blockchain:</span><strong>${w.blockchain?.toUpperCase()}</strong></div>
         <div class="profile-item"><span>Address:</span><code style="word-break:break-all;font-size:12px;">${w.address}</code></div>
-        <div class="profile-item"><span>Primary:</span><strong>${w.is_primary ? 'Yes' : 'No'}</strong></div>
+        <div class="profile-item"><span>Primary:</span><strong>${w.is_primary ? 'Yes ⭐' : 'No'}</strong></div>
         <div class="profile-item"><span>Created:</span><small>${new Date(w.created_at).toLocaleDateString()}</small></div>
       </div>
-      <button class="btn btn-secondary btn-block" onclick="window.closeModal()">Close</button>
+      ${!w.is_primary ? `<button class="btn btn-secondary btn-block" onclick="window.updateWalletPrimary('${w.id}')">Set as Primary</button>` : '<p class="muted" style="text-align:center;">This is your primary wallet</p>'}
+      <button class="btn btn-secondary btn-block" onclick="window.closeModal()" style="margin-top:8px;">Close</button>
     `);
   };
 
   window.viewListing = function(id) {
-    const listing = state.listings.find(l => l.id === id);
+    const listing = state.marketplaceListings?.find(l => l.id === id) || 
+                    state.myListings?.find(l => l.id === id) ||
+                    state.listings?.find(l => l.id === id);
     if (!listing) {
       showStatus('Listing not found', 'error', false);
       return;
     }
     showModal('NFT Listing', `
       <div class="profile-section">
-        <div class="profile-item"><span>NFT:</span><strong>${listing.nft?.name || 'Unknown'}</strong></div>
+        <div class="profile-item"><span>NFT:</span><strong>${listing.nft_name || 'Unknown'}</strong></div>
         <div class="profile-item"><span>Price:</span><strong>$${parseFloat(listing.price).toFixed(2)}</strong></div>
-        <div class="profile-item"><span>Blockchain:</span><strong>${listing.blockchain?.toUpperCase()}</strong></div>
+        <div class="profile-item"><span>Blockchain:</span><strong>${(listing.blockchain || 'Unknown').toUpperCase()}</strong></div>
         <div class="profile-item"><span>Status:</span><strong>${listing.active || listing.status === 'active' ? 'For Sale' : 'Inactive'}</strong></div>
+        ${listing.currency ? `<div class="profile-item"><span>Currency:</span><strong>${listing.currency}</strong></div>` : ''}
       </div>
-      <button class="btn btn-primary btn-block">Make Offer</button>
+      ${listing.seller_id !== state.user.id ? `<button class="btn btn-primary btn-block" onclick="window.makeOfferModal('${listing.id}')">Make Offer</button>` : ''}
       <button class="btn btn-secondary btn-block" onclick="window.closeModal()" style="margin-top:8px;">Close</button>
     `);
   };
+
+  window.makeOfferModal = function(listingId) {
+    const html = `
+      <div class="form-group">
+        <label>Your Offer Price ($)</label>
+        <input type="number" id="offerPrice" placeholder="0.00" class="input-text" step="0.01" min="0">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="window.submitOffer('${listingId}')">Submit Offer</button>
+    `;
+    showModal('Make an Offer', html);
+  };
+
+  window.submitOffer = async function(listingId) {
+    const priceEl = document.getElementById('offerPrice');
+    if (!priceEl || !priceEl.value) {
+      showStatus('Please enter an offer price', 'error', false);
+      return;
+    }
+    
+    showStatus('Submitting offer...', 'info', true);
+    showModalSpinner();
+    try {
+      const res = await API.makeOffer(state.user.id, listingId, priceEl.value);
+      if (res.success) {
+        showStatus('Offer submitted successfully!', 'success', false);
+        closeModal();
+        await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Offer submission failed');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error', false);
+      hideModalSpinner();
+    }
+  };
+
+  window.showNFTActions = function(nftId) {
+    const nft = state.nfts.find(n => n.id === nftId);
+    if (!nft) {
+      showStatus('NFT not found', 'error', false);
+      return;
+    }
+    showModal('NFT Actions', `
+      <div class="profile-section">
+        <div class="profile-item"><span>Name:</span><strong>${nft.name}</strong></div>
+        <div class="profile-item"><span>Blockchain:</span><strong>${nft.blockchain?.toUpperCase() || 'Unknown'}</strong></div>
+        <div class="profile-item"><span>Status:</span><strong>${nft.status || 'Minted'}</strong></div>
+      </div>
+      <button class="btn btn-secondary btn-block" onclick="window.showListNFTModal('${nftId}')">List for Sale</button>
+      <button class="btn btn-secondary btn-block" onclick="window.showTransferModal('${nftId}')" style="margin-top:8px;">Transfer</button>
+      <button class="btn btn-secondary btn-block" onclick="window.showBurnModal('${nftId}')" style="margin-top:8px;">Burn</button>
+      <button class="btn btn-secondary btn-block" onclick="window.closeModal()" style="margin-top:8px;">Close</button>
+    `);
+  };
+
+  window.showListNFTModal = function(nftId) {
+    const html = `
+      <div class="form-group">
+        <label>Price ($)</label>
+        <input type="number" id="listPrice" placeholder="0.00" class="input-text" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <select id="listCurrency" class="input-select">
+          <option value="USDT">USDT</option>
+          <option value="ETH">ETH</option>
+          <option value="BTC">BTC</option>
+          <option value="SOL">SOL</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="window.submitListNFT('${nftId}')">List NFT</button>
+    `;
+    showModal('List NFT for Sale', html);
+  };
+
+  window.submitListNFT = async function(nftId) {
+    const priceEl = document.getElementById('listPrice');
+    const currencyEl = document.getElementById('listCurrency');
+    if (!priceEl || !priceEl.value) {
+      showStatus('Please enter a price', 'error', false);
+      return;
+    }
+    
+    showStatus('Listing NFT...', 'info', true);
+    showModalSpinner();
+    try {
+      const res = await API.listNFT(state.user.id, nftId, priceEl.value, currencyEl.value);
+      if (res.success) {
+        showStatus('NFT listed successfully!', 'success', false);
+        closeModal();
+        await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Listing failed');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error', false);
+      hideModalSpinner();
+    }
+  };
+
+  window.showTransferModal = function(nftId) {
+    const html = `
+      <div class="form-group">
+        <label>Recipient Address</label>
+        <input type="text" id="transferAddr" placeholder="0x..." class="input-text">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="window.submitTransfer('${nftId}')">Transfer NFT</button>
+      <button class="btn btn-secondary btn-block" onclick="window.closeModal()" style="margin-top:8px;">Cancel</button>
+    `;
+    showModal('Transfer NFT', html);
+  };
+
+  window.submitTransfer = async function(nftId) {
+    const addrEl = document.getElementById('transferAddr');
+    if (!addrEl || !addrEl.value?.trim()) {
+      showStatus('Please enter a valid address', 'error', false);
+      return;
+    }
+    
+    showStatus('Transferring NFT...', 'info', true);
+    showModalSpinner();
+    try {
+      const res = await API.transferNFT(state.user.id, nftId, addrEl.value.trim());
+      if (res.success) {
+        showStatus('NFT transferred successfully!', 'success', false);
+        closeModal();
+        await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Transfer failed');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error', false);
+      hideModalSpinner();
+    }
+  };
+
+  window.showBurnModal = function(nftId) {
+    const html = `
+      <div style="color:var(--text-secondary);margin-bottom:16px;">⚠️ This action cannot be undone. You will permanently delete this NFT.</div>
+      <button class="btn btn-primary btn-block" style="background:#d32f2f;" onclick="window.submitBurn('${nftId}')">Confirm Burn</button>
+      <button class="btn btn-secondary btn-block" onclick="window.closeModal()" style="margin-top:8px;">Cancel</button>
+    `;
+    showModal('Burn NFT', html);
+  };
+
+  window.submitBurn = async function(nftId) {
+    showStatus('Burning NFT...', 'info', true);
+    showModalSpinner();
+    try {
+      const res = await API.burnNFT(state.user.id, nftId);
+      if (res.success) {
+        showStatus('NFT burned successfully!', 'success', false);
+        closeModal();
+        await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Burn failed');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error', false);
+      hideModalSpinner();
+    }
+  };
+
+  window.cancelMyListing = async function(listingId) {
+    if (!confirm('Cancel this listing?')) return;
+    
+    showStatus('Canceling listing...', 'info', true);
+    try {
+      const res = await API.cancelListing(state.user.id, listingId);
+      if (res.success) {
+        showStatus('Listing canceled successfully!', 'success', false);
+        await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Cancellation failed');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error', false);
+    }
+  };
+
+  window.updateWalletPrimary = async function(walletId) {
+    showStatus('Setting primary wallet...', 'info', true);
+    try {
+      const res = await API.setPrimaryWallet(state.user.id, walletId);
+      if (res.success) {
+        showStatus('Primary wallet updated!', 'success', false);
+        closeModal();
+        await loadDashboardData();
+      } else {
+        throw new Error(res.error || 'Update failed');
+      }
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error', false);
+    }
+  }
 
   window.closeModal = closeModal;
 
