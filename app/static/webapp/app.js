@@ -97,12 +97,13 @@
   const API = {
     async fetch(endpoint, options = {}, attempt = 1) {
       const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+      let timeoutId; // Declare outside try-catch for proper scope
       
       try {
         log(`[Attempt ${attempt}] Fetching: ${endpoint}`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+        timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
         const response = await fetch(url, {
           method: options.method || 'GET',
@@ -126,7 +127,7 @@
         log(`✓ ${endpoint}: OK`, 'success');
         return data;
       } catch (err) {
-        clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
         
         // Retry on network errors (but not on 4xx/5xx)
         if (attempt < API_RETRY_ATTEMPTS && this.shouldRetry(err)) {
