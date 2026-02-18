@@ -64,11 +64,25 @@ bot_service = TelegramBotService()
 
 async def get_telegram_user_from_request(request: Request, db: AsyncSession = Depends(get_db_session)) -> dict:
     """
-    Extract and authenticate Telegram user from request (OPTIONAL).
+    Extract and authenticate Telegram user from request.
+    Requires valid Telegram init_data - no guest users allowed.
     Supports both query parameter and body init_data.
-    If no valid init_data provided, returns anonymous guest user (allows browsing).
-    Authenticated users with valid Telegram init_data get real user accounts.
     """
+    
+    # Try to get init_data from query params first
+    init_data_str = request.query_params.get("init_data")
+    
+    # If not in query, try to get from body (for POST requests)
+    if not init_data_str:
+        try:
+            body = getattr(request.state, 'body', None)
+            if body is None:
+                body = await request.body()
+            if body:
+                body_dict = json.loads(body)
+                init_data_str = body_dict.get("init_data")
+        except Exception:
+            pass
     
     # If no init_data provided, reject request (Telegram user REQUIRED)
     if not init_data_str:
