@@ -165,12 +165,15 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
         await db.commit()
         await db.refresh(user)
     
-    return {
+    # Attach user to request state for use in endpoints
+    request.state.telegram_user = {
         "user_id": str(user.id),
         "telegram_id": user.telegram_id,
         "telegram_username": user.telegram_username,
         "user_obj": user,
     }
+    
+    return request.state.telegram_user
 
 
 
@@ -1880,29 +1883,23 @@ async def web_app_get_dashboard_data(
 @router.post("/web-app/mint")
 async def web_app_mint_nft(
     request: WebAppMintNFTRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Mint NFT via web app."""
+    """Mint NFT via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        # Get user
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id from request matches authenticated telegram user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        
+        # User already authenticated via dependency
+        user = telegram_user["user_obj"]
 
         # Mint NFT
         nft, error = await NFTService.mint_nft_with_blockchain_confirmation(
@@ -1946,29 +1943,23 @@ async def web_app_mint_nft(
 @router.post("/web-app/list-nft")
 async def web_app_list_nft(
     request: WebAppListNFTRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """List NFT on marketplace via web app."""
+    """List NFT on marketplace via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id matches authenticated user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        # Get user
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        
+        # User already authenticated
+        user = telegram_user["user_obj"]
 
         # Get NFT
         nft_result = await db.execute(
@@ -2035,22 +2026,23 @@ async def web_app_list_nft(
 @router.post("/web-app/transfer")
 async def web_app_transfer_nft(
     request: WebAppTransferNFTRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Transfer NFT to another address via web app."""
+    """Transfer NFT to another address via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id matches authenticated user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
+        
+        # User already authenticated
+        user = telegram_user["user_obj"]
 
         if not user:
             raise HTTPException(
@@ -2092,28 +2084,23 @@ async def web_app_transfer_nft(
 @router.post("/web-app/burn")
 async def web_app_burn_nft(
     request: WebAppBurnNFTRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Burn NFT via web app."""
+    """Burn NFT via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id matches authenticated user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        
+        # User already authenticated
+        user = telegram_user["user_obj"]
 
         nft, error = await NFTService.burn_nft(
             db=db,
@@ -2148,28 +2135,23 @@ async def web_app_burn_nft(
 @router.post("/web-app/set-primary")
 async def web_app_set_primary_wallet(
     request: WebAppSetPrimaryWalletRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Set primary wallet via web app."""
+    """Set primary wallet via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id matches authenticated user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        
+        # User already authenticated
+        user = telegram_user["user_obj"]
 
         wallet, error = await WalletService.set_primary_wallet(
             db=db,
@@ -2204,28 +2186,23 @@ async def web_app_set_primary_wallet(
 @router.post("/web-app/make-offer")
 async def web_app_make_offer(
     request: WebAppMakeOfferRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Make an offer on a listing via web app."""
+    """Make an offer on a listing via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id matches authenticated user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        
+        # User already authenticated
+        user = telegram_user["user_obj"]
 
         listing_result = await db.execute(
             select(Listing).where(Listing.id == request.listing_id)
@@ -2282,28 +2259,23 @@ async def web_app_make_offer(
 @router.post("/web-app/cancel-listing")
 async def web_app_cancel_listing(
     request: WebAppCancelListingRequest,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Cancel a listing via web app."""
+    """Cancel a listing via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
 
     try:
-        user_id = request.user_id
-        if not user_id:
+        # Validate user_id matches authenticated user
+        if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_id required",
+                detail="user_id mismatch",
             )
-
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+        
+        # User already authenticated
+        user = telegram_user["user_obj"]
 
         listing, error = await MarketplaceService.cancel_listing(
             db=db,

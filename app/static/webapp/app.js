@@ -187,14 +187,33 @@
       try {
         log(`[Attempt ${attempt}] ${method} ${url}`);
         
-        // Inject Telegram init_data and user_id for authenticated POST/PUT requests when available
+        // MANDATORY: Inject Telegram init_data for ALL POST/PUT requests
+        // This MUST be present for Telegram signature verification
         if (method !== 'GET') {
-          options.body = Object.assign({}, options.body || {});
-          if (state.initData && !options.body.init_data) {
-            options.body.init_data = state.initData;
+          const body = Object.assign({}, options.body || {});
+          
+          // Get fresh initData from WebApp SDK or state
+          let initData = state.initData;
+          if (!initData && typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
+            initData = window.Telegram.WebApp.initData;
           }
-          if (state.user && !options.body.user_id) {
-            options.body.user_id = state.user.id;
+          
+          // Always set init_data if available (required for auth)
+          if (initData) {
+            body.init_data = initData;
+          }
+          
+          // Always set user_id if available
+          if (state.user && state.user.id) {
+            body.user_id = state.user.id;
+          }
+          
+          // Validate request payload can be serialized
+          try {
+            options.body = body;
+          } catch (e) {
+            log(`Error preparing request body: ${e.message}`, 'error');
+            throw e;
           }
         }
 
@@ -202,16 +221,38 @@
           method,
           headers: {
             'Content-Type': 'application/json',
+            Accept: 'application/json',
             ...options.headers,
           },
+          credentials: 'same-origin',
         };
 
+        // Serialize body with error handling
         if (options.body) {
-          fetchOptions.body = JSON.stringify(options.body);
+          try {
+            fetchOptions.body = JSON.stringify(options.body);
+          } catch (e) {
+            log(`JSON serialization failed: ${e.message}`, 'error');
+            throw new Error(`Invalid request body: ${e.message}`);
+          }
         }
         
         const response = await fetch(url, fetchOptions);
-        const data = await response.json();
+        
+        // Fail fast on 401/403 - auth errors
+        if (response.status === 401 || response.status === 403) {
+          log(`${method} ${endpoint} auth failed: ${response.status}`, 'error');
+          showStatus('Authentication failed - please restart from Telegram', 'error');
+          throw new Error('Authentication failed');
+        }
+        
+        let data;
+        try {
+          data = await response.json();
+        } catch (e) {
+          log(`Invalid JSON response from server: ${response.status}`, 'error');
+          throw new Error(`Server error: ${response.status}`);
+        }
         
         if (!response.ok) {
           log(`${method} ${endpoint} failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
@@ -219,10 +260,12 @@
             await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
             return this._fetch(endpoint, options, attempt + 1);
           }
-          throw new Error(data?.detail || data?.error || `HTTP ${response.status}`);
+          // Extract detail from response
+          const errorMsg = data?.detail || data?.error || `HTTP ${response.status}`;
+          throw new Error(errorMsg);
         }
         
-        // Ensure response is valid
+        // Ensure response is valid object
         if (!data || typeof data !== 'object') {
           throw new Error('Invalid response from server');
         }
@@ -235,7 +278,8 @@
           await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
           return this._fetch(endpoint, options, attempt + 1);
         }
-        // Return error object instead of throwing to prevent app crash
+        // Return graceful error object instead of throwing
+        showStatus(`Error: ${err.message}`, 'error');
         return { success: false, error: err.message || 'Unknown error', detail: err.message };
       }
     },
@@ -1142,17 +1186,23 @@
           </div>
         </div>
       `, [
-        { label: 'Mint', action: 'pageActions.submitMint()', class: 'btn-primary' },
-        { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-      ]);
-    },
+        if (!state.user || !state.user.id) {
+          showStatus('User not authenticated', 'error');
+          return;
+        }
 
-    async submitMint() {
-      try {
         const walletId = document.getElementById('mintWalletSelect')?.value;
         const name = document.getElementById('mintName')?.value;
         const desc = document.getElementById('mintDesc')?.value;
         const image = document.getElementById('mintImage')?.value;
+        
+        if (!walletId) throw new Error('Please select a wallet');
+        if (!name || name.trim().length === 0) throw new Error('Please enter an NFT name');
+        
+        showStatus('Minting NFT...', 'loading');
+        const result = await API.mintNft(state.user.id, walletId, name, desc, image || null);
+        
+        if (!result || !result.success) throw new Error(result?.error || result?.detail)?.value;
         
         if (!name) throw new Error('Please enter an NFT name');
         
@@ -1286,51 +1336,68 @@
   
   async function initWithTelegram() {
     /**
-     * Initialize with real Telegram WebApp
-     * Handles initData retrieval with proper error handling
+     * Initialize WebApp with real Telegram initData
+     * initData MUST be present for all backend communications
      */
     if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
-      showStatus('This app must be opened from Telegram', 'error');
+      showStatus('This app must be opened from Telegram Bot', 'error');
+      log('Telegram WebApp SDK not available', 'error');
       return null;
     }
 
     try {
-      // Ensure WebApp is ready
-      if (window.Telegram.WebApp.ready) window.Telegram.WebApp.ready();
-      if (window.Telegram.WebApp.expand) window.Telegram.WebApp.expand();
+      // Ready WebApp UI
+      if (typeof window.Telegram.WebApp.ready === 'function') {
+        window.Telegram.WebApp.ready();
+      }
+      if (typeof window.Telegram.WebApp.expand === 'function') {
+        window.Telegram.WebApp.expand();
+      }
 
-      // Get initData - try multiple sources
+      // Get initData - REQUIRED for Telegram signature verification
       let initData = window.Telegram?.WebApp?.initData;
       
-      // Fallback: check if initData is in URL params
+      // Fallback: try URL params
       if (!initData) {
         const urlParams = new URLSearchParams(window.location.search);
         initData = urlParams.get('tgWebAppData') || urlParams.get('init_data');
       }
 
-      if (!initData || initData.trim().length === 0) {
-        throw new Error('Unable to get Telegram authentication data. Please restart the app.');
+      // Validate initData is present and non-empty
+      if (!initData || typeof initData !== 'string' || initData.trim().length === 0) {
+        throw new Error(
+          'Unable to obtain Telegram authentication data. ' +
+          'Please ensure the app is opened from Telegram bot using /start command.'
+        );
       }
 
-      log(`Telegram init data received (${initData.length} bytes)`);
+      log(`Telegram initData received: ${initData.substring(0, 50)}...`);
       showStatus('Authenticating with Telegram...', 'loading');
 
+      // Send initData to backend for signature verification
       const authResult = await API.initSession(initData);
-      if (!authResult || !authResult.success || !authResult.user) {
-        const errMsg = authResult?.error || authResult?.detail || 'Telegram authentication failed';
-        throw new Error(errMsg);
+      
+      // Check for authentication success
+      if (!authResult || !authResult.success) {
+        const errorMsg = authResult?.detail || authResult?.error || 'Telegram authentication failed';
+        throw new Error(errorMsg);
+      }
+      
+      // Extract user data from response
+      const user = authResult?.user;
+      if (!user || !user.id) {
+        throw new Error('No user data in authentication response');
       }
 
-      state.user = authResult.user;
-      if (!state.user || !state.user.id) {
-        throw new Error('No user data received from server');
-      }
-
-      log(`Authenticated via Telegram: ${state.user.telegram_username}`);
-      return state.user;
+      // Store user in state
+      state.user = user;
+      log(`✓ Authenticated: ${user.telegram_username || user.full_name}`);
+      return user;
+      
     } catch (err) {
-      log(`Telegram init error: ${err.message}`, 'error');
-      showStatus(`Authentication Error: ${err.message}`, 'error');
+      const errorMsg = err.message || 'Unknown authentication error';
+      log(`Telegram auth failed: ${errorMsg}`, 'error');
+      showStatus(`Authentication Error: ${errorMsg}`, 'error');
       return null;
     }
   }
@@ -1338,29 +1405,38 @@
   async function init() {
     try {
       showStatus('Initializing NFT Platform...', 'loading');
-      log('Initialization started');
+      log('=== App Initialization Starting ===');
 
+      // Authenticate with Telegram - MUST succeed before proceeding
       const user = await initWithTelegram();
       
       if (!user || !user.id) {
-        throw new Error('Authentication failed - please restart the app from Telegram');
+        throw new Error('Telegram authentication failed - cannot proceed without valid user session');
       }
 
-      // Update user info in header
+      // User authenticated - update UI
       if (dom.userInfo && state.user) {
-        const avatar = state.user.avatar_url ? `<img src="${state.user.avatar_url}" alt="Avatar" style="width:36px;height:36px;border-radius:50%;margin-right:10px;">` : '';
-        dom.userInfo.innerHTML = `${avatar}<div><strong>${state.user.full_name || 'User'}</strong><br><small>@${state.user.telegram_username || 'unknown'}</small></div>`;
+        const avatar = state.user.avatar_url 
+          ? `<img src="${state.user.avatar_url}" alt="Avatar" style="width:36px;height:36px;border-radius:50%;margin-right:10px;">`
+          : '';
+        const fullName = state.user.full_name || state.user.telegram_username || 'User';
+        dom.userInfo.innerHTML = `${avatar}<div><strong>${fullName}</strong><br><small>@${state.user.telegram_username || 'user'}</small></div>`;
       }
 
-      // Load initial data
+      // Load initial dashboard data
       await loadPageData('dashboard');
 
       showStatus('Ready!', 'success');
-      log('Initialization complete - user authenticated');
+      log('=== App Initialization Complete ===');
 
     } catch (err) {
-      log(`Init error: ${err.message}`, 'error');
-      showStatus(err.message, 'error');
+      const errorMsg = err.message || 'Initialization failed';
+      log(`Init failed: ${errorMsg}`, 'error');
+      showStatus(errorMsg, 'error');
+      // Prevent further execution - auth is mandatory
+      setTimeout(() => {
+        if (dom.app) dom.app.style.opacity = '0.5';
+      }, 2000);
     }
   }
 
