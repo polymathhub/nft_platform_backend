@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional, Dict, Any
@@ -63,6 +63,8 @@ class ListingResponse(BaseModel):
     expires_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+    name: Optional[str] = None
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True

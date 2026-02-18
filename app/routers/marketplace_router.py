@@ -36,6 +36,7 @@ async def create_listing(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> ListingResponse:
+    
     """Create a new NFT listing."""
     listing, error = await MarketplaceService.create_listing(
         db=db,
@@ -80,11 +81,22 @@ async def get_active_listings(
     listings, total = await MarketplaceService.get_active_listings(
         db=db, skip=skip, limit=limit, blockchain=blockchain
     )
+    
+    # Populate image_url and name from related NFTs
+    items = []
+    for listing in listings:
+        resp = ListingResponse.model_validate(listing)
+        # Add NFT info from relationship
+        if hasattr(listing, 'nft') and listing.nft:
+            resp.name = listing.nft.name
+            resp.image_url = listing.nft.image_url
+        items.append(resp)
+    
     return ActiveListingsResponse(
         total=total,
         page=skip // limit + 1,
         per_page=limit,
-        items=[ListingResponse.model_validate(l) for l in listings],
+        items=items,
     )
 
 
@@ -99,11 +111,22 @@ async def get_user_listings(
     listings, total = await MarketplaceService.get_user_listings(
         db=db, user_id=current_user.id, skip=skip, limit=limit
     )
+    
+    # Populate image_url and name from related NFTs
+    items = []
+    for listing in listings:
+        resp = ListingResponse.model_validate(listing)
+        # Add NFT info from relationship
+        if hasattr(listing, 'nft') and listing.nft:
+            resp.name = listing.nft.name
+            resp.image_url = listing.nft.image_url
+        items.append(resp)
+    
     return UserListingsResponse(
         total=total,
         page=skip // limit + 1,
         per_page=limit,
-        items=[ListingResponse.model_validate(l) for l in listings],
+        items=items,
     )
 
 
