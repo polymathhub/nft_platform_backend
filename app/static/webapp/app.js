@@ -679,12 +679,13 @@
       
       container.innerHTML = state.nfts.map(nft => `
         <div class="card">
-          ${nft.image_url ? `
-            <div style="width:100%;height:200px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);border-radius:8px;margin-bottom:12px;background-image:url('${nft.image_url}');background-size:cover;background-position:center;"></div>
-          ` : ''}
+          <div style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;${nft.image_url ? `background-image:url('${nft.image_url}');` : ''}">
+            ${!nft.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
+          </div>
           <div style="margin-bottom:12px;">
             <strong>${nft.name}</strong>
             <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${nft.description || 'No description'}</p>
+            ${nft.image_url ? `<p style="font-size:11px;color:var(--text-secondary);margin-top:4px;word-break:break-all;">Image: ${nft.image_url.substring(0, 50)}${nft.image_url.length > 50 ? '...' : ''}</p>` : ''}
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px;">
             <span class="blockchain-badge">${nft.blockchain?.toUpperCase()}</span>
@@ -723,12 +724,13 @@
       
       container.innerHTML = state.listings.map(listing => `
         <div class="card">
-          ${listing.image_url ? `
-            <div style="width:100%;height:200px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);border-radius:8px;margin-bottom:12px;background-image:url('${listing.image_url}');background-size:cover;background-position:center;"></div>
-          ` : ''}
+          <div style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;${listing.image_url ? `background-image:url('${listing.image_url}');` : ''}">
+            ${!listing.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
+          </div>
           <div style="margin-bottom:12px;">
             <strong>${listing.nft_name}</strong>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">By <strong>${listing.seller_name || 'Anonymous'}</strong></div>
+            ${listing.image_url ? `<p style="font-size:11px;color:var(--text-secondary);margin-top:4px;word-break:break-all;">Image: ${listing.image_url.substring(0, 50)}${listing.image_url.length > 50 ? '...' : ''}</p>` : ''}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div>
@@ -865,7 +867,9 @@
     if (!nft) return;
     
     showModal(`${nft.name}`, `
-      ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" style="width:100%;max-height:200px;border-radius:8px;margin-bottom:12px;">` : ''}
+      <div style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;${nft.image_url ? `background-image:url('${nft.image_url}');` : ''}">
+        ${!nft.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
+      </div>
       <div style="font-size:13px;">
         <div class="profile-item">
           <span>Blockchain:</span>
@@ -879,6 +883,10 @@
           <span>Description:</span>
           <p style="margin-top:4px;color:var(--text-secondary);">${nft.description || 'No description'}</p>
         </div>
+        ${nft.image_url ? `<div class="profile-item">
+          <span>Image URL:</span>
+          <p style="margin-top:4px;color:var(--text-secondary);word-break:break-all;font-size:11px;">${nft.image_url}</p>
+        </div>` : ''}
       </div>
     `, [
       { label: nft.status !== 'LISTED' ? 'Sell NFT' : 'View Listing', action: `listNftModal('${nft.id}')`, class: 'btn-primary' },
