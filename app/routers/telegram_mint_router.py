@@ -14,6 +14,7 @@ from app.database import get_db_session
 from app.models import User, NFT
 from app.models.marketplace import Listing
 from app.schemas.wallet import CreateWalletRequest, ImportWalletRequest, WalletResponse
+from app.schemas.nft import WebAppMintNFTRequest, WebAppListNFTRequest, WebAppTransferNFTRequest, WebAppBurnNFTRequest, WebAppSetPrimaryWalletRequest, WebAppMakeOfferRequest, WebAppCancelListingRequest
 from app.services.telegram_bot_service import TelegramBotService
 from app.services.nft_service import NFTService
 from app.services.marketplace_service import MarketplaceService
@@ -126,24 +127,30 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     
     # Try to find existing user
     result = await db.execute(
-        select(User).where(User.telegram_id == telegram_id)
+        select(User).where(User.telegram_id == str(telegram_id))
     )
     user = result.scalar_one_or_none()
     
     if not user:
         # Create new user from Telegram data
         from uuid import uuid4
+        first_name = user_data.get("first_name", "")
+        last_name = user_data.get("last_name", "")
+        full_name = f"{first_name} {last_name}".strip() if last_name else (first_name or "User")
+        email = f"telegram_{telegram_id}@nftplatform.local"
+        username = user_data.get("username", f"user_{telegram_id}")
+        
         user = User(
             id=uuid4(),
-            telegram_id=telegram_id,
-            telegram_username=user_data.get("username", f"user{telegram_id}"),
-            first_name=user_data.get("first_name", ""),
-            last_name=user_data.get("last_name", ""),
-            full_name=user_data.get("first_name", "") + (" " + user_data.get("last_name", "")) if user_data.get("last_name") else user_data.get("first_name", "User"),
-            email=None,
+            email=email,
+            username=username,
+            telegram_id=str(telegram_id),
+            telegram_username=user_data.get("username"),
+            full_name=full_name,
+            hashed_password="",
             avatar_url=None,
             is_active=True,
-            is_verified=False,
+            is_verified=True,
             user_role="user",
         )
         db.add(user)
@@ -207,33 +214,43 @@ async def telegram_webhook(
     update: TelegramUpdate,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    try:
-        # Validate secret token if configured
-        from app.config import get_settings
-        settings = get_settings()
-        if settings.telegram_webhook_secret:
-            header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-            if not header_secret or header_secret != settings.telegram_webhook_secret:
-                logger.warning("Invalid or missing webhook secret token")
-                from fastapi import HTTPException, status
+    # Validate secret token if configured. Do not swallow auth errors.
+    from app.config import get_settings
+    from fastapi import HTTPException, status
 
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret")
-        # End secret validation
-        # Handle message updates
-        if update.message:
-            await handle_message(db, update.message)
-            return {"ok": True}
+    settings = get_settings()
+    if settings.telegram_webhook_secret:
+        # Try common header keys (case-insensitive via Starlette, but be explicit)
+        header_secret = (
+            request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+            or request.headers.get("x-telegram-bot-api-secret-token")
+        )
+        if not header_secret:
+            logger.warning("Missing Telegram webhook secret header; request rejected")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook secret")
+        if header_secret != settings.telegram_webhook_secret:
+            # Mask received value in logs for safety
+            def _mask(s: str) -> str:
+                if not s:
+                    return "<empty>"
+                return s[:4] + "..." if len(s) > 8 else s
 
-        # Handle callback queries (button clicks)
-        if update.callback_query:
-            await handle_callback_query(db, update.callback_query)
-            return {"ok": True}
+            logger.warning(
+                "Webhook secret mismatch: received=%s expected=configured",
+                _mask(header_secret),
+            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret")
 
+    # Process update payloads. Let unexpected errors propagate as HTTP 500.
+    if update.message:
+        await handle_message(db, update.message)
         return {"ok": True}
 
-    except Exception as e:
-        logger.error(f"Error processing Telegram update: {e}")
-        return {"ok": False, "error": str(e)}
+    if update.callback_query:
+        await handle_callback_query(db, update.callback_query)
+        return {"ok": True}
+
+    return {"ok": True}
 
 
 async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
@@ -246,7 +263,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         logger.debug(f"Empty message from {username} ({user_id}), skipping")
         return
 
-    logger.warning(f"[TELEGRAM] Received message from {username} ({user_id}): {text}")
+    logger.info(f"Received message from {username} ({user_id}): {text}")
 
     # Get or create user
     user = await get_or_create_telegram_user(db, message.from_user)
@@ -264,7 +281,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     if hasattr(handle_admin_login, "_pending_admins") and chat_id in handle_admin_login._pending_admins:
         pending = handle_admin_login._pending_admins[chat_id]
         if pending.get("step") == "waiting_password":
-            logger.warning(f"[ADMIN] Processing password input from {username}")
+            logger.info(f"Processing password input from {username}")
             await handle_admin_password_input(db, chat_id, user, text)
             return
 
@@ -390,7 +407,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
     # Handle blockchain reply-keyboard tokens like 'blockchain:ethereum'
     if text.startswith("blockchain:"):
         blockchain = text.split(":", 1)[1]
-        logger.warning(f"[ROUTER] Detected blockchain selection from reply keyboard: {blockchain}")
+        logger.info(f"Detected blockchain selection from reply keyboard: {blockchain}")
         await handle_wallet_create_command(db, chat_id, user, blockchain)
         return
 
@@ -400,31 +417,31 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
         # We'll prompt the user for listing id in chat
         await bot_service.send_message(chat_id, "To make an offer, reply with: /offer <listing_id> <amount>")
         return
-        logger.warning(f"[ROUTER] Button pressed, converted to command: {text}")
+        logger.info(f"Button pressed, converted to command: {text}")
 
     # Parse command - CHECK SPECIFIC COMMANDS BEFORE GENERAL ONES
     if text.startswith("/start"):
-        logger.warning(f"[TELEGRAM] Processing /start command from {username}")
+        logger.info(f"Processing /start command from {username}")
         await send_welcome_start(chat_id, username)
     
     elif text.startswith("/dashboard"):
-        logger.warning(f"[TELEGRAM] Processing /dashboard command from {username}")
+        logger.info(f"Processing /dashboard command from {username}")
         await send_dashboard(db, chat_id, user, username)
     
     elif text.startswith("/balance"):
-        logger.warning(f"[TELEGRAM] Processing /balance command from {username}")
+        logger.info(f"Processing /balance command from {username}")
         await send_balance(db, chat_id, user)
     
     elif text.startswith("/menu"):
-        logger.warning(f"[TELEGRAM] Processing /menu command from {username}")
+        logger.info(f"Processing /menu command from {username}")
         await send_main_menu(chat_id, username)
     
     elif text.startswith("/quick-mint"):
-        logger.warning(f"[TELEGRAM] Processing /quick-mint command from {username}")
+        logger.info(f"Processing /quick-mint command from {username}")
         await send_quick_mint_screen(db, chat_id, user)
     
     elif text.startswith("/receive"):
-        logger.warning(f"[TELEGRAM] Processing /receive command from {username}")
+        logger.info(f"Processing /receive command from {username}")
         await send_receive_menu(db, chat_id, user)
 
     # Wallet-related commands (check specific before general)
@@ -445,7 +462,7 @@ async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
             await bot_service.send_wallet_creation_guide(chat_id)
         else:
             blockchain = parts[1].lower()
-            logger.warning(f"[ROUTER] Calling handle_wallet_create_command with blockchain={blockchain}")
+            logger.info(f"Calling handle_wallet_create_command with blockchain={blockchain}")
             await handle_wallet_create_command(db, chat_id, user, blockchain)
 
     elif text.startswith("/wallet"):
@@ -586,14 +603,14 @@ async def send_welcome_start(chat_id: int, username: str) -> None:
     keyboard = build_start_dashboard_inline(settings.telegram_webapp_url)
     
     # Send welcome message with photo and dashboard buttons
-    logger.warning(f"[TELEGRAM] Sending /start dashboard with banner image and web_app button...")
+    logger.info("Sending /start dashboard with banner image and web_app button...")
     result = await bot_service.send_photo(
         chat_id, 
         settings.banner_image_url,
         caption=message,
         reply_markup=keyboard
     )
-    logger.warning(f"[TELEGRAM] Welcome /start dashboard sent: {result}")
+    logger.info(f"Welcome /start dashboard sent: {result}")
 
 
 async def send_main_menu(chat_id: int, username: str) -> None:
@@ -603,13 +620,13 @@ async def send_main_menu(chat_id: int, username: str) -> None:
         f"Use the buttons below to navigate or type commands.\n\n"
         f"<b>What would you like to do?</b>"
     )
-    logger.warning(f"[TELEGRAM] Calling bot_service.send_message with CTA menu keyboard...")
+    logger.info("Calling bot_service.send_message with CTA menu keyboard...")
     result = await bot_service.send_message(
         chat_id, 
         message,
         reply_markup=build_dashboard_cta_keyboard()
     )
-    logger.warning(f"[TELEGRAM] bot_service.send_message returned: {result}")
+    logger.info(f"bot_service.send_message returned: {result}")
 
 
 async def send_dashboard(db: AsyncSession, chat_id: int, user: User, username: str) -> None:
@@ -1468,7 +1485,11 @@ async def set_webhook(webhook_url: str) -> dict:
     Example: POST /api/v1/telegram/webhook/set?webhook_url=https://yourdomain.com/api/v1/telegram/webhook
     """
     # In production, add authentication check
-    success = await bot_service.set_webhook(webhook_url)
+    from app.config import get_settings
+    settings = get_settings()
+    # If a webhook secret is configured in env, propagate it to Telegram when setting the webhook
+    secret = settings.telegram_webhook_secret if getattr(settings, "telegram_webhook_secret", None) else None
+    success = await bot_service.set_webhook(webhook_url, secret_token=secret)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1604,7 +1625,7 @@ async def web_app_init(
                 "id": str(user.id),
                 "telegram_id": user.telegram_id,
                 "telegram_username": user.telegram_username,
-                "full_name": user.full_name or f"{user.first_name or ''} {user.last_name or ''}".strip() or user.telegram_username or "User",
+                "full_name": user.full_name or user.telegram_username or "User",
                 "avatar_url": user.avatar_url,
                 "email": user.email,
                 "is_verified": user.is_verified,
@@ -1643,9 +1664,9 @@ async def web_app_get_user(
             "id": str(user.id),
             "telegram_id": user.telegram_id,
             "telegram_username": user.telegram_username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
+            "full_name": user.full_name,
             "email": user.email,
+            "avatar_url": user.avatar_url,
             "created_at": user.created_at.isoformat(),
         },
     }
@@ -1838,18 +1859,21 @@ async def web_app_get_dashboard_data(
 
 @router.post("/web-app/mint")
 async def web_app_mint_nft(
-    user_id: str,
-    wallet_id: str,
-    nft_name: str,
-    nft_description: Optional[str] = None,
-    image_url: Optional[str] = None,
+    request: WebAppMintNFTRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Mint NFT via web app."""
     from uuid import UUID
 
     # Get user
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -1862,10 +1886,10 @@ async def web_app_mint_nft(
     nft, error = await NFTService.mint_nft_with_blockchain_confirmation(
         db=db,
         user_id=user.id,
-        wallet_id=UUID(wallet_id),
-        name=nft_name,
-        description=nft_description,
-        image_url=image_url,
+        wallet_id=request.wallet_id,
+        name=request.nft_name,
+        description=request.nft_description,
+        image_url=request.image_url,
         royalty_percentage=0,
         metadata={"minted_via": "web_app"},
     )
@@ -1891,17 +1915,21 @@ async def web_app_mint_nft(
 
 @router.post("/web-app/list-nft")
 async def web_app_list_nft(
-    user_id: str,
-    nft_id: str,
-    price: float,
-    currency: str = "USDT",
+    request: WebAppListNFTRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """List NFT on marketplace via web app."""
     from uuid import UUID
 
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
     # Get user
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -1913,7 +1941,7 @@ async def web_app_list_nft(
     # Get NFT
     nft_result = await db.execute(
         select(NFT).where(
-            and_(NFT.id == UUID(nft_id), NFT.user_id == user.id)
+            and_(NFT.id == request.nft_id, NFT.user_id == user.id)
         )
     )
     nft = nft_result.scalar_one_or_none()
@@ -1937,11 +1965,11 @@ async def web_app_list_nft(
 
     listing, error = await MarketplaceService.create_listing(
         db=db,
-        nft_id=UUID(nft_id),
+        nft_id=request.nft_id,
         seller_id=user.id,
         seller_address=wallet.address,
-        price=price,
-        currency=currency.upper(),
+        price=request.price,
+        currency=request.currency.upper(),
         blockchain=nft.blockchain,
     )
 
@@ -1966,15 +1994,20 @@ async def web_app_list_nft(
 
 @router.post("/web-app/transfer")
 async def web_app_transfer_nft(
-    user_id: str,
-    nft_id: str,
-    to_address: str,
+    request: WebAppTransferNFTRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Transfer NFT to another address via web app."""
     from uuid import UUID
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -1985,8 +2018,8 @@ async def web_app_transfer_nft(
 
     nft, error = await NFTService.transfer_nft(
         db=db,
-        nft_id=UUID(nft_id),
-        to_address=to_address,
+        nft_id=request.nft_id,
+        to_address=request.to_address,
         transaction_hash="",
     )
 
@@ -2008,14 +2041,20 @@ async def web_app_transfer_nft(
 
 @router.post("/web-app/burn")
 async def web_app_burn_nft(
-    user_id: str,
-    nft_id: str,
+    request: WebAppBurnNFTRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Burn NFT via web app."""
     from uuid import UUID
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -2026,7 +2065,7 @@ async def web_app_burn_nft(
 
     nft, error = await NFTService.burn_nft(
         db=db,
-        nft_id=UUID(nft_id),
+        nft_id=request.nft_id,
         transaction_hash="",
     )
 
@@ -2048,14 +2087,20 @@ async def web_app_burn_nft(
 
 @router.post("/web-app/set-primary")
 async def web_app_set_primary_wallet(
-    user_id: str,
-    wallet_id: str,
+    request: WebAppSetPrimaryWalletRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Set primary wallet via web app."""
     from uuid import UUID
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -2066,8 +2111,8 @@ async def web_app_set_primary_wallet(
 
     wallet, error = await WalletService.set_primary_wallet(
         db=db,
-        user_id=UUID(user_id),
-        wallet_id=UUID(wallet_id),
+        user_id=user_id,
+        wallet_id=request.wallet_id,
     )
 
     if error:
@@ -2088,15 +2133,20 @@ async def web_app_set_primary_wallet(
 
 @router.post("/web-app/make-offer")
 async def web_app_make_offer(
-    user_id: str,
-    listing_id: str,
-    offer_price: float,
+    request: WebAppMakeOfferRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Make an offer on a listing via web app."""
     from uuid import UUID
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -2106,7 +2156,7 @@ async def web_app_make_offer(
         )
 
     listing_result = await db.execute(
-        select(Listing).where(Listing.id == UUID(listing_id))
+        select(Listing).where(Listing.id == request.listing_id)
     )
     listing = listing_result.scalar_one_or_none()
 
@@ -2125,10 +2175,10 @@ async def web_app_make_offer(
 
     offer, error = await MarketplaceService.make_offer(
         db=db,
-        listing_id=UUID(listing_id),
+        listing_id=request.listing_id,
         buyer_id=user.id,
         buyer_address=wallet.address,
-        offer_price=offer_price,
+        offer_price=request.offer_price,
         currency=listing.currency,
     )
 
@@ -2151,14 +2201,20 @@ async def web_app_make_offer(
 
 @router.post("/web-app/cancel-listing")
 async def web_app_cancel_listing(
-    user_id: str,
-    listing_id: str,
+    request: WebAppCancelListingRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Cancel a listing via web app."""
     from uuid import UUID
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user_id = request.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id required",
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -2169,7 +2225,7 @@ async def web_app_cancel_listing(
 
     listing, error = await MarketplaceService.cancel_listing(
         db=db,
-        listing_id=UUID(listing_id),
+        listing_id=request.listing_id,
         user_id=user.id,
     )
 
@@ -2196,33 +2252,37 @@ async def get_marketplace_listings(
     """Get active marketplace listings with seller information."""
     from app.models.marketplace import ListingStatus
     from sqlalchemy.orm import selectinload
-    from uuid import UUID
 
-    # Optimized query with eager loading and index-friendly ordering
+    # Query with eager loading - selectinload both NFT and seller relationships
     result = await db.execute(
-        select(Listing, User)
-        .options(selectinload(Listing.nft))
-        .outerjoin(User, Listing.seller_id == User.id)
+        select(Listing)
+        .options(
+            selectinload(Listing.nft),
+            selectinload(Listing.seller)
+        )
         .where(Listing.status == ListingStatus.ACTIVE)
         .order_by(Listing.created_at.desc())
         .limit(limit)
     )
-    rows = result.unique().all()
+    listings_db = result.scalars().unique().all()
 
-    if not rows:
+    if not listings_db:
         return {"success": True, "listings": []}
 
     listings = []
-    for listing, seller in rows:
+    for listing in listings_db:
+        nft = listing.nft
+        seller = listing.seller
+        
         listings.append({
             "id": str(listing.id),
             "nft_id": str(listing.nft_id),
-            "nft_name": listing.nft.name if listing.nft else "Unknown NFT",
+            "nft_name": nft.name if nft else "Unknown NFT",
             "price": float(listing.price),
             "currency": listing.currency,
             "blockchain": listing.blockchain,
             "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
-            "image_url": listing.nft.image_url if listing.nft else None,
+            "image_url": nft.image_url if nft else None,
             "active": listing.status == ListingStatus.ACTIVE,
             "seller_id": str(listing.seller_id) if listing.seller_id else None,
             "seller_name": seller.telegram_username or seller.full_name or "Anonymous" if seller else "Anonymous",
@@ -2423,71 +2483,3 @@ async def handle_telegram_update(update: dict) -> None:
 
     except Exception as e:
         logger.error(f"Error processing Telegram update from polling: {e}", exc_info=True)
-
-# ==================== Web App Test Endpoint ====================
-
-@router.get("/web-app/test-user")
-async def get_or_create_test_user(
-    db: AsyncSession = Depends(get_db_session),
-) -> dict:
-    """
-    Get or create a test user for web app testing (development mode).
-    This endpoint is for testing the web app outside of Telegram.
-    
-    Usage: 
-      1. Call this endpoint to create a test user
-      2. Use the returned user_id in the web app URL: ?user_id=UUID
-      3. Web app will load with the test user's data
-    
-    Returns the test user UUID and test data.
-    """
-    try:
-        from app.services.auth_service import AuthService
-        
-        # Look for existing test user
-        result = await db.execute(
-            select(User).where(User.telegram_username == "test_user")
-        )
-        test_user = result.scalar_one_or_none()
-
-        # Create test user if doesn't exist
-        if not test_user:
-            logger.info("Creating test user for web app testing")
-            test_user, error = await AuthService.authenticate_telegram(
-                db=db,
-                telegram_id=999999,
-                telegram_username="test_user",
-                first_name="Test",
-                last_name="User"
-            )
-            
-            if error or not test_user:
-                error_msg = error or "Unknown error creating test user"
-                logger.error(f"Test user creation failed: {error_msg}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to create test user: {error_msg}"
-                )
-        
-        return {
-            "success": True,
-            "test_user": {
-                "id": str(test_user.id),
-                "username": test_user.telegram_username,
-                "full_name": test_user.full_name or test_user.username,
-            },
-            "instructions": {
-                "step_1": "Copy the test user ID above",
-                "step_2": f"Visit web app with: /web-app/?user_id={str(test_user.id)}",
-                "step_3": "Web app will now load with test user's data",
-                "note": "This test mode is for development only. In production, use Telegram WebApp.initData"
-            }
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in test-user endpoint: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Server error: {str(e)}"
-        )

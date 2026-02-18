@@ -6,6 +6,7 @@ from app.models.marketplace import Listing, Offer, Order, ListingStatus, OfferSt
 from app.models.attestation import Attestation, AttestationType, AttestationStatus
 from app.models.collection import Collection
 from app.models.escrow import Escrow, EscrowStatus
+from app.models.payment import Payment, PaymentType, PaymentStatus
 from app.models.admin import AdminLog, AdminLogAction, AdminSettings
 
 __all__ = [
@@ -33,6 +34,9 @@ __all__ = [
     "Collection",
     "Escrow",
     "EscrowStatus",
+    "Payment",
+    "PaymentType",
+    "PaymentStatus",
     "AdminLog",
     "AdminLogAction",
     "AdminSettings",

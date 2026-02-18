@@ -35,7 +35,6 @@ def upgrade() -> None:
     op.create_index('ix_admin_logs_admin_id', 'admin_logs', ['admin_id'])
     op.create_index('ix_admin_logs_action', 'admin_logs', ['action'])
     op.create_index('ix_admin_logs_target_user_id', 'admin_logs', ['target_user_id'])
-    op.create_index('ix_admin_logs_created_at', 'admin_logs', ['created_at'])
     op.create_index('ix_admin_logs_admin_action', 'admin_logs', ['admin_id', 'action'])
     
     # Create admin_settings table
@@ -63,7 +62,6 @@ def downgrade() -> None:
     op.drop_table('admin_settings')
     
     op.drop_index('ix_admin_logs_admin_action', 'admin_logs')
-    op.drop_index('ix_admin_logs_created_at', 'admin_logs')
     op.drop_index('ix_admin_logs_target_user_id', 'admin_logs')
     op.drop_index('ix_admin_logs_action', 'admin_logs')
     op.drop_index('ix_admin_logs_admin_id', 'admin_logs')

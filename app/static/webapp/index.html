@@ -323,6 +323,9 @@
         <a href="#" class="nav-item" data-page="wallets">
           <span class="nav-label">Wallets</span>
         </a>
+        <a href="#" class="nav-item" data-page="balance">
+          <span class="nav-label">Balance</span>
+        </a>
         <a href="#" class="nav-item" data-page="nfts">
           <span class="nav-label">My NFTs</span>
         </a>
@@ -368,6 +371,17 @@
             <div id="dashboardStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;"></div>
           </div>
 
+          <div style="margin-bottom:32px;">
+            <div style="background:linear-gradient(135deg,#7c5cff,#4c6ef5);padding:24px;border-radius:12px;color:white;">
+              <div style="font-size:14px;font-weight:600;margin-bottom:8px;opacity:0.9;">Your USDT Balance</div>
+              <div style="font-size:32px;font-weight:700;margin-bottom:16px;" id="balanceDisplay">$0.00 USDT</div>
+              <div style="display:flex;gap:12px;">
+                <button class="btn" onclick="pageActions.viewBalance()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;flex:1;">View Details</button>
+                <button class="btn" onclick="pageActions.depositQuick()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;flex:1;">Deposit</button>
+              </div>
+            </div>
+          </div>
+
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
             <div>
               <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;">Recent Wallets</h3>
@@ -389,6 +403,48 @@
             <button class="btn btn-primary" onclick="pageActions.createWallet()">Create Wallet</button>
           </div>
           <div id="walletsList"></div>
+        </div>
+
+        <!-- Balance & Payments Page -->
+        <div id="balance-page" class="page" data-page="balance">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+            <h2 style="font-size:20px;font-weight:600;">Balance & Payments</h2>
+            <button class="btn btn-primary" onclick="pageActions.refreshBalance()">Refresh</button>
+          </div>
+          
+          <div style="background:linear-gradient(135deg,#51cf66,#40c057);padding:24px;border-radius:12px;margin-bottom:24px;color:white;">
+            <div style="font-size:14px;font-weight:600;margin-bottom:8px;opacity:0.9;">Total USDT Balance</div>
+            <div style="font-size:36px;font-weight:700;margin-bottom:8px;" id="balanceDisplayLarge">$0.00 USDT</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:12px;margin-top:16px;">
+              <div style="background:rgba(0,0,0,0.1);padding:12px;border-radius:8px;">
+                <div style="opacity:0.8;margin-bottom:4px;">Confirmed</div>
+                <div id="confirmedBalance" style="font-size:16px;font-weight:600;">$0.00</div>
+              </div>
+              <div style="background:rgba(0,0,0,0.1);padding:12px;border-radius:8px;">
+                <div style="opacity:0.8;margin-bottom:4px;">Pending</div>
+                <div id="pendingBalance" style="font-size:16px;font-weight:600;">$0.00</div>
+              </div>
+              <div style="background:rgba(0,0,0,0.1);padding:12px;border-radius:8px;">
+                <div style="opacity:0.8;margin-bottom:4px;">Available</div>
+                <div id="availableBalance" style="font-size:16px;font-weight:600;">$0.00</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+            <button class="btn btn-primary" onclick="pageActions.quickDeposit()" style="padding:16px;font-size:14px;">
+              Deposit
+            </button>
+            <button class="btn btn-primary" onclick="pageActions.quickWithdraw()" style="padding:16px;font-size:14px;">
+              💸 Withdraw
+            </button>
+          </div>
+
+          <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;">Wallet Balances</h3>
+          <div id="walletBalancesList"></div>
+
+          <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;">Recent Transactions</h3>
+          <div id="paymentHistoryList"></div>
         </div>
 
         <!-- NFTs Page -->

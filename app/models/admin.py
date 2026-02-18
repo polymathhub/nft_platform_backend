@@ -42,11 +42,11 @@ class AdminLog(Base):
     old_value = Column(Text, nullable=True)  # Old value if editing (JSON string)
     new_value = Column(Text, nullable=True)  # New value if editing (JSON string)
     ip_address = Column(String(50), nullable=True)  # Admin IP address for security
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
         Index("ix_admin_logs_admin_action", "admin_id", "action"),
-        Index("ix_admin_logs_created_at", "created_at"),
+        # created_at index removed — created_at queries rely on table scan or other indexes
     )
 
     def __repr__(self) -> str:

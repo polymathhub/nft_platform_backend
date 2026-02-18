@@ -137,11 +137,11 @@ async def setup_telegram_webhook():
     Initialize and set Telegram webhook automatically.
     """
     if not settings.telegram_bot_token:
-        logger.warning("Telegram bot token not configured; skipping webhook setup.")
+        logger.info("Telegram bot token not configured; skipping webhook setup.")
         return False
 
     manager = TelegramWebhookManager()
-    webhook_url = "https://nftplatformbackend-production-b67d.up.railway.app/api/v1/telegram"
+    webhook_url = settings.telegram_webhook_url or "https://nftplatformbackend-production-b67d.up.railway.app/api/v1/telegram/webhook"
     success = await manager.set_webhook(webhook_url)
     if not success:
         logger.warning("Webhook setup failed, continuing startup...")

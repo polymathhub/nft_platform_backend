@@ -98,6 +98,64 @@ class NFTDetailResponse(NFTResponse):
     transaction_hash: Optional[str]
 
 
+# ==================== WebApp Specific Requests ====================
+
+class WebAppMintNFTRequest(BaseModel):
+    """Request model for /web-app/mint endpoint"""
+    wallet_id: UUID
+    nft_name: str = Field(..., min_length=1, max_length=255)
+    nft_description: Optional[str] = Field(None, max_length=2000)
+    image_url: Optional[str] = Field(None, max_length=500)
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
+class WebAppListNFTRequest(BaseModel):
+    """Request model for /web-app/list-nft endpoint"""
+    nft_id: UUID
+    price: float = Field(..., gt=0)
+    currency: str = Field("USDT", max_length=10)
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
+class WebAppTransferNFTRequest(BaseModel):
+    """Request model for /web-app/transfer endpoint"""
+    nft_id: UUID
+    to_address: str = Field(..., min_length=1, max_length=255)
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
+class WebAppBurnNFTRequest(BaseModel):
+    """Request model for /web-app/burn endpoint"""
+    nft_id: UUID
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
+class WebAppSetPrimaryWalletRequest(BaseModel):
+    """Request model for /web-app/set-primary endpoint"""
+    wallet_id: UUID
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
+class WebAppMakeOfferRequest(BaseModel):
+    """Request model for /web-app/make-offer endpoint"""
+    listing_id: UUID
+    offer_price: float = Field(..., gt=0)
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
+class WebAppCancelListingRequest(BaseModel):
+    """Request model for /web-app/cancel-listing endpoint"""
+    listing_id: UUID
+    user_id: UUID
+    init_data: Optional[str] = None
+
+
 class UserNFTListResponse(BaseModel):
     total: int
     page: int

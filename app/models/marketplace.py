@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey, Enum, Index, Text, Float, Integer, Boolean, JSON
+from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 from enum import Enum as PyEnum
@@ -65,6 +66,9 @@ class Listing(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    nft = relationship("NFT", foreign_keys=[nft_id], lazy="select")
+    seller = relationship("User", foreign_keys=[seller_id], lazy="select")
+
     __table_args__ = (
         Index("ix_listings_status", "status"),
         Index("ix_listings_blockchain", "blockchain"),
@@ -114,6 +118,10 @@ class Offer(Base):
     offer_metadata = Column(JSON, nullable=True, default={})
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    listing = relationship("Listing", foreign_keys=[listing_id], lazy="select")
+    nft = relationship("NFT", foreign_keys=[nft_id], lazy="select")
+    buyer = relationship("User", foreign_keys=[buyer_id], lazy="select")
 
     __table_args__ = (
         Index("ix_offers_status", "status"),
@@ -178,6 +186,12 @@ class Order(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
+
+    listing = relationship("Listing", foreign_keys=[listing_id], lazy="select")
+    offer = relationship("Offer", foreign_keys=[offer_id], lazy="select")
+    nft = relationship("NFT", foreign_keys=[nft_id], lazy="select")
+    seller = relationship("User", foreign_keys=[seller_id], lazy="select", viewonly=True)
+    buyer = relationship("User", foreign_keys=[buyer_id], lazy="select", viewonly=True)
 
     __table_args__ = (
         Index("ix_orders_status", "status"),

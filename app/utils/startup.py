@@ -120,10 +120,10 @@ async def ensure_user_role_column():
             column_exists = bool(result.scalar())
             
             if column_exists:
-                logger.info("✓ user_role column already exists on users table")
+                logger.info("user_role column already exists on users table")
                 return
             
-            logger.info("! user_role column missing; adding it safely...")
+            logger.info("user_role column missing; adding it now")
             
             # Add the enum type if it doesn't exist
             await conn.execute(text(
@@ -136,11 +136,11 @@ async def ensure_user_role_column():
             ))
             
             await conn.commit()
-            logger.info("✓ user_role column added successfully")
+            logger.info("user_role column added successfully")
             
     except Exception as e:
         logger.warning(f"Failed to ensure user_role column (non-fatal): {e}")
-        # Don't raise; this is a safeguard and shouldn't block startup if migrations handle it
+        # Don't raise; this is an exception we can stay with if it happensas the column will be added 
 
 
 
@@ -157,7 +157,7 @@ async def setup_telegram_webhook() -> bool:
     logger.info("Initializing Telegram webhook integration...")
 
     webhook_url = (
-        "https://nftplatformbackend-production-b67d.up.railway.app/api/v1/telegram/webhook"
+        settings.telegram_webhook_url or "https://nftplatformbackend-production-b67d.up.railway.app/api/v1/telegram/webhook"
     )
 
     try:

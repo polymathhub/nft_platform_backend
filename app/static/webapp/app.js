@@ -45,6 +45,7 @@
     nfts: [],
     listings: [],
     currentPage: 'dashboard',
+    initData: null,
   };
 
   // ========== UTILITIES ==========
@@ -150,15 +151,25 @@
       try {
         log(`[Attempt ${attempt}] ${method} ${url}`);
         
+        // Inject Telegram init_data and user_id for authenticated POST/PUT requests when available
+        if (method !== 'GET') {
+          options.body = Object.assign({}, options.body || {});
+          if (state.initData && !options.body.init_data) {
+            options.body.init_data = state.initData;
+          }
+          if (state.user && !options.body.user_id) {
+            options.body.user_id = state.user.id;
+          }
+        }
+
         let fetchOptions = {
           method,
           headers: {
             'Content-Type': 'application/json',
             ...options.headers,
           },
-          timeout: CONFIG.TIMEOUT,
         };
-        
+
         if (options.body) {
           fetchOptions.body = JSON.stringify(options.body);
         }
@@ -189,6 +200,10 @@
 
     // Auth endpoints
     async initSession(initData) {
+      // Store initData in state for subsequent authenticated requests
+      try {
+        state.initData = initData;
+      } catch (e) {}
       return this._fetch(`/web-app/init?init_data=${encodeURIComponent(initData)}`);
     },
 
@@ -216,10 +231,12 @@
       });
     },
 
-    async setPrimaryWallet(walletId) {
+    async setPrimaryWallet(walletId, userId = null) {
+      const body = { wallet_id: walletId };
+      if (userId) body.user_id = userId;
       return this._fetch(`/web-app/set-primary`, {
         method: 'POST',
-        body: { wallet_id: walletId }
+        body,
       });
     },
 
@@ -228,10 +245,11 @@
       return this._fetch(`/web-app/nfts?user_id=${userId}`);
     },
 
-    async mintNft(walletId, nftName, description, imageUrl = null) {
+    async mintNft(userId, walletId, nftName, description, imageUrl = null) {
       return this._fetch(`/web-app/mint`, {
         method: 'POST',
         body: {
+          user_id: userId,
           wallet_id: walletId,
           nft_name: nftName,
           nft_description: description,
@@ -240,17 +258,17 @@
       });
     },
 
-    async burnNft(nftId) {
+    async burnNft(userId, nftId) {
       return this._fetch(`/web-app/burn`, {
         method: 'POST',
-        body: { nft_id: nftId }
+        body: { user_id: userId, nft_id: nftId }
       });
     },
 
-    async transferNft(nftId, toAddress) {
+    async transferNft(userId, nftId, toAddress) {
       return this._fetch(`/web-app/transfer`, {
         method: 'POST',
-        body: { nft_id: nftId, to_address: toAddress }
+        body: { user_id: userId, nft_id: nftId, to_address: toAddress }
       });
     },
 
@@ -263,24 +281,24 @@
       return this._fetch(`/web-app/marketplace/mylistings?user_id=${userId}`);
     },
 
-    async listNft(nftId, price, currency = 'USD') {
+    async listNft(userId, nftId, price, currency = 'USDT') {
       return this._fetch(`/web-app/list-nft`, {
         method: 'POST',
-        body: { nft_id: nftId, price: parseFloat(price), currency }
+        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
       });
     },
 
-    async makeOffer(listingId, offerPrice) {
+    async makeOffer(userId, listingId, offerPrice) {
       return this._fetch(`/web-app/make-offer`, {
         method: 'POST',
-        body: { listing_id: listingId, offer_price: parseFloat(offerPrice) }
+        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice) }
       });
     },
 
-    async cancelListing(listingId) {
+    async cancelListing(userId, listingId) {
       return this._fetch(`/web-app/cancel-listing`, {
         method: 'POST',
-        body: { listing_id: listingId }
+        body: { user_id: userId, listing_id: listingId }
       });
     },
 
@@ -290,7 +308,7 @@
     },
   };
 
-  // ========== UI UPDATES ==========
+  // Ui update 
 
   function formatAddress(addr) {
     if (!addr || addr.length < 10) return addr;
@@ -403,9 +421,11 @@
             <small style="color:var(--text-secondary);">${new Date(w.created_at).toLocaleDateString()}</small>
           </div>
           <code style="display:block;word-break:break-all;padding:12px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:11px;margin-bottom:12px;">${w.address}</code>
-          <div style="display:flex;gap:10px;">
-            <button class="btn btn-secondary" onclick="window.showWalletDetails('${w.id}')">Details</button>
-            ${!w.is_primary ? `<button class="btn btn-secondary" onclick="window.setPrimary('${w.id}')">Set Primary</button>` : ''}
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="window.showWalletDetails('${w.id}')" style="flex:1;min-width:80px;">Details</button>
+            <button class="btn btn-secondary" onclick="window.depositModal('${w.id}')" style="flex:1;min-width:80px;">Deposit</button>
+            <button class="btn btn-secondary" onclick="window.withdrawalModal('${w.id}')" style="flex:1;min-width:80px;">💸 Withdraw</button>
+            ${!w.is_primary ? `<button class="btn btn-secondary" onclick="window.setPrimary('${w.id}')" style="flex:1;min-width:80px;">Set Primary</button>` : ''}
           </div>
         </div>
       `).join('');
@@ -534,7 +554,7 @@
             </div>
             <div class="profile-item">
               <span>Status:</span>
-              <strong>${state.user.is_verified ? 'Verified ✓' : 'Unverified'}</strong>
+              <strong>${state.user.is_verified ? 'Verified' : 'Unverified'}</strong>
             </div>
             <div class="profile-item">
               <span>Role:</span>
@@ -569,7 +589,7 @@
     }
   }
 
-  // ========== MODAL FUNCTIONS ==========
+  //MODAL FUNCTIONS
 
   window.showWalletDetails = function(walletId) {
     const wallet = state.wallets.find(w => w.id === walletId);
@@ -593,6 +613,28 @@
     `, [
       { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
     ]);
+  };
+
+  // Set a wallet as primary (used by wallet list actions)
+  window.setPrimary = async function(walletId) {
+    try {
+      if (!state.user) {
+        showStatus('User not authenticated', 'error');
+        return;
+      }
+
+      showStatus('Setting primary wallet...', 'loading');
+      const result = await API.setPrimaryWallet(walletId, state.user.id);
+
+      if (!result.success) throw new Error(result.error || 'Failed to set primary wallet');
+
+      showStatus('Primary wallet updated!', 'success');
+      closeModal();
+      await updateWalletsList();
+      await updateDashboard();
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    }
   };
 
   window.showNftDetails = function(nftId) {
@@ -648,12 +690,13 @@
   window.submitListNft = async function(nftId) {
     try {
       const price = document.getElementById('listPrice')?.value;
-      const currency = document.getElementById('listCurrency')?.value || 'USD';
+      const currency = document.getElementById('listCurrency')?.value || 'USDT';
       
       if (!price) throw new Error('Please enter a price');
+      if (!state.user?.id) throw new Error('User not authenticated');
       
       showStatus('Listing NFT...', 'loading');
-      const result = await API.listNft(nftId, price, currency);
+      const result = await API.listNft(state.user.id, nftId, price, currency);
       
       if (!result.success) throw new Error(result.error || 'Failed to list NFT');
       
@@ -681,9 +724,10 @@
     try {
       const price = document.getElementById('offerPrice')?.value;
       if (!price) throw new Error('Please enter an offer price');
+      if (!state.user?.id) throw new Error('User not authenticated');
       
       showStatus('Submitting offer...', 'loading');
-      const result = await API.makeOffer(listingId, price);
+      const result = await API.makeOffer(state.user.id, listingId, price);
       
       if (!result.success) throw new Error(result.error || 'Failed to submit offer');
       
@@ -695,9 +739,213 @@
     }
   };
 
+  // Direct buy / make offer helper
+  window.buyNow = async function(listingId, offerPrice) {
+    try {
+      if (!state.user || !state.user.id) return showStatus('User not authenticated', 'error');
+      if (!offerPrice) throw new Error('Offer price required');
+
+      showStatus('Processing purchase...', 'loading');
+      const result = await API.makeOffer(state.user.id, listingId, parseFloat(offerPrice));
+
+      if (!result.success) throw new Error(result.error || 'Purchase failed');
+
+      showStatus('Purchase submitted!', 'success');
+      await updateMarketplaceList();
+      await updateDashboard();
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  window.cancelListing = async function(listingId) {
+    try {
+      if (!state.user || !state.user.id) return showStatus('User not authenticated', 'error');
+      showStatus('Cancelling listing...', 'loading');
+      const res = await API.cancelListing(state.user.id, listingId);
+      if (!res.success) throw new Error(res.error || 'Cancel failed');
+      showStatus('Listing cancelled', 'success');
+      await updateMarketplaceList();
+      await updateDashboard();
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  // ========== DEPOSIT / WITHDRAWAL FUNCTIONS ==========
+  
+  window.depositModal = function(walletId) {
+    showModal(' Deposit USDT', `
+      <div style="display:flex;flex-direction:column;gap:12px;text-align:center;">
+        <p style="color:var(--text-secondary);font-size:13px;">Send USDT to your wallet to increase your balance</p>
+        <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
+          <label style="display:block;margin-bottom:8px;font-size:12px;color:var(--text-secondary);">Amount (USDT)</label>
+          <input type="number" id="depositAmount" placeholder="Enter amount" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;font-size:14px;" min="1" step="0.01">
+        </div>
+      </div>
+    `, [
+      { label: 'Initiate Deposit', action: `submitDeposit('${walletId}')`, class: 'btn-primary' },
+      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+    ]);
+  };
+
+  window.submitDeposit = async function(walletId) {
+    try {
+      const amount = parseFloat(document.getElementById('depositAmount')?.value);
+      if (!amount || amount < 1) throw new Error('Minimum deposit is 1 USDT');
+      
+      showStatus('Initiating deposit...', 'loading');
+      const result = await API._fetch(`/api/v1/payments/deposit/initiate`, {
+        method: 'POST',
+        body: {
+          wallet_id: walletId,
+          amount: amount,
+        }
+      });
+      
+      if (!result.success) throw new Error(result.error || 'Failed to initiate deposit');
+      
+      closeModal();
+      showModal('📋 Deposit Instructions', `
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
+          <div style="background:rgba(76,175,80,0.1);padding:12px;border-radius:8px;border-left:4px solid #4CAF50;">
+            <p><strong>Deposit Address:</strong></p>
+            <code style="display:block;background:rgba(0,0,0,0.3);padding:8px;margin:8px 0;word-break:break-all;border-radius:4px;font-size:11px;">${result.deposit_address}</code>
+            <button onclick="navigator.clipboard.writeText('${result.deposit_address}');alert('Copied!')" class="btn btn-secondary" style="width:100%;margin-top:8px;font-size:12px;">📋 Copy Address</button>
+          </div>
+          <div style="background:rgba(33,150,243,0.1);padding:12px;border-radius:8px;border-left:4px solid #2196F3;">
+            <strong>Send this amount:</strong> ${result.amount} ${result.currency}
+          </div>
+          <div style="background:rgba(255,152,0,0.1);padding:12px;border-radius:8px;border-left:4px solid #FF9800;">
+            <strong>On blockchain:</strong> ${result.blockchain.toUpperCase()}
+          </div>
+          <p style="color:var(--text-secondary);margin-top:8px;">⏱ This deposit is valid for 24 hours. After sending, come back to confirm the transaction.</p>
+        </div>
+      `, [
+        { label: 'Confirmed Deposit', action: `confirmDepositModal('${result.payment_id}')`, class: 'btn-primary' },
+        { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
+      ]);
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  window.confirmDepositModal = function(paymentId) {
+    showModal('Confirm Deposit', `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <p style="color:var(--text-secondary);font-size:13px;">Paste your transaction hash to confirm the deposit</p>
+        <div>
+          <label style="display:block;margin-bottom:6px;font-size:12px;">Transaction Hash</label>
+          <input type="text" id="txHash" placeholder="0x..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;font-size:12px;font-family:monospace;">
+        </div>
+      </div>
+    `, [
+      { label: 'Confirm', action: `submitConfirmDeposit('${paymentId}')`, class: 'btn-primary' },
+      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+    ]);
+  };
+
+  window.submitConfirmDeposit = async function(paymentId) {
+    try {
+      const txHash = document.getElementById('txHash')?.value?.trim();
+      if (!txHash || txHash.length < 10) throw new Error('Invalid transaction hash');
+      
+      showStatus('Confirming deposit...', 'loading');
+      const result = await API._fetch(`/api/v1/payments/deposit/confirm`, {
+        method: 'POST',
+        body: {
+          payment_id: paymentId,
+          transaction_hash: txHash,
+        }
+      });
+      
+      if (!result.success) throw new Error(result.error || 'Failed to confirm deposit');
+      
+      closeModal();
+      showStatus('Deposit confirmed! Your balance will update once verified.', 'success');
+      await updateDashboard();
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    }
+  };
+
+  window.withdrawalModal = function(walletId) {
+    showModal(' Withdraw USDT', `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="display:block;margin-bottom:6px;font-size:12px;">Amount to Withdraw (USDT)</label>
+          <input type="number" id="withdrawAmount" placeholder="Enter amount" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;" min="1" step="0.01">
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px;font-size:12px;">Destination Address</label>
+          <input type="text" id="destAddress" placeholder="0x... or other address" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;font-size:12px;">
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px;font-size:12px;">Blockchain (optional)</label>
+          <select id="destBlockchain" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
+            <option value="">Same as source</option>
+            <option value="ethereum">Ethereum</option>
+            <option value="polygon">Polygon</option>
+            <option value="arbitrum">Arbitrum</option>
+            <option value="optimism">Optimism</option>
+            <option value="avalanche">Avalanche</option>
+            <option value="base">Base</option>
+          </select>
+        </div>
+      </div>
+    `, [
+      { label: 'Withdraw', action: `submitWithdrawal('${walletId}')`, class: 'btn-primary' },
+      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+    ]);
+  };
+
+  window.submitWithdrawal = async function(walletId) {
+    try {
+      const amount = parseFloat(document.getElementById('withdrawAmount')?.value);
+      const destAddress = document.getElementById('destAddress')?.value?.trim();
+      const destBlockchain = document.getElementById('destBlockchain')?.value || undefined;
+      
+      if (!amount || amount < 1) throw new Error('Minimum withdrawal is 1 USDT');
+      if (!destAddress || destAddress.length < 20) throw new Error('Invalid destination address');
+      
+      showStatus('Processing withdrawal request...', 'loading');
+      const result = await API._fetch(`/api/v1/payments/withdrawal/initiate`, {
+        method: 'POST',
+        body: {
+          wallet_id: walletId,
+          amount: amount,
+          destination_address: destAddress,
+          destination_blockchain: destBlockchain,
+        }
+      });
+      
+      if (!result.success) throw new Error(result.error || 'Failed to initiate withdrawal');
+      
+      closeModal();
+      showModal('⏳ Withdrawal Pending', `
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
+          <div style="background:rgba(76,175,80,0.1);padding:12px;border-radius:8px;">
+            <strong>Withdrawal Created</strong><br>
+            ${result.amount} ${result.currency} will be sent to your address.
+          </div>
+          <div style="background:rgba(255,152,0,0.1);padding:12px;border-radius:8px;border-left:4px solid #FF9800;">
+            <strong>Fee:</strong> ${result.platform_fee || '2%'}
+          </div>
+          <p style="color:var(--text-secondary);">Withdrawal will be processed within 5 minutes.</p>
+        </div>
+      `, [
+        { label: 'Done', action: 'closeModal()', class: 'btn-primary' }
+      ]);
+      
+      await updateDashboard();
+    } catch (err) {
+      showStatus(`Error: ${err.message}`, 'error');
+    }
+  };
+
   window.closeModal = closeModal;
 
-  // ========== NAVIGATION ==========
+  //NAVIGATION
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
@@ -706,7 +954,7 @@
     });
   });
 
-  // ========== PAGE ACTIONS ==========
+  //  PAGE ACTION
   const pageActions = {
     async createWallet() {
       showModal('Create Wallet', `
@@ -734,6 +982,57 @@
         { label: 'Create', action: 'pageActions.submitCreateWallet()', class: 'btn-primary' },
         { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
       ]);
+    },
+
+    async importWallet() {
+      showModal('Import Wallet', `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label>Blockchain</label>
+            <select id="importBlockchain" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
+              <option value="bitcoin">Bitcoin</option>
+              <option value="ethereum">Ethereum</option>
+              <option value="solana">Solana</option>
+              <option value="ton">TON</option>
+              <option value="polygon">Polygon</option>
+              <option value="avalanche">Avalanche</option>
+            </select>
+          </div>
+          <div>
+            <label>Address</label>
+            <input type="text" id="importAddress" placeholder="0x..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input type="checkbox" id="importSetPrimary">
+            <label style="margin:0;">Set as Primary</label>
+          </div>
+        </div>
+      `, [
+        { label: 'Import', action: 'pageActions.submitImportWallet()', class: 'btn-primary' },
+        { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+      ]);
+    },
+
+    async submitImportWallet() {
+      try {
+        const blockchain = document.getElementById('importBlockchain')?.value;
+        const address = document.getElementById('importAddress')?.value;
+        const isPrimary = document.getElementById('importSetPrimary')?.checked === true;
+
+        if (!blockchain || !address) throw new Error('Please select blockchain and enter address');
+
+        showStatus('Importing wallet...', 'loading');
+        const result = await API.importWallet(blockchain, address, null, isPrimary);
+
+        if (!result.success) throw new Error(result.error || 'Failed to import wallet');
+
+        closeModal();
+        showStatus('Wallet imported!', 'success');
+        await updateWalletsList();
+        await updateDashboard();
+      } catch (err) {
+        showStatus(`Error: ${err.message}`, 'error');
+      }
     },
 
     async submitCreateWallet() {
@@ -797,7 +1096,7 @@
         if (!name) throw new Error('Please enter an NFT name');
         
         showStatus('Minting NFT...', 'loading');
-        const result = await API.mintNft(walletId, name, desc, image || null);
+        const result = await API.mintNft(state.user.id, walletId, name, desc, image || null);
         
         if (!result.success) throw new Error(result.error || 'Failed to mint NFT');
         
@@ -807,6 +1106,116 @@
       } catch (err) {
         showStatus(`Error: ${err.message}`, 'error');
       }
+    },
+
+    async viewBalance() {
+      switchPage('balance');
+      await pageActions.refreshBalance();
+    },
+
+    async refreshBalance() {
+      try {
+        showStatus('Loading balance...', 'loading');
+        
+        const response = await API._fetch(`/api/v1/payments/balance`);
+        if (response.error) throw new Error(response.error);
+        
+        const balance = response || {};
+        const total = balance.total_balance_usdt || 0;
+        const pending = balance.pending_deposits_usdt || 0;
+        const available = balance.available_balance_usdt || 0;
+        
+        // Update balance display in dashboard
+        const dashDisplay = document.getElementById('balanceDisplay');
+        if (dashDisplay) dashDisplay.textContent = `$${total.toFixed(2)} USDT`;
+        
+        // Update balance display in balance page
+        const largeDisplay = document.getElementById('balanceDisplayLarge');
+        if (largeDisplay) largeDisplay.textContent = `$${total.toFixed(2)} USDT`;
+        
+        const confirmedEl = document.getElementById('confirmedBalance');
+        if (confirmedEl) confirmedEl.textContent = `$${total.toFixed(2)}`;
+        
+        const pendingEl = document.getElementById('pendingBalance');
+        if (pendingEl) pendingEl.textContent = `$${pending.toFixed(2)}`;
+        
+        const availEl = document.getElementById('availableBalance');
+        if (availEl) availEl.textContent = `$${available.toFixed(2)}`;
+        
+        // Update wallet balances
+        const walletBalancesList = document.getElementById('walletBalancesList');
+        if (walletBalancesList && balance.wallets) {
+          walletBalancesList.innerHTML = balance.wallets.map(w => `
+            <div class="card" style="padding:12px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <strong>${w.blockchain?.toUpperCase()}</strong>
+                  ${w.is_primary ? '<span class="blockchain-badge primary-badge">Primary</span>' : ''}
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:14px;font-weight:600;">$${w.balance?.toFixed(2)}</div>
+                  <div style="font-size:11px;color:var(--text-secondary);">${w.address.substring(0, 12)}...</div>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+        
+        // Update payment history
+        const historyResponse = await API._fetch(`/api/v1/payments/history?limit=5`);
+        const paymentHistoryList = document.getElementById('paymentHistoryList');
+        if (paymentHistoryList && historyResponse.history) {
+          paymentHistoryList.innerHTML = historyResponse.history.length ? 
+            historyResponse.history.map(tx => `
+              <div class="card" style="padding:12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>
+                    <div style="font-weight:600;">${tx.type === 'deposit' ? ' Deposit' : ' Withdrawal'}</div>
+                    <div style="font-size:11px;color:var(--text-secondary);">${new Date(tx.created_at).toLocaleString()}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-weight:600;color:${tx.type === 'deposit' ? '#51cf66' : '#ff6b6b'}">${tx.type === 'deposit' ? '+' : '-'}$${tx.amount?.toFixed(2)}</div>
+                    <div style="font-size:11px;color:var(--text-secondary)">${tx.status}</div>
+                  </div>
+                </div>
+              </div>
+            `).join('') : '<div class="card"><p style="color:var(--text-secondary);">No transactions yet</p></div>';
+        }
+        
+        showStatus('Balance updated', 'success');
+      } catch (err) {
+        showStatus(`Error: ${err.message}`, 'error');
+      }
+    },
+
+    async depositQuick() {
+      if (!state.wallets.length) {
+        showStatus('Please create a wallet first', 'error');
+        return;
+      }
+      
+      const primaryWallet = state.wallets.find(w => w.is_primary) || state.wallets[0];
+      window.depositModal(primaryWallet.id);
+    },
+
+    async quickDeposit() {
+      if (!state.wallets.length) {
+        showStatus('Please create a wallet first', 'error');
+        return;
+      }
+      
+      const primaryWallet = state.wallets.find(w => w.is_primary) || state.wallets[0];
+      window.depositModal(primaryWallet.id);
+    },
+
+    async quickWithdraw() {
+      if (!state.wallets.length) {
+        showStatus('Please create a wallet first', 'error');
+        return;
+      }
+      
+      const primaryWallet = state.wallets.find(w => w.is_primary) || state.wallets[0];
+      window.withdrawalModal(primaryWallet.id);
     },
   };
 
@@ -848,61 +1257,15 @@
     }
   }
 
-  async function initWithTestUser() {
-    /**
-     * Initialize with test user (development/testing mode)
-     */
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const testUserId = params.get('user_id') || params.get('test_user');
-      
-      if (testUserId) {
-        log(`Loading user: ${testUserId}`);
-        showStatus('Loading user data...', 'loading');
-        
-        const result = await API._fetch(`/web-app/user?user_id=${testUserId}`);
-        if (result.success && result.user) {
-          state.user = result.user;
-          log(`User loaded: ${state.user.telegram_username}`);
-          return state.user;
-        }
-      }
-      
-      // Create/get test user
-      const testResult = await API._fetch('/web-app/test-user');
-      if (testResult.success && testResult.test_user) {
-        const userId = testResult.test_user.id;
-        log(`Using test user: ${userId}`);
-        
-        const userData = await API._fetch(`/web-app/user?user_id=${userId}`);
-        if (userData.success && userData.user) {
-          state.user = userData.user;
-          log(`Test user data loaded: ${state.user.telegram_username}`);
-          return state.user;
-        }
-      }
-      
-      return null;
-    } catch (err) {
-      log(`Test user init error: ${err.message}`, 'error');
-      return null;
-    }
-  }
-
   async function init() {
     try {
       showStatus('Initializing NFT Platform...', 'loading');
       log('Initialization started');
 
-      let user = await initWithTelegram();
+      const user = await initWithTelegram();
       
       if (!user) {
-        log('Telegram not available, trying development mode...');
-        user = await initWithTestUser();
-      }
-      
-      if (!user) {
-        throw new Error('Authentication failed - open in Telegram or use development mode');
+        throw new Error('Authentication failed - please open this app in Telegram');
       }
 
       // Update user info in header

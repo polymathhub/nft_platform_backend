@@ -50,9 +50,8 @@ class TelegramBotService:
         parse_mode: str = "HTML",
         reply_markup: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        logger.warning(f"[TELEGRAM] send_message called: chat_id={chat_id}, text_length={len(text)}")
         if not getattr(self, "enabled", False) or not self.api_url:
-            logger.warning("Telegram bot disabled or token missing; skipping send_message")
+            logger.debug("Telegram bot disabled or token missing; skipping send_message")
             return False
         try:
             async with aiohttp.ClientSession() as session:
@@ -64,15 +63,13 @@ class TelegramBotService:
                 if reply_markup:
                     payload["reply_markup"] = reply_markup
 
-                logger.warning(f"[TELEGRAM] Posting to {self.api_url}/sendMessage")
                 async with session.post(
                     f"{self.api_url}/sendMessage",
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
-                    logger.warning(f"[TELEGRAM] Response status: {response.status}")
                     if response.status == 200:
-                        logger.warning(f"[TELEGRAM] Message sent successfully to {chat_id}")
+                        logger.debug(f"Message sent successfully to {chat_id}")
                         return True
                     else:
                         error_text = await response.text()
@@ -93,9 +90,8 @@ class TelegramBotService:
         reply_markup: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Send a photo to a Telegram chat."""
-        logger.warning(f"[TELEGRAM] send_photo called: chat_id={chat_id}, photo_url={photo_url}")
         if not getattr(self, "enabled", False) or not self.api_url:
-            logger.warning("Telegram bot disabled or token missing; skipping send_photo")
+            logger.debug("Telegram bot disabled or token missing; skipping send_photo")
             return False
         try:
             async with aiohttp.ClientSession() as session:
@@ -338,11 +334,18 @@ class TelegramBotService:
                 chat_id, f"❌ Error retrieving status: {str(e)}"
             )
 
-    async def set_webhook(self, webhook_url: str) -> bool:
-        """Set Telegram webhook for receiving updates."""
+    async def set_webhook(self, webhook_url: str, secret_token: Optional[str] = None) -> bool:
+        """Set Telegram webhook for receiving updates.
+
+        Accepts optional `secret_token` so callers (admin UI) can register
+        a secret token with Telegram. This keeps webhook setup consistent
+        across utilities and startup flows.
+        """
         try:
             async with aiohttp.ClientSession() as session:
                 payload = {"url": webhook_url}
+                if secret_token:
+                    payload["secret_token"] = secret_token
                 async with session.post(
                     f"{self.api_url}/setWebhook",
                     json=payload,

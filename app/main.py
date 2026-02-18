@@ -6,8 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db, close_db
-from app.utils.startup import setup_telegram_webhook,auto_migrate
-
+from app.utils.startup import setup_telegram_webhook, auto_migrate
 
 from app.routers import (
     auth_router,
@@ -17,6 +16,7 @@ from app.routers import (
     marketplace_router,
     attestation_router,
     admin_router,
+    payment_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -33,15 +33,12 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()           
-    from app.utils.startup import auto_migrate
-    await auto_migrate()      
-    from app.utils.startup import setup_telegram_webhook
-    await setup_telegram_webhook() 
+    await init_db()
+    await auto_migrate()
+    await setup_telegram_webhook()
 
     yield
 
-    from app.database.connection import close_db
     await close_db()
 
 
@@ -63,9 +60,11 @@ app.add_middleware(HTTPSEnforcementMiddleware)
 app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
 
 """CORS"""
-# Build allowed origins - include same-origin for web app
+""" Build allowed origins - include same-origin for web app"""
 cors_origins = settings.allowed_origins.copy() if settings.allowed_origins else []
-# Always allow same-origin requests (important for internal web app)
+
+"""Always allow same-origin requests (important for internal web app)"""
+
 if "http://localhost" not in ",".join(cors_origins):
     cors_origins.extend([
         "http://localhost",
@@ -122,6 +121,7 @@ app.include_router(notification_router, prefix="/api/v1")
 app.include_router(marketplace_router, prefix="/api/v1")
 app.include_router(attestation_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+app.include_router(payment_router)
 
 
 
