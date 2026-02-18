@@ -398,9 +398,12 @@
 
         <!-- Wallets Page -->
         <div id="wallets-page" class="page" data-page="wallets">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
             <h2 style="font-size:20px;font-weight:600;">My Wallets</h2>
-            <button class="btn btn-primary" onclick="pageActions.createWallet()">Create Wallet</button>
+            <div style="display:flex;gap:12px;">
+              <button class="btn btn-primary" onclick="pageActions.createWallet()">+ Create Wallet</button>
+              <button class="btn btn-secondary" onclick="pageActions.importWallet()">📥 Import Wallet</button>
+            </div>
           </div>
           <div id="walletsList"></div>
         </div>

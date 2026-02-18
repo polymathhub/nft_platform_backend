@@ -24,6 +24,7 @@ from app.routers.walletconnect_router import router as walletconnect_router
 """Middleware"""
 
 from app.security_middleware import (
+    RequestBodyCachingMiddleware,
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
     HTTPSEnforcementMiddleware,
@@ -51,6 +52,8 @@ app = FastAPI(
 """
 Security & request middleware
 """
+# RequestBodyCachingMiddleware MUST be added first to cache bodies early
+app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
@@ -122,8 +125,9 @@ app.include_router(notification_router, prefix="/api/v1")
 app.include_router(marketplace_router, prefix="/api/v1")
 app.include_router(attestation_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+app.include_router(walletconnect_router, prefix="/api/v1")
 app.include_router(payment_router)
-
+ 
 
 
 

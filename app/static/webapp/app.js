@@ -295,12 +295,14 @@
 
     // User endpoints
     async getUser(userId) {
-      return this._fetch(`/web-app/user?user_id=${userId}`);
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/web-app/user?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
     },
 
     // Wallet endpoints
     async getWallets(userId) {
-      return this._fetch(`/web-app/wallets?user_id=${userId}`);
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/web-app/wallets?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
     },
 
     async createWallet(blockchain, walletType = 'custodial', isPrimary = false) {
@@ -328,7 +330,8 @@
 
     // NFT endpoints
     async getNfts(userId) {
-      return this._fetch(`/web-app/nfts?user_id=${userId}`);
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/web-app/nfts?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
     },
 
     async mintNft(userId, walletId, nftName, description, imageUrl = null) {
@@ -364,7 +367,8 @@
     },
 
     async getMyListings(userId) {
-      return this._fetch(`/web-app/marketplace/mylistings?user_id=${userId}`);
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/web-app/marketplace/mylistings?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
     },
 
     async listNft(userId, nftId, price, currency = 'USDT') {
@@ -390,7 +394,8 @@
 
     // Dashboard endpoints
     async getDashboardData(userId) {
-      return this._fetch(`/web-app/dashboard-data?user_id=${userId}`);
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
     },
   };
 
@@ -423,6 +428,11 @@
       const wallets = dashData.wallets || [];
       const nfts = dashData.nfts || [];
       const listings = dashData.listings || [];
+      
+      // Populate state so wallets and NFTs are available for actions
+      state.wallets = wallets;
+      state.nfts = nfts;
+      state.listings = listings;
       
       // Update stats
       const stats = document.getElementById('dashboardStats');
@@ -1151,16 +1161,45 @@
         if (!result || !result.success) throw new Error(result?.error || result?.detail || 'Failed to create wallet');
         
         closeModal();
-        showStatus('Wallet created!', 'success');
+        showStatus('Wallet created successfully! 🎉', 'success');
+        
+        // Reload wallet data
         await updateWalletsList();
+        await updateDashboard();
       } catch (err) {
         showStatus(`Error: ${err.message}`, 'error');
       }
     },
 
     async mintNft() {
-      if (!state.wallets.length) {
-        showStatus('Please create a wallet first', 'error');
+      if (!state.user || !state.user.id) {
+        showStatus('User not authenticated', 'error');
+        return;
+      }
+
+      // Ensure wallets are loaded
+      if (!state.wallets || state.wallets.length === 0) {
+        try {
+          showStatus('Loading wallets...', 'loading');
+          const data = await API.getWallets(state.user.id);
+          if (data.success) {
+            state.wallets = data.wallets || [];
+          }
+        } catch (e) {
+          log(`Failed to load wallets: ${e.message}`, 'error');
+        }
+      }
+
+      if (!state.wallets || state.wallets.length === 0) {
+        showModal('No Wallets', `
+          <div style="text-align:center;">
+            <p>You need to create a wallet before minting NFTs.</p>
+            <p style="color:var(--text-secondary);font-size:12px;">A wallet holds your NFTs on a blockchain.</p>
+          </div>
+        `, [
+          { label: 'Create Wallet', action: 'pageActions.createWallet()', class: 'btn-primary' },
+          { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+        ]);
         return;
       }
       
@@ -1186,6 +1225,13 @@
           </div>
         </div>
       `, [
+        { label: 'Create NFT', action: 'pageActions.submitMintNft()', class: 'btn-primary' },
+        { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+      ]);
+    },
+
+    async submitMintNft() {
+      try {
         if (!state.user || !state.user.id) {
           showStatus('User not authenticated', 'error');
           return;
@@ -1202,18 +1248,12 @@
         showStatus('Minting NFT...', 'loading');
         const result = await API.mintNft(state.user.id, walletId, name, desc, image || null);
         
-        if (!result || !result.success) throw new Error(result?.error || result?.detail)?.value;
-        
-        if (!name) throw new Error('Please enter an NFT name');
-        
-        showStatus('Minting NFT...', 'loading');
-        const result = await API.mintNft(state.user.id, walletId, name, desc, image || null);
-        
-        if (!result.success) throw new Error(result.error || 'Failed to mint NFT');
+        if (!result || !result.success) throw new Error(result?.error || result?.detail || 'Failed to mint NFT');
         
         closeModal();
         showStatus('NFT minted successfully!', 'success');
         await updateNftList();
+        await updateDashboard();
       } catch (err) {
         showStatus(`Error: ${err.message}`, 'error');
       }

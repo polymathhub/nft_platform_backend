@@ -219,6 +219,26 @@ class MintRequestData(BaseModel):
 # ==================== Endpoints ====================
 
 
+@router.get("/web-app/test-user")
+async def web_app_get_test_user() -> dict:
+    """
+    Get test user data for UI testing and development.
+    Returns a mock user for testing WebApp endpoints without authentication.
+    """
+    return {
+        "success": True,
+        "user": {
+            "id": "test-user-123",
+            "telegram_id": "123456789",
+            "telegram_username": "testuser",
+            "full_name": "Test User",
+            "email": "test@nftplatform.local",
+            "avatar_url": None,
+            "created_at": "2025-01-01T00:00:00",
+        },
+    }
+
+
 @router.post("/webhook")
 async def telegram_webhook(
     request: Request,
@@ -1667,19 +1687,19 @@ async def web_app_init(
 @router.get("/web-app/user")
 async def web_app_get_user(
     user_id: str,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user profile for web app."""
+    """Get user profile for web app. Requires Telegram authentication."""
     from uuid import UUID
 
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
-
-    if not user:
+    if str(telegram_user["user_id"]) != user_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: user_id mismatch",
         )
+
+    user = telegram_user["user_obj"]
 
     return {
         "success": True,
@@ -1698,12 +1718,18 @@ async def web_app_get_user(
 @router.get("/web-app/wallets")
 async def web_app_get_wallets(
     user_id: str,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's wallets for web app. Cached for 60 seconds."""
+    """Get user's wallets for web app. Requires Telegram authentication. Cached for 60 seconds."""
     from uuid import UUID
     from app.models import Wallet
-    from fastapi import Response
+
+    if str(telegram_user["user_id"]) != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: user_id mismatch",
+        )
 
     result = await db.execute(
         select(Wallet)
@@ -1732,12 +1758,18 @@ async def web_app_get_wallets(
 @router.get("/web-app/nfts")
 async def web_app_get_user_nfts(
     user_id: str,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's NFTs for web app. Optimized query, cached for 30 seconds."""
+    """Get user's NFTs for web app. Requires Telegram authentication. Optimized query, cached for 30 seconds."""
     from uuid import UUID
 
-    # Optimized query with index-friendly order
+    if str(telegram_user["user_id"]) != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: user_id mismatch",
+        )
+
     result = await db.execute(
         select(NFT)
         .where(NFT.user_id == UUID(user_id))
@@ -1767,17 +1799,24 @@ async def web_app_get_user_nfts(
 @router.get("/web-app/dashboard-data")
 async def web_app_get_dashboard_data(
     user_id: str,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """
     Get all dashboard data in one call (wallets, NFTs, listings).
-    Significantly faster than 3 separate API calls. Cached 60 seconds.
+    Requires Telegram authentication. Significantly faster than 3 separate API calls. Cached 60 seconds.
     """
     try:
         from uuid import UUID
         from app.models import Wallet
         from app.models.marketplace import ListingStatus
         from sqlalchemy.orm import selectinload
+
+        if str(telegram_user["user_id"]) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: user_id mismatch",
+            )
 
         # Validate UUID format
         try:
@@ -1868,9 +1907,10 @@ async def web_app_get_dashboard_data(
                 for listing in listings
             ],
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Dashboard data fetch error: {str(e)}", exc_info=True)
-        # Return empty state instead of 500 error
         return {
             "success": True,
             "wallets": [],
@@ -2155,7 +2195,7 @@ async def web_app_set_primary_wallet(
 
         wallet, error = await WalletService.set_primary_wallet(
             db=db,
-            user_id=user_id,
+            user_id=user.id,
             wallet_id=request.wallet_id,
         )
 
@@ -2359,10 +2399,17 @@ async def get_marketplace_listings(
 @router.get("/web-app/marketplace/mylistings")
 async def get_my_listings(
     user_id: str,
+    telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's marketplace listings."""
+    """Get user's marketplace listings. Requires Telegram authentication."""
     from uuid import UUID
+
+    if str(telegram_user["user_id"]) != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: user_id mismatch",
+        )
 
     result = await db.execute(
         select(Listing, NFT)
