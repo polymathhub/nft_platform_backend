@@ -679,7 +679,7 @@
       
       container.innerHTML = state.nfts.map(nft => `
         <div class="card">
-          <div style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;${nft.image_url ? `background-image:url('${nft.image_url}');` : ''}">
+          <div class="nft-image-container" data-image-url="${nft.image_url || ''}" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
             ${!nft.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
           </div>
           <div style="margin-bottom:12px;">
@@ -697,6 +697,13 @@
           </div>
         </div>
       `).join('');
+      
+      // Set background images via JavaScript to safely handle URLs with special characters
+      document.querySelectorAll('.nft-image-container[data-image-url]').forEach(el => {
+        if (el.dataset.imageUrl) {
+          el.style.backgroundImage = `url('${el.dataset.imageUrl}')`;
+        }
+      });
       
       showStatus('NFTs loaded', 'success');
     } catch (err) {
@@ -724,7 +731,7 @@
       
       container.innerHTML = state.listings.map(listing => `
         <div class="card">
-          <div style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;${listing.image_url ? `background-image:url('${listing.image_url}');` : ''}">
+          <div class="listing-image-container" data-image-url="${listing.image_url || ''}" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
             ${!listing.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
           </div>
           <div style="margin-bottom:12px;">
@@ -742,6 +749,13 @@
           <button class="btn btn-primary" onclick="window.buyNftModal('${listing.id}')">Buy Now</button>
         </div>
       `).join('');
+      
+      // Set background images via JavaScript to safely handle URLs with special characters
+      document.querySelectorAll('.listing-image-container[data-image-url]').forEach(el => {
+        if (el.dataset.imageUrl) {
+          el.style.backgroundImage = `url('${el.dataset.imageUrl}')`;
+        }
+      });
       
       showStatus('Marketplace loaded', 'success');
     } catch (err) {
@@ -867,7 +881,7 @@
     if (!nft) return;
     
     showModal(`${nft.name}`, `
-      <div style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;${nft.image_url ? `background-image:url('${nft.image_url}');` : ''}">
+      <div class="modal-nft-image" data-image-url="${nft.image_url || ''}" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
         ${!nft.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
       </div>
       <div style="font-size:13px;">
@@ -892,6 +906,12 @@
       { label: nft.status !== 'LISTED' ? 'Sell NFT' : 'View Listing', action: `listNftModal('${nft.id}')`, class: 'btn-primary' },
       { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
     ]);
+    
+    // Set background image via JavaScript after modal is rendered
+    const imageEl = document.querySelector('.modal-nft-image[data-image-url]');
+    if (imageEl && imageEl.dataset.imageUrl) {
+      imageEl.style.backgroundImage = `url('${imageEl.dataset.imageUrl}')`;
+    }
   };
 
   window.listNftModal = function(nftId) {
