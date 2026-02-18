@@ -320,26 +320,6 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
             "authenticated": False,
         }
     
-    # Verify user is verified
-    if not user.is_verified:
-        logger.warning(f"Unverified user attempt: telegram_id={telegram_id}, user_id={user.id}")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
-    
     # Attach user to request state for use in endpoints
     logger.info(f"Authenticated user: telegram_id={telegram_id}, user_id={user.id}, username={user.username}")
     request.state.telegram_user = {
@@ -1827,26 +1807,21 @@ async def web_app_init(
         try:
             user_data_json = data_dict.get("user")
             if not user_data_json:
-                logger.warning("No 'user' field in init_data - using test user")
-                result = await db.execute(
-                    select(User).where(User.telegram_id == "999999999")
-                )
-                test_user = result.scalar_one_or_none()
-                if test_user:
-                    return {
-                        "success": True,
-                        "user": {
-                            "id": str(test_user.id),
-                            "telegram_id": 999999999,
-                            "telegram_username": "dev_user",
-                            "full_name": "Development User",
-                            "avatar_url": None,
-                            "email": "dev@nftplatform.local",
-                            "is_verified": True,
-                            "user_role": "user",
-                            "created_at": test_user.created_at.isoformat() if hasattr(test_user, 'created_at') else None,
-                        },
-                    }
+                logger.warning("No 'user' field in init_data - cannot authenticate")
+                return {
+                    "success": True,
+                    "user": {
+                        "id": "guest",
+                        "telegram_id": 0,
+                        "telegram_username": "guest",
+                        "full_name": "Guest User",
+                        "avatar_url": None,
+                        "email": None,
+                        "is_verified": False,
+                        "user_role": "guest",
+                        "created_at": None,
+                    },
+                }
             
             user_data = json.loads(user_data_json)
             telegram_id = user_data.get("id")
@@ -1940,11 +1915,8 @@ async def web_app_init(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Initialization failed",
         )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Initialization failed - please contact support",
-        )
-@router.get("/web-app/user")
+
+
 @router.get("/web-app/user")
 async def web_app_get_user(
     user_id: str,
@@ -2746,12 +2718,17 @@ async def create_wallet_for_webapp(
     """
     Create a new wallet for the current user.
     Requires Telegram WebApp init_data for authentication.
+    Logs activity to audit trail.
     """
     import anyio
+    from app.services.activity_service import ActivityService
+    from app.models.activity import ActivityType
     
     try:
         user_id = auth["user_id"]
         user = auth["user_obj"]
+        telegram_username = user.telegram_username
+        telegram_id = user.telegram_id
         
         # Create wallet using WalletService
         wallet, error = await WalletService.create_wallet(
@@ -2764,12 +2741,35 @@ async def create_wallet_for_webapp(
         
         if error:
             logger.error(f"Wallet creation error: {error}")
+            # Log the failure
+            await ActivityService.log_error(
+                db=db,
+                user_id=user.id,
+                activity_type=ActivityType.WALLET_CREATED,
+                error_message=error,
+                resource_type="wallet",
+                telegram_id=telegram_id,
+                telegram_username=telegram_username,
+            )
+            await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to create wallet: {error}",
             )
         
-        logger.info(f"Wallet created for user {user.telegram_username}: {wallet.id}")
+        # Log successful wallet creation
+        await ActivityService.log_wallet_created(
+            db=db,
+            user_id=user.id,
+            wallet_id=wallet.id,
+            blockchain=request.blockchain.value,
+            address=wallet.address,
+            telegram_id=telegram_id,
+            telegram_username=telegram_username,
+        )
+        await db.commit()
+        
+        logger.info(f"Wallet created for user {telegram_username}: {wallet.id}")
         
         return {
             "success": True,
@@ -2804,12 +2804,17 @@ async def import_wallet_for_webapp(
     """
     Import an existing wallet for the current user.
     Requires Telegram WebApp init_data for authentication.
+    Logs activity to audit trail.
     """
     import anyio
+    from app.services.activity_service import ActivityService
+    from app.models.activity import ActivityType
     
     try:
         user_id = auth["user_id"]
         user = auth["user_obj"]
+        telegram_username = user.telegram_username
+        telegram_id = user.telegram_id
         
         # Import wallet using WalletService
         wallet, error = await WalletService.import_wallet(
@@ -2824,12 +2829,36 @@ async def import_wallet_for_webapp(
         
         if error:
             logger.error(f"Wallet import error: {error}")
+            # Log the failure
+            await ActivityService.log_error(
+                db=db,
+                user_id=user.id,
+                activity_type=ActivityType.WALLET_IMPORTED,
+                error_message=error,
+                resource_type="wallet",
+                metadata={"blockchain": request.blockchain.value, "address": request.address},
+                telegram_id=telegram_id,
+                telegram_username=telegram_username,
+            )
+            await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to import wallet: {error}",
             )
         
-        logger.info(f"Wallet imported for user {user.telegram_username}: {wallet.id}")
+        # Log successful wallet import
+        await ActivityService.log_wallet_imported(
+            db=db,
+            user_id=user.id,
+            wallet_id=wallet.id,
+            blockchain=request.blockchain.value,
+            address=request.address,
+            telegram_id=telegram_id,
+            telegram_username=telegram_username,
+        )
+        await db.commit()
+        
+        logger.info(f"Wallet imported for user {telegram_username}: {wallet.id}")
         
         return {
             "success": True,
