@@ -159,37 +159,65 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     # Extract user data from init_data
     user_data_str = data_dict.get("user")
     if not user_data_str:
-        logger.warning("No user data in init_data - using test user")
-        result = await db.execute(
-            select(User).where(User.telegram_id == "999999999")
-        )
-        test_user = result.scalar_one_or_none()
-        if test_user:
-            return {
-                "user_id": str(test_user.id),
-                "telegram_id": 999999999,
-                "user_obj": test_user,
-                "authenticated": False,
-                "is_test_user": True,
-            }
+        logger.debug("No user data in init_data - returning guest")
+        guest = type('GuestUser', (), {
+            "id": "guest",
+            "telegram_id": 0,
+            "telegram_username": "guest",
+            "full_name": "Guest User",
+            "email": None,
+            "avatar_url": None,
+            "is_verified": False,
+            "user_role": "guest",
+        })()
+        return {
+            "user_id": "guest",
+            "telegram_id": 0,
+            "user_obj": guest,
+            "authenticated": False,
+        }
     
     try:
         user_data = json.loads(user_data_str)
     except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"Failed to parse user data from init_data: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user data format",
-        )
+        logger.warning(f"Failed to parse user data from init_data: {e} - returning guest")
+        guest = type('GuestUser', (), {
+            "id": "guest",
+            "telegram_id": 0,
+            "telegram_username": "guest",
+            "full_name": "Guest User",
+            "email": None,
+            "avatar_url": None,
+            "is_verified": False,
+            "user_role": "guest",
+        })()
+        return {
+            "user_id": "guest",
+            "telegram_id": 0,
+            "user_obj": guest,
+            "authenticated": False,
+        }
     
     # Get or create user in database
     telegram_id = user_data.get("id")
     if not telegram_id:
-        logger.warning("Missing Telegram ID in user data")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing Telegram ID",
-        )
+        logger.warning("Missing Telegram ID in user data - returning guest")
+        guest = type('GuestUser', (), {
+            "id": "guest",
+            "telegram_id": 0,
+            "telegram_username": "guest",
+            "full_name": "Guest User",
+            "email": None,
+            "avatar_url": None,
+            "is_verified": False,
+            "user_role": "guest",
+        })()
+        return {
+            "user_id": "guest",
+            "telegram_id": 0,
+            "user_obj": guest,
+            "authenticated": False,
+        }
     
     # Try to find existing user
     try:
@@ -199,70 +227,127 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
         user = result.scalar_one_or_none()
     except Exception as e:
         logger.error(f"Database error during user lookup: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error during authentication",
-        )
+        logger.info(f"Falling back to guest user due to DB error")
+        guest = type('GuestUser', (), {
+            "id": "guest",
+            "telegram_id": 0,
+            "telegram_username": "guest",
+            "full_name": "Guest User",
+            "email": None,
+            "avatar_url": None,
+            "is_verified": False,
+            "user_role": "guest",
+        })()
+        return {
+            "user_id": "guest",
+            "telegram_id": 0,
+            "user_obj": guest,
+            "authenticated": False,
+        }
     
     if not user:
-        # Create new user from Telegram data (production-ready)
+        # Create new user from Telegram data using AuthService
         try:
-            from uuid import uuid4
+            from app.services.auth_service import AuthService
+            
             first_name = user_data.get("first_name", "")
             last_name = user_data.get("last_name", "")
-            full_name = f"{first_name} {last_name}".strip() if last_name else (first_name or "User")
-            email = f"telegram_{telegram_id}@nftplatform.local"
             username = user_data.get("username", f"user_{telegram_id}")
             
-            # Check if username already exists (conflict handling)
-            existing = await db.execute(
-                select(User).where(User.username == username)
+            logger.info(f"Creating new Telegram user: telegram_id={telegram_id}, username={username}")
+            user, error = await AuthService.authenticate_telegram(
+                db=db,
+                telegram_id=telegram_id,
+                telegram_username=username,
+                first_name=first_name,
+                last_name=last_name,
             )
-            if existing.scalar_one_or_none():
-                # Use unique username if conflict
-                username = f"{username}_{telegram_id}"
             
-            user = User(
-                id=uuid4(),
-                email=email,
-                username=username,
-                telegram_id=str(telegram_id),
-                telegram_username=user_data.get("username"),
-                full_name=full_name,
-                hashed_password="",
-                avatar_url=None,
-                is_active=True,
-                is_verified=True,
-                user_role="user",
-            )
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
-            logger.info(f"Created new Telegram user: {telegram_id}")
+            if error or not user:
+                logger.error(f"Failed to create user: {error}")
+                guest = type('GuestUser', (), {
+                    "id": "guest",
+                    "telegram_id": 0,
+                    "telegram_username": "guest",
+                    "full_name": "Guest User",
+                    "email": None,
+                    "avatar_url": None,
+                    "is_verified": False,
+                    "user_role": "guest",
+                })()
+                return {
+                    "user_id": "guest",
+                    "telegram_id": 0,
+                    "user_obj": guest,
+                    "authenticated": False,
+                }
         except Exception as e:
-            logger.error(f"Failed to create new user: {e}")
-            await db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create user account",
-            )
+            logger.error(f"Error creating Telegram user: {e}")
+            guest = type('GuestUser', (), {
+                "id": "guest",
+                "telegram_id": 0,
+                "telegram_username": "guest",
+                "full_name": "Guest User",
+                "email": None,
+                "avatar_url": None,
+                "is_verified": False,
+                "user_role": "guest",
+            })()
+            return {
+                "user_id": "guest",
+                "telegram_id": 0,
+                "user_obj": guest,
+                "authenticated": False,
+            }
     
     # Verify user is active
     if not user.is_active:
-        logger.warning(f"Inactive user attempt: {telegram_id}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled",
-        )
+        logger.warning(f"Inactive user attempt: telegram_id={telegram_id}")
+        guest = type('GuestUser', (), {
+            "id": "guest",
+            "telegram_id": 0,
+            "telegram_username": "guest",
+            "full_name": "Guest User",
+            "email": None,
+            "avatar_url": None,
+            "is_verified": False,
+            "user_role": "guest",
+        })()
+        return {
+            "user_id": "guest",
+            "telegram_id": 0,
+            "user_obj": guest,
+            "authenticated": False,
+        }
+    
+    # Verify user is verified
+    if not user.is_verified:
+        logger.warning(f"Unverified user attempt: telegram_id={telegram_id}, user_id={user.id}")
+        guest = type('GuestUser', (), {
+            "id": "guest",
+            "telegram_id": 0,
+            "telegram_username": "guest",
+            "full_name": "Guest User",
+            "email": None,
+            "avatar_url": None,
+            "is_verified": False,
+            "user_role": "guest",
+        })()
+        return {
+            "user_id": "guest",
+            "telegram_id": 0,
+            "user_obj": guest,
+            "authenticated": False,
+        }
     
     # Attach user to request state for use in endpoints
+    logger.info(f"Authenticated user: telegram_id={telegram_id}, user_id={user.id}, username={user.username}")
     request.state.telegram_user = {
         "user_id": str(user.id),
         "telegram_id": user.telegram_id,
         "telegram_username": user.telegram_username,
         "user_obj": user,
         "authenticated": True,
-        "is_test_user": False,
     }
     
     logger.debug(f"Authenticated Telegram user: {telegram_id}")
@@ -1860,21 +1945,34 @@ async def web_app_init(
             detail="Initialization failed - please contact support",
         )
 @router.get("/web-app/user")
+@router.get("/web-app/user")
 async def web_app_get_user(
     user_id: str,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user profile for web app. Requires Telegram authentication."""
+    """Get user profile for web app. Requires valid Telegram authentication."""
     from uuid import UUID
 
+    # Only authenticated (real) users can access personal data
+    if not telegram_user.get("authenticated"):
+        logger.warning(f"Unauthenticated user attempted to access /web-app/user")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to access user data",
+        )
+    
+    # Verify user_id matches authenticated session
     if str(telegram_user["user_id"]) != user_id:
+        logger.warning(f"User ID mismatch: session={telegram_user['user_id']}, requested={user_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: user_id mismatch",
         )
 
     user = telegram_user["user_obj"]
+    
+    logger.info(f"User data accessed: telegram_id={telegram_user['telegram_id']}, user_id={user_id}")
 
     return {
         "success": True,
@@ -1885,7 +1983,7 @@ async def web_app_get_user(
             "full_name": user.full_name,
             "email": user.email,
             "avatar_url": user.avatar_url,
-            "created_at": user.created_at.isoformat(),
+            "created_at": user.created_at.isoformat() if hasattr(user, 'created_at') else None,
         },
     }
 
@@ -1896,15 +1994,27 @@ async def web_app_get_wallets(
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's wallets for web app. Requires Telegram authentication. Cached for 60 seconds."""
+    """Get user's wallets for web app. Requires valid Telegram authentication."""
     from uuid import UUID
     from app.models import Wallet
 
+    # Only authenticated (real) users can access personal data
+    if not telegram_user.get("authenticated"):
+        logger.warning(f"Unauthenticated user attempted to access /web-app/wallets")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to access wallet data",
+        )
+
+    # Verify user_id matches authenticated session
     if str(telegram_user["user_id"]) != user_id:
+        logger.warning(f"User ID mismatch in wallets: session={telegram_user['user_id']}, requested={user_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: user_id mismatch",
         )
+
+    logger.info(f"Wallets accessed: telegram_id={telegram_user['telegram_id']}, user_id={user_id}")
 
     result = await db.execute(
         select(Wallet)
@@ -1936,14 +2046,26 @@ async def web_app_get_user_nfts(
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's NFTs for web app. Requires Telegram authentication. Optimized query, cached for 30 seconds."""
+    """Get user's NFTs for web app. Requires valid Telegram authentication."""
     from uuid import UUID
 
+    # Only authenticated (real) users can access personal data
+    if not telegram_user.get("authenticated"):
+        logger.warning(f"Unauthenticated user attempted to access /web-app/nfts")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to access NFT data",
+        )
+
+    # Verify user_id matches authenticated session
     if str(telegram_user["user_id"]) != user_id:
+        logger.warning(f"User ID mismatch in NFTs: session={telegram_user['user_id']}, requested={user_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: user_id mismatch",
         )
+
+    logger.info(f"NFTs accessed: telegram_id={telegram_user['telegram_id']}, user_id={user_id}")
 
     result = await db.execute(
         select(NFT)
