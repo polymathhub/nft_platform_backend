@@ -1,9 +1,34 @@
+import logging
+import anyio
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+class RequestBodyCachingMiddleware(BaseHTTPMiddleware):
+    """Cache request body early to prevent stream exhaustion errors."""
+    
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if request.method in ["POST", "PUT", "PATCH"]:
+            try:
+                body = await request.body()
+                request.state.body = body
+            except anyio.EndOfStream:
+                logger.warning("Client disconnected before sending body")
+                return Response(content=b"", status_code=499)
+            except anyio.WouldBlock:
+                logger.warning("Stream operation would block")
+                return Response(content=b"", status_code=503)
+            except Exception as e:
+                logger.error(f"Error reading request body: {e}")
+                request.state.body = b""
+        
+        response = await call_next(request)
+        return response
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

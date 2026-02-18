@@ -63,25 +63,33 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     """
     Extract and authenticate Telegram user from request.
     Supports both query parameter and body init_data.
+    Uses cached body from middleware to prevent stream exhaustion.
     """
     from urllib.parse import parse_qs
     import json
+    import anyio
     
     # Try to get init_data from query params first
     init_data_str = request.query_params.get("init_data")
     
-    # If not in query, try to get from body (for POST requests)
+    # If not in query, try to get from cached body (for POST requests)
     if not init_data_str:
         try:
-            body = await request.body()
+            body = getattr(request.state, 'body', None)
+            if body is None:
+                try:
+                    body = await request.body()
+                except (anyio.EndOfStream, anyio.WouldBlock):
+                    body = b""
+            
             if body:
-                # Try to parse as JSON
                 try:
                     body_dict = json.loads(body)
                     init_data_str = body_dict.get("init_data")
-                except:
+                except (json.JSONDecodeError, ValueError):
                     pass
-        except:
+        except Exception as e:
+            logger.debug(f"Error reading request body: {e}")
             pass
     
     if not init_data_str:
@@ -214,43 +222,55 @@ async def telegram_webhook(
     update: TelegramUpdate,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    # Validate secret token if configured. Do not swallow auth errors.
-    from app.config import get_settings
-    from fastapi import HTTPException, status
+    import anyio
+    
+    try:
+        # Validate secret token if configured. Do not swallow auth errors.
+        from app.config import get_settings
+        from fastapi import HTTPException, status
 
-    settings = get_settings()
-    if settings.telegram_webhook_secret:
-        # Try common header keys (case-insensitive via Starlette, but be explicit)
-        header_secret = (
-            request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-            or request.headers.get("x-telegram-bot-api-secret-token")
-        )
-        if not header_secret:
-            logger.warning("Missing Telegram webhook secret header; request rejected")
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook secret")
-        if header_secret != settings.telegram_webhook_secret:
-            # Mask received value in logs for safety
-            def _mask(s: str) -> str:
-                if not s:
-                    return "<empty>"
-                return s[:4] + "..." if len(s) > 8 else s
-
-            logger.warning(
-                "Webhook secret mismatch: received=%s expected=configured",
-                _mask(header_secret),
+        settings = get_settings()
+        if settings.telegram_webhook_secret:
+            # Try common header keys (case-insensitive via Starlette, but be explicit)
+            header_secret = (
+                request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+                or request.headers.get("x-telegram-bot-api-secret-token")
             )
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret")
+            if not header_secret:
+                logger.warning("Missing Telegram webhook secret header; request rejected")
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook secret")
+            if header_secret != settings.telegram_webhook_secret:
+                # Mask received value in logs for safety
+                def _mask(s: str) -> str:
+                    if not s:
+                        return "<empty>"
+                    return s[:4] + "..." if len(s) > 8 else s
 
-    # Process update payloads. Let unexpected errors propagate as HTTP 500.
-    if update.message:
-        await handle_message(db, update.message)
+                logger.warning(
+                    "Webhook secret mismatch: received=%s expected=configured",
+                    _mask(header_secret),
+                )
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret")
+
+        # Process update payloads. Let unexpected errors propagate as HTTP 500.
+        if update.message:
+            await handle_message(db, update.message)
+            return {"ok": True}
+
+        if update.callback_query:
+            await handle_callback_query(db, update.callback_query)
+            return {"ok": True}
+
         return {"ok": True}
-
-    if update.callback_query:
-        await handle_callback_query(db, update.callback_query)
+    
+    except (anyio.EndOfStream, anyio.WouldBlock) as e:
+        logger.debug(f"Client disconnected during webhook processing: {type(e).__name__}")
         return {"ok": True}
-
-    return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}", exc_info=False)
+        return {"ok": True}
 
 
 async def handle_message(db: AsyncSession, message: TelegramMessage) -> None:
@@ -1863,54 +1883,64 @@ async def web_app_mint_nft(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Mint NFT via web app."""
+    import anyio
     from uuid import UUID
 
-    # Get user
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        # Get user
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        # Mint NFT
+        nft, error = await NFTService.mint_nft_with_blockchain_confirmation(
+            db=db,
+            user_id=user.id,
+            wallet_id=request.wallet_id,
+            name=request.nft_name,
+            description=request.nft_description,
+            image_url=request.image_url,
+            royalty_percentage=0,
+            metadata={"minted_via": "web_app"},
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Minting failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    # Mint NFT
-    nft, error = await NFTService.mint_nft_with_blockchain_confirmation(
-        db=db,
-        user_id=user.id,
-        wallet_id=request.wallet_id,
-        name=request.nft_name,
-        description=request.nft_description,
-        image_url=request.image_url,
-        royalty_percentage=0,
-        metadata={"minted_via": "web_app"},
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Minting failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "nft": {
-            "id": str(nft.id),
-            "name": nft.name,
-            "global_nft_id": nft.global_nft_id,
-            "blockchain": nft.blockchain,
-            "status": nft.status,
-            "created_at": nft.created_at.isoformat(),
-        },
-    }
+        return {
+            "success": True,
+            "nft": {
+                "id": str(nft.id),
+                "name": nft.name,
+                "global_nft_id": nft.global_nft_id,
+                "blockchain": nft.blockchain,
+                "status": nft.status,
+                "created_at": nft.created_at.isoformat(),
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during mint operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Mint error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Mint operation failed")
 
 
 @router.post("/web-app/list-nft")
@@ -1919,77 +1949,87 @@ async def web_app_list_nft(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """List NFT on marketplace via web app."""
+    import anyio
     from uuid import UUID
 
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        # Get user
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        # Get NFT
+        nft_result = await db.execute(
+            select(NFT).where(
+                and_(NFT.id == request.nft_id, NFT.user_id == user.id)
+            )
+        )
+        nft = nft_result.scalar_one_or_none()
+
+        if not nft:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="NFT not found",
+            )
+
+        # Get wallet
+        wallet = await WalletService.get_primary_wallet(db, user.id, nft.blockchain)
+        if not wallet:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No primary wallet for {nft.blockchain}",
+            )
+
+        # Create listing
+        from app.models.marketplace import Listing
+
+        listing, error = await MarketplaceService.create_listing(
+            db=db,
+            nft_id=request.nft_id,
+            seller_id=user.id,
+            seller_address=wallet.address,
+            price=request.price,
+            currency=request.currency.upper(),
+            blockchain=nft.blockchain,
         )
 
-    # Get user
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Listing failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    # Get NFT
-    nft_result = await db.execute(
-        select(NFT).where(
-            and_(NFT.id == request.nft_id, NFT.user_id == user.id)
-        )
-    )
-    nft = nft_result.scalar_one_or_none()
-
-    if not nft:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="NFT not found",
-        )
-
-    # Get wallet
-    wallet = await WalletService.get_primary_wallet(db, user.id, nft.blockchain)
-    if not wallet:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No primary wallet for {nft.blockchain}",
-        )
-
-    # Create listing
-    from app.models.marketplace import Listing
-
-    listing, error = await MarketplaceService.create_listing(
-        db=db,
-        nft_id=request.nft_id,
-        seller_id=user.id,
-        seller_address=wallet.address,
-        price=request.price,
-        currency=request.currency.upper(),
-        blockchain=nft.blockchain,
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Listing failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "listing": {
-            "id": str(listing.id),
-            "nft_id": str(listing.nft_id),
-            "price": listing.price,
-            "currency": listing.currency,
-            "status": listing.status,
-            "created_at": listing.created_at.isoformat(),
-        },
-    }
+        return {
+            "success": True,
+            "listing": {
+                "id": str(listing.id),
+                "nft_id": str(listing.nft_id),
+                "price": listing.price,
+                "currency": listing.currency,
+                "status": listing.status,
+                "created_at": listing.created_at.isoformat(),
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during list operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"List error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="List operation failed")
 
 
 @router.post("/web-app/transfer")
@@ -1998,45 +2038,55 @@ async def web_app_transfer_nft(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Transfer NFT to another address via web app."""
+    import anyio
     from uuid import UUID
 
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        nft, error = await NFTService.transfer_nft(
+            db=db,
+            nft_id=request.nft_id,
+            to_address=request.to_address,
+            transaction_hash="",
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Transfer failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    nft, error = await NFTService.transfer_nft(
-        db=db,
-        nft_id=request.nft_id,
-        to_address=request.to_address,
-        transaction_hash="",
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Transfer failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "nft": {
-            "id": str(nft.id),
-            "name": nft.name,
-            "status": nft.status,
-        },
-    }
+        return {
+            "success": True,
+            "nft": {
+                "id": str(nft.id),
+                "name": nft.name,
+                "status": nft.status,
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during transfer operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Transfer error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Transfer operation failed")
 
 
 @router.post("/web-app/burn")
@@ -2045,44 +2095,54 @@ async def web_app_burn_nft(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Burn NFT via web app."""
+    import anyio
     from uuid import UUID
 
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        nft, error = await NFTService.burn_nft(
+            db=db,
+            nft_id=request.nft_id,
+            transaction_hash="",
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Burn failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    nft, error = await NFTService.burn_nft(
-        db=db,
-        nft_id=request.nft_id,
-        transaction_hash="",
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Burn failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "nft": {
-            "id": str(nft.id),
-            "name": nft.name,
-            "status": nft.status,
-        },
-    }
+        return {
+            "success": True,
+            "nft": {
+                "id": str(nft.id),
+                "name": nft.name,
+                "status": nft.status,
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during burn operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Burn error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Burn operation failed")
 
 
 @router.post("/web-app/set-primary")
@@ -2091,44 +2151,54 @@ async def web_app_set_primary_wallet(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Set primary wallet via web app."""
+    import anyio
     from uuid import UUID
 
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        wallet, error = await WalletService.set_primary_wallet(
+            db=db,
+            user_id=user_id,
+            wallet_id=request.wallet_id,
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    wallet, error = await WalletService.set_primary_wallet(
-        db=db,
-        user_id=user_id,
-        wallet_id=request.wallet_id,
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "wallet": {
-            "id": str(wallet.id),
-            "name": wallet.name,
-            "blockchain": wallet.blockchain.value,
-        },
-    }
+        return {
+            "success": True,
+            "wallet": {
+                "id": str(wallet.id),
+                "name": wallet.name,
+                "blockchain": wallet.blockchain.value,
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during set-primary operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Set-primary error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Operation failed")
 
 
 @router.post("/web-app/make-offer")
@@ -2137,66 +2207,76 @@ async def web_app_make_offer(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Make an offer on a listing via web app."""
+    import anyio
     from uuid import UUID
 
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        listing_result = await db.execute(
+            select(Listing).where(Listing.id == request.listing_id)
+        )
+        listing = listing_result.scalar_one_or_none()
+
+        if not listing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Listing not found",
+            )
+
+        wallet = await WalletService.get_primary_wallet(db, user.id, listing.blockchain)
+        if not wallet:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No primary wallet for {listing.blockchain}",
+            )
+
+        offer, error = await MarketplaceService.make_offer(
+            db=db,
+            listing_id=request.listing_id,
+            buyer_id=user.id,
+            buyer_address=wallet.address,
+            offer_price=request.offer_price,
+            currency=listing.currency,
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Offer failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    listing_result = await db.execute(
-        select(Listing).where(Listing.id == request.listing_id)
-    )
-    listing = listing_result.scalar_one_or_none()
-
-    if not listing:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Listing not found",
-        )
-
-    wallet = await WalletService.get_primary_wallet(db, user.id, listing.blockchain)
-    if not wallet:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No primary wallet for {listing.blockchain}",
-        )
-
-    offer, error = await MarketplaceService.make_offer(
-        db=db,
-        listing_id=request.listing_id,
-        buyer_id=user.id,
-        buyer_address=wallet.address,
-        offer_price=request.offer_price,
-        currency=listing.currency,
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Offer failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "offer": {
-            "id": str(offer.id),
-            "offer_price": offer.offer_price,
-            "currency": offer.currency,
-            "status": offer.status,
-        },
-    }
+        return {
+            "success": True,
+            "offer": {
+                "id": str(offer.id),
+                "offer_price": offer.offer_price,
+                "currency": offer.currency,
+                "status": offer.status,
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during make-offer operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Make-offer error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Offer operation failed")
 
 
 @router.post("/web-app/cancel-listing")
@@ -2205,43 +2285,53 @@ async def web_app_cancel_listing(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Cancel a listing via web app."""
+    import anyio
     from uuid import UUID
 
-    user_id = request.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id required",
+    try:
+        user_id = request.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id required",
+            )
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        listing, error = await MarketplaceService.cancel_listing(
+            db=db,
+            listing_id=request.listing_id,
+            user_id=user.id,
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cancellation failed: {error}",
+            )
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    listing, error = await MarketplaceService.cancel_listing(
-        db=db,
-        listing_id=request.listing_id,
-        user_id=user.id,
-    )
-
-    if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cancellation failed: {error}",
-        )
-
-    return {
-        "success": True,
-        "listing": {
-            "id": str(listing.id),
-            "status": listing.status,
-        },
-    }
+        return {
+            "success": True,
+            "listing": {
+                "id": str(listing.id),
+                "status": listing.status,
+            },
+        }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during cancel-listing operation")
+        return {"success": False, "detail": "Client disconnected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cancel-listing error: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Cancellation failed")
 
 
 @router.get("/web-app/marketplace/listings")
@@ -2341,6 +2431,8 @@ async def create_wallet_for_webapp(
     Create a new wallet for the current user.
     Requires Telegram WebApp init_data for authentication.
     """
+    import anyio
+    
     try:
         user_id = auth["user_id"]
         user = auth["user_obj"]
@@ -2374,13 +2466,16 @@ async def create_wallet_for_webapp(
                 "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
             },
         }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during create-wallet")
+        return {"success": False, "detail": "Client disconnected"}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Create wallet error: {e}", exc_info=True)
+        logger.error(f"Create wallet error: {e}", exc_info=False)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create wallet: {str(e)}",
+            detail=f"Failed to create wallet",
         )
 
 
@@ -2394,6 +2489,8 @@ async def import_wallet_for_webapp(
     Import an existing wallet for the current user.
     Requires Telegram WebApp init_data for authentication.
     """
+    import anyio
+    
     try:
         user_id = auth["user_id"]
         user = auth["user_obj"]
@@ -2429,13 +2526,16 @@ async def import_wallet_for_webapp(
                 "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
             },
         }
+    except (anyio.EndOfStream, anyio.WouldBlock):
+        logger.debug("Client disconnected during import-wallet")
+        return {"success": False, "detail": "Client disconnected"}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Import wallet error: {e}", exc_info=True)
+        logger.error(f"Import wallet error: {e}", exc_info=False)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to import wallet: {str(e)}",
+            detail=f"Failed to import wallet",
         )
 
 
