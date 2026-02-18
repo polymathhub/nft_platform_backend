@@ -71,6 +71,7 @@ if "http://localhost" not in ",".join(cors_origins):
         "http://localhost:8000",
         "http://127.0.0.1",
         "http://127.0.0.1:8000",
+        "https://nftplatformbackend-production-b67d.up.railway.app",
     ])
 
 app.add_middleware(
