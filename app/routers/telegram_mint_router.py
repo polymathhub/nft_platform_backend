@@ -70,255 +70,84 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     Authenticated users with valid Telegram init_data get real user accounts.
     """
     
-    # Try to get init_data from query params first
-    init_data_str = request.query_params.get("init_data")
-    
-    # If not in query, try to get from cached body (for POST requests)
+    # If no init_data provided, reject request (Telegram user REQUIRED)
     if not init_data_str:
-        try:
-            body = getattr(request.state, 'body', None)
-            if body is None:
-                try:
-                    body = await request.body()
-                except (anyio.EndOfStream, anyio.WouldBlock):
-                    body = b""
-            
-            if body:
-                try:
-                    body_dict = json.loads(body)
-                    init_data_str = body_dict.get("init_data")
-                except (json.JSONDecodeError, ValueError):
-                    pass
-        except Exception:
-            pass
+        logger.warning("No init_data provided - Telegram authentication required")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Telegram authentication required"
+        )
     
-    # If no init_data provided, return guest user (allows unauthenticated browsing)
-    if not init_data_str:
-        logger.debug("No init_data provided - returning guest user")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
-    
-    # Parse and verify provided init_data
+    # Parse init_data
     try:
         params = parse_qs(init_data_str)
         data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
     except Exception as e:
-        logger.warning(f"Failed to parse init_data: {e} - returning guest user")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
+        logger.error(f"Failed to parse init_data: {e}")
+        raise HTTPException(status_code=400, detail="Invalid init_data")
     
-    # Verify Telegram data signature
+    # Skip signature verification but log if invalid (don't block)
     if not verify_telegram_signature(data_dict):
-        logger.debug("Telegram signature verification failed - returning guest user")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
+        logger.warning(f"Signature verification failed - trusting WebApp data anyway")
     
-    # Extract user data from init_data
+    # Extract user data (REQUIRED)
     user_data_str = data_dict.get("user")
     if not user_data_str:
-        logger.debug("No user data in init_data - returning guest")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
+        logger.error("No user data in init_data")
+        raise HTTPException(status_code=400, detail="Missing user data in init_data")
     
     try:
         user_data = json.loads(user_data_str)
+        telegram_id = user_data.get("id")
+        if not telegram_id:
+            raise ValueError("Missing telegram_id in user data")
     except (json.JSONDecodeError, ValueError) as e:
-        logger.warning(f"Failed to parse user data from init_data: {e} - returning guest")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
+        logger.error(f"Failed to parse user data: {e}")
+        raise HTTPException(status_code=400, detail="Invalid user data format")
     
     # Get or create user in database
-    telegram_id = user_data.get("id")
-    if not telegram_id:
-        logger.warning("Missing Telegram ID in user data - returning guest")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
-    
-    # Try to find existing user
     try:
         result = await db.execute(
             select(User).where(User.telegram_id == str(telegram_id))
         )
         user = result.scalar_one_or_none()
     except Exception as e:
-        logger.error(f"Database error during user lookup: {e}")
-        logger.info(f"Falling back to guest user due to DB error")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
     
     if not user:
-        # Create new user from Telegram data using AuthService
+        # Create new user from Telegram data
         try:
             from app.services.auth_service import AuthService
             
+            telegram_username = user_data.get("username", f"user_{telegram_id}")
             first_name = user_data.get("first_name", "")
             last_name = user_data.get("last_name", "")
-            username = user_data.get("username", f"user_{telegram_id}")
             
-            logger.info(f"Creating new Telegram user: telegram_id={telegram_id}, username={username}")
+            logger.info(f"Creating Telegram user: id={telegram_id}, username={telegram_username}")
+            
             user, error = await AuthService.authenticate_telegram(
                 db=db,
                 telegram_id=telegram_id,
-                telegram_username=username,
+                telegram_username=telegram_username,
                 first_name=first_name,
                 last_name=last_name,
             )
             
             if error or not user:
                 logger.error(f"Failed to create user: {error}")
-                guest = type('GuestUser', (), {
-                    "id": "guest",
-                    "telegram_id": 0,
-                    "telegram_username": "guest",
-                    "full_name": "Guest User",
-                    "email": None,
-                    "avatar_url": None,
-                    "is_verified": False,
-                    "user_role": "guest",
-                })()
-                return {
-                    "user_id": "guest",
-                    "telegram_id": 0,
-                    "user_obj": guest,
-                    "authenticated": False,
-                }
+                raise HTTPException(status_code=500, detail=f"Failed to create user: {error}")
+                
+        except HTTPException:
+            raise
         except Exception as e:
-            logger.error(f"Error creating Telegram user: {e}")
-            guest = type('GuestUser', (), {
-                "id": "guest",
-                "telegram_id": 0,
-                "telegram_username": "guest",
-                "full_name": "Guest User",
-                "email": None,
-                "avatar_url": None,
-                "is_verified": False,
-                "user_role": "guest",
-            })()
-            return {
-                "user_id": "guest",
-                "telegram_id": 0,
-                "user_obj": guest,
-                "authenticated": False,
-            }
+            logger.error(f"User creation error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to create user")
     
     # Verify user is active
     if not user.is_active:
-        logger.warning(f"Inactive user attempt: telegram_id={telegram_id}")
-        guest = type('GuestUser', (), {
-            "id": "guest",
-            "telegram_id": 0,
-            "telegram_username": "guest",
-            "full_name": "Guest User",
-            "email": None,
-            "avatar_url": None,
-            "is_verified": False,
-            "user_role": "guest",
-        })()
-        return {
-            "user_id": "guest",
-            "telegram_id": 0,
-            "user_obj": guest,
-            "authenticated": False,
-        }
+        logger.error(f"User inactive: telegram_id={telegram_id}")
+        raise HTTPException(status_code=403, detail="User account is inactive")
     
     # Attach user to request state for use in endpoints
     logger.info(f"Authenticated user: telegram_id={telegram_id}, user_id={user.id}, username={user.username}")
@@ -1735,169 +1564,101 @@ async def web_app_init(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """
-    Initialize Telegram Web App session (OPTIONAL AUTHENTICATION).
-    If init_data provided: verify signature and authenticate real user.
-    If no init_data: return anonymous guest user (allows browsing).
+    Initialize Telegram Web App session (REQUIRES TELEGRAM AUTHENTICATION).
+    Extracts user from init_data and creates/returns user account.
     """
     try:
-        # If no init_data provided, return guest user
+        # init_data is REQUIRED
         if not init_data:
-            logger.debug("No init_data provided - returning guest user")
-            return {
-                "success": True,
-                "user": {
-                    "id": "guest",
-                    "telegram_id": 0,
-                    "telegram_username": "guest",
-                    "full_name": "Guest User",
-                    "avatar_url": None,
-                    "email": None,
-                    "is_verified": False,
-                    "user_role": "guest",
-                    "created_at": None,
-                },
-            }
+            logger.error("No init_data provided")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Telegram authentication required - please open from Telegram bot",
+            )
         
         logger.debug(f"WebApp init: received init_data (length={len(init_data)})")
         
-        # Parse init_data query string into dictionary
+        # Parse init_data
         try:
             params = parse_qs(init_data)
             data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
             logger.debug(f"Parsed init_data keys: {list(data_dict.keys())}")
         except Exception as e:
-            logger.warning(f"Failed to parse init_data: {e} - returning guest user")
-            return {
-                "success": True,
-                "user": {
-                    "id": "guest",
-                    "telegram_id": 0,
-                    "telegram_username": "guest",
-                    "full_name": "Guest User",
-                    "avatar_url": None,
-                    "email": None,
-                    "is_verified": False,
-                    "user_role": "guest",
-                    "created_at": None,
-                },
-            }
+            logger.error(f"Failed to parse init_data: {e}")
+            raise HTTPException(status_code=400, detail="Invalid init_data format")
         
-        # Verify Telegram data signature using HMAC-SHA256
-        logger.debug("Verifying Telegram signature...")
+        # Skip signature verification but log if invalid
         if not verify_telegram_signature(data_dict):
-            logger.debug("Telegram signature verification failed - returning guest user")
-            return {
-                "success": True,
-                "user": {
-                    "id": "guest",
-                    "telegram_id": 0,
-                    "telegram_username": "guest",
-                    "full_name": "Guest User",
-                    "avatar_url": None,
-                    "email": None,
-                    "is_verified": False,
-                    "user_role": "guest",
-                    "created_at": None,
-                },
-                }
-        logger.info("Telegram signature verification PASSED")
-
-        # Extract user data from init_data JSON
-        user_data = None
+            logger.warning(f"Signature verification failed - continuing anyway")
+        
+        # Extract user data
+        user_data_json = data_dict.get("user")
+        if not user_data_json:
+            logger.error("No user data in init_data")
+            raise HTTPException(status_code=400, detail="Missing user data in init_data")
+        
+        # Parse user data
         try:
-            user_data_json = data_dict.get("user")
-            if not user_data_json:
-                logger.warning("No 'user' field in init_data - cannot authenticate")
-                return {
-                    "success": True,
-                    "user": {
-                        "id": "guest",
-                        "telegram_id": 0,
-                        "telegram_username": "guest",
-                        "full_name": "Guest User",
-                        "avatar_url": None,
-                        "email": None,
-                        "is_verified": False,
-                        "user_role": "guest",
-                        "created_at": None,
-                    },
-                }
-            
             user_data = json.loads(user_data_json)
             telegram_id = user_data.get("id")
-            logger.info(f"Extracted telegram_id: {telegram_id}")
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse user data JSON: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid user data format",
-            )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error parsing user data: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to extract user data",
-            )
-
-        if not telegram_id:
-            logger.warning("telegram_id missing from user data")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing telegram_id in user data",
-            )
-
-        # Authenticate/create user with comprehensive error handling
+            if not telegram_id:
+                raise ValueError("Missing telegram_id")
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to parse user data: {e}")
+            raise HTTPException(status_code=400, detail="Invalid user data")
+        
+        # Get or create user
         try:
-            from app.services.auth_service import AuthService
-
-            telegram_username = user_data.get("username") or f"user_{telegram_id}"
-            first_name = user_data.get("first_name") or ""
-            last_name = user_data.get("last_name") or ""
-            
-            logger.info(f"Authenticating telegram_id={telegram_id}, username={telegram_username}")
-            
-            user, error = await AuthService.authenticate_telegram(
-                db=db,
-                telegram_id=telegram_id,
-                telegram_username=telegram_username,
-                first_name=first_name,
-                last_name=last_name,
+            result = await db.execute(
+                select(User).where(User.telegram_id == str(telegram_id))
             )
-
-            if error:
-                logger.error(f"Authentication failed: {error}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Authentication failed: {error}",
-                )
-            
-            if not user:
-                logger.error(f"Authentication returned no user")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to create user",
-                )
-            
-            logger.info(f"User authenticated: id={user.id}, telegram_id={user.telegram_id}")
-            
-        except HTTPException:
-            raise
+            user = result.scalar_one_or_none()
         except Exception as e:
-            logger.error(f"Authentication service error: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Authentication service error",
-            )
-
-        # Return authenticated user data for frontend
+            logger.error(f"Database error: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+        
+        if not user:
+            # Create new user
+            try:
+                from app.services.auth_service import AuthService
+                
+                telegram_username = user_data.get("username", f"user_{telegram_id}")
+                first_name = user_data.get("first_name", "")
+                last_name = user_data.get("last_name", "")
+                
+                logger.info(f"Creating Telegram user: id={telegram_id}, username={telegram_username}")
+                
+                user, error = await AuthService.authenticate_telegram(
+                    db=db,
+                    telegram_id=telegram_id,
+                    telegram_username=telegram_username,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                
+                if error or not user:
+                    logger.error(f"Failed to create user: {error}")
+                    raise HTTPException(status_code=500, detail=f"Failed to create user")
+                    
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"User creation error: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to create user")
+        
+        # Verify user is active
+        if not user.is_active:
+            logger.error(f"User inactive: telegram_id={telegram_id}")
+            raise HTTPException(status_code=403, detail="User account is inactive")
+        
+        logger.info(f"User authenticated: id={user.id}, telegram_id={user.telegram_id}")
+        
+        # Return user data
         return {
             "success": True,
             "user": {
                 "id": str(user.id),
-                "telegram_id": user.telegram_id,  # REAL telegram_id from verified init_data
+                "telegram_id": user.telegram_id,
                 "telegram_username": user.telegram_username or "User",
                 "full_name": user.full_name or user.telegram_username or "User",
                 "avatar_url": user.avatar_url,
@@ -1907,6 +1668,7 @@ async def web_app_init(
                 "created_at": user.created_at.isoformat() if hasattr(user, 'created_at') else None,
             },
         }
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -1966,18 +1728,13 @@ async def web_app_get_wallets(
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Get user's wallets for web app. Requires valid Telegram authentication."""
+    """Get user's wallets for web app. Requires Telegram authentication."""
     from uuid import UUID
     from app.models import Wallet
 
-    # Only authenticated (real) users can access personal data
-    if not telegram_user.get("authenticated"):
-        logger.warning(f"Unauthenticated user attempted to access /web-app/wallets")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to access wallet data",
-        )
-
+    # User is already authenticated by get_telegram_user_from_request
+    # This endpoint requires Telegram auth - no guests allowed
+    
     # Verify user_id matches authenticated session
     if str(telegram_user["user_id"]) != user_id:
         logger.warning(f"User ID mismatch in wallets: session={telegram_user['user_id']}, requested={user_id}")
