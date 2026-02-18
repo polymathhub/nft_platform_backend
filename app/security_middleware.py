@@ -9,60 +9,6 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-class RequestPathValidationMiddleware(BaseHTTPMiddleware):
-    """Validate and reject requests with suspicious path patterns."""
-    
-    async def dispatch(self, request: Request, call_next) -> Response:
-        path = request.url.path
-        
-        # Skip validation for safe endpoints
-        safe_prefixes = ["/web-app/", "/api/v1/telegram/web-app/", "/static/", "/.well-known/"]
-        if any(path.startswith(prefix) for prefix in safe_prefixes):
-            # For internal endpoints, only check for obvious code injection
-            if any(pattern in path for pattern in ["eval(", "exec(", "exec%20"]):
-                logger.warning(f"BLOCKED: Code injection attempt | Path: {path}")
-                return JSONResponse(status_code=400, content={"detail": "Invalid request"})
-            # Allow the request
-            return await call_next(request)
-        
-        # Suspicious patterns that indicate potential attacks
-        dangerous_patterns = [
-            ("https://", "URL in path"),
-            ("http://", "URL in path"),
-            ("%3A%2F%2F", "Encoded URL in path"),
-            ("../../", "Path traversal"),
-            ("..%2F", "Encoded path traversal"),
-            ("%00", "Null byte injection"),
-            ("eval(", "Code injection"),
-            ("exec(", "Code injection"),
-            ("<script>", "XSS attempt"),
-            ("<iframe>", "XSS attempt"),
-            ("cmd=", "Command injection"),
-            ("exec%20", "Code injection"),
-        ]
-        
-        # Check for suspicious patterns
-        for pattern, threat_type in dangerous_patterns:
-            if pattern in path:
-                logger.warning(
-                    f"BLOCKED: {threat_type} in path | "
-                    f"Method: {request.method} | "
-                    f"Path: {path} | "
-                    f"Client: {request.client.host if request.client else 'unknown'}"
-                )
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "detail": "Invalid request path",
-                        "status_code": 400,
-                    }
-                )
-        
-        # Allow request through
-        response = await call_next(request)
-        return response
-
-
 class RequestBodyCachingMiddleware(BaseHTTPMiddleware):
     """Cache request body early to prevent stream exhaustion errors."""
     

@@ -29,7 +29,6 @@ from app.routers.walletconnect_router import router as walletconnect_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
-    RequestPathValidationMiddleware,
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
     HTTPSEnforcementMiddleware,
@@ -116,8 +115,6 @@ Security & request middleware
 """
 # RequestBodyCachingMiddleware MUST be added first to cache bodies early
 app.add_middleware(RequestBodyCachingMiddleware)
-# RequestPathValidationMiddleware should run early to reject suspicious requests
-app.add_middleware(RequestPathValidationMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)

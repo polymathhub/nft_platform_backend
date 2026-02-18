@@ -7,44 +7,6 @@
 (() => {
   'use strict';
 
-  // ========== DISABLE DEVELOPER TOOLS ==========
-  // Disable F12, Ctrl+Shift+C, Right-click context menu in production
-  const disableDevTools = () => {
-    // Disable F12
-    document.addEventListener('keydown', (e) => {
-      if (e.keyCode === 123) {
-        e.preventDefault();
-        return false;
-      }
-      // Disable Ctrl+Shift+C (inspect element)
-      if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
-        e.preventDefault();
-        return false;
-      }
-      // Disable Ctrl+Shift+I (developer tools)
-      if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
-        e.preventDefault();
-        return false;
-      }
-      // Disable Ctrl+Shift+J (console)
-      if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
-        e.preventDefault();
-        return false;
-      }
-    });
-
-    // Disable right-click context menu
-    document.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      return false;
-    });
-  };
-
-  // Only disable in production (not on localhost)
-  if (!window.location.hostname.includes('localhost')) {
-    disableDevTools();
-  }
-
   // ========== DOM ELEMENTS ==========
   const dom = {
     app: document.getElementById('app'),
