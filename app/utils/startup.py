@@ -147,6 +147,7 @@ async def ensure_user_role_column():
 async def setup_telegram_webhook() -> bool:
     """
     Setup Telegram webhook on application startup.
+    SKIPPED for local development (localhost, debug mode).
     Non-fatal - app will start even if webhook setup fails.
     """
 
@@ -154,11 +155,23 @@ async def setup_telegram_webhook() -> bool:
         logger.info("Telegram bot token not configured, skipping Telegram webhook setup")
         return True
 
+    # Skip webhook setup for local development (use polling instead)
+    if settings.debug or os.getenv("ENVIRONMENT", "").lower() == "development":
+        logger.info("Local development detected - skipping Telegram webhook setup (will use polling mode)")
+        return True
+    
+    # Only set webhook if explicitly enabled in non-debug mode
+    if not settings.telegram_auto_setup_webhook:
+        logger.info("Telegram auto-setup webhook disabled - skipping setup")
+        return True
+
+    if not settings.telegram_webhook_url:
+        logger.warning("Telegram webhook URL not configured - skipping setup. Set TELEGRAM_WEBHOOK_URL to enable.")
+        return True
+
     logger.info("Initializing Telegram webhook integration...")
 
-    webhook_url = (
-        settings.telegram_webhook_url or "https://nftplatformbackend-production-b67d.up.railway.app/api/v1/telegram/webhook"
-    )
+    webhook_url = settings.telegram_webhook_url
 
     try:
         manager = TelegramWebhookManager(settings.telegram_bot_token)
@@ -173,7 +186,7 @@ async def setup_telegram_webhook() -> bool:
                 logger.info("Webhook already correctly configured")
                 return True
 
-        logger.info("Attempting to set Telegram webhook...")
+        logger.info(f"Attempting to set Telegram webhook to: {webhook_url}")
 
         success = await manager.set_webhook(
             webhook_url,
