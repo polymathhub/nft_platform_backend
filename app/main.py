@@ -179,18 +179,12 @@ app.include_router(
     tags=["telegram"]
 )
 
-# Fallback route for requests to /telegram/webhook (should be /api/v1/telegram/webhook)
-@app.post("/telegram/webhook")
-async def telegram_webhook_redirect():
-    """
-    Redirect/reject requests to /telegram/webhook.
-    Telegram webhook MUST be registered at /api/v1/telegram/webhook
-    """
-    logger.warning("Request to /telegram/webhook - should be /api/v1/telegram/webhook")
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Endpoint moved to /api/v1/telegram/webhook. Update Telegram webhook URL."
-    )
+# Accept webhook at both paths (Telegram may use either)
+app.include_router(
+    telegram_mint_router,
+    prefix="",
+    tags=["telegram"]
+)
 
 """routers"""
 

@@ -15,6 +15,16 @@ class RequestPathValidationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
         
+        # Skip validation for safe endpoints
+        safe_prefixes = ["/web-app/", "/api/v1/telegram/web-app/", "/static/", "/.well-known/"]
+        if any(path.startswith(prefix) for prefix in safe_prefixes):
+            # For internal endpoints, only check for obvious code injection
+            if any(pattern in path for pattern in ["eval(", "exec(", "exec%20"]):
+                logger.warning(f"BLOCKED: Code injection attempt | Path: {path}")
+                return JSONResponse(status_code=400, content={"detail": "Invalid request"})
+            # Allow the request
+            return await call_next(request)
+        
         # Suspicious patterns that indicate potential attacks
         dangerous_patterns = [
             ("https://", "URL in path"),
