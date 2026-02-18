@@ -7,7 +7,43 @@
 (() => {
   'use strict';
 
-  console.log('=== NFT Platform Web App v2 Initializing ===');
+  // ========== DISABLE DEVELOPER TOOLS ==========
+  // Disable F12, Ctrl+Shift+C, Right-click context menu in production
+  const disableDevTools = () => {
+    // Disable F12
+    document.addEventListener('keydown', (e) => {
+      if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+      }
+      // Disable Ctrl+Shift+C (inspect element)
+      if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+      }
+      // Disable Ctrl+Shift+I (developer tools)
+      if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+        e.preventDefault();
+        return false;
+      }
+      // Disable Ctrl+Shift+J (console)
+      if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+  };
+
+  // Only disable in production (not on localhost)
+  if (!window.location.hostname.includes('localhost')) {
+    disableDevTools();
+  }
 
   // ========== DOM ELEMENTS ==========
   const dom = {
@@ -183,7 +219,12 @@
             await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
             return this._fetch(endpoint, options, attempt + 1);
           }
-          throw new Error(data.detail || `HTTP ${response.status}`);
+          throw new Error(data?.detail || data?.error || `HTTP ${response.status}`);
+        }
+        
+        // Ensure response is valid
+        if (!data || typeof data !== 'object') {
+          throw new Error('Invalid response from server');
         }
         
         log(`${method} ${endpoint} succeeded`, 'log');
@@ -194,7 +235,8 @@
           await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
           return this._fetch(endpoint, options, attempt + 1);
         }
-        throw err;
+        // Return error object instead of throwing to prevent app crash
+        return { success: false, error: err.message || 'Unknown error', detail: err.message };
       }
     },
 
@@ -321,11 +363,18 @@
 
   async function updateDashboard() {
     try {
+      if (!state.user || !state.user.id) {
+        showStatus('User not authenticated', 'error');
+        return;
+      }
+
       showStatus('Loading dashboard...', 'loading');
       
       const dashData = await API.getDashboardData(state.user.id);
       
-      if (!dashData.success) throw new Error(dashData.error || 'Failed to load dashboard');
+      if (!dashData || !dashData.success) {
+        throw new Error(dashData?.error || dashData?.detail || 'Failed to load dashboard');
+      }
       
       const wallets = dashData.wallets || [];
       const nfts = dashData.nfts || [];
@@ -362,10 +411,10 @@
           <div class="card" style="padding:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div>
-                <strong>${w.blockchain?.toUpperCase()}</strong>
+                <strong>${(w.blockchain || 'Unknown').toUpperCase()}</strong>
                 ${w.is_primary ? '<span class="blockchain-badge primary-badge">Primary</span>' : ''}
               </div>
-              <code style="font-size:11px;">${formatAddress(w.address)}</code>
+              <code style="font-size:11px;">${formatAddress(w.address || '')}</code>
             </div>
           </div>
         `).join('');
@@ -379,8 +428,8 @@
             <div style="display:flex;gap:12px;">
               ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" style="width:40px;height:40px;border-radius:4px;">` : ''}
               <div style="flex:1;min-width:0;">
-                <strong>${nft.name}</strong>
-                <div style="font-size:12px;color:var(--text-secondary);">${nft.blockchain?.toUpperCase()}</div>
+                <strong>${nft.name || 'NFT'}</strong>
+                <div style="font-size:12px;color:var(--text-secondary);">${(nft.blockchain || 'Unknown').toUpperCase()}</div>
               </div>
             </div>
           </div>
@@ -396,10 +445,15 @@
 
   async function updateWalletsList() {
     try {
+      if (!state.user || !state.user.id) {
+        showStatus('User not authenticated', 'error');
+        return;
+      }
+
       showStatus('Loading wallets...', 'loading');
       
       const data = await API.getWallets(state.user.id);
-      if (!data.success) throw new Error(data.error || 'Failed to load wallets');
+      if (!data || !data.success) throw new Error(data?.error || data?.detail || 'Failed to load wallets');
       
       state.wallets = data.wallets || [];
       
@@ -415,17 +469,17 @@
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div>
-              <strong>${w.blockchain?.toUpperCase() || 'Wallet'}</strong>
+              <strong>${(w.blockchain || 'Wallet').toUpperCase()}</strong>
               ${w.is_primary ? '<span class="blockchain-badge primary-badge">Primary</span>' : ''}
             </div>
-            <small style="color:var(--text-secondary);">${new Date(w.created_at).toLocaleDateString()}</small>
+            <small style="color:var(--text-secondary);">${new Date(w.created_at || Date.now()).toLocaleDateString()}</small>
           </div>
-          <code style="display:block;word-break:break-all;padding:12px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:11px;margin-bottom:12px;">${w.address}</code>
+          <code style="display:block;word-break:break-all;padding:12px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:11px;margin-bottom:12px;">${w.address || 'N/A'}</code>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-secondary" onclick="window.showWalletDetails('${w.id}')" style="flex:1;min-width:80px;">Details</button>
-            <button class="btn btn-secondary" onclick="window.depositModal('${w.id}')" style="flex:1;min-width:80px;">Deposit</button>
-            <button class="btn btn-secondary" onclick="window.withdrawalModal('${w.id}')" style="flex:1;min-width:80px;">💸 Withdraw</button>
-            ${!w.is_primary ? `<button class="btn btn-secondary" onclick="window.setPrimary('${w.id}')" style="flex:1;min-width:80px;">Set Primary</button>` : ''}
+            <button class="btn btn-secondary" onclick="if(window.showWalletDetails)window.showWalletDetails('${w.id}')" style="flex:1;min-width:80px;">Details</button>
+            <button class="btn btn-secondary" onclick="if(window.depositModal)window.depositModal('${w.id}')" style="flex:1;min-width:80px;">Deposit</button>
+            <button class="btn btn-secondary" onclick="if(window.withdrawalModal)window.withdrawalModal('${w.id}')" style="flex:1;min-width:80px;">💸 Withdraw</button>
+            ${!w.is_primary ? `<button class="btn btn-secondary" onclick="if(window.setPrimary)window.setPrimary('${w.id}')" style="flex:1;min-width:80px;">Set Primary</button>` : ''}
           </div>
         </div>
       `).join('');
@@ -1037,13 +1091,20 @@
 
     async submitCreateWallet() {
       try {
+        if (!state.user || !state.user.id) {
+          showStatus('User not authenticated', 'error');
+          return;
+        }
+
         const blockchain = document.getElementById('blockchainSelect')?.value;
         const isPrimary = document.getElementById('setPrimary')?.checked === true;
+        
+        if (!blockchain) throw new Error('Please select a blockchain');
         
         showStatus('Creating wallet...', 'loading');
         const result = await API.createWallet(blockchain, 'custodial', isPrimary);
         
-        if (!result.success) throw new Error(result.error || 'Failed to create wallet');
+        if (!result || !result.success) throw new Error(result?.error || result?.detail || 'Failed to create wallet');
         
         closeModal();
         showStatus('Wallet created!', 'success');
@@ -1226,33 +1287,50 @@
   async function initWithTelegram() {
     /**
      * Initialize with real Telegram WebApp
+     * Handles initData retrieval with proper error handling
      */
     if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
+      showStatus('This app must be opened from Telegram', 'error');
       return null;
     }
 
     try {
-      window.Telegram.WebApp.ready?.();
-      window.Telegram.WebApp.expand?.();
+      // Ensure WebApp is ready
+      if (window.Telegram.WebApp.ready) window.Telegram.WebApp.ready();
+      if (window.Telegram.WebApp.expand) window.Telegram.WebApp.expand();
 
-      const initData = window.Telegram?.WebApp?.initData;
+      // Get initData - try multiple sources
+      let initData = window.Telegram?.WebApp?.initData;
+      
+      // Fallback: check if initData is in URL params
       if (!initData) {
-        return null;
+        const urlParams = new URLSearchParams(window.location.search);
+        initData = urlParams.get('tgWebAppData') || urlParams.get('init_data');
+      }
+
+      if (!initData || initData.trim().length === 0) {
+        throw new Error('Unable to get Telegram authentication data. Please restart the app.');
       }
 
       log(`Telegram init data received (${initData.length} bytes)`);
       showStatus('Authenticating with Telegram...', 'loading');
 
       const authResult = await API.initSession(initData);
-      if (!authResult.success || !authResult.user) {
-        throw new Error(authResult.error || 'Telegram authentication failed');
+      if (!authResult || !authResult.success || !authResult.user) {
+        const errMsg = authResult?.error || authResult?.detail || 'Telegram authentication failed';
+        throw new Error(errMsg);
       }
 
       state.user = authResult.user;
+      if (!state.user || !state.user.id) {
+        throw new Error('No user data received from server');
+      }
+
       log(`Authenticated via Telegram: ${state.user.telegram_username}`);
       return state.user;
     } catch (err) {
       log(`Telegram init error: ${err.message}`, 'error');
+      showStatus(`Authentication Error: ${err.message}`, 'error');
       return null;
     }
   }
@@ -1264,14 +1342,14 @@
 
       const user = await initWithTelegram();
       
-      if (!user) {
-        throw new Error('Authentication failed - please open this app in Telegram');
+      if (!user || !user.id) {
+        throw new Error('Authentication failed - please restart the app from Telegram');
       }
 
       // Update user info in header
-      if (dom.userInfo) {
+      if (dom.userInfo && state.user) {
         const avatar = state.user.avatar_url ? `<img src="${state.user.avatar_url}" alt="Avatar" style="width:36px;height:36px;border-radius:50%;margin-right:10px;">` : '';
-        dom.userInfo.innerHTML = `${avatar}<div><strong>${state.user.full_name}</strong><br><small>@${state.user.telegram_username}</small></div>`;
+        dom.userInfo.innerHTML = `${avatar}<div><strong>${state.user.full_name || 'User'}</strong><br><small>@${state.user.telegram_username || 'unknown'}</small></div>`;
       }
 
       // Load initial data
@@ -1283,10 +1361,6 @@
     } catch (err) {
       log(`Init error: ${err.message}`, 'error');
       showStatus(err.message, 'error');
-      
-      setTimeout(() => {
-        showStatus('Check F12 console for more info', 'info');
-      }, 3000);
     }
   }
 
