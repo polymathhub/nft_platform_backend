@@ -293,54 +293,40 @@ async def telegram_webhook(
     update: TelegramUpdate,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    import anyio
-    
+    """
+    Telegram webhook endpoint for receiving bot updates.
+    URL: POST /api/v1/telegram/webhook (MUST be registered with Telegram API)
+    Validates secret token and processes messages/callbacks.
+    Returns 200 OK always to prevent Telegram retries.
+    """
     try:
-        # Validate secret token if configured. Do not swallow auth errors.
         from app.config import get_settings
-        from fastapi import HTTPException, status
-
+        
         settings = get_settings()
+        
+        # Validate secret token if configured
         if settings.telegram_webhook_secret:
-            # Try common header keys (case-insensitive via Starlette, but be explicit)
-            header_secret = (
-                request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-                or request.headers.get("x-telegram-bot-api-secret-token")
-            )
+            header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
             if not header_secret:
-                logger.warning("Missing Telegram webhook secret header; request rejected")
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook secret")
+                logger.warning("Webhook rejected: missing secret token header")
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing secret token")
             if header_secret != settings.telegram_webhook_secret:
-                # Mask received value in logs for safety
-                def _mask(s: str) -> str:
-                    if not s:
-                        return "<empty>"
-                    return s[:4] + "..." if len(s) > 8 else s
+                logger.warning(f"Webhook rejected: secret mismatch from {request.client.host if request.client else 'unknown'}")
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid secret token")
 
-                logger.warning(
-                    "Webhook secret mismatch: received=%s expected=configured",
-                    _mask(header_secret),
-                )
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook secret")
-
-        # Process update payloads. Let unexpected errors propagate as HTTP 500.
+        # Process Telegram update
         if update.message:
             await handle_message(db, update.message)
-            return {"ok": True}
-
-        if update.callback_query:
+        elif update.callback_query:
             await handle_callback_query(db, update.callback_query)
-            return {"ok": True}
-
+        
         return {"ok": True}
     
-    except (anyio.EndOfStream, anyio.WouldBlock) as e:
-        logger.debug(f"Client disconnected during webhook processing: {type(e).__name__}")
-        return {"ok": True}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Webhook processing error: {e}", exc_info=False)
+        logger.error(f"Webhook error: {e}", exc_info=True)
+        # Return 200 OK even on error to prevent Telegram retry loop
         return {"ok": True}
 
 
@@ -1660,14 +1646,18 @@ async def web_app_init(
 ) -> dict:
     """
     Initialize Telegram Web App session.
-    Verify init data and authenticate user.
-    Production-ready with comprehensive error handling.
+    Receives init_data from frontend, verifies HMAC-SHA256 signature.
+    Creates/updates user in database.
+    Returns user with telegram_id for frontend.
     """
     try:
-        # Parse init_data query string  dictionary
+        logger.info(f"WebApp init: received init_data (length={len(init_data)})")
+        
+        # Parse init_data query string into dictionary
         try:
             params = parse_qs(init_data)
             data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+            logger.debug(f"Parsed init_data keys: {list(data_dict.keys())}")
         except Exception as e:
             logger.error(f"Failed to parse init_data: {e}")
             raise HTTPException(
@@ -1675,66 +1665,102 @@ async def web_app_init(
                 detail="Invalid init_data format",
             )
         
-        # Verify Telegram data signature
+        # Verify Telegram data signature using HMAC-SHA256
+        logger.debug("Verifying Telegram signature...")
         if not verify_telegram_signature(data_dict):
-            logger.warning("Telegram signature verification failed during init")
+            logger.warning("Telegram signature verification FAILED - rejecting request")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Telegram data signature",
             )
+        logger.info("Telegram signature verification PASSED")
 
-        # Extract user data from init_data
+        # Extract user data from init_data JSON
+        user_data = None
         try:
-            user_data = None
-            if "user" in data_dict:
-                user_data = json.loads(data_dict["user"])
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.error(f"Failed to parse user data: {e}")
+            user_data_json = data_dict.get("user")
+            if not user_data_json:
+                logger.warning("No 'user' field in init_data")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No user data in init_data",
+                )
+            
+            user_data = json.loads(user_data_json)
+            telegram_id = user_data.get("id")
+            logger.info(f"Extracted telegram_id: {telegram_id}")
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse user data JSON: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid user data format",
             )
-
-        if not user_data:
-            logger.warning("No user data provided in init_data")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No user data provided",
-            )
-
-        # Get or create user with comprehensive error handling
-        try:
-            from app.services.auth_service import AuthService
-
-            user, error = await AuthService.authenticate_telegram(
-                db=db,
-                telegram_id=user_data.get("id"),
-                telegram_username=user_data.get("username", f"user_{user_data.get('id')}"),
-                first_name=user_data.get("first_name", ""),
-                last_name=user_data.get("last_name", ""),
-            )
-
-            if error or not user:
-                logger.error(f"User authentication failed: {error}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to authenticate user: {error or 'unknown error'}",
-                )
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Authentication service error: {e}")
+            logger.error(f"Unexpected error parsing user data: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to extract user data",
+            )
+
+        if not telegram_id:
+            logger.warning("telegram_id missing from user data")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing telegram_id in user data",
+            )
+
+        # Authenticate/create user with comprehensive error handling
+        try:
+            from app.services.auth_service import AuthService
+
+            telegram_username = user_data.get("username") or f"user_{telegram_id}"
+            first_name = user_data.get("first_name") or ""
+            last_name = user_data.get("last_name") or ""
+            
+            logger.info(f"Authenticating telegram_id={telegram_id}, username={telegram_username}")
+            
+            user, error = await AuthService.authenticate_telegram(
+                db=db,
+                telegram_id=telegram_id,
+                telegram_username=telegram_username,
+                first_name=first_name,
+                last_name=last_name,
+            )
+
+            if error:
+                logger.error(f"Authentication failed: {error}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Authentication failed: {error}",
+                )
+            
+            if not user:
+                logger.error(f"Authentication returned no user")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create user",
+                )
+            
+            logger.info(f"User authenticated: id={user.id}, telegram_id={user.telegram_id}")
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Authentication service error: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Authentication service error",
             )
 
-        # Build response with all necessary user data
+        # Return authenticated user data for frontend
         return {
             "success": True,
             "user": {
                 "id": str(user.id),
-                "telegram_id": user.telegram_id,
+                "telegram_id": user.telegram_id,  # REAL telegram_id from verified init_data
                 "telegram_username": user.telegram_username or "User",
                 "full_name": user.full_name or user.telegram_username or "User",
                 "avatar_url": user.avatar_url,
@@ -1747,7 +1773,11 @@ async def web_app_init(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Web app init error: {str(e)}", exc_info=True)
+        logger.error(f"WebApp init error: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Initialization failed",
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Initialization failed - please contact support",

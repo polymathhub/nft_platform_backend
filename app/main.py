@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import HTTPException
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 
@@ -178,6 +179,18 @@ app.include_router(
     tags=["telegram"]
 )
 
+# Fallback route for requests to /telegram/webhook (should be /api/v1/telegram/webhook)
+@app.post("/telegram/webhook")
+async def telegram_webhook_redirect():
+    """
+    Redirect/reject requests to /telegram/webhook.
+    Telegram webhook MUST be registered at /api/v1/telegram/webhook
+    """
+    logger.warning("Request to /telegram/webhook - should be /api/v1/telegram/webhook")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Endpoint moved to /api/v1/telegram/webhook. Update Telegram webhook URL."
+    )
 
 """routers"""
 
