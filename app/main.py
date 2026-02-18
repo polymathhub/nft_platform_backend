@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import logging
 
 from app.config import get_settings
 from app.database import init_db, close_db
@@ -25,11 +28,13 @@ from app.routers.walletconnect_router import router as walletconnect_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
+    RequestPathValidationMiddleware,
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
     HTTPSEnforcementMiddleware,
 )
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 @asynccontextmanager
@@ -49,11 +54,69 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ==================== Global Exception Handlers ====================
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """
+    Custom HTTP exception handler to log suspicious requests.
+    Detects and logs potential security issues like URL injection in paths.
+    """
+    path = request.url.path
+    method = request.method
+    
+    # Check for suspicious patterns in path
+    suspicious_patterns = [
+        "https://", "http://",  # URLs in path
+        "%3A", "%2F",  # Encoded : and /
+        "../../",  # Path traversal
+        "..%2F",  # Encoded path traversal
+        "%00",  # Null byte injection
+        "eval(", "exec(",  # Code injection attempts
+        "<script>", "<iframe>",  # XSS attempts
+    ]
+    
+    is_suspicious = any(pattern in path for pattern in suspicious_patterns)
+    
+    # Log suspicious requests at WARNING level
+    if is_suspicious:
+        logger.warning(
+            f"SUSPICIOUS REQUEST: {method} {path} | "
+            f"Status: {exc.status_code} | "
+            f"Client: {request.client.host if request.client else 'unknown'}"
+        )
+    elif exc.status_code == 404:
+        # Log 404s for debugging (mostly for development)
+        logger.debug(f"404 Not Found: {method} {path}")
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "status_code": exc.status_code,
+            "path": path,
+        }
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Global catch-all for unexpected errors."""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "status_code": 500,
+        }
+    )
+
 """
 Security & request middleware
 """
 # RequestBodyCachingMiddleware MUST be added first to cache bodies early
 app.add_middleware(RequestBodyCachingMiddleware)
+# RequestPathValidationMiddleware should run early to reject suspicious requests
+app.add_middleware(RequestPathValidationMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)

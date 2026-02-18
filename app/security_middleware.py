@@ -2,11 +2,55 @@ import logging
 import anyio
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+class RequestPathValidationMiddleware(BaseHTTPMiddleware):
+    """Validate and reject requests with suspicious path patterns."""
+    
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.url.path
+        
+        # Suspicious patterns that indicate potential attacks
+        dangerous_patterns = [
+            ("https://", "URL in path"),
+            ("http://", "URL in path"),
+            ("%3A%2F%2F", "Encoded URL in path"),
+            ("../../", "Path traversal"),
+            ("..%2F", "Encoded path traversal"),
+            ("%00", "Null byte injection"),
+            ("eval(", "Code injection"),
+            ("exec(", "Code injection"),
+            ("<script>", "XSS attempt"),
+            ("<iframe>", "XSS attempt"),
+            ("cmd=", "Command injection"),
+            ("exec%20", "Code injection"),
+        ]
+        
+        # Check for suspicious patterns
+        for pattern, threat_type in dangerous_patterns:
+            if pattern in path:
+                logger.warning(
+                    f"BLOCKED: {threat_type} in path | "
+                    f"Method: {request.method} | "
+                    f"Path: {path} | "
+                    f"Client: {request.client.host if request.client else 'unknown'}"
+                )
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "detail": "Invalid request path",
+                        "status_code": 400,
+                    }
+                )
+        
+        # Allow request through
+        response = await call_next(request)
+        return response
 
 
 class RequestBodyCachingMiddleware(BaseHTTPMiddleware):
