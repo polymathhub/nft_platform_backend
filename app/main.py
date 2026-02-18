@@ -24,6 +24,7 @@ from app.routers import (
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
+from app.routers.image_router import router as image_router
 
 """Middleware"""
 
@@ -163,6 +164,7 @@ app.include_router(marketplace_router, prefix="/api/v1")
 app.include_router(attestation_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(walletconnect_router, prefix="/api/v1")
+app.include_router(image_router, prefix="/api/v1")
 app.include_router(payment_router)
  
 

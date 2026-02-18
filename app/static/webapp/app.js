@@ -92,6 +92,144 @@
     if (dom.modal) dom.modal.style.display = 'none';
   }
 
+  // ========== IMAGE PROTECTION ==========
+  /**
+   * Protect images from being copied, downloaded, or saved
+   * Disables: right-click, drag-and-drop, keyboard shortcuts (Ctrl+S, Ctrl+C)
+   */
+  function protectImage(element) {
+    if (!element) return;
+
+    // Disable right-click context menu
+    element.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
+
+    // Disable drag and drop
+    element.addEventListener('dragstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
+
+    // Disable selection
+    element.addEventListener('selectstart', (e) => {
+      e.preventDefault();
+      return false;
+    });
+
+    // Disable pointer events to prevent saving
+    if (element.tagName === 'IMG') {
+      element.style.pointerEvents = 'none';
+      element.style.userSelect = 'none';
+      element.style.WebkitUserSelect = 'none';
+    }
+  }
+
+  /**
+   * Protect all NFT images on the current page
+   */
+  function protectAllImages() {
+    // Protect all img elements with NFT images
+    document.querySelectorAll('img[alt*="NFT"], img[alt*="nft"], img[src*="image"]').forEach(img => {
+      protectImage(img);
+    });
+
+    // Protect background images (div elements with background-image style)
+    document.querySelectorAll('[style*="background-image"]').forEach(div => {
+      protectImage(div);
+      // Additional protection for background images
+      div.style.userSelect = 'none';
+      div.style.WebkitUserSelect = 'none';
+    });
+  }
+
+  /**
+   * Add global keyboard shortcut protection
+   */
+  function protectKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Block Ctrl+S (Save), Ctrl+C (Copy), Ctrl+A (Select All) on images
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'c')) {
+        // Only block if the event target or any parent is an image-related element
+        let target = e.target;
+        let isImageElement = false;
+        
+        while (target && target !== document) {
+          if (target.tagName === 'IMG' || 
+              target.style?.backgroundImage || 
+              target.className?.includes('nft') ||
+              target.className?.includes('image')) {
+            isImageElement = true;
+            break;
+          }
+          target = target.parentElement;
+        }
+
+        if (isImageElement) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
+    }, true);
+
+    // Block Print Screen / Prt Sc
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Apply additional CSS protections
+   */
+  function applyImageProtectionStyles() {
+    // Check if style tag already exists
+    if (document.getElementById('nft-image-protection-styles')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'nft-image-protection-styles';
+    style.textContent = `
+      /* NFT Image Protection */
+      img[alt*="NFT"],
+      img[alt*="nft"],
+      img[src*="image"],
+      [style*="background-image"] {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        pointer-events: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-user-drag: none !important;
+      }
+
+      /* Prevent drag on NFT images */
+      img {
+        -webkit-user-drag: none;
+        -khtml-user-drag: none;
+        -moz-user-drag: none;
+        -o-user-drag: none;
+        user-drag: none;
+      }
+
+      /* Disable text selection in NFT containers */
+      .card img,
+      [class*="nft"] img {
+        -webkit-user-select: none;
+        user-select: none;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function switchPage(pageName) {
     // Hide all pages
     Object.values(dom.pages).forEach(page => {
@@ -123,6 +261,9 @@
       
       // Load page data
       loadPageData(pageName);
+      
+      // Apply image protection
+      protectAllImages();
     }
   }
 
@@ -135,6 +276,8 @@
         case 'marketplace': await updateMarketplaceList(); break;
         case 'profile': await updateProfilePage(); break;
       }
+      // Protect images after loading page data
+      setTimeout(protectAllImages, 100);
     } catch (err) {
       log(`Error loading ${pageName}: ${err.message}`, 'error');
     }
@@ -1409,6 +1552,10 @@
       showStatus('Initializing NFT Platform...', 'loading');
       log('=== App Initialization Starting ===');
 
+      // Initialize image protection system
+      applyImageProtectionStyles();
+      protectKeyboardShortcuts();
+
       // Authenticate with Telegram - MUST succeed before proceeding
       const user = await initWithTelegram();
       
@@ -1427,6 +1574,9 @@
 
       // Load initial dashboard data
       await loadPageData('dashboard');
+
+      // Apply final image protection
+      protectAllImages();
 
       showStatus('Ready!', 'success');
       log('=== App Initialization Complete ===');

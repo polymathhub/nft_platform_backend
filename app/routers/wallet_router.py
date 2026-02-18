@@ -55,6 +55,8 @@ async def create_wallet(
     """Create a new wallet for a user."""
     try:
         from app.models import User
+        from app.models.wallet import WalletType
+        from app.utils.wallet_address_generator import WalletAddressGenerator
         from sqlalchemy import select
         
         # Verify user exists
@@ -67,12 +69,26 @@ async def create_wallet(
                 detail="User not found",
             )
         
+        # Convert blockchain string to BlockchainType enum
+        try:
+            blockchain_type = BlockchainType[blockchain.upper()]
+        except KeyError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid blockchain: {blockchain}",
+            )
+        
+        # Generate address for the blockchain
+        address = WalletAddressGenerator.generate_address(blockchain_type)
+        
         # Create wallet
         wallet, error = await WalletService.create_wallet(
             db=db,
             user_id=UUID(user_id),
-            blockchain=blockchain,
-            name=f"{blockchain.capitalize()} Wallet"
+            blockchain=blockchain_type,
+            wallet_type=WalletType.CUSTODIAL,
+            address=address,
+            is_primary=False,
         )
         
         if error:
@@ -85,9 +101,10 @@ async def create_wallet(
             "success": True,
             "wallet": {
                 "id": str(wallet.id),
-                "name": wallet.name,
                 "blockchain": wallet.blockchain.value,
                 "address": wallet.address,
+                "wallet_type": wallet.wallet_type.value,
+                "is_primary": wallet.is_primary,
             },
         }
     except HTTPException:

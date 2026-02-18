@@ -2492,6 +2492,8 @@ async def create_wallet_for_webapp(
     import anyio
     from app.services.activity_service import ActivityService
     from app.models.activity import ActivityType
+    from app.models.wallet import WalletType
+    from app.utils.wallet_address_generator import WalletAddressGenerator
     
     try:
         user_id = auth["user_id"]
@@ -2499,12 +2501,19 @@ async def create_wallet_for_webapp(
         telegram_username = user.telegram_username
         telegram_id = user.telegram_id
         
+        # Convert blockchain string to BlockchainType enum
+        blockchain_type = request.blockchain
+        
+        # Generate address for the blockchain
+        address = WalletAddressGenerator.generate_address(blockchain_type)
+        
         # Create wallet using WalletService
         wallet, error = await WalletService.create_wallet(
             db=db,
             user_id=user.id,
-            blockchain=request.blockchain.value,
-            name=f"{request.blockchain.value.capitalize()} Wallet",
+            blockchain=blockchain_type,
+            wallet_type=WalletType.CUSTODIAL,
+            address=address,
             is_primary=request.is_primary,
         )
         
@@ -2531,7 +2540,7 @@ async def create_wallet_for_webapp(
             db=db,
             user_id=user.id,
             wallet_id=wallet.id,
-            blockchain=request.blockchain.value,
+            blockchain=blockchain_type.value,
             address=wallet.address,
             telegram_id=telegram_id,
             telegram_username=telegram_username,
@@ -2544,9 +2553,9 @@ async def create_wallet_for_webapp(
             "success": True,
             "wallet": {
                 "id": str(wallet.id),
-                "name": wallet.name,
                 "blockchain": wallet.blockchain.value if hasattr(wallet.blockchain, 'value') else str(wallet.blockchain),
                 "address": wallet.address,
+                "wallet_type": wallet.wallet_type.value if hasattr(wallet.wallet_type, 'value') else str(wallet.wallet_type),
                 "is_primary": wallet.is_primary,
                 "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
             },
