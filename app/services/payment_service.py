@@ -11,9 +11,10 @@ from app.models.payment import Payment, PaymentType, PaymentStatus
 from app.models.wallet import Wallet
 from app.models.user import User
 from app.utils.blockchain_utils import USDTHelper
-from app.config import settings
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class PaymentService:

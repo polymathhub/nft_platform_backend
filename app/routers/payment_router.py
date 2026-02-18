@@ -19,8 +19,7 @@ from app.schemas.payment import (
     BalanceSummaryResponse,
 )
 from app.services.payment_service import PaymentService
-from app.services.auth_service import get_current_user
-from app.config import settings
+from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
