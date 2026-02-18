@@ -2485,46 +2485,39 @@ async def create_wallet_for_webapp(
     auth: dict = Depends(get_telegram_user_from_request),
 ) -> dict:
     """
-    Create a new wallet for the current user.
+    Create a new wallet for the current user via web app.
     Requires Telegram WebApp init_data for authentication.
-    Logs activity to audit trail.
+    Uses bot_service.handle_wallet_create for proper wallet generation.
     """
     import anyio
     from app.services.activity_service import ActivityService
     from app.models.activity import ActivityType
-    from app.models.wallet import WalletType
-    from app.utils.wallet_address_generator import WalletAddressGenerator
     
     try:
         user_id = auth["user_id"]
         user = auth["user_obj"]
         telegram_username = user.telegram_username
         telegram_id = user.telegram_id
+        chat_id = telegram_id  # Use telegram_id as chat_id for bot_service
         
-        # Convert blockchain string to BlockchainType enum
-        blockchain_type = request.blockchain
+        logger.info(f"[CREATE_WALLET] START: user={user_id}, blockchain={request.blockchain.value}")
         
-        # Generate address for the blockchain
-        address = WalletAddressGenerator.generate_address(blockchain_type)
-        
-        # Create wallet using WalletService
-        wallet, error = await WalletService.create_wallet(
+        # Use bot_service to handle wallet creation (proper generation functions)
+        wallet, error = await bot_service.handle_wallet_create(
             db=db,
-            user_id=user.id,
-            blockchain=blockchain_type,
-            wallet_type=WalletType.CUSTODIAL,
-            address=address,
-            is_primary=request.is_primary,
+            chat_id=chat_id,
+            user=user,
+            blockchain=request.blockchain.value,
         )
         
-        if error:
-            logger.error(f"Wallet creation error: {error}")
+        if error or not wallet:
+            logger.error(f"[CREATE_WALLET] FAILED: {error}")
             # Log the failure
             await ActivityService.log_error(
                 db=db,
                 user_id=user.id,
                 activity_type=ActivityType.WALLET_CREATED,
-                error_message=error,
+                error_message=error or "Unknown error",
                 resource_type="wallet",
                 telegram_id=telegram_id,
                 telegram_username=telegram_username,
@@ -2532,22 +2525,22 @@ async def create_wallet_for_webapp(
             await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to create wallet: {error}",
+                detail=f"Failed to create wallet: {error or 'Unknown error'}",
             )
+        
+        logger.info(f"[CREATE_WALLET] SUCCESS: wallet_id={wallet.id}")
         
         # Log successful wallet creation
         await ActivityService.log_wallet_created(
             db=db,
             user_id=user.id,
             wallet_id=wallet.id,
-            blockchain=blockchain_type.value,
+            blockchain=request.blockchain.value,
             address=wallet.address,
             telegram_id=telegram_id,
             telegram_username=telegram_username,
         )
         await db.commit()
-        
-        logger.info(f"Wallet created for user {telegram_username}: {wallet.id}")
         
         return {
             "success": True,
@@ -2566,10 +2559,10 @@ async def create_wallet_for_webapp(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Create wallet error: {e}", exc_info=False)
+        logger.error(f"Create wallet error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create wallet",
+            detail=f"Failed to create wallet: {str(e)}",
         )
 
 

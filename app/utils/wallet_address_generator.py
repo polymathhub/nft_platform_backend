@@ -1,79 +1,79 @@
 """
 Wallet address generation utilities
-Generates addresses for different blockchain types
+Generates format-compliant placeholder addresses for different blockchain types
+Note: These are PLACEHOLDER addresses for quick wallet creation. 
+For production, integrate actual blockchain clients for real address generation.
 """
 import logging
 import uuid
+import hashlib
 from app.models.wallet import BlockchainType
 
 logger = logging.getLogger(__name__)
 
 
 class WalletAddressGenerator:
-    """Generate wallet addresses for different blockchain types."""
+    """Generate placeholder wallet addresses for different blockchain types."""
 
     @staticmethod
     def generate_address(blockchain: BlockchainType) -> str:
         """
-        Generate a wallet address for the given blockchain type.
+        Generate a placeholder wallet address for the given blockchain type.
         
-        For production, this should integrate with actual blockchain clients
-        to generate proper hierarchical deterministic (HD) wallets.
-        
-        For now, generates format-compliant placeholder addresses.
+        For production, this should integrate with actual blockchain clients.
+        Currently generates format-compliant placeholder addresses.
         """
         if isinstance(blockchain, str):
             blockchain = BlockchainType[blockchain.upper()]
         
-        unique_suffix = str(uuid.uuid4()).replace('-', '')[:32]
+        # Generate unique portion using UUID hash
+        unique_id = str(uuid.uuid4()).replace('-', '')
         
         if blockchain in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
                          BlockchainType.ARBITRUM, BlockchainType.OPTIMISM, 
                          BlockchainType.BASE, BlockchainType.AVALANCHE):
             # EVM-compatible: 42-character address (0x + 40 hex chars)
-            return f"0x{unique_suffix}{unique_suffix[:10]}"
+            return f"0x{unique_id[:40]}"
         
         elif blockchain == BlockchainType.SOLANA:
-            # Solana: Base58 encoded, 44 characters (32 bytes)
-            import base58
-            random_bytes = uuid.uuid4().bytes + uuid.uuid4().bytes[:8]
-            return base58.b58encode(random_bytes).decode('ascii')
+            # Solana: 43/44 character Base58 address
+            # Use simple base58 fallback without external dependencies
+            return WalletAddressGenerator._generate_base58_address(unique_id, length=43)
         
         elif blockchain == BlockchainType.TON:
             # TON: 48 character address (0: + 47 hex chars)
-            return f"0:{unique_suffix}{unique_suffix[:15]}"
+            return f"0:{unique_id[:47]}"
         
         elif blockchain == BlockchainType.BITCOIN:
-            # Bitcoin: P2PKH address starts with 1, P2SH starts with 3, Bech32 starts with bc1
-            # Use legacy format: 1 + 33 base58 characters
-            import base58
-            random_bytes = b'\x00' + uuid.uuid4().bytes  # Version byte 0x00 for P2PKH
-            checksum = uuid.uuid4().bytes[:4]
-            return base58.b58encode(random_bytes + checksum).decode('ascii')
+            # Bitcoin: Start with 1 (P2PKH), followed by 33 characters
+            return f"1{WalletAddressGenerator._generate_base58_address(unique_id, length=33)}"
         
         else:
-            # Fallback: generic format
-            return f"{blockchain.value}_wallet_{unique_suffix}"
+            # Fallback: generic format with blockchain prefix
+            return f"{blockchain.value[:3].upper()}_{unique_id[:30]}"
 
-
-# Monkey-patch base58 if needed for Solana/Bitcoin
-try:
-    import base58
-except ImportError:
-    # Fallback implementation for base58 (simplified)
-    class SimplifiedBase58:
-        ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    @staticmethod
+    def _generate_base58_address(source: str, length: int) -> str:
+        """
+        Generate a Base58-like string without external dependencies.
+        Uses a simplified alphabet for Solana/Bitcoin compatibility.
+        """
+        alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
         
-        @classmethod
-        def b58encode(cls, data: bytes) -> bytes:
-            """Simple base58 encoding fallback"""
-            if not data:
-                return b"1"
-            num = int.from_bytes(data, 'big')
-            encoded = ""
-            while num > 0:
-                num, remainder = divmod(num, 58)
-                encoded = cls.ALPHABET[remainder] + encoded
-            return encoded.encode('ascii')
-    
-    base58 = SimplifiedBase58()
+        # Convert source to numeric value for base58 encoding
+        hash_bytes = hashlib.sha256(source.encode()).digest()
+        
+        # Simple base58-like encode
+        result = ""
+        num = int.from_bytes(hash_bytes, 'big')
+        
+        while num > 0 and len(result) < length:
+            num, remainder = divmod(num, 58)
+            result = alphabet[remainder] + result
+        
+        # Pad with leading alphabet[0] ('1') if needed
+        while len(result) < length:
+            result = "1" + result
+        
+        return result[:length]
+
