@@ -1771,7 +1771,6 @@ async def web_app_get_wallets(
         "wallets": [
             {
                 "id": str(wallet.id),
-                "name": wallet.name,
                 "blockchain": wallet.blockchain.value,
                 "address": wallet.address,
                 "is_primary": wallet.is_primary,
@@ -1910,7 +1909,6 @@ async def web_app_get_dashboard_data(
             "wallets": [
                 {
                     "id": str(wallet.id),
-                    "name": wallet.name,
                     "blockchain": wallet.blockchain.value,
                     "address": wallet.address,
                     "is_primary": wallet.is_primary,
