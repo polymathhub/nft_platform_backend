@@ -4,7 +4,10 @@ Handles Telegram webhook updates and minting commands.
 """
 
 import logging
+import json
+import anyio
 from typing import Optional
+from urllib.parse import parse_qs
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,10 +67,8 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     Extract and authenticate Telegram user from request.
     Supports both query parameter and body init_data.
     Uses cached body from middleware to prevent stream exhaustion.
+    Production-ready with comprehensive error handling.
     """
-    from urllib.parse import parse_qs
-    import json
-    import anyio
     
     # Try to get init_data from query params first
     init_data_str = request.query_params.get("init_data")
@@ -80,38 +81,50 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
                 try:
                     body = await request.body()
                 except (anyio.EndOfStream, anyio.WouldBlock):
+                    logger.warning("Stream exhaustion while reading request body")
                     body = b""
             
             if body:
                 try:
                     body_dict = json.loads(body)
                     init_data_str = body_dict.get("init_data")
-                except (json.JSONDecodeError, ValueError):
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.warning(f"Failed to parse request body: {e}")
                     pass
         except Exception as e:
-            logger.debug(f"Error reading request body: {e}")
+            logger.error(f"Error reading request body: {e}")
             pass
     
     if not init_data_str:
+        logger.warning("Missing init_data in request")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing init_data",
+            detail="Missing init_data - authentication failed",
         )
     
     # Parse init_data query string into dictionary
-    params = parse_qs(init_data_str)
-    data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+    try:
+        params = parse_qs(init_data_str)
+        data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+    except Exception as e:
+        logger.error(f"Failed to parse init_data: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid init_data format",
+        )
     
     # Verify Telegram data signature
     if not verify_telegram_signature(data_dict):
+        logger.warning("Telegram signature verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Telegram signature",
+            detail="Invalid Telegram signature - authentication failed",
         )
     
     # Extract user data from init_data
     user_data_str = data_dict.get("user")
     if not user_data_str:
+        logger.warning("No user data in init_data")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No user data in init_data",
@@ -119,7 +132,8 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     
     try:
         user_data = json.loads(user_data_str)
-    except:
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"Failed to parse user data from init_data: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid user data format",
@@ -128,42 +142,75 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     # Get or create user in database
     telegram_id = user_data.get("id")
     if not telegram_id:
+        logger.error("Missing Telegram ID in user data")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing Telegram ID",
         )
     
     # Try to find existing user
-    result = await db.execute(
-        select(User).where(User.telegram_id == str(telegram_id))
-    )
-    user = result.scalar_one_or_none()
+    try:
+        result = await db.execute(
+            select(User).where(User.telegram_id == str(telegram_id))
+        )
+        user = result.scalar_one_or_none()
+    except Exception as e:
+        logger.error(f"Database error during user lookup: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error during authentication",
+        )
     
     if not user:
-        # Create new user from Telegram data
-        from uuid import uuid4
-        first_name = user_data.get("first_name", "")
-        last_name = user_data.get("last_name", "")
-        full_name = f"{first_name} {last_name}".strip() if last_name else (first_name or "User")
-        email = f"telegram_{telegram_id}@nftplatform.local"
-        username = user_data.get("username", f"user_{telegram_id}")
-        
-        user = User(
-            id=uuid4(),
-            email=email,
-            username=username,
-            telegram_id=str(telegram_id),
-            telegram_username=user_data.get("username"),
-            full_name=full_name,
-            hashed_password="",
-            avatar_url=None,
-            is_active=True,
-            is_verified=True,
-            user_role="user",
+        # Create new user from Telegram data (production-ready)
+        try:
+            from uuid import uuid4
+            first_name = user_data.get("first_name", "")
+            last_name = user_data.get("last_name", "")
+            full_name = f"{first_name} {last_name}".strip() if last_name else (first_name or "User")
+            email = f"telegram_{telegram_id}@nftplatform.local"
+            username = user_data.get("username", f"user_{telegram_id}")
+            
+            # Check if username already exists (conflict handling)
+            existing = await db.execute(
+                select(User).where(User.username == username)
+            )
+            if existing.scalar_one_or_none():
+                # Use unique username if conflict
+                username = f"{username}_{telegram_id}"
+            
+            user = User(
+                id=uuid4(),
+                email=email,
+                username=username,
+                telegram_id=str(telegram_id),
+                telegram_username=user_data.get("username"),
+                full_name=full_name,
+                hashed_password="",
+                avatar_url=None,
+                is_active=True,
+                is_verified=True,
+                user_role="user",
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            logger.info(f"Created new Telegram user: {telegram_id}")
+        except Exception as e:
+            logger.error(f"Failed to create new user: {e}")
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user account",
+            )
+    
+    # Verify user is active
+    if not user.is_active:
+        logger.warning(f"Inactive user attempt: {telegram_id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
     
     # Attach user to request state for use in endpoints
     request.state.telegram_user = {
@@ -173,6 +220,7 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
         "user_obj": user,
     }
     
+    logger.debug(f"Authenticated Telegram user: {telegram_id}")
     return request.state.telegram_user
 
 
@@ -1613,67 +1661,87 @@ async def web_app_init(
     """
     Initialize Telegram Web App session.
     Verify init data and authenticate user.
-    
-    The init_data comes from Telegram WebApp.initData (query param)
+    Production-ready with comprehensive error handling.
     """
     try:
-        from urllib.parse import parse_qs
-        import json
-
-        # Parse init_data query string into dictionary
-        params = parse_qs(init_data)
-        
-        # Convert parsed params to simple dict (parse_qs returns lists)
-        data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+        # Parse init_data query string  dictionary
+        try:
+            params = parse_qs(init_data)
+            data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+        except Exception as e:
+            logger.error(f"Failed to parse init_data: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid init_data format",
+            )
         
         # Verify Telegram data signature
         if not verify_telegram_signature(data_dict):
+            logger.warning("Telegram signature verification failed during init")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Telegram data signature",
             )
 
         # Extract user data from init_data
-        user_data = None
-        if "user" in data_dict:
-            user_data = json.loads(data_dict["user"])
+        try:
+            user_data = None
+            if "user" in data_dict:
+                user_data = json.loads(data_dict["user"])
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to parse user data: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid user data format",
+            )
 
         if not user_data:
+            logger.warning("No user data provided in init_data")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No user data provided",
             )
 
-        # Get or create user
-        from app.services.auth_service import AuthService
+        # Get or create user with comprehensive error handling
+        try:
+            from app.services.auth_service import AuthService
 
-        user, error = await AuthService.authenticate_telegram(
-            db=db,
-            telegram_id=user_data.get("id"),
-            telegram_username=user_data.get("username", f"user_{user_data.get('id')}"),
-            first_name=user_data.get("first_name", ""),
-            last_name=user_data.get("last_name", ""),
-        )
-
-        if error or not user:
-            logger.error(f"User authentication failed: {error}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to authenticate user: {error or 'unknown error'}",
+            user, error = await AuthService.authenticate_telegram(
+                db=db,
+                telegram_id=user_data.get("id"),
+                telegram_username=user_data.get("username", f"user_{user_data.get('id')}"),
+                first_name=user_data.get("first_name", ""),
+                last_name=user_data.get("last_name", ""),
             )
 
+            if error or not user:
+                logger.error(f"User authentication failed: {error}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to authenticate user: {error or 'unknown error'}",
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Authentication service error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication service error",
+            )
+
+        # Build response with all necessary user data
         return {
             "success": True,
             "user": {
                 "id": str(user.id),
                 "telegram_id": user.telegram_id,
-                "telegram_username": user.telegram_username,
+                "telegram_username": user.telegram_username or "User",
                 "full_name": user.full_name or user.telegram_username or "User",
                 "avatar_url": user.avatar_url,
                 "email": user.email,
                 "is_verified": user.is_verified,
                 "user_role": user.user_role.value if hasattr(user.user_role, 'value') else str(user.user_role),
-                "created_at": user.created_at.isoformat(),
+                "created_at": user.created_at.isoformat() if hasattr(user, 'created_at') else None,
             },
         }
     except HTTPException:
@@ -1682,7 +1750,7 @@ async def web_app_init(
         logger.error(f"Web app init error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Initialization failed: {str(e)}"
+            detail="Initialization failed - please contact support",
         )
 @router.get("/web-app/user")
 async def web_app_get_user(
