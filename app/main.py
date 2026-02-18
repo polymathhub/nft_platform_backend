@@ -29,9 +29,6 @@ from app.routers.walletconnect_router import router as walletconnect_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
-    SecurityHeadersMiddleware,
-    RequestSizeLimitMiddleware,
-    HTTPSEnforcementMiddleware,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,35 +55,11 @@ app = FastAPI(
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """
-    Custom HTTP exception handler to log suspicious requests.
-    Detects and logs potential security issues like URL injection in paths.
-    """
+    """HTTP exception handler."""
     path = request.url.path
     method = request.method
     
-    # Check for suspicious patterns in path
-    suspicious_patterns = [
-        "https://", "http://",  # URLs in path
-        "%3A", "%2F",  # Encoded : and /
-        "../../",  # Path traversal
-        "..%2F",  # Encoded path traversal
-        "%00",  # Null byte injection
-        "eval(", "exec(",  # Code injection attempts
-        "<script>", "<iframe>",  # XSS attempts
-    ]
-    
-    is_suspicious = any(pattern in path for pattern in suspicious_patterns)
-    
-    # Log suspicious requests at WARNING level
-    if is_suspicious:
-        logger.warning(
-            f"SUSPICIOUS REQUEST: {method} {path} | "
-            f"Status: {exc.status_code} | "
-            f"Client: {request.client.host if request.client else 'unknown'}"
-        )
-    elif exc.status_code == 404:
-        # Log 404s for debugging (mostly for development)
+    if exc.status_code == 404:
         logger.debug(f"404 Not Found: {method} {path}")
     
     return JSONResponse(
@@ -116,9 +89,6 @@ Security & request middleware
 # RequestBodyCachingMiddleware MUST be added first to cache bodies early
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RequestSizeLimitMiddleware)
-app.add_middleware(HTTPSEnforcementMiddleware)
 
 """Serve Telegram Web App static files at /web-app"""
 app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
@@ -176,10 +146,10 @@ app.include_router(
     tags=["telegram"]
 )
 
-# Mount again at root to catch /telegram/webhook and /web-app endpoints
+# Include telegram router at /telegram prefix to catch /telegram/webhook
 app.include_router(
     telegram_mint_router,
-    prefix="",
+    prefix="/telegram",
     tags=["telegram"]
 )
 
