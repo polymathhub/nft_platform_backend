@@ -179,7 +179,7 @@ app.include_router(
     tags=["telegram"]
 )
 
-# Accept webhook at both paths (Telegram may use either)
+# Mount again at root to catch /telegram/webhook and /web-app endpoints
 app.include_router(
     telegram_mint_router,
     prefix="",
