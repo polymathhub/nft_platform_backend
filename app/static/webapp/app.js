@@ -411,21 +411,24 @@
     },
 
     async createWallet(blockchain, walletType = 'custodial', isPrimary = false) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/create-wallet`, {
         method: 'POST',
-        body: { blockchain, wallet_type: walletType, is_primary: isPrimary }
+        body: { blockchain, wallet_type: walletType, is_primary: isPrimary, init_data: initData }
       });
     },
 
     async importWallet(blockchain, address, publicKey = null, isPrimary = false) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/import-wallet`, {
         method: 'POST',
-        body: { blockchain, address, public_key: publicKey, is_primary: isPrimary }
+        body: { blockchain, address, public_key: publicKey, is_primary: isPrimary, init_data: initData }
       });
     },
 
     async setPrimaryWallet(walletId, userId = null) {
-      const body = { wallet_id: walletId };
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      const body = { wallet_id: walletId, init_data: initData };
       if (userId) body.user_id = userId;
       return this._fetch(`/web-app/set-primary`, {
         method: 'POST',
@@ -440,6 +443,7 @@
     },
 
     async mintNft(userId, walletId, nftName, description, imageUrl = null) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/mint`, {
         method: 'POST',
         body: {
@@ -448,21 +452,24 @@
           nft_name: nftName,
           nft_description: description,
           image_url: imageUrl,
+          init_data: initData,
         }
       });
     },
 
     async burnNft(userId, nftId) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/burn`, {
         method: 'POST',
-        body: { user_id: userId, nft_id: nftId }
+        body: { user_id: userId, nft_id: nftId, init_data: initData }
       });
     },
 
     async transferNft(userId, nftId, toAddress) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/transfer`, {
         method: 'POST',
-        body: { user_id: userId, nft_id: nftId, to_address: toAddress }
+        body: { user_id: userId, nft_id: nftId, to_address: toAddress, init_data: initData }
       });
     },
 
@@ -477,23 +484,26 @@
     },
 
     async listNft(userId, nftId, price, currency = 'USDT') {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/list-nft`, {
         method: 'POST',
-        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
+        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency, init_data: initData }
       });
     },
 
     async makeOffer(userId, listingId, offerPrice) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/make-offer`, {
         method: 'POST',
-        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice) }
+        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice), init_data: initData }
       });
     },
 
     async cancelListing(userId, listingId) {
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/cancel-listing`, {
         method: 'POST',
-        body: { user_id: userId, listing_id: listingId }
+        body: { user_id: userId, listing_id: listingId, init_data: initData }
       });
     },
 
