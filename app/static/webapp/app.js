@@ -1395,7 +1395,7 @@
         log(`Wallet creation failed: ${err.message}`, 'error');
         showStatus(`Error: ${err.message}`, 'error');
       }
-    }
+    },
 
     async mintNft() {
       if (!state.user || !state.user.id) {
@@ -1600,6 +1600,15 @@
   };
 
   window.pageActions = pageActions;
+
+  // ========== EXPOSE GLOBAL FUNCTIONS ==========
+  // These functions need to be accessible from onclick handlers in HTML
+  window.showModal = showModal;
+  window.closeModal = closeModal;
+  window.showStatus = showStatus;
+  window.log = log;
+  window.switchPage = switchPage;
+  window.loadPageData = loadPageData;
 
   // ========== INITIALIZATION ==========
   

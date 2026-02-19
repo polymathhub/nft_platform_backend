@@ -2799,11 +2799,6 @@ async def import_wallet_for_webapp(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to import wallet: {str(e)}",
         )
-        logger.error(f"Import wallet error: {e}", exc_info=False)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to import wallet",
-        )
 
 
 # ==================== Polling Handler ====================

@@ -99,6 +99,7 @@ async def initiate_deposit(
         )
 
     # Get platform wallet for this blockchain
+    settings = get_settings()
     platform_address = getattr(settings, "platform_wallets", {}).get(
         payment.blockchain.lower(), "0x..."
     )
