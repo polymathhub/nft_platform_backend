@@ -8,12 +8,12 @@
     :root {
       --primary: #7c5cff;
       --primary-dark: #6b4dcc;
-      --bg: #030712;
-      --bg-card: #0f1724;
-      --bg-dark: #0a0f1a;
+      --bg: #0a0e27;
+      --bg-light: #0f1429;
+      --bg-card: #14192f;
+      --border: rgba(255, 255, 255, 0.08);
       --text: #e6eef8;
       --text-muted: #8892b0;
-      --border: rgba(255, 255, 255, 0.08);
       --success: #34d399;
       --error: #ff3b30;
       --warning: #fbbf24;
@@ -29,153 +29,162 @@
       width: 100%;
       height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, var(--bg) 0%, var(--bg-card) 100%);
+      background: linear-gradient(135deg, var(--bg) 0%, #0d1633 100%);
       color: var(--text);
     }
 
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0;
+    .app-wrapper {
       display: flex;
-      flex-direction: column;
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    .init-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: rgba(10, 14, 39, 0.8);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 0 24px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(124, 92, 255, 0.1);
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      padding: 16px;
+      font-weight: bold;
+      font-size: 18px;
     }
 
-    .init-modal.hidden {
-      display: none;
+    .user-info {
+      flex: 1;
     }
 
-    .init-content {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    }
-
-    .init-content h2 {
-      color: var(--primary);
-      margin-bottom: 12px;
-      font-size: 24px;
-    }
-
-    .init-content p {
-      color: var(--text-muted);
-      margin-bottom: 16px;
-      font-size: 14px;
-    }
-
-    textarea, input[type="text"], input[type="number"], select {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--bg-dark);
+    .user-info strong {
+      display: block;
+      font-size: 13px;
       color: var(--text);
+    }
+
+    .user-info small {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .nav-menu {
+      flex: 1;
+      padding: 24px 0;
+    }
+
+    .nav-item {
+      padding: 12px 24px;
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 12px;
       font-size: 14px;
-      font-family: inherit;
     }
 
-    textarea:focus, input:focus, select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.1);
+    .nav-item:hover {
+      color: var(--primary);
+      background: rgba(124, 92, 255, 0.05);
     }
 
-    .header {
-      background: rgba(3, 7, 18, 0.7);
+    .nav-item.active {
+      color: var(--primary);
+      border-left-color: var(--primary);
+      background: rgba(124, 92, 255, 0.08);
+    }
+
+    .nav-icon {
+      width: 20px;
+      text-align: center;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top-header {
+      background: rgba(10, 14, 39, 0.6);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
+      padding: 16px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
     }
 
-    .header h1 {
-      margin: 0;
-      font-size: 22px;
-      color: var(--primary);
-    }
-
-    .nav-tabs {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .nav-tab {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 8px 16px;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-
-    .nav-tab:hover {
-      color: var(--primary);
-    }
-
-    .nav-tab.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-
-    .status-alert {
-      padding: 12px 24px;
-      background: rgba(124, 92, 255, 0.1);
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
       color: var(--text);
-      border-bottom: 1px solid var(--border);
-      border-left: 3px solid var(--primary);
-      animation: slideDown 0.3s ease;
     }
 
-    .status-alert.success {
-      background: rgba(52, 211, 153, 0.1);
-      border-left-color: var(--success);
+    .status-bar {
+      padding: 12px 32px;
+      background: rgba(124, 92, 255, 0.08);
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .status-bar.success {
+      background: rgba(52, 211, 153, 0.08);
       color: var(--success);
     }
 
-    .status-alert.error {
-      background: rgba(255, 59, 48, 0.1);
-      border-left-color: var(--error);
+    .status-bar.error {
+      background: rgba(255, 59, 48, 0.08);
       color: var(--error);
     }
 
-    @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    .content {
+    .content-area {
       flex: 1;
       overflow-y: auto;
-      padding: 24px;
+      padding: 32px;
     }
 
     .page {
@@ -193,109 +202,174 @@
     }
 
     .page h2 {
-      font-size: 18px;
-      margin-bottom: 20px;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 24px;
       color: var(--text);
     }
 
-    .grid-2 {
+    /* Grid Layouts */
+    .grid-auto {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
       margin-bottom: 24px;
     }
 
+    .grid-2col {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    /* Cards */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 20px;
+      padding: 24px;
       transition: all 0.3s ease;
     }
 
     .card:hover {
       border-color: var(--primary);
-      box-shadow: 0 8px 32px rgba(124, 92, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(124, 92, 255, 0.15);
+      transform: translateY(-2px);
     }
 
     .card h3 {
       font-size: 16px;
-      margin-bottom: 12px;
+      font-weight: 600;
+      margin-bottom: 16px;
       color: var(--text);
-    }
-
-    .section {
-      margin-bottom: 20px;
     }
 
     .stat-card {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 140px;
+      min-height: 160px;
     }
 
-    .wallet-card {
-      cursor: pointer;
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 12px;
     }
 
-    .wallet-blockchain {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .wallet-item {
+      padding: 16px;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
       margin-bottom: 12px;
+      transition: all 0.3s;
+    }
+
+    .wallet-item:hover {
+      background: rgba(124, 92, 255, 0.05);
+      border-color: var(--primary);
     }
 
     .blockchain-badge {
+      display: inline-block;
       background: rgba(124, 92, 255, 0.2);
       color: var(--primary);
       padding: 4px 12px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
+      margin-bottom: 8px;
     }
 
-    .wallet-address {
-      font-family: monospace;
+    .address-text {
+      font-family: 'Monaco', 'Courier New', monospace;
       font-size: 12px;
       color: var(--text-muted);
       word-break: break-all;
-      margin-bottom: 12px;
       padding: 8px;
       background: var(--bg);
       border-radius: 6px;
+      margin: 8px 0;
     }
 
-    .nft-card {
-      display: flex;
-      flex-direction: column;
+    /* Forms */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.3s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
       gap: 8px;
     }
 
-    .btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      display: inline-block;
-    }
-
     .btn-primary {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
     }
 
     .btn-primary:hover {
-      background: var(--primary-dark);
       transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(124, 92, 255, 0.3);
+      box-shadow: 0 8px 20px rgba(124, 92, 255, 0.3);
     }
 
     .btn-secondary {
-      background: var(--bg-card);
+      background: var(--bg-light);
       color: var(--text);
       border: 1px solid var(--border);
     }
@@ -303,390 +377,701 @@
     .btn-secondary:hover {
       border-color: var(--primary);
       color: var(--primary);
+      background: rgba(124, 92, 255, 0.05);
+    }
+
+    .btn-block {
+      width: 100%;
     }
 
     .btn-small {
-      padding: 6px 12px;
+      padding: 8px 16px;
       font-size: 12px;
     }
 
-    .form-group {
-      margin-bottom: 16px;
+    .btn-danger {
+      background: rgba(255, 59, 48, 0.2);
+      color: var(--error);
+      border: 1px solid var(--error);
     }
 
-    .form-group label {
-      display: block;
-      margin-bottom: 6px;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 500;
+    .btn-danger:hover {
+      background: rgba(255, 59, 48, 0.3);
     }
 
-    .mkt-tab {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 8px 16px;
-      cursor: pointer;
-      font-size: 14px;
-      border-bottom: 2px solid transparent;
-      transition: all 0.3s;
+    /* Loading State */
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
     }
 
-    .mkt-tab.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(124, 92, 255, 0.3);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
 
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
-      .header {
+      .app-wrapper {
         flex-direction: column;
-        align-items: flex-start;
       }
 
-      .nav-tabs {
+      .sidebar {
         width: 100%;
-        justify-content: flex-start;
+        height: auto;
+        max-height: none;
+        padding: 16px;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
       }
 
-      .grid-2 {
+      .sidebar-header {
+        padding: 0;
+        border: none;
+        min-width: 200px;
+      }
+
+      .nav-menu {
+        flex: 1;
+        display: flex;
+        gap: 8px;
+        padding: 0;
+        flex-wrap: wrap;
+      }
+
+      .nav-item {
+        padding: 8px 12px;
+        border: none;
+        flex: 0 1 auto;
+        white-space: nowrap;
+        font-size: 12px;
+      }
+
+      .content-area {
+        padding: 20px;
+      }
+
+      .grid-auto {
         grid-template-columns: 1fr;
-      }
-
-      .init-content {
-        padding: 24px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Auth Modal -->
-    <div id="authModal" class="init-modal">
-      <div class="init-content">
-        <h2>Telegram Authentication</h2>
-        <p>Paste your Telegram init_data to authenticate</p>
-        <textarea id="initData" placeholder="Paste init_data from Telegram web app launch parameters..." style="height:100px"></textarea>
-        <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="initApp()">Authenticate</button>
-        <div id="userInfo" style="margin-top:16px;padding:12px;background:var(--bg-dark);border-radius:8px;text-align:center;color:var(--text-muted);font-size:12px">Not authenticated</div>
+  <div class="app-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">NFT</div>
+        <div class="user-badge" id="userBadge">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-info">
+            <strong id="userNameDisplay">Loading...</strong>
+            <small id="userIdDisplay"></small>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Header -->
-    <header class="header">
-      <h1>NFT Platform</h1>
-      <nav class="nav-tabs">
-        <button class="nav-tab active" data-page="dashboard">Dashboard</button>
-        <button class="nav-tab" data-page="wallets">Wallets</button>
-        <button class="nav-tab" data-page="nfts">My NFTs</button>
-        <button class="nav-tab" data-page="mint">Create NFT</button>
-        <button class="nav-tab" data-page="marketplace">Marketplace</button>
-        <button class="nav-tab" data-page="profile">Profile</button>
+      <nav class="nav-menu">
+        <div class="nav-item active" data-page="dashboard">📊 Dashboard</div>
+        <div class="nav-item" data-page="wallets">💰 Wallets</div>
+        <div class="nav-item" data-page="nfts">🖼️ My NFTs</div>
+        <div class="nav-item" data-page="mint">⚡ Mint NFT</div>
+        <div class="nav-item" data-page="marketplace">🏪 Marketplace</div>
+        <div class="nav-item" data-page="profile">👤 Profile</div>
       </nav>
-    </header>
+    </aside>
 
-    <!-- Status -->
-    <div id="status" class="status-alert">
-      <span id="statusText">Ready</span>
-    </div>
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-header">
+        <h1 class="page-title">Dashboard</h1>
+        <div id="authStatus" style="font-size: 13px; color: var(--text-muted);">Initializing...</div>
+      </header>
 
-    <!-- Pages -->
-    <div class="content">
-      <!-- Dashboard -->
-      <div id="dashboard-page" class="page active">
-        <h2>Dashboard</h2>
-        <div class="grid-2">
-          <div class="card stat-card">
-            <div style="font-size:28px;color:var(--primary)">Portfolio Value</div>
-            <div id="portfolioValue" style="font-size:24px;font-weight:bold;margin-top:8px">$0</div>
+      <div class="status-bar" id="statusBar" style="display: none;">
+        <span class="spinner" id="statusSpinner" style="display: none;"></span>
+        <span id="statusText">Ready</span>
+      </div>
+
+      <div class="content-area">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active">
+          <h2>Dashboard</h2>
+          <div class="grid-auto">
+            <div class="card stat-card">
+              <div class="stat-label">Portfolio Value</div>
+              <div class="stat-value" id="portfolioValue">$0</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">Total NFTs</div>
+              <div class="stat-value" id="totalNfts">0</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">Wallets</div>
+              <div class="stat-value" id="totalWallets">0</div>
+            </div>
+            <div class="card stat-card">
+              <div class="stat-label">Listings</div>
+              <div class="stat-value" id="totalListings">0</div>
+            </div>
           </div>
-          <div class="card stat-card">
-            <div style="font-size:28px;color:var(--primary)">Total NFTs</div>
-            <div id="totalNfts" style="font-size:24px;font-weight:bold;margin-top:8px">0</div>
-          </div>
-          <div class="card stat-card">
-            <div style="font-size:28px;color:var(--primary)">Wallets</div>
-            <div id="totalWallets" style="font-size:24px;font-weight:bold;margin-top:8px">0</div>
-          </div>
-          <div class="card stat-card">
-            <div style="font-size:28px;color:var(--primary)">Activity</div>
-            <div style="font-size:24px;font-weight:bold;margin-top:8px">--</div>
+          <div class="card">
+            <h3>Quick Actions</h3>
+            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 13px;">Manage your NFT platform</p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <button class="btn btn-primary btn-small" onclick="switchPage('wallets')">Create Wallet</button>
+              <button class="btn btn-primary btn-small" onclick="switchPage('mint')">Mint NFT</button>
+              <button class="btn btn-secondary btn-small" onclick="switchPage('marketplace')">Browse Market</button>
+            </div>
           </div>
         </div>
-        <div class="card"><h3>Quick Stats</h3><p style="color:var(--text-muted);font-size:13px">Your portfolio overview and latest activity</p><button class="btn btn-secondary" onclick="loadDashboard()">Refresh</button></div>
-      </div>
 
-      <!-- Wallets -->
-      <div id="wallets-page" class="page">
-        <h2>Wallets</h2>
-        <div class="card section"><h3>Create New Wallet</h3><div class="form-group"><label>Blockchain</label><select id="createBlockchain"><option value="ethereum">Ethereum (EVM)</option><option value="solana">Solana</option><option value="bitcoin">Bitcoin</option><option value="ton">TON</option></select></div><button id="createWalletBtn" class="btn btn-primary">Create Wallet</button></div>
-        <div class="card section"><h3>Import Wallet</h3><div class="form-group"><label>Blockchain</label><select id="importBlockchain"><option value="ethereum">Ethereum (EVM)</option><option value="solana">Solana</option><option value="bitcoin">Bitcoin</option><option value="ton">TON</option></select><label style="margin-top:12px">Wallet Address</label><input id="importAddress" type="text" placeholder="Paste wallet address..."></div><button id="importWalletBtn" class="btn btn-primary">Import Wallet</button></div>
-        <div class="card section"><h3>Your Wallets</h3><div id="walletsList" style="display:grid;gap:12px"><p style="color:var(--text-muted)">Loading wallets...</p></div></div>
-      </div>
-
-      <!-- NFTs -->
-      <div id="nfts-page" class="page">
-        <h2>My NFTs</h2>
-        <div class="card section"><h3>Your Collection</h3><div id="nftList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"><p style="color:var(--text-muted)">Loading NFTs...</p></div></div>
-        <div class="card section"><h3>Transfer NFT</h3><div class="form-group"><label>NFT ID</label><input id="transferNFT" type="text" placeholder="Enter NFT ID..."><label style="margin-top:12px">To Address</label><input id="transferTo" type="text" placeholder="Recipient wallet address..."></div><button class="btn btn-primary" onclick="transfer()">Send NFT</button></div>
-        <div class="card section"><h3>Burn NFT</h3><div class="form-group"><label>NFT ID</label><input id="burnNFT" type="text" placeholder="Enter NFT ID..."></div><button class="btn btn-primary" style="background:var(--error)" onclick="burn()">Burn NFT</button></div>
-      </div>
-
-      <!-- Mint -->
-      <div id="mint-page" class="page">
-        <h2>Create NFT</h2>
-        <div class="card section"><h3>Mint New NFT</h3><div class="form-group"><label>Select Wallet</label><select id="mintWalletSelect"><option value="">Choose wallet...</option></select><label style="margin-top:12px">NFT Name</label><input id="mintName" type="text" placeholder="e.g., My Digital Art #1"><label style="margin-top:12px">Description</label><textarea id="mintDesc" placeholder="Optional description..." style="height:80px"></textarea><label style="margin-top:12px">Image URL</label><input id="mintImage" type="text" placeholder="https://..."></div><button id="mintNftBtn" class="btn btn-primary" style="width:100%">Mint NFT</button></div>
-      </div>
-
-      <!-- Marketplace -->
-      <div id="marketplace-page" class="page">
-        <h2>Marketplace</h2>
-        <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
-          <button data-tab="listings" class="mkt-tab active" onclick="browseListings()">Browse</button>
-          <button data-tab="mylistings" class="mkt-tab" onclick="myListings()">My Listings</button>
+        <!-- Wallets Page -->
+        <div id="wallets-page" class="page">
+          <h2>Wallets</h2>
+          <div class="grid-auto">
+            <div class="card">
+              <h3>Create Wallet</h3>
+              <div class="form-group">
+                <label>Blockchain</label>
+                <select id="createBlockchain">
+                  <option value="ethereum">Ethereum</option>
+                  <option value="solana">Solana</option>
+                  <option value="bitcoin">Bitcoin</option>
+                  <option value="ton">TON</option>
+                </select>
+              </div>
+              <button id="createWalletBtn" class="btn btn-primary btn-block">Create Wallet</button>
+            </div>
+            <div class="card">
+              <h3>Import Wallet</h3>
+              <div class="form-group">
+                <label>Blockchain</label>
+                <select id="importBlockchain">
+                  <option value="ethereum">Ethereum</option>
+                  <option value="solana">Solana</option>
+                  <option value="bitcoin">Bitcoin</option>
+                  <option value="ton">TON</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Address</label>
+                <input id="importAddress" type="text" placeholder="Wallet address...">
+              </div>
+              <button id="importWalletBtn" class="btn btn-primary btn-block">Import</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Your Wallets</h3>
+            <div id="walletsList" style="margin-top: 16px;">
+              <p style="color: var(--text-muted); text-align: center; padding: 32px;"><span class="spinner"></span> Loading wallets...</p>
+            </div>
+          </div>
         </div>
-        <div id="browseSection">
-          <div class="card section"><h3>Browse Marketplace</h3><div id="marketplaceListings" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"><p style="color:var(--text-muted)">Loading listings...</p></div></div>
-          <div class="card section"><h3>Make Offer</h3><div class="form-group"><label>Listing ID</label><input id="offerListing" type="text" placeholder="Enter listing ID..."><label style="margin-top:12px">Offer Price</label><input id="offerPrice" type="number" placeholder="0.00" step="0.01"></div><button class="btn btn-primary" onclick="makeOffer()">Make Offer</button></div>
-        </div>
-        <div id="myListingsSection" style="display:none">
-          <div class="card section"><h3>My Listings</h3><div id="myListings" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"><p style="color:var(--text-muted)">Loading...</p></div></div>
-          <div class="card section"><h3>List NFT for Sale</h3><div class="form-group"><label>NFT ID</label><input id="listNFT" type="text" placeholder="Enter NFT ID..."><label style="margin-top:12px">Price</label><input id="listPrice" type="number" placeholder="0.00" step="0.01"><label style="margin-top:12px">Currency</label><select id="listCurrency"><option value="ETH">ETH</option><option value="SOL">SOL</option><option value="BTC">BTC</option><option value="USDC">USDC</option></select></div><button class="btn btn-primary" onclick="listNFT()">List NFT</button></div>
-          <div class="card section"><h3>Cancel Listing</h3><div class="form-group"><label>Listing ID</label><input id="cancelListing" type="text" placeholder="Select from listings above or enter ID..."></div><button class="btn btn-primary" style="background:var(--error)" onclick="cancelListing()">Cancel</button></div>
-        </div>
-      </div>
 
-      <!-- Profile -->
-      <div id="profile-page" class="page">
-        <h2>Profile</h2>
-        <div class="card"><h3>Your Profile</h3><div style="padding:12px;background:var(--bg-dark);border-radius:8px"><p><strong style="color:var(--primary)">Telegram User:</strong></p><div id="profileInfo" style="padding:12px;background:var(--bg);border-radius:6px;margin-top:8px;font-family:monospace;font-size:12px;color:var(--text-muted)"><span id="profileUsername">Not authenticated</span></div></div></div>
-        <div class="card" style="margin-top:16px"><h3>Platform Info</h3><ul style="color:var(--text-muted);font-size:13px;line-height:1.8"><li>Ethereum, Solana, Bitcoin, TON wallets</li><li>Encrypted custody wallets</li><li>Full NFT marketplace</li><li>Create, transfer, burn NFTs</li><li>Make marketplace offers</li><li>Mobile Telegram web app ready</li></ul></div>
+        <!-- NFTs Page -->
+        <div id="nfts-page" class="page">
+          <h2>My NFTs</h2>
+          <div class="card" style="margin-bottom: 24px;">
+            <h3>Your Collection</h3>
+            <div id="nftList" class="grid-2col" style="margin-top: 16px;">
+              <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;"><span class="spinner"></span> Loading NFTs...</p>
+            </div>
+          </div>
+          <div class="grid-auto">
+            <div class="card">
+              <h3>Transfer NFT</h3>
+              <div class="form-group">
+                <label>NFT ID</label>
+                <input id="transferNFT" type="text" placeholder="NFT ID...">
+              </div>
+              <div class="form-group">
+                <label>To Address</label>
+                <input id="transferTo" type="text" placeholder="Recipient address...">
+              </div>
+              <button class="btn btn-primary btn-block" onclick="transfer()">Transfer</button>
+            </div>
+            <div class="card">
+              <h3>Burn NFT</h3>
+              <div class="form-group">
+                <label>NFT ID</label>
+                <input id="burnNFT" type="text" placeholder="NFT ID...">
+              </div>
+              <button class="btn btn-danger btn-block" onclick="burn()">Burn NFT</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mint Page -->
+        <div id="mint-page" class="page">
+          <h2>Mint New NFT</h2>
+          <div class="card" style="max-width: 600px;">
+            <h3>Create NFT</h3>
+            <div class="form-group">
+              <label>Select Wallet</label>
+              <select id="mintWalletSelect">
+                <option value="">Choose wallet...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>NFT Name</label>
+              <input id="mintName" type="text" placeholder="My Digital Art #1">
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="mintDesc" placeholder="Describe your NFT..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Image URL</label>
+              <input id="mintImage" type="text" placeholder="https://...">
+            </div>
+            <button id="mintNftBtn" class="btn btn-primary btn-block">Mint NFT</button>
+          </div>
+        </div>
+
+        <!-- Marketplace Page -->
+        <div id="marketplace-page" class="page">
+          <h2>Marketplace</h2>
+          <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+            <button class="btn btn-secondary" style="border-color: var(--primary); color: var(--primary);" data-section="browse" onclick="showMarketSection('browse')">Browse Listings</button>
+            <button class="btn btn-secondary" data-section="mylistings" onclick="showMarketSection('mylistings')">My Listings</button>
+          </div>
+
+          <!-- Browse Section -->
+          <div id="browseSection">
+            <div class="card" style="margin-bottom: 24px;">
+              <h3>Marketplace Listings</h3>
+              <div id="marketplaceListings" class="grid-auto" style="margin-top: 16px;">
+                <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;"><span class="spinner"></span> Loading listings...</p>
+              </div>
+            </div>
+            <div class="card" style="max-width: 600px;">
+              <h3>Make Offer</h3>
+              <div class="form-group">
+                <label>Listing ID</label>
+                <input id="offerListing" type="text" placeholder="Listing ID...">
+              </div>
+              <div class="form-group">
+                <label>Offer Price</label>
+                <input id="offerPrice" type="number" placeholder="0.00" step="0.01">
+              </div>
+              <button class="btn btn-primary btn-block" onclick="makeOffer()">Make Offer</button>
+            </div>
+          </div>
+
+          <!-- My Listings Section -->
+          <div id="myListingsSection" style="display: none;">
+            <div class="card" style="margin-bottom: 24px;">
+              <h3>Your Listings</h3>
+              <div id="myListings" class="grid-auto" style="margin-top: 16px;">
+                <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;"><span class="spinner"></span> Loading...</p>
+              </div>
+            </div>
+            <div class="grid-auto">
+              <div class="card">
+                <h3>List NFT</h3>
+                <div class="form-group">
+                  <label>NFT ID</label>
+                  <input id="listNFT" type="text" placeholder="NFT ID...">
+                </div>
+                <div class="form-group">
+                  <label>Price</label>
+                  <input id="listPrice" type="number" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label>Currency</label>
+                  <select id="listCurrency">
+                    <option value="ETH">ETH</option>
+                    <option value="SOL">SOL</option>
+                    <option value="BTC">BTC</option>
+                    <option value="USDC">USDC</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="listNFT()">List NFT</button>
+              </div>
+              <div class="card">
+                <h3>Cancel Listing</h3>
+                <div class="form-group">
+                  <label>Listing ID</label>
+                  <input id="cancelListing" type="text" placeholder="Select or enter ID...">
+                </div>
+                <button class="btn btn-danger btn-block" onclick="cancelListing()">Cancel Listing</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profile-page" class="page">
+          <h2>Profile</h2>
+          <div class="grid-auto">
+            <div class="card">
+              <h3>Account Info</h3>
+              <div style="margin-top: 16px;">
+                <p style="margin-bottom: 12px;"><strong style="color: var(--text-muted); display: block; font-size: 12px; margin-bottom: 4px;">USERNAME</strong> <span id="profileUsername">—</span></p>
+                <p style="margin-bottom: 12px;"><strong style="color: var(--text-muted); display: block; font-size: 12px; margin-bottom: 4px;">USER ID</strong> <span id="profileId" style="font-family: monospace; font-size: 12px;">—</span></p>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Platform</h3>
+              <ul style="list-style: none; margin-top: 16px; font-size: 13px;">
+                <li style="margin-bottom: 8px; color: var(--text-muted);">✓ Multi-chain wallets</li>
+                <li style="margin-bottom: 8px; color: var(--text-muted);">✓ NFT minting & trading</li>
+                <li style="margin-bottom: 8px; color: var(--text-muted);">✓ Marketplace support</li>
+                <li style="color: var(--text-muted);">✓ Telegram integrated</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
 
   <script>
-    // API helper
-    const API = { call: async (method, path, body=null) => { const res = await fetch('/web-app'+path, { method, headers: {'Content-Type':'application/json'},...(body && {body:JSON.stringify(body)}) }); const text = await res.text(); try { return {ok:res.ok, status:res.status, data:JSON.parse(text)}; } catch(e) { return {ok:res.ok, status:res.status, data:text}; } } };
-    const $ = id => document.getElementById(id);
-    const showStatus = (msg, type='info') => { $('statusText').textContent = msg; const el = $('status'); el.className='status-alert '+type; setTimeout(()=>el.className='status-alert', 5000); };
-    let user = null;
+    // API Helper
+    const API = { 
+      call: async (method, path, body = null) => { 
+        const res = await fetch('/web-app' + path, { 
+          method, 
+          headers: { 'Content-Type': 'application/json' }, 
+          ...(body && { body: JSON.stringify(body) }) 
+        }); 
+        const text = await res.text(); 
+        try { 
+          return { ok: res.ok, status: res.status, data: JSON.parse(text) }; 
+        } catch(e) { 
+          return { ok: res.ok, status: res.status, data: text }; 
+        } 
+      } 
+    };
 
-    // Page switching
-    function switchPage(page) {
-      document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.nav-tab').forEach(x => x.classList.remove('active'));
-      $(page+'-page').classList.add('active');
-      document.querySelector('[data-page="'+page+'"]').classList.add('active');
+    const $ = id => document.getElementById(id);
+    let user = null;
+    let initData = null;
+
+    // Get Telegram init_data
+    function getTelegramInitData() {
+      if (window.Telegram?.WebApp?.initData) {
+        return window.Telegram.WebApp.initData;
+      }
+      // Fallback for development/testing
+      return localStorage.getItem('telegram_init_data') || 'test_init_data';
     }
 
-    // Init
+    // Show status message
+    function showStatus(msg, type = 'info') {
+      const bar = $('statusBar');
+      const text = $('statusText');
+      const spinner = $('statusSpinner');
+      
+      text.textContent = msg;
+      bar.className = 'status-bar ' + type;
+      spinner.style.display = type === 'info' ? 'inline-block' : 'none';
+      bar.style.display = 'flex';
+      
+      setTimeout(() => { bar.style.display = 'none'; }, type === 'success' ? 3000 : 2000);
+    }
+
+    // Switch page
+    function switchPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      $(page + '-page').classList.add('active');
+      document.querySelector(`[data-page="${page}"]`).classList.add('active');
+      
+      const titles = {
+        dashboard: 'Dashboard',
+        wallets: 'Wallets',
+        nfts: 'My NFTs',
+        mint: 'Mint NFT',
+        marketplace: 'Marketplace',
+        profile: 'Profile'
+      };
+      document.querySelector('.page-title').textContent = titles[page] || 'Dashboard';
+    }
+
+    // Initialize app
     async function initApp() {
-      const data = $('initData').value.trim();
-      if(!data) { showStatus('Paste init_data', 'error'); return; }
-      showStatus('Authenticating...', '');
-      const r = await API.call('GET', '/init?init_data='+encodeURIComponent(data));
-      if(r.ok && r.data.user) {
+      initData = getTelegramInitData();
+      const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
+      
+      if (r.ok && r.data.user) {
         user = r.data.user;
-        $('userInfo').innerHTML = `<strong>${user.telegram_username}</strong><br><small style="color:var(--text-muted)">#${user.id}</small>`;
-        $('profileUsername').textContent = `@${user.telegram_username} (ID: ${user.id})`;
-        $('authModal').classList.add('hidden');
-        showStatus(`Welcome ${user.telegram_username}`, 'success');
+        const initial = (user.telegram_username || user.first_name || 'User')[0].toUpperCase();
+        $('userAvatar').textContent = initial;
+        $('userNameDisplay').textContent = user.telegram_username || user.first_name || 'User';
+        $('userIdDisplay').textContent = '#' + user.id;
+        $('profileUsername').textContent = user.telegram_username || 'N/A';
+        $('profileId').textContent = user.id;
+        $('authStatus').textContent = 'Authenticated';
+        $('authStatus').style.color = 'var(--success)';
+        showStatus('Welcome ' + (user.telegram_username || 'User'), 'success');
         loadDashboard();
         loadWallets();
         loadNFTs();
-        switchPage('dashboard');
       } else {
-        showStatus('Authentication failed: '+(r.data?.detail||'Unknown error'), 'error');
+        showStatus('Failed to authenticate', 'error');
+      }
+    }
+
+    // Dashboard
+    async function loadDashboard() {
+      if (!user) return;
+      const r = await API.call('GET', '/dashboard-data?user_id=' + user.id);
+      if (r.ok) {
+        const d = r.data;
+        $('portfolioValue').textContent = '$' + (d.portfolio_value || '0');
+        $('totalNfts').textContent = d.total_nfts || '0';
+        $('totalWallets').textContent = d.total_wallets || '0';
+        $('totalListings').textContent = d.total_listings || '0';
       }
     }
 
     // Wallets
     async function createWallet() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const bc = $('createBlockchain').value;
-      const r = await API.call('POST', '/create-wallet', {blockchain:bc, wallet_type:'custodial', init_data:$('initData').value});
-      if(r.ok) {
+      if (!bc) { showStatus('Select blockchain', 'error'); return; }
+      showStatus('Creating wallet...', 'info');
+      const r = await API.call('POST', '/create-wallet', { blockchain: bc, wallet_type: 'custodial', init_data: initData });
+      if (r.ok) {
         showStatus('Wallet created', 'success');
         loadWallets();
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
     async function importWallet() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const bc = $('importBlockchain').value;
       const addr = $('importAddress').value;
-      if(!addr) { showStatus('Enter address', 'error'); return; }
-      const r = await API.call('POST', '/import-wallet', {blockchain:bc, address:addr, init_data:$('initData').value});
-      if(r.ok) {
+      if (!bc || !addr) { showStatus('Fill all fields', 'error'); return; }
+      showStatus('Importing wallet...', 'info');
+      const r = await API.call('POST', '/import-wallet', { blockchain: bc, address: addr, init_data: initData });
+      if (r.ok) {
         showStatus('Wallet imported', 'success');
         loadWallets();
         $('importAddress').value = '';
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
     async function loadWallets() {
-      if(!user) return;
-      const r = await API.call('GET', '/wallets?user_id='+user.id);
-      const ws = r.ok ? r.data.wallets||[] : [];
-      $('walletsList').innerHTML = ws.length > 0 ? ws.map(w=>`<div class="card wallet-card"><div class="wallet-blockchain"><span class="blockchain-badge">${w.blockchain}</span></div><div class="wallet-address">${w.address}</div><button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}');showStatus('Copied!','success')">Copy</button></div>`).join('') : '<p style="color:var(--text-muted)">No wallets. Create one above.</p>';
-      $('mintWalletSelect').innerHTML = '<option value="">Select wallet</option>' + ws.map(w=>`<option value="${w.id}">${w.blockchain}</option>`).join('');
+      if (!user) return;
+      const r = await API.call('GET', '/wallets?user_id=' + user.id);
+      const ws = r.ok ? r.data.wallets || [] : [];
+      $('walletsList').innerHTML = ws.length > 0 
+        ? ws.map(w => `
+            <div class="wallet-item">
+              <div class="blockchain-badge">${w.blockchain}</div>
+              <div class="address-text">${w.address}</div>
+              <button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}'); showStatus('Copied!', 'success')">Copy Address</button>
+            </div>
+          `).join('')
+        : '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets. Create one above.</p>';
+      
+      $('mintWalletSelect').innerHTML = '<option value="">Choose wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain}</option>`).join('');
     }
 
     // NFTs
     async function loadNFTs() {
-      if(!user) return;
-      const r = await API.call('GET', '/nfts?user_id='+user.id);
-      const ns = r.ok ? r.data.nfts||[] : [];
-      $('nftList').innerHTML = ns.length > 0 ? ns.map(n=>`<div class="card nft-card"><strong>${n.name}</strong><small style="color:var(--text-muted)">ID: ${n.id.slice(0,8)}...</small><small style="color:var(--text-muted)">${n.status}</small></div>`).join('') : '<p style="color:var(--text-muted)">No NFTs. Mint one below.</p>';
+      if (!user) return;
+      const r = await API.call('GET', '/nfts?user_id=' + user.id);
+      const ns = r.ok ? r.data.nfts || [] : [];
+      $('nftList').innerHTML = ns.length > 0 
+        ? ns.map(n => `
+            <div class="card" style="padding: 16px;">
+              <strong>${n.name}</strong>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${n.id.slice(0, 12)}...</p>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${n.status}</p>
+            </div>
+          `).join('')
+        : '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1; padding: 80px 20px;">No NFTs yet. Mint one!</p>';
     }
 
     async function mint() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const wallet = $('mintWalletSelect').value;
       const name = $('mintName').value;
-      if(!name) { showStatus('Enter NFT name', 'error'); return; }
-      if(!wallet) { showStatus('Select wallet', 'error'); return; }
-      showStatus('Minting NFT...', '');
-      const r = await API.call('POST', '/mint', {wallet_id:wallet, nft_name:name, nft_description:$('mintDesc').value||'', image_url:$('mintImage').value||'', init_data:$('initData').value});
-      if(r.ok) {
-        showStatus('NFT minted', 'success');
+      if (!name || !wallet) { showStatus('Fill all required fields', 'error'); return; }
+      showStatus('Minting NFT...', 'info');
+      const r = await API.call('POST', '/mint', { 
+        wallet_id: wallet, 
+        nft_name: name, 
+        nft_description: $('mintDesc').value || '', 
+        image_url: $('mintImage').value || '', 
+        init_data: initData 
+      });
+      if (r.ok) {
+        showStatus('NFT minted successfully!', 'success');
         loadNFTs();
         $('mintName').value = '';
         $('mintDesc').value = '';
         $('mintImage').value = '';
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
     async function transfer() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const nid = $('transferNFT').value;
       const addr = $('transferTo').value;
-      if(!nid || !addr) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Transferring...', '');
-      const r = await API.call('POST', '/transfer', {nft_id:nid, to_address:addr, init_data:$('initData').value});
-      if(r.ok) {
+      if (!nid || !addr) { showStatus('Fill all fields', 'error'); return; }
+      showStatus('Transferring NFT...', 'info');
+      const r = await API.call('POST', '/transfer', { nft_id: nid, to_address: addr, init_data: initData });
+      if (r.ok) {
         showStatus('NFT transferred', 'success');
-        loadNFTs();
         $('transferNFT').value = '';
         $('transferTo').value = '';
+        loadNFTs();
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
     async function burn() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const nid = $('burnNFT').value;
-      if(!nid) { showStatus('Enter NFT ID', 'error'); return; }
-      if(!confirm('Really burn this NFT? This cannot be undone.')) return;
-      showStatus('Burning NFT...', '');
-      const r = await API.call('POST', '/burn', {nft_id:nid, init_data:$('initData').value});
-      if(r.ok) {
+      if (!nid) { showStatus('Enter NFT ID', 'error'); return; }
+      if (!confirm('Burn this NFT? This cannot be undone.')) return;
+      showStatus('Burning NFT...', 'info');
+      const r = await API.call('POST', '/burn', { nft_id: nid, init_data: initData });
+      if (r.ok) {
         showStatus('NFT burned', 'success');
-        loadNFTs();
         $('burnNFT').value = '';
+        loadNFTs();
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
     // Marketplace
     async function browseListings() {
-      showStatus('Loading listings...', '');
+      showStatus('Loading listings...', 'info');
       const r = await API.call('GET', '/marketplace/listings?limit=50');
-      const ls = r.ok ? r.data.listings||[] : [];
-      $('marketplaceListings').innerHTML = ls.length>0 ? ls.map(l=>`<div class="card"><strong>${l.nft_name}</strong><br><small style="color:var(--primary)">${l.price} ${l.currency}</small><br><small style="color:var(--text-muted)">${l.blockchain}</small><button class="btn btn-small btn-secondary" style="margin-top:8px;width:100%" onclick="$('offerListing').value='${l.listing_id}'">Make Offer</button></div>`).join('') : '<p style="color:var(--text-muted)">No listings</p>';
+      const ls = r.ok ? r.data.listings || [] : [];
+      $('marketplaceListings').innerHTML = ls.length > 0 
+        ? ls.map(l => `
+            <div class="card" style="padding: 16px;">
+              <strong>${l.nft_name}</strong>
+              <p style="font-size: 12px; color: var(--primary); margin-top: 8px;"><strong>${l.price} ${l.currency}</strong></p>
+              <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain}</p>
+              <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('offerListing').value='${l.listing_id}'; showStatus('Enter your offer price', 'info')">Make Offer</button>
+            </div>
+          `).join('')
+        : '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1; padding: 80px 20px;">No listings available</p>';
       showStatus('Listings loaded', 'success');
     }
 
-    async function listNFT() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
-      const nid = $('listNFT').value;
-      const price = $('listPrice').value;
-      if(!nid || !price) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Listing NFT...', '');
-      const r = await API.call('POST', '/list-nft', {nft_id:nid, price, currency:$('listCurrency').value, init_data:$('initData').value});
-      if(r.ok) {
-        showStatus('NFT listed', 'success');
-        $('listNFT').value = '';
-        $('listPrice').value = '';
+    function showMarketSection(section) {
+      document.querySelectorAll('[data-section]').forEach(b => b.style.borderColor = 'var(--border)');
+      document.querySelector(`[data-section="${section}"]`).style.borderColor = 'var(--primary)';
+      
+      if (section === 'browse') {
+        $('browseSection').style.display = 'block';
+        $('myListingsSection').style.display = 'none';
+        browseListings();
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        $('browseSection').style.display = 'none';
+        $('myListingsSection').style.display = 'block';
+        myListings();
       }
     }
 
     async function myListings() {
-      if(!user) return;
-      $('myListingsSection').style.display = 'block';
-      $('browseSection').style.display = 'none';
-      const r = await API.call('GET', '/marketplace/mylistings?user_id='+user.id);
-      const ls = r.ok ? r.data.listings||[] : [];
-      $('myListings').innerHTML = ls.length>0 ? ls.map(l=>`<div class="card"><strong>${l.nft_name}</strong><br><small style="color:var(--primary)">${l.price} ${l.currency}</small><br><button class="btn btn-small btn-secondary" style="width:100%" onclick="$('cancelListing').value='${l.listing_id}'">Select to Cancel</button></div>`).join('') : '<p style="color:var(--text-muted)">No listings</p>';
+      if (!user) return;
+      const r = await API.call('GET', '/marketplace/mylistings?user_id=' + user.id);
+      const ls = r.ok ? r.data.listings || [] : [];
+      $('myListings').innerHTML = ls.length > 0 
+        ? ls.map(l => `
+            <div class="card" style="padding: 16px;">
+              <strong>${l.nft_name}</strong>
+              <p style="font-size: 12px; color: var(--primary); margin-top: 8px;"><strong>${l.price} ${l.currency}</strong></p>
+              <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('cancelListing').value='${l.listing_id}'">Cancel</button>
+            </div>
+          `).join('')
+        : '<p style="color: var(--text-muted); text-align: center; grid-column: 1/-1; padding: 80px 20px;">No active listings</p>';
+    }
+
+    async function listNFT() {
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
+      const nid = $('listNFT').value;
+      const price = $('listPrice').value;
+      if (!nid || !price) { showStatus('Fill all fields', 'error'); return; }
+      showStatus('Listing NFT...', 'info');
+      const r = await API.call('POST', '/list-nft', { nft_id: nid, price, currency: $('listCurrency').value, init_data: initData });
+      if (r.ok) {
+        showStatus('NFT listed', 'success');
+        $('listNFT').value = '';
+        $('listPrice').value = '';
+        myListings();
+      } else {
+        showStatus(r.data?.detail || 'Error', 'error');
+      }
     }
 
     async function makeOffer() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const lid = $('offerListing').value;
       const price = $('offerPrice').value;
-      if(!lid || !price) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Making offer...', '');
-      const r = await API.call('POST', '/make-offer', {listing_id:lid, offer_price:price, init_data:$('initData').value});
-      if(r.ok) {
+      if (!lid || !price) { showStatus('Fill all fields', 'error'); return; }
+      showStatus('Making offer...', 'info');
+      const r = await API.call('POST', '/make-offer', { listing_id: lid, offer_price: price, init_data: initData });
+      if (r.ok) {
         showStatus('Offer made', 'success');
         $('offerListing').value = '';
         $('offerPrice').value = '';
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
     async function cancelListing() {
-      if(!user) { showStatus('Authenticate first', 'error'); return; }
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
       const lid = $('cancelListing').value;
-      if(!lid) { showStatus('Enter listing ID', 'error'); return; }
-      if(!confirm('Cancel this listing?')) return;
-      showStatus('Cancelling...', '');
-      const r = await API.call('POST', '/cancel-listing', {listing_id:lid, init_data:$('initData').value});
-      if(r.ok) {
+      if (!lid) { showStatus('Enter listing ID', 'error'); return; }
+      if (!confirm('Cancel this listing?')) return;
+      showStatus('Cancelling...', 'info');
+      const r = await API.call('POST', '/cancel-listing', { listing_id: lid, init_data: initData });
+      if (r.ok) {
         showStatus('Listing cancelled', 'success');
-        myListings();
         $('cancelListing').value = '';
+        myListings();
       } else {
-        showStatus((r.data?.detail||'Error'), 'error');
+        showStatus(r.data?.detail || 'Error', 'error');
       }
     }
 
-    async function loadDashboard() {
-      if(!user) return;
-      const r = await API.call('GET', '/dashboard-data?user_id='+user.id);
-      if(r.ok) {
-        const d = r.data;
-        $('portfolioValue').textContent = `$${d.portfolio_value||'0'}`;
-        $('totalNfts').textContent = d.total_nfts||0;
-        $('totalWallets').textContent = d.total_wallets||0;
-      }
-    }
-
-    // Nav
-    document.querySelectorAll('.nav-tab').forEach(btn => btn.addEventListener('click', e => {
-      e.preventDefault();
-      switchPage(btn.dataset.page);
-    }));
-
-    // Init on load
-    window.addEventListener('DOMContentLoaded', () => {
-      $('createWalletBtn').onclick = createWallet;
-      $('importWalletBtn').onclick = importWallet;
-      $('mintNftBtn').onclick = mint;
-      $('initData').addEventListener('keydown', e => { if(e.key==='Enter') initApp(); });
+    // Nav listeners
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', e => switchPage(e.target.dataset.page));
     });
+
+    document.querySelectorAll('[data-page]').forEach(item => {
+      item.addEventListener('click', e => switchPage(e.target.dataset.page));
+    });
+
+    // Mount handlers
+    $('createWalletBtn').onclick = createWallet;
+    $('importWalletBtn').onclick = importWallet;
+    $('mintNftBtn').onclick = mint;
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', initApp);
   </script>
   <script src="/web-app/static/app.js"></script>
 </body>
