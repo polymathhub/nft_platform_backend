@@ -1362,29 +1362,40 @@
       try {
         if (!state.user || !state.user.id) {
           showStatus('User not authenticated', 'error');
+          log('Wallet creation failed: user not authenticated', 'error');
           return;
         }
 
-        const blockchain = document.getElementById('blockchainSelect')?.value;
+        const blockchain = document.getElementById('blockchainSelect')?.value?.toLowerCase();
         const isPrimary = document.getElementById('setPrimary')?.checked === true;
         
         if (!blockchain) throw new Error('Please select a blockchain');
         
+        log(`Creating wallet on ${blockchain} (primary=${isPrimary})`, 'log');
         showStatus('Creating wallet...', 'loading');
+        
         const result = await API.createWallet(blockchain, 'custodial', isPrimary);
         
-        if (!result || !result.success) throw new Error(result?.error || result?.detail || 'Failed to create wallet');
+        log(`Create wallet response: ${JSON.stringify(result)}`, 'log');
+        
+        if (!result || !result.success) {
+          const errorMsg = result?.error || result?.detail || result?.message || 'Failed to create wallet';
+          log(`Wallet creation error: ${errorMsg}`, 'error');
+          throw new Error(errorMsg);
+        }
         
         closeModal();
+        log(`Wallet created successfully: ${result.wallet?.id}`, 'log');
         showStatus('Wallet created successfully! 🎉', 'success');
         
         // Reload wallet data
         await updateWalletsList();
         await updateDashboard();
       } catch (err) {
+        log(`Wallet creation failed: ${err.message}`, 'error');
         showStatus(`Error: ${err.message}`, 'error');
       }
-    },
+    }
 
     async mintNft() {
       if (!state.user || !state.user.id) {

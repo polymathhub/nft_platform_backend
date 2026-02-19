@@ -23,17 +23,19 @@ class WalletTypeEnum(str, Enum):
 
 
 class CreateWalletRequest(BaseModel):
-    blockchain: BlockchainEnum
-    wallet_type: WalletTypeEnum = WalletTypeEnum.CUSTODIAL
+    blockchain: str  # Accept both string and enum, will handle conversion in endpoint
+    wallet_type: str = "custodial"  # Accept string values
     is_primary: bool = False
+    init_data: Optional[str] = None  # For Telegram web app authentication
 
 
 class ImportWalletRequest(BaseModel):
-    blockchain: BlockchainEnum
+    blockchain: str  # Accept string value
     address: str
-    wallet_type: WalletTypeEnum = WalletTypeEnum.SELF_CUSTODY
+    wallet_type: str = "self_custody"  # Accept string values
     public_key: Optional[str] = None
     is_primary: bool = False
+    init_data: Optional[str] = None  # For Telegram web app authentication
 
 
 class WalletResponse(BaseModel):

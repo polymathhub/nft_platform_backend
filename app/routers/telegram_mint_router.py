@@ -2547,7 +2547,15 @@ async def create_wallet_for_webapp(
                 detail="blockchain is required in request body",
             )
         
-        blockchain_value = request.blockchain.value if hasattr(request.blockchain, 'value') else str(request.blockchain)
+        # Normalize blockchain value to lowercase for comparison
+        blockchain_value = str(request.blockchain).lower() if request.blockchain else None
+        valid_blockchains = ['bitcoin', 'ethereum', 'solana', 'ton', 'polygon', 'arbitrum', 'optimism', 'base', 'avalanche']
+        
+        if blockchain_value not in valid_blockchains:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid blockchain: {blockchain_value}. Must be one of: {', '.join(valid_blockchains)}",
+            )
         
         logger.info(f"[CREATE_WALLET] START: user={user_id}, blockchain={blockchain_value}")
         
@@ -2672,7 +2680,14 @@ async def import_wallet_for_webapp(
                 detail="blockchain and address are required in request body",
             )
         
-        blockchain_value = request.blockchain.value if hasattr(request.blockchain, 'value') else str(request.blockchain)
+        # Normalize and validate blockchain value
+        blockchain_value = str(request.blockchain).lower() if request.blockchain else None
+        valid_blockchains = ['bitcoin', 'ethereum', 'solana', 'ton', 'polygon', 'arbitrum', 'optimism', 'base', 'avalanche']
+        if blockchain_value not in valid_blockchains:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid blockchain: {blockchain_value}. Valid options are: {', '.join(valid_blockchains)}"
+            )
         
         # Import wallet using WalletService
         wallet, error = await WalletService.import_wallet(
