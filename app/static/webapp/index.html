@@ -2,210 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="NFT Platform — Create, mint, trade, and manage digital assets across multiple blockchains." />
-  <meta name="theme-color" content="#030712" />
   <title>NFT Platform</title>
-  
   <style>
-    :root {
-      --primary: #7c5cff;
-      --bg-dark: #030712;
-      --bg-card: #0f1724;
-      --text-primary: #e6eef8;
-      --text-muted: #8892b0;
-      --border: rgba(255, 255, 255, 0.08);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       width: 100%;
       height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-card) 100%);
-      color: var(--text-primary);
+      background: linear-gradient(135deg, #030712 0%, #0f1724 100%);
+      color: #e6eef8;
       -webkit-font-smoothing: antialiased;
-      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
     }
-
+    :root {
+      --primary: #7c5cff;
+      --success: #51cf66;
+      --error: #ff6b6b;
+      --border: rgba(255, 255, 255, 0.08);
+      --text-secondary: rgba(230, 238, 248, 0.6);
+    }
     .app {
       display: flex;
       height: 100vh;
       overflow: hidden;
     }
-
-    /* Mobile-first layout */
     .sidebar {
-      display: none;
-      position: fixed;
-      left: 0;
-      top: 0;
       width: 280px;
-      height: 100vh;
       background: linear-gradient(180deg, rgba(11, 18, 32, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%);
+      display: flex;
       flex-direction: column;
       padding: 24px 0;
       overflow-y: auto;
       border-right: 1px solid var(--border);
-      z-index: 100;
     }
-
-    .sidebar.open {
-      display: flex;
-    }
-
     .sidebar-header {
-      padding: 0 24px 32px;
+      padding: 0 24px;
+      margin-bottom: 32px;
       display: flex;
       align-items: center;
       gap: 12px;
     }
-
     .logo {
       font-size: 24px;
-      font-weight: 700;
-      color: var(--primary);
+      font-weight: 900;
+      background: linear-gradient(135deg, #7c5cff, #4c6ef5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-
     .logo-text {
       font-size: 14px;
-      color: var(--text-muted);
+      font-weight: 600;
+      color: var(--text-secondary);
     }
-
     .nav-menu {
       flex: 1;
       display: flex;
       flex-direction: column;
+      gap: 4px;
+      padding: 0 12px;
     }
-
     .nav-item {
-      padding: 12px 24px;
-      color: var(--text-muted);
+      padding: 12px 16px;
+      border-radius: 8px;
       text-decoration: none;
-      border-left: 3px solid transparent;
-      transition: all 0.3s ease;
+      color: var(--text-secondary);
+      transition: all 0.3s;
       cursor: pointer;
+      display: block;
     }
-
-    .nav-item:hover,
-    .nav-item.active {
+    .nav-item:hover, .nav-item.active {
+      background: rgba(124, 92, 255, 0.15);
       color: var(--primary);
-      border-left-color: var(--primary);
-      background: rgba(124, 92, 255, 0.05);
     }
-
     .nav-label {
       font-size: 14px;
       font-weight: 500;
     }
-
     .sidebar-footer {
-      padding: 24px;
+      padding: 16px 24px;
       border-top: 1px solid var(--border);
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 11px;
+      color: var(--text-secondary);
     }
-
     .main-content {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      width: 100%;
     }
-
     .top-bar {
-      padding: 16px;
+      padding: 20px 32px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(3, 7, 18, 0.5);
+      background: rgba(3, 7, 18, 0.4);
     }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-    }
-
-    .menu-toggle {
-      background: none;
-      border: none;
-      color: var(--text-primary);
-      cursor: pointer;
-      font-size: 18px;
-      padding: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
     .page-title {
-      font-size: 18px;
+      font-size: 24px;
       font-weight: 600;
+      color: #e6eef8;
+      margin: 0;
     }
-
-    .top-bar-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
     .user-info {
-      font-size: 12px;
-      text-align: right;
-    }
-
-    .user-info strong {
-      display: block;
-      font-size: 14px;
-      color: var(--primary);
-    }
-
-    .user-info small {
-      color: var(--text-muted);
-    }
-
-    .status-alert {
-      padding: 12px 16px;
-      background: rgba(124, 92, 255, 0.1);
-      color: var(--text-primary);
       display: flex;
       align-items: center;
       gap: 12px;
-      animation: slideDown 0.3s ease;
-      font-size: 14px;
+      font-size: 13px;
     }
-
+    .status-alert {
+      padding: 16px 32px;
+      background: rgba(124, 92, 255, 0.15);
+      color: #e6eef8;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      display: none;
+    }
     .status-alert.error {
-      background: rgba(255, 59, 48, 0.1);
-      color: #ff3b30;
+      background: rgba(255, 107, 107, 0.15);
     }
-
     .status-alert.success {
-      background: rgba(52, 211, 153, 0.1);
-      color: #34d399;
+      background: rgba(81, 207, 102, 0.15);
     }
-
-    @keyframes slideDown {
-      from {
-        transform: translateY(-100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
     .spinner {
       display: inline-block;
       width: 16px;
@@ -215,264 +137,121 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
     .page-container {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
-      -webkit-overflow-scrolling: touch;
+      padding: 32px;
+      background: linear-gradient(135deg, #030712 0%, #0f1724 100%);
     }
-
-    @media (min-width: 768px) {
-      .page-container {
-        padding: 24px;
-      }
-    }
-
-    @media (min-width: 1024px) {
-      .sidebar {
-        display: flex;
-      }
-
-      .menu-toggle {
-        display: none;
-      }
-    }
-
     .page {
       display: none;
     }
-
     .page.active {
       display: block;
     }
-
-    .grid-1col {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-
-    @media (min-width: 768px) {
-      .grid-1col {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (min-width: 1024px) {
-      .grid-1col {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
-    .grid-2col {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-
-    @media (min-width: 768px) {
-      .grid-2col {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
     .card {
-      background: rgba(15, 23, 36, 0.8);
+      background: linear-gradient(135deg, rgba(20, 30, 50, 0.6) 0%, rgba(10, 18, 35, 0.4) 100%);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 16px;
-      transition: all 0.3s ease;
+      padding: 20px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
     }
-
-    .card:hover {
-      border-color: var(--primary);
-      background: rgba(15, 23, 36, 1);
-    }
-
     .card h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .metric-value {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 8px;
-    }
-
-    .card small {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .wallet-card {
-      padding: 12px;
-    }
-
-    .wallet-blockchain {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .blockchain-badge {
-      font-size: 10px;
-      background: var(--primary);
-      color: var(--bg-dark);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .wallet-address {
-      font-family: monospace;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .wallet-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .nft-card {
-      padding: 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .nft-image {
-      width: 100%;
-      aspect-ratio: 1;
-      overflow: hidden;
-      background: var(--bg-card);
-    }
-
-    .nft-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .nft-content {
-      padding: 12px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .nft-name {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: var(--text-primary);
-    }
-
-    .nft-price {
       font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .profile-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .profile-item:last-child {
+      border-bottom: none;
+    }
+    .profile-item span {
+      color: var(--text-secondary);
+    }
+    .stat-box {
+      background: linear-gradient(135deg, rgba(124, 92, 255, 0.15) 0%, rgba(76, 110, 245, 0.1) 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .stat-value {
+      font-size: 28px;
       font-weight: 700;
       color: var(--primary);
-      margin-bottom: 8px;
+      margin-top: 8px;
     }
-
     .btn {
       padding: 10px 16px;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
+      border-radius: 6px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s ease;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      transition: all 0.3s;
     }
-
     .btn-primary {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, #4c6ef5 100%);
       color: white;
     }
-
     .btn-primary:hover {
-      background: #9d7cff;
+      opacity: 0.9;
+      transform: translateY(-2px);
     }
-
     .btn-secondary {
-      background: rgba(124, 92, 255, 0.1);
+      background: rgba(124, 92, 255, 0.2);
       color: var(--primary);
       border: 1px solid var(--primary);
     }
-
     .btn-secondary:hover {
+      background: rgba(124, 92, 255, 0.3);
+    }
+    .blockchain-badge {
+      display: inline-block;
+      padding: 4px 10px;
       background: rgba(124, 92, 255, 0.2);
+      border: 1px solid var(--primary);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
     }
-
-    .btn-block {
-      width: 100%;
+    .blockchain-badge.primary-badge {
+      background: rgba(81, 207, 102, 0.2);
+      border-color: var(--success);
+      color: var(--success);
     }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    input, textarea, select {
+      font-size: 13px;
     }
-
-    .form-group {
-      margin-bottom: 16px;
+    input::placeholder, textarea::placeholder {
+      color: var(--text-secondary);
     }
-
-    .form-group label {
+    label {
       display: block;
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 8px;
-      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
     }
-
-    .input-text,
-    .input-select {
-      width: 100%;
-      padding: 10px 12px;
-      background: rgba(15, 23, 36, 0.8);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    .input-text:focus,
-    .input-select:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: rgba(15, 23, 36, 1);
-    }
-
-    .input-select {
-      cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c5cff' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 8px center;
-      background-size: 20px;
-      padding-right: 32px;
-    }
-
     .modal {
       display: none;
       position: fixed;
@@ -480,127 +259,57 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      align-items: center;
+      z-index: 1000;
       justify-content: center;
-      z-index: 200;
+      align-items: center;
+      backdrop-filter: blur(5px);
     }
-
-    .modal.show {
+    .modal.active {
       display: flex;
     }
-
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+    }
     .modal-content {
-      background: var(--bg-card);
+      position: relative;
+      z-index: 1001;
+      background: linear-gradient(135deg, #030712 0%, #0f1724 100%);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
+      border-radius: 12px;
+      padding: 32px;
       max-width: 500px;
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
     }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-
     .modal-title {
       font-size: 18px;
-      font-weight: 600;
+      font-weight: 700;
+      margin-bottom: 20px;
     }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 20px;
-      padding: 4px;
-    }
-
-    .modal-close:hover {
-      color: var(--text-primary);
-    }
-
     .modal-body {
-      margin-bottom: 24px;
+      font-size: 13px;
     }
-
-    .skeleton {
-      background: linear-gradient(90deg, rgba(124, 92, 255, 0.1) 25%, rgba(124, 92, 255, 0.05) 50%, rgba(124, 92, 255, 0.1) 75%);
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite;
-    }
-
-    .skeleton-metric {
-      display: block;
-      height: 32px;
-      border-radius: 8px;
-    }
-
-    @keyframes loading {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    .profile-section {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .profile-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .profile-item span {
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .profile-item strong {
-      color: var(--text-primary);
-      font-size: 14px;
-    }
-
-    .muted {
-      color: var(--text-muted);
-    }
-
-    .tab-btn {
-      padding: 8px 16px;
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      border-bottom: 2px solid transparent;
-      transition: all 0.3s ease;
-    }
-
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-
-    .tab-btn:hover {
-      color: var(--primary);
+    @media (max-width: 768px) {
+      .app { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+      .nav-menu { flex-direction: row; gap: 0; }
+      .nav-item { flex: 1; border-radius: 0; }
+      .sidebar-footer { display: none; }
+      .page-container { padding: 16px; }
+      .modal-content { width: 95%; padding: 20px; }
     }
   </style>
 </head>
 <body>
   <div id="app" class="app">
-    <!-- Navigation Sidebar -->
+    <!-- Sidebar Navigation -->
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo">NFT</div>
@@ -614,6 +323,9 @@
         <a href="#" class="nav-item" data-page="wallets">
           <span class="nav-label">Wallets</span>
         </a>
+        <a href="#" class="nav-item" data-page="balance">
+          <span class="nav-label">Balance</span>
+        </a>
         <a href="#" class="nav-item" data-page="nfts">
           <span class="nav-label">My NFTs</span>
         </a>
@@ -626,115 +338,168 @@
         <a href="#" class="nav-item" data-page="profile">
           <span class="nav-label">Profile</span>
         </a>
+        <a href="#" class="nav-item" data-page="help">
+          <span class="nav-label">Help</span>
+        </a>
       </div>
 
       <div class="sidebar-footer">
-        <small>v1.0.0</small>
+        <small>NFT Platform v2.0</small>
       </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="main-content">
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
       <!-- Top Bar -->
       <header class="top-bar">
-        <div class="top-bar-left">
-          <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu">Menu</button>
-          <h1 id="pageTitle" class="page-title">Dashboard</h1>
-        </div>
-        <div class="top-bar-right">
-          <div class="user-info" id="userInfo">User</div>
-        </div>
+        <h1 id="pageTitle" class="page-title">Dashboard</h1>
+        <div class="user-info" id="userInfo">Loading...</div>
       </header>
 
       <!-- Status Alert -->
       <div id="status" class="status-alert">
         <span class="spinner" id="statusSpinner"></span>
-        <span id="statusText">Initializing...</span>
+        <span id="statusText">Loading...</span>
       </div>
 
-      <!-- Page Container -->
+      <!-- Pages Container -->
       <div class="page-container">
-        <!-- Dashboard -->
-        <div id="dashboard-page" class="page active">
-          <div class="grid-1col">
-            <div class="card">
-              <h3>Portfolio Value</h3>
-              <div class="metric-value" id="portfolioValue">$0.00</div>
-              <small class="muted">Total asset value</small>
-            </div>
-            <div class="card">
-              <h3>Total NFTs</h3>
-              <div class="metric-value" id="totalNfts">0</div>
-              <small class="muted">Owned items</small>
-            </div>
-            <div class="card">
-              <h3>Wallets</h3>
-              <div class="metric-value" id="totalWallets">0</div>
-              <small class="muted">Connected wallets</small>
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active" data-page="dashboard">
+          <div style="margin-bottom:32px;">
+            <h2 style="font-size:20px;font-weight:600;margin-bottom:16px;">Portfolio Overview</h2>
+            <div id="dashboardStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;"></div>
+          </div>
+
+          <div style="margin-bottom:32px;">
+            <div style="background:linear-gradient(135deg,#7c5cff,#4c6ef5);padding:24px;border-radius:12px;color:white;">
+              <div style="font-size:14px;font-weight:600;margin-bottom:8px;opacity:0.9;">Your USDT Balance</div>
+              <div style="font-size:32px;font-weight:700;margin-bottom:16px;" id="balanceDisplay">$0.00 USDT</div>
+              <div style="display:flex;gap:12px;">
+                <button class="btn" onclick="pageActions.viewBalance()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;flex:1;">View Details</button>
+                <button class="btn" onclick="pageActions.depositQuick()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:white;flex:1;">Deposit</button>
+              </div>
             </div>
           </div>
-          
-          <h2 style="font-size: 16px; font-weight: 600; margin: 24px 0 16px; color: var(--text-primary);">Your NFTs</h2>
-          <div class="grid-2col" id="nftList" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
-            <p class="muted">Loading...</p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
+            <div>
+              <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;">Recent Wallets</h3>
+              <div id="recentWallets"></div>
+              <button class="btn btn-primary" onclick="pageActions.createWallet()" style="width:100%;margin-top:12px;">Create Wallet</button>
+            </div>
+            <div>
+              <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;">Recent NFTs</h3>
+              <div id="recentNfts"></div>
+              <button class="btn btn-primary" onclick="pageActions.mintNft()" style="width:100%;margin-top:12px;">Mint NFT</button>
+            </div>
           </div>
         </div>
 
-        <!-- Wallets -->
-        <div id="wallets-page" class="page">
-          <div style="margin-bottom: 16px; display: flex; gap: 8px;">
-            <button class="btn btn-primary" id="createWalletBtn">Create Wallet</button>
-            <button class="btn btn-secondary" id="importWalletBtn">Import Wallet</button>
+        <!-- Wallets Page -->
+        <div id="wallets-page" class="page" data-page="wallets">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <h2 style="font-size:20px;font-weight:600;">My Wallets</h2>
+            <div style="display:flex;gap:12px;">
+              <button class="btn btn-primary" onclick="pageActions.createWallet()">+ Create Wallet</button>
+              <button class="btn btn-secondary" onclick="pageActions.importWallet()">📥 Import Wallet</button>
+            </div>
           </div>
           <div id="walletsList"></div>
         </div>
 
-        <!-- My NFTs -->
-        <div id="nfts-page" class="page">
-          <button class="btn btn-primary" style="margin-bottom: 16px;" onclick="window.switchPage('mint')">Mint New NFT</button>
-          <div class="grid-2col" id="nftList" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));"></div>
+        <!-- Balance & Payments Page -->
+        <div id="balance-page" class="page" data-page="balance">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+            <h2 style="font-size:20px;font-weight:600;">Balance & Payments</h2>
+            <button class="btn btn-primary" onclick="pageActions.refreshBalance()">Refresh</button>
+          </div>
+          
+          <div style="background:linear-gradient(135deg,#51cf66,#40c057);padding:24px;border-radius:12px;margin-bottom:24px;color:white;">
+            <div style="font-size:14px;font-weight:600;margin-bottom:8px;opacity:0.9;">Total USDT Balance</div>
+            <div style="font-size:36px;font-weight:700;margin-bottom:8px;" id="balanceDisplayLarge">$0.00 USDT</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:12px;margin-top:16px;">
+              <div style="background:rgba(0,0,0,0.1);padding:12px;border-radius:8px;">
+                <div style="opacity:0.8;margin-bottom:4px;">Confirmed</div>
+                <div id="confirmedBalance" style="font-size:16px;font-weight:600;">$0.00</div>
+              </div>
+              <div style="background:rgba(0,0,0,0.1);padding:12px;border-radius:8px;">
+                <div style="opacity:0.8;margin-bottom:4px;">Pending</div>
+                <div id="pendingBalance" style="font-size:16px;font-weight:600;">$0.00</div>
+              </div>
+              <div style="background:rgba(0,0,0,0.1);padding:12px;border-radius:8px;">
+                <div style="opacity:0.8;margin-bottom:4px;">Available</div>
+                <div id="availableBalance" style="font-size:16px;font-weight:600;">$0.00</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+            <button class="btn btn-primary" onclick="pageActions.quickDeposit()" style="padding:16px;font-size:14px;">
+              Deposit
+            </button>
+            <button class="btn btn-primary" onclick="pageActions.quickWithdraw()" style="padding:16px;font-size:14px;">
+              💸 Withdraw
+            </button>
+          </div>
+
+          <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;">Wallet Balances</h3>
+          <div id="walletBalancesList"></div>
+
+          <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px;">Recent Transactions</h3>
+          <div id="paymentHistoryList"></div>
         </div>
 
-        <!-- Create NFT (Mint) -->
-        <div id="mint-page" class="page">
-          <div class="card" style="max-width: 500px;">
-            <h2 style="margin-bottom: 16px; font-size: 18px;">Mint New NFT</h2>
-            <div class="form-group">
-              <label>NFT Name</label>
-              <input type="text" id="mintName" class="input-text" placeholder="Enter NFT name">
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="mintDesc" class="input-text" placeholder="Describe your NFT" style="min-height: 100px; font-family: inherit;"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Wallet</label>
-              <select id="mintWalletSelect" class="input-select">
-                <option value="">Select a wallet</option>
-              </select>
-            </div>
-            <button id="mintNftBtn" class="btn btn-primary btn-block">Mint NFT</button>
+        <!-- NFTs Page -->
+        <div id="nfts-page" class="page" data-page="nfts">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+            <h2 style="font-size:20px;font-weight:600;">My NFTs</h2>
+            <button class="btn btn-primary" onclick="pageActions.mintNft()">Create NFT</button>
+          </div>
+          <div id="nftList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;"></div>
+        </div>
+
+        <!-- Mint Page -->
+        <div id="mint-page" class="page" data-page="mint">
+          <div style="max-width:500px;">
+            <h2 style="font-size:20px;font-weight:600;margin-bottom:24px;">Create NFT</h2>
+            <button class="btn btn-primary" onclick="pageActions.mintNft()" style="width:100%;padding:12px;">Mint NFT</button>
           </div>
         </div>
 
-        <!-- Marketplace -->
-        <div id="marketplace-page" class="page">
-          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-            <button class="tab-btn active" data-tab="listings">Marketplace</button>
-            <button class="tab-btn" data-tab="mylistings">My Listings</button>
-          </div>
-          <div class="grid-2col" id="marketplaceListings" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));"></div>
-          <div class="grid-2col" id="myListings" style="display: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));"></div>
+        <!-- Marketplace Page -->
+        <div id="marketplace-page" class="page" data-page="marketplace">
+          <h2 style="font-size:20px;font-weight:600;margin-bottom:24px;">NFT Marketplace</h2>
+          <div id="marketplaceList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;"></div>
         </div>
 
-        <!-- Profile -->
-        <div id="profile-page" class="page">
-          <div class="card" style="max-width: 500px;">
-            <h2 style="margin-bottom: 16px; font-size: 18px;">Account Settings</h2>
-            <div class="profile-section" id="profileInfo">
-              <div class="profile-item"><span>Username:</span><strong id="profileUsername">—</strong></div>
-              <div class="profile-item"><span>User ID:</span><strong id="profileId">—</strong></div>
-              <div class="profile-item"><span>Status:</span><strong>Active</strong></div>
+        <!-- Profile Page -->
+        <div id="profile-page" class="page" data-page="profile">
+          <h2 style="font-size:20px;font-weight:600;margin-bottom:24px;">My Profile</h2>
+          <div id="profilePage"></div>
+        </div>
+
+        <!-- Help Page -->
+        <div id="help-page" class="page" data-page="help">
+          <h2 style="font-size:20px;font-weight:600;margin-bottom:24px;">Help & Support</h2>
+          <div class="card">
+            <h3>Getting Started</h3>
+            <ul style="margin-left:20px;line-height:1.8;">
+              <li><strong>Create Wallet:</strong> Go to Wallets and create a new wallet.</li>
+              <li><strong>Mint NFT:</strong> Use Create NFT to mint new assets.</li>
+              <li><strong>List for Sale:</strong> Sell NFTs on the marketplace.</li>
+              <li><strong>Make Offers:</strong> Browse and buy NFTs.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Supported Blockchains</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:12px;">
+              <span class="blockchain-badge">Bitcoin</span>
+              <span class="blockchain-badge">Ethereum</span>
+              <span class="blockchain-badge">Solana</span>
+              <span class="blockchain-badge">TON</span>
+              <span class="blockchain-badge">Polygon</span>
+              <span class="blockchain-badge">Avalanche</span>
             </div>
           </div>
         </div>
@@ -744,18 +509,14 @@
 
   <!-- Modal -->
   <div id="modal" class="modal">
+    <div class="modal-overlay" onclick="closeModal()"></div>
     <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="modalTitle" class="modal-title">Modal</h2>
-        <button id="closeModal" class="modal-close" aria-label="Close modal">×</button>
-      </div>
+      <div id="modalTitle" class="modal-title">Modal</div>
       <div id="modalBody" class="modal-body"></div>
     </div>
   </div>
 
-  <!-- Sidebar Overlay for Mobile -->
-  <div id="modalOverlay" class="modal"></div>
-
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
