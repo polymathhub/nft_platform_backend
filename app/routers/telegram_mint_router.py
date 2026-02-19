@@ -8,7 +8,7 @@ import json
 import anyio
 from typing import Optional
 from urllib.parse import parse_qs
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -2502,6 +2502,7 @@ async def create_wallet_for_webapp(
     request: CreateWalletRequest,
     db: AsyncSession = Depends(get_db_session),
     auth: dict = Depends(get_telegram_user_from_request),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
 ) -> dict:
     """
     Create a new wallet for the current user via web app.
@@ -2559,13 +2560,49 @@ async def create_wallet_for_webapp(
         
         logger.info(f"[CREATE_WALLET] START: user={user_id}, blockchain={blockchain_value}")
         
+        # Generate wallet directly using appropriate service (no Telegram messaging needed for web-app)
+        wallet = None
+        error = None
+        
+        from app.models.wallet import BlockchainType
+        
+        try:
+            blockchain_type = BlockchainType(blockchain_value)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid blockchain: {blockchain_value}",
+            )
+        
+        # Use proper wallet generation based on blockchain
+        if blockchain_type == BlockchainType.ETHEREUM:
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.POLYGON:
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.ARBITRUM:
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.OPTIMISM:
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.BASE:
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.AVALANCHE:
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.TON:
+            wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.SOLANA:
+            wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, make_primary=True)
+        elif blockchain_type == BlockchainType.BITCOIN:
+            wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, make_primary=True)
+        else:
+            error = f"Unsupported blockchain: {blockchain_value}"
+        
         # Use bot_service to handle wallet creation (proper generation functions)
-        wallet, error = await bot_service.handle_wallet_create(
-            db=db,
-            chat_id=chat_id,
-            user=user,
-            blockchain=blockchain_value,
-        )
+        # wallet, error = await bot_service.handle_wallet_create(
+        #     db=db,
+        #     chat_id=chat_id,
+        #     user=user,
+        #     blockchain=blockchain_value,
+        # )
         
         if error or not wallet:
             logger.error(f"[CREATE_WALLET] FAILED: {error}")
