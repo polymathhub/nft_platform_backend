@@ -52,7 +52,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ==================== Global Exception Handlers ====================
+# ==================== ROOT & HEALTH ENDPOINTS (MUST BE FIRST) ====================
+
+@app.get("/")
+async def root_get():
+    """Health check - root endpoint"""
+    return {"message": "Server is running", "status": "ok"}
+
+
+@app.post("/")
+async def root_post(data: dict = None):
+    """Root POST endpoint"""
+    return {"message": "POST received", "data": data}
+
+
+@app.get("/health")
+async def health_check():
+    """Application health check"""
+    return {
+        "status": "ok",
+        "telegram_bot_token": bool(settings.telegram_bot_token),
+        "database_url": "configured" if settings.database_url else "not configured",
+    }
+
+# ==================== GLOBAL EXCEPTION HANDLERS ====================
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
@@ -123,26 +146,15 @@ app.add_middleware(
 )
 
 
-"""Root endpoints"""
+# ==================== TELEGRAM WEBHOOK COMPATIBILITY ROUTES ====================
+# Mount telegram router at both /api/v1/telegram and /telegram for compatibility
 
-@app.get("/")
-async def root_get():
-    return {"message": "Server is running", "status": "ok"}
+app.include_router(
+    telegram_mint_router,
+    prefix="/telegram",
+    tags=["telegram"]
+)
 
-
-@app.post("/")
-async def root_post(data: dict):
-    return {"message": "POST received", "data": data}
-
-""" Health check endpoint"""
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "telegram_bot_token": bool(settings.telegram_bot_token),
-        "database_url": "configured" if settings.database_url else "not configured",
-    }
 
 """Include routers"""
 
