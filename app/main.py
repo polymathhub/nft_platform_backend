@@ -91,13 +91,13 @@ Security & request middleware
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 
-"""Serve Telegram Web App static files at /web-app"""
+"""Serve Telegram Web App static files at /web-app
+Note: static mount moved after router registration so API endpoints under
+`/web-app/*` (POST create/import/etc.) are matched first. If the static
+directory is missing we log a warning and API paths remain available.
+"""
 import os
 webapp_path = os.path.join(os.path.dirname(__file__), "static", "webapp")
-if os.path.isdir(webapp_path):
-    app.mount("/web-app", StaticFiles(directory=webapp_path, html=True), name="webapp")
-else:
-    logger.warning(f"Web app static directory not found at {webapp_path} - /web-app endpoint will return 404")
 
 """CORS"""
 """ Build allowed origins - include same-origin for web app"""
@@ -152,6 +152,30 @@ app.include_router(
     tags=["telegram"]
 )
 
+# Also expose the web-app endpoints at the root so the frontend can call
+# `/web-app/*` (the web app expects API paths under the same prefix).
+# These routes are duplicated intentionally as compatibility endpoints.
+app.include_router(
+    telegram_mint_router,
+    prefix="",
+    tags=["telegram-root-compat"]
+)
+
+# Additional compatibility prefixes Telegram deployments sometimes use
+# (e.g., webhook configured to https://host/telegram/webhook)
+app.include_router(
+    telegram_mint_router,
+    prefix="/telegram",
+    tags=["telegram-compat"]
+)
+
+# Also support /api/telegram as some setups omit the v1 segment
+app.include_router(
+    telegram_mint_router,
+    prefix="/api/telegram",
+    tags=["telegram-compat-2"]
+)
+
 """routers"""
 
 app.include_router(auth_router, prefix="/api/v1")
@@ -168,6 +192,13 @@ app.include_router(image_router, prefix="/api/v1")
 # DO NOT add another prefix to avoid double-prefixing
 app.include_router(payment_router)
  
+# Mount web app static files after routers so API endpoints under /web-app/*
+# (POST create/import/etc.) are matched first. StaticFiles only serves GET/HEAD.
+if os.path.isdir(webapp_path):
+    app.mount("/web-app", StaticFiles(directory=webapp_path, html=True), name="webapp")
+else:
+    logger.warning(f"Web app static directory not found at {webapp_path} - /web-app static will not be available")
+
 
 
 
