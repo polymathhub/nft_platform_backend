@@ -46,94 +46,39 @@ async def get_current_user_id(authorization: str = None) -> UUID:
         )
 
 
-@router.post("/create", response_model=WalletResponse)
+@router.post("/create", response_model=dict)
 async def create_wallet(
-    user_id: str,
-    blockchain: str,
+    request: CreateWalletRequest,
+    user_id: str | None = None,
     db: AsyncSession = Depends(get_db_session),
+    authorization: str | None = None,
 ) -> dict:
-    """Create a new wallet for a user."""
+    """
+    Create a new wallet for a user.
+    
+    Either provide user_id as query param or use Authorization header.
+    Request body contains blockchain, wallet_type, and init_data (for Telegram).
+    """
     try:
         from app.models import User
         from app.models.wallet import WalletType
         from app.utils.wallet_address_generator import WalletAddressGenerator
         from sqlalchemy import select
         
-        # Verify user exists
-        result = await db.execute(select(User).where(User.id == UUID(user_id)))
-        user = result.scalar_one_or_none()
-        
-        if not user:
+        # Get user ID from either query param or fallback
+        if not user_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id query parameter is required",
             )
         
-        # Convert blockchain string to BlockchainType enum
         try:
-            blockchain_type = BlockchainType[blockchain.upper()]
-        except KeyError:
+            uid = UUID(user_id)
+        except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid blockchain: {blockchain}",
+                detail="Invalid user_id format",
             )
-        
-        # Generate address for the blockchain
-        address = WalletAddressGenerator.generate_address(blockchain_type)
-        
-        # Create wallet
-        wallet, error = await WalletService.create_wallet(
-            db=db,
-            user_id=UUID(user_id),
-            blockchain=blockchain_type,
-            wallet_type=WalletType.CUSTODIAL,
-            address=address,
-            is_primary=False,
-        )
-        
-        if error:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to create wallet: {error}",
-            )
-        
-        return {
-            "success": True,
-            "wallet": {
-                "id": str(wallet.id),
-                "blockchain": wallet.blockchain.value,
-                "address": wallet.address,
-                "wallet_type": wallet.wallet_type.value,
-                "is_primary": wallet.is_primary,
-            },
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Create wallet error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create wallet: {str(e)}",
-        )
-
-
-@router.post("/import", response_model=WalletResponse)
-async def import_wallet(
-    user_id: str,
-    request: ImportWalletRequest,
-    db: AsyncSession = Depends(get_db_session),
-) -> WalletResponse:
-    """
-    Import an existing wallet for a user.
-    
-    Args:
-        user_id: User UUID as string
-        request: Wallet import request with blockchain, address, and optional private key
-    """
-    try:
-        from app.models import User
-        
-        uid = UUID(user_id)
         
         # Verify user exists
         result = await db.execute(select(User).where(User.id == uid))
@@ -145,14 +90,132 @@ async def import_wallet(
                 detail="User not found",
             )
         
+        # Convert blockchain string to BlockchainType enum
+        try:
+            blockchain_type = BlockchainType[request.blockchain.upper()]
+        except KeyError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid blockchain: {request.blockchain}. Valid values: {[b.name for b in BlockchainType]}",
+            )
+        
+        # Convert wallet_type string to WalletType enum
+        try:
+            wallet_type = WalletType[request.wallet_type.upper()]
+        except KeyError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid wallet_type: {request.wallet_type}. Valid values: {[w.name for w in WalletType]}",
+            )
+        
+        # Generate address for the blockchain
+        address = WalletAddressGenerator.generate_address(blockchain_type)
+        
+        # Create wallet
+        wallet, error = await WalletService.create_wallet(
+            db=db,
+            user_id=uid,
+            blockchain=blockchain_type,
+            wallet_type=wallet_type,
+            address=address,
+            is_primary=request.is_primary,
+        )
+        
+        if error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to create wallet: {error}",
+            )
+        
+        logger.info(f"Wallet created: {wallet.id} for user {uid} on {blockchain_type.value}")
+        
+        return {
+            "success": True,
+            "wallet": {
+                "id": str(wallet.id),
+                "blockchain": wallet.blockchain.value,
+                "address": wallet.address,
+                "wallet_type": wallet.wallet_type.value,
+                "is_primary": wallet.is_primary,
+                "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create wallet: {str(e)}",
+        )
+
+
+@router.post("/import", response_model=dict)
+async def import_wallet(
+    request: ImportWalletRequest,
+    user_id: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+    authorization: str | None = None,
+) -> dict:
+    """
+    Import an existing wallet for a user.
+    
+    Args:
+        request: Wallet import request with blockchain, address, and optional properties
+        user_id: User UUID as query parameter
+    """
+    try:
+        from app.models import User
+        from app.models.wallet import WalletType
+        
+        # Get user ID
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_id query parameter is required",
+            )
+        
+        try:
+            uid = UUID(user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid user_id format",
+            )
+        
+        # Verify user exists
+        result = await db.execute(select(User).where(User.id == uid))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        # Convert blockchain string to BlockchainType enum
+        try:
+            blockchain_type = BlockchainType[request.blockchain.upper()]
+        except KeyError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid blockchain: {request.blockchain}",
+            )
+        
+        # Convert wallet_type string to WalletType enum
+        try:
+            wallet_type = WalletType[request.wallet_type.upper()]
+        except KeyError:
+            wallet_type = WalletType.SELF_CUSTODY  # Default for imports
+        
         # Import wallet
         wallet, error = await WalletService.import_wallet(
             db=db,
             user_id=uid,
-            blockchain=request.blockchain,
+            blockchain=blockchain_type,
             address=request.address,
-            private_key=request.private_key,
-            name=request.name or f"Imported {request.blockchain.capitalize()} Wallet"
+            is_primary=request.is_primary,
+            public_key=request.public_key,
         )
         
         if error:
@@ -161,14 +224,19 @@ async def import_wallet(
                 detail=f"Failed to import wallet: {error}",
             )
         
-        return WalletResponse.model_validate({
-            "id": wallet.id,
-            "blockchain": wallet.blockchain.value,
-            "address": wallet.address,
-            "is_primary": wallet.is_primary,
-            "is_active": wallet.is_active,
-            "created_at": wallet.created_at,
-        })
+        logger.info(f"Wallet imported: {wallet.id} for user {uid} on {blockchain_type.value}")
+        
+        return {
+            "success": True,
+            "wallet": {
+                "id": str(wallet.id),
+                "blockchain": wallet.blockchain.value,
+                "address": wallet.address,
+                "wallet_type": wallet.wallet_type.value,
+                "is_primary": wallet.is_primary,
+                "created_at": wallet.created_at.isoformat() if wallet.created_at else None,
+            },
+        }
     except HTTPException:
         raise
     except Exception as e:
