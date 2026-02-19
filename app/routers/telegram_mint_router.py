@@ -1529,6 +1529,35 @@ async def delete_webhook() -> dict:
     }
 
 
+@router.get("/webhook/info")
+async def webhook_info() -> dict:
+    """
+    Get current Telegram webhook status and configuration.
+    Useful for debugging webhook issues.
+    URL: GET /api/v1/telegram/webhook/info
+    """
+    try:
+        from app.config import get_settings
+        settings = get_settings()
+        
+        # Get webhook info from Telegram API
+        info = await bot_service.get_webhook_info()
+        
+        return {
+            "status": "ok",
+            "webhook_url": settings.telegram_webhook_url,
+            "webhook_secret": "***configured***" if settings.telegram_webhook_secret else "not configured",
+            "auto_setup_enabled": settings.telegram_auto_setup_webhook,
+            "telegram_webhook_info": info or {"status": "not configured"},
+        }
+    except Exception as e:
+        logger.error(f"Error getting webhook info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting webhook info: {str(e)}"
+        )
+
+
 @router.post("/send-notification")
 async def send_telegram_notification(
     user_id: str,

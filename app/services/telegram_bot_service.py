@@ -385,6 +385,27 @@ class TelegramBotService:
         except Exception as e:
             logger.error(f"Error deleting webhook: {e}")
             return False
+
+    async def get_webhook_info(self) -> dict:
+        """Get current Telegram webhook info."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.api_url}/getWebhookInfo",
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return data.get("result", {})
+                    else:
+                        error_text = await response.text()
+                        logger.warning(
+                            f"Failed to get webhook info: {response.status} - {error_text}"
+                        )
+                        return {}
+        except Exception as e:
+            logger.warning(f"Error getting webhook info: {e}")
+            return {}
     # ==================== Marketplace Commands ====================
 
     async def send_user_nfts(
