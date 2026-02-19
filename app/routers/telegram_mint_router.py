@@ -2004,8 +2004,13 @@ async def web_app_mint_nft(
                 "name": nft.name,
                 "global_nft_id": nft.global_nft_id,
                 "blockchain": nft.blockchain,
-                "status": nft.status,
+                "description": nft.description,
+                "status": nft.status.value if hasattr(nft.status, 'value') else str(nft.status),
+                "image_url": nft.image_url,
+                "owner_address": nft.owner_address,
+                "is_locked": nft.is_locked,
                 "created_at": nft.created_at.isoformat(),
+                "minted_at": nft.minted_at.isoformat() if nft.minted_at else None,
             },
         }
     except (anyio.EndOfStream, anyio.WouldBlock):
@@ -2387,51 +2392,65 @@ async def web_app_cancel_listing(
 @router.get("/web-app/marketplace/listings")
 async def get_marketplace_listings(
     limit: int = 50,
+    skip: int = 0,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Get active marketplace listings with seller information."""
-    from app.models.marketplace import ListingStatus
-    from sqlalchemy.orm import selectinload
+    try:
+        from app.models.marketplace import ListingStatus
+        from sqlalchemy.orm import selectinload
 
-    # Query with eager loading - selectinload both NFT and seller relationships
-    result = await db.execute(
-        select(Listing)
-        .options(
-            selectinload(Listing.nft),
-            selectinload(Listing.seller)
+        # Query with eager loading - selectinload both NFT and seller relationships
+        result = await db.execute(
+            select(Listing)
+            .options(
+                selectinload(Listing.nft),
+                selectinload(Listing.seller)
+            )
+            .where(Listing.status == ListingStatus.ACTIVE)
+            .order_by(Listing.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
-        .where(Listing.status == ListingStatus.ACTIVE)
-        .order_by(Listing.created_at.desc())
-        .limit(limit)
-    )
-    listings_db = result.scalars().unique().all()
+        listings_db = result.scalars().unique().all()
 
-    if not listings_db:
-        return {"success": True, "listings": []}
+        if not listings_db:
+            return {"success": True, "listings": []}
 
-    listings = []
-    for listing in listings_db:
-        nft = listing.nft
-        seller = listing.seller
-        
-        listings.append({
-            "id": str(listing.id),
-            "nft_id": str(listing.nft_id),
-            "nft_name": nft.name if nft else "Unknown NFT",
-            "price": float(listing.price),
-            "currency": listing.currency,
-            "blockchain": listing.blockchain,
-            "status": listing.status.value if hasattr(listing.status, 'value') else listing.status,
-            "image_url": nft.image_url if nft else None,
-            "active": listing.status == ListingStatus.ACTIVE,
-            "seller_id": str(listing.seller_id) if listing.seller_id else None,
-            "seller_name": seller.telegram_username or seller.full_name or "Anonymous" if seller else "Anonymous",
-        })
+        listings = []
+        for listing in listings_db:
+            try:
+                nft = listing.nft
+                seller = listing.seller
+                
+                listings.append({
+                    "id": str(listing.id),
+                    "nft_id": str(listing.nft_id),
+                    "nft_name": nft.name if nft else "Unknown NFT",
+                    "price": float(listing.price),
+                    "currency": listing.currency,
+                    "blockchain": listing.blockchain,
+                    "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
+                    "image_url": nft.image_url if nft else None,
+                    "active": listing.status == ListingStatus.ACTIVE,
+                    "seller_id": str(listing.seller_id) if listing.seller_id else None,
+                    "seller_name": seller.telegram_username or seller.full_name or "Anonymous" if seller else "Anonymous",
+                })
+            except Exception as e:
+                logger.error(f"Error processing listing {listing.id}: {e}")
+                continue
 
-    return {
-        "success": True,
-        "listings": listings,
-    }
+        return {
+            "success": True,
+            "listings": listings,
+        }
+    except Exception as e:
+        logger.error(f"Marketplace listings error: {e}", exc_info=True)
+        return {
+            "success": False,
+            "listings": [],
+            "error": str(e),
+        }
 
 
 @router.get("/web-app/marketplace/mylistings")
@@ -2488,41 +2507,75 @@ async def create_wallet_for_webapp(
     Create a new wallet for the current user via web app.
     Requires Telegram WebApp init_data for authentication.
     Uses bot_service.handle_wallet_create for proper wallet generation.
+    
+    Request body:
+    {
+        "blockchain": "ethereum",
+        "wallet_type": "custodial",
+        "is_primary": false
+    }
     """
     import anyio
     from app.services.activity_service import ActivityService
     from app.models.activity import ActivityType
     
     try:
-        user_id = auth["user_id"]
-        user = auth["user_obj"]
+        # Validate auth dictionary
+        if not auth or not isinstance(auth, dict):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+            )
+        
+        user_id = auth.get("user_id")
+        user = auth.get("user_obj")
+        
+        if not user_id or not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication data",
+            )
+        
         telegram_username = user.telegram_username
         telegram_id = user.telegram_id
         chat_id = telegram_id  # Use telegram_id as chat_id for bot_service
         
-        logger.info(f"[CREATE_WALLET] START: user={user_id}, blockchain={request.blockchain.value}")
+        # Validate request
+        if not request or not request.blockchain:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="blockchain is required in request body",
+            )
+        
+        blockchain_value = request.blockchain.value if hasattr(request.blockchain, 'value') else str(request.blockchain)
+        
+        logger.info(f"[CREATE_WALLET] START: user={user_id}, blockchain={blockchain_value}")
         
         # Use bot_service to handle wallet creation (proper generation functions)
         wallet, error = await bot_service.handle_wallet_create(
             db=db,
             chat_id=chat_id,
             user=user,
-            blockchain=request.blockchain.value,
+            blockchain=blockchain_value,
         )
         
         if error or not wallet:
             logger.error(f"[CREATE_WALLET] FAILED: {error}")
             # Log the failure
-            await ActivityService.log_error(
-                db=db,
-                user_id=user.id,
-                activity_type=ActivityType.WALLET_CREATED,
-                error_message=error or "Unknown error",
-                resource_type="wallet",
-                telegram_id=telegram_id,
-                telegram_username=telegram_username,
-            )
-            await db.commit()
+            try:
+                await ActivityService.log_error(
+                    db=db,
+                    user_id=user.id,
+                    activity_type=ActivityType.WALLET_CREATED,
+                    error_message=error or "Unknown error",
+                    resource_type="wallet",
+                    telegram_id=telegram_id,
+                    telegram_username=telegram_username,
+                )
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to log error: {e}")
+            
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to create wallet: {error or 'Unknown error'}",
@@ -2531,16 +2584,19 @@ async def create_wallet_for_webapp(
         logger.info(f"[CREATE_WALLET] SUCCESS: wallet_id={wallet.id}")
         
         # Log successful wallet creation
-        await ActivityService.log_wallet_created(
-            db=db,
-            user_id=user.id,
-            wallet_id=wallet.id,
-            blockchain=request.blockchain.value,
-            address=wallet.address,
-            telegram_id=telegram_id,
-            telegram_username=telegram_username,
-        )
-        await db.commit()
+        try:
+            await ActivityService.log_wallet_created(
+                db=db,
+                user_id=user.id,
+                wallet_id=wallet.id,
+                blockchain=blockchain_value,
+                address=wallet.address,
+                telegram_id=telegram_id,
+                telegram_username=telegram_username,
+            )
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log activity: {e}")
         
         return {
             "success": True,
@@ -2576,58 +2632,96 @@ async def import_wallet_for_webapp(
     Import an existing wallet for the current user.
     Requires Telegram WebApp init_data for authentication.
     Logs activity to audit trail.
+    
+    Request body:
+    {
+        "blockchain": "ethereum",
+        "address": "0x123...",
+        "public_key": "optional",
+        "is_primary": false
+    }
     """
     import anyio
     from app.services.activity_service import ActivityService
     from app.models.activity import ActivityType
     
     try:
-        user_id = auth["user_id"]
-        user = auth["user_obj"]
+        # Validate auth
+        if not auth or not isinstance(auth, dict):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+            )
+        
+        user_id = auth.get("user_id")
+        user = auth.get("user_obj")
+        
+        if not user_id or not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication data",
+            )
+        
         telegram_username = user.telegram_username
         telegram_id = user.telegram_id
+        
+        # Validate request
+        if not request or not request.blockchain or not request.address:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="blockchain and address are required in request body",
+            )
+        
+        blockchain_value = request.blockchain.value if hasattr(request.blockchain, 'value') else str(request.blockchain)
         
         # Import wallet using WalletService
         wallet, error = await WalletService.import_wallet(
             db=db,
             user_id=user.id,
-            blockchain=request.blockchain.value,
+            blockchain=blockchain_value,
             address=request.address,
             public_key=request.public_key,
-            name=f"Imported {request.blockchain.value.capitalize()} Wallet",
-            is_primary=request.is_primary,
+            name=f"Imported {blockchain_value.capitalize()} Wallet",
+            is_primary=request.is_primary if hasattr(request, 'is_primary') else False,
         )
         
         if error:
             logger.error(f"Wallet import error: {error}")
             # Log the failure
-            await ActivityService.log_error(
-                db=db,
-                user_id=user.id,
-                activity_type=ActivityType.WALLET_IMPORTED,
-                error_message=error,
-                resource_type="wallet",
-                metadata={"blockchain": request.blockchain.value, "address": request.address},
-                telegram_id=telegram_id,
-                telegram_username=telegram_username,
-            )
-            await db.commit()
+            try:
+                await ActivityService.log_error(
+                    db=db,
+                    user_id=user.id,
+                    activity_type=ActivityType.WALLET_IMPORTED,
+                    error_message=error,
+                    resource_type="wallet",
+                    metadata={"blockchain": blockchain_value, "address": request.address},
+                    telegram_id=telegram_id,
+                    telegram_username=telegram_username,
+                )
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to log error: {e}")
+            
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to import wallet: {error}",
             )
         
         # Log successful wallet import
-        await ActivityService.log_wallet_imported(
-            db=db,
-            user_id=user.id,
-            wallet_id=wallet.id,
-            blockchain=request.blockchain.value,
-            address=request.address,
-            telegram_id=telegram_id,
-            telegram_username=telegram_username,
-        )
-        await db.commit()
+        try:
+            await ActivityService.log_wallet_imported(
+                db=db,
+                user_id=user.id,
+                wallet_id=wallet.id,
+                blockchain=blockchain_value,
+                address=request.address,
+                telegram_id=telegram_id,
+                telegram_username=telegram_username,
+            )
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log activity: {e}")
         
         logger.info(f"Wallet imported for user {telegram_username}: {wallet.id}")
         
@@ -2635,7 +2729,7 @@ async def import_wallet_for_webapp(
             "success": True,
             "wallet": {
                 "id": str(wallet.id),
-                "name": wallet.name,
+                "name": wallet.name if hasattr(wallet, 'name') else f"Imported {blockchain_value}",
                 "blockchain": wallet.blockchain.value if hasattr(wallet.blockchain, 'value') else str(wallet.blockchain),
                 "address": wallet.address,
                 "is_primary": wallet.is_primary,
@@ -2648,6 +2742,11 @@ async def import_wallet_for_webapp(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Import wallet error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to import wallet: {str(e)}",
+        )
         logger.error(f"Import wallet error: {e}", exc_info=False)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

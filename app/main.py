@@ -165,6 +165,9 @@ app.include_router(attestation_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(walletconnect_router, prefix="/api/v1")
 app.include_router(image_router, prefix="/api/v1")
+
+# Payment router already has /api/v1/payments prefix in its definition
+# DO NOT add another prefix to avoid double-prefixing
 app.include_router(payment_router)
  
 

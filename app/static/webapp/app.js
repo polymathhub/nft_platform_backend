@@ -306,6 +306,8 @@
           // Always set init_data if available (required for auth)
           if (initData) {
             body.init_data = initData;
+          } else {
+            log(`WARNING: No init_data available for POST to ${endpoint}`, 'warn');
           }
           
           // Always set user_id if available
@@ -344,11 +346,15 @@
         
         const response = await fetch(url, fetchOptions);
         
+        // Debug response status
+        if (!response.ok) {
+          log(`[${response.status}] ${method} ${endpoint} failed`, 'warn');
+        }
+        
         // Fail fast on 401/403 - auth errors
         if (response.status === 401 || response.status === 403) {
           log(`${method} ${endpoint} auth failed: ${response.status}`, 'error');
-          showStatus('Authentication failed - please restart from Telegram', 'error');
-          throw new Error('Authentication failed');
+          throw new Error('Authentication failed - Telegram init_data required');
         }
         
         let data;
@@ -384,8 +390,10 @@
           return this._fetch(endpoint, options, attempt + 1);
         }
         // Return graceful error object instead of throwing
-        showStatus(`Error: ${err.message}`, 'error');
-        return { success: false, error: err.message || 'Unknown error', detail: err.message };
+        const errorMsg = err.message || 'Unknown error';
+        log(`Final API error for ${endpoint}: ${errorMsg}`, 'error');
+        showStatus(`Error: ${errorMsg}`, 'error');
+        return { success: false, error: errorMsg, detail: errorMsg };
       }
     },
 
@@ -595,7 +603,12 @@
         recentNfts.innerHTML = nfts.slice(0, 3).map(nft => `
           <div class="card" style="padding:12px;">
             <div style="display:flex;gap:12px;">
-              ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" style="width:40px;height:40px;border-radius:4px;">` : ''}
+              ${nft.image_url ? `
+                <img src="${nft.image_url}" 
+                     alt="${nft.name}" 
+                     style="width:40px;height:40px;border-radius:4px;object-fit:cover;" 
+                     onerror="this.style.display='none'">
+              ` : ''}
               <div style="flex:1;min-width:0;">
                 <strong>${nft.name || 'NFT'}</strong>
                 <div style="font-size:12px;color:var(--text-secondary);">${(nft.blockchain || 'Unknown').toUpperCase()}</div>
@@ -679,13 +692,17 @@
       
       container.innerHTML = state.nfts.map(nft => `
         <div class="card">
-          <div class="nft-image-container" data-image-url="${nft.image_url || ''}" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-            ${!nft.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
+          <div class="nft-image-container" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+            ${nft.image_url ? `
+              <img src="${nft.image_url}" 
+                   alt="${nft.name}" 
+                   style="width:100%;height:100%;object-fit:cover;" 
+                   onerror="this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);font-size:12px;\\">Image failed to load</span>'">
+            ` : `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>`}
           </div>
           <div style="margin-bottom:12px;">
             <strong>${nft.name}</strong>
             <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${nft.description || 'No description'}</p>
-            ${nft.image_url ? `<p style="font-size:11px;color:var(--text-secondary);margin-top:4px;word-break:break-all;">Image: ${nft.image_url.substring(0, 50)}${nft.image_url.length > 50 ? '...' : ''}</p>` : ''}
           </div>
           <div style="display:flex;gap:8px;margin-bottom:12px;">
             <span class="blockchain-badge">${nft.blockchain?.toUpperCase()}</span>
@@ -697,13 +714,6 @@
           </div>
         </div>
       `).join('');
-      
-      // Set background images via JavaScript to safely handle URLs with special characters
-      document.querySelectorAll('.nft-image-container[data-image-url]').forEach(el => {
-        if (el.dataset.imageUrl) {
-          el.style.backgroundImage = `url('${el.dataset.imageUrl}')`;
-        }
-      });
       
       showStatus('NFTs loaded', 'success');
     } catch (err) {
@@ -731,13 +741,17 @@
       
       container.innerHTML = state.listings.map(listing => `
         <div class="card">
-          <div class="listing-image-container" data-image-url="${listing.image_url || ''}" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-            ${!listing.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
+          <div class="listing-image-container" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+            ${listing.image_url ? `
+              <img src="${listing.image_url}" 
+                   alt="${listing.nft_name}" 
+                   style="width:100%;height:100%;object-fit:cover;" 
+                   onerror="this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);font-size:12px;\\">Image failed to load</span>'">
+            ` : `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>`}
           </div>
           <div style="margin-bottom:12px;">
             <strong>${listing.nft_name}</strong>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">By <strong>${listing.seller_name || 'Anonymous'}</strong></div>
-            ${listing.image_url ? `<p style="font-size:11px;color:var(--text-secondary);margin-top:4px;word-break:break-all;">Image: ${listing.image_url.substring(0, 50)}${listing.image_url.length > 50 ? '...' : ''}</p>` : ''}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div>
@@ -749,13 +763,6 @@
           <button class="btn btn-primary" onclick="window.buyNftModal('${listing.id}')">Buy Now</button>
         </div>
       `).join('');
-      
-      // Set background images via JavaScript to safely handle URLs with special characters
-      document.querySelectorAll('.listing-image-container[data-image-url]').forEach(el => {
-        if (el.dataset.imageUrl) {
-          el.style.backgroundImage = `url('${el.dataset.imageUrl}')`;
-        }
-      });
       
       showStatus('Marketplace loaded', 'success');
     } catch (err) {
@@ -881,8 +888,13 @@
     if (!nft) return;
     
     showModal(`${nft.name}`, `
-      <div class="modal-nft-image" data-image-url="${nft.image_url || ''}" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-        ${!nft.image_url ? `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>` : ''}
+      <div class="modal-nft-image" style="width:100%;height:250px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+        ${nft.image_url ? `
+          <img src="${nft.image_url}" 
+               alt="${nft.name}" 
+               style="width:100%;height:100%;object-fit:cover;" 
+               onerror="this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);\\">Image failed to load</span>'">
+        ` : `<span style="color:rgba(255,255,255,0.5);">No image</span>`}
       </div>
       <div style="font-size:13px;">
         <div class="profile-item">
@@ -897,21 +909,11 @@
           <span>Description:</span>
           <p style="margin-top:4px;color:var(--text-secondary);">${nft.description || 'No description'}</p>
         </div>
-        ${nft.image_url ? `<div class="profile-item">
-          <span>Image URL:</span>
-          <p style="margin-top:4px;color:var(--text-secondary);word-break:break-all;font-size:11px;">${nft.image_url}</p>
-        </div>` : ''}
       </div>
     `, [
       { label: nft.status !== 'LISTED' ? 'Sell NFT' : 'View Listing', action: `listNftModal('${nft.id}')`, class: 'btn-primary' },
       { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
     ]);
-    
-    // Set background image via JavaScript after modal is rendered
-    const imageEl = document.querySelector('.modal-nft-image[data-image-url]');
-    if (imageEl && imageEl.dataset.imageUrl) {
-      imageEl.style.backgroundImage = `url('${imageEl.dataset.imageUrl}')`;
-    }
   };
 
   window.listNftModal = function(nftId) {
@@ -1046,13 +1048,45 @@
       if (!amount || amount < 1) throw new Error('Minimum deposit is 1 USDT');
       
       showStatus('Initiating deposit...', 'loading');
-      const result = await API._fetch(`/api/v1/payments/deposit/initiate`, {
+      
+      // Use web-app endpoint if available, otherwise fall back to direct endpoint
+      let depositPath = `/api/v1/payments/web-app/deposit`;
+      let requestBody = {
+        user_id: state.user?.id || '',
+        wallet_id: walletId,
+        amount: amount,
+        blockchain: 'ethereum', // default blockchain  
+        init_data: state.initData || '',
+      };
+      
+      const result = await API._fetch(depositPath, {
         method: 'POST',
-        body: {
+        body: requestBody
+      });
+      
+      if (!result.success && result.error) {
+        // Try alternative endpoint if first fails
+        depositPath = `/api/v1/payments/deposit/initiate`;
+        requestBody = {
           wallet_id: walletId,
           amount: amount,
+        };
+        
+        const altResult = await API._fetch(depositPath, {
+          method: 'POST',
+          body: requestBody
+        });
+        
+        if (altResult.success) {
+          result.success = altResult.success;
+          result.payment_id = altResult.payment_id;
+          result.deposit_address = altResult.deposit_address;
+          result.currency = altResult.currency || 'USDT';
+          result.blockchain = altResult.blockchain || 'ethereum';
+        } else {
+          throw new Error(altResult.error || result.error || 'Failed to initiate deposit');
         }
-      });
+      }
       
       if (!result.success) throw new Error(result.error || 'Failed to initiate deposit');
       
@@ -1068,7 +1102,7 @@
             <strong>Send this amount:</strong> ${result.amount} ${result.currency}
           </div>
           <div style="background:rgba(255,152,0,0.1);padding:12px;border-radius:8px;border-left:4px solid #FF9800;">
-            <strong>On blockchain:</strong> ${result.blockchain.toUpperCase()}
+            <strong>On blockchain:</strong> ${(result.blockchain || 'ethereum').toUpperCase()}
           </div>
           <p style="color:var(--text-secondary);margin-top:8px;">⏱ This deposit is valid for 24 hours. After sending, come back to confirm the transaction.</p>
         </div>
@@ -1077,6 +1111,7 @@
         { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
       ]);
     } catch (err) {
+      log(`Deposit error: ${err.message}`, 'error');
       showStatus(`Error: ${err.message}`, 'error');
     }
   };
@@ -1102,7 +1137,9 @@
       if (!txHash || txHash.length < 10) throw new Error('Invalid transaction hash');
       
       showStatus('Confirming deposit...', 'loading');
-      const result = await API._fetch(`/api/v1/payments/deposit/confirm`, {
+      
+      let confirmPath = `/api/v1/payments/deposit/confirm`;
+      const result = await API._fetch(confirmPath, {
         method: 'POST',
         body: {
           payment_id: paymentId,
@@ -1114,8 +1151,10 @@
       
       closeModal();
       showStatus('Deposit confirmed! Your balance will update once verified.', 'success');
+      log(`Deposit confirmed: ${paymentId}`, 'log');
       await updateDashboard();
     } catch (err) {
+      log(`Deposit confirmation error: ${err.message}`, 'error');
       showStatus(`Error: ${err.message}`, 'error');
     }
   };
@@ -1160,15 +1199,46 @@
       if (!destAddress || destAddress.length < 20) throw new Error('Invalid destination address');
       
       showStatus('Processing withdrawal request...', 'loading');
-      const result = await API._fetch(`/api/v1/payments/withdrawal/initiate`, {
+      
+      let withdrawPath = `/api/v1/payments/web-app/withdrawal`;
+      let requestBody = {
+        user_id: state.user?.id || '',
+        wallet_id: walletId,
+        amount: amount,
+        destination_address: destAddress,
+        blockchain: destBlockchain || 'ethereum',
+        init_data: state.initData || '',
+      };
+      
+      let result = await API._fetch(withdrawPath, {
         method: 'POST',
-        body: {
+        body: requestBody
+      });
+      
+      if (!result.success && result.error) {
+        // Try alternative endpoint
+        withdrawPath = `/api/v1/payments/withdrawal/initiate`;
+        requestBody = {
           wallet_id: walletId,
           amount: amount,
           destination_address: destAddress,
           destination_blockchain: destBlockchain,
+        };
+        
+        const altResult = await API._fetch(withdrawPath, {
+          method: 'POST',
+          body: requestBody
+        });
+        
+        if (altResult.success) {
+          result.success = altResult.success;
+          result.payment_id = altResult.payment_id;
+          result.currency = altResult.currency || 'USDT';
+          result.platform_fee = altResult.platform_fee || '0';
+        } else {
+          throw new Error(altResult.error || result.error || 'Failed to initiate withdrawal');
         }
-      });
+      }
       
       if (!result.success) throw new Error(result.error || 'Failed to initiate withdrawal');
       
@@ -1188,8 +1258,10 @@
         { label: 'Done', action: 'closeModal()', class: 'btn-primary' }
       ]);
       
+      log(`Withdrawal initiated: ${result.payment_id}`, 'log');
       await updateDashboard();
     } catch (err) {
+      log(`Withdrawal error: ${err.message}`, 'error');
       showStatus(`Error: ${err.message}`, 'error');
     }
   };
@@ -1364,7 +1436,10 @@
           </div>
           <div>
             <label>Image URL (Optional)</label>
-            <input type="url" id="mintImage" placeholder="https://..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
+            <input type="url" id="mintImage" placeholder="https://..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;" oninput="this._imagePreviewTimeout = setTimeout(() => { const img = document.getElementById('imagePreview'); const url = this.value; if (url && url.startsWith('http')) { img.src = url; img.style.display='block'; } else { img.style.display='none'; } }, 500)">
+          </div>
+          <div id="imagePreviewContainer" style="width:100%;height:150px;border-radius:8px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;overflow:hidden;margin-top:8px;display:flex;align-items:center;justify-content:center;">
+            <img id="imagePreview" src="" alt="Preview" style="display:none;width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);\\">Image failed to load</span>'">
           </div>
         </div>
       `, [
