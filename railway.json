@@ -4,28 +4,61 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4"
   },
   "env": {
-    "BOT_TOKEN": {
-      "description": "Telegram bot token",
+    "ENVIRONMENT": {
+      "description": "Deployment environment (production, staging, development)",
+      "value": "production"
+    },
+    "DATABASE_URL": {
+      "description": "PostgreSQL connection URL (required). Get from Railway PostgreSQL service.",
+      "required": true
+    },
+    "REDIS_URL": {
+      "description": "Redis connection URL (required). Format: redis://user:password@host:port/db",
+      "required": true
+    },
+    "TELEGRAM_BOT_TOKEN": {
+      "description": "Telegram Bot API token from @BotFather (required)",
+      "required": true
+    },
+    "TELEGRAM_WEBHOOK_URL": {
+      "description": "Your webhook URL. Format: https://your-railway-domain.up.railway.app/api/v1/telegram/webhook",
       "required": true
     },
     "TELEGRAM_WEBHOOK_SECRET": {
-      "description": "Telegram webhook secret (optional)",
+      "description": "Secret token for webhook validation (optional but recommended)",
       "required": false
     },
-    "DATABASE_URL": {
-      "description": "Your database connection URL",
+    "TELEGRAM_AUTO_SETUP_WEBHOOK": {
+      "description": "Auto-setup Telegram webhook on startup (true/false)",
+      "value": "true"
+    },
+    "JWT_SECRET_KEY": {
+      "description": "Secret key for JWT tokens (32+ characters, use openssl rand -hex 32)",
       "required": true
     },
-    "RPC_URL": {
-      "description": "RPC URL for blockchain node",
+    "MNEMONIC_ENCRYPTION_KEY": {
+      "description": "Fernet key for encrypting wallet mnemonics. Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'",
       "required": true
     },
-    "PRIVATE_KEY": {
-      "description": "Private key for minting",
-      "required": true
+    "ALLOWED_ORIGINS": {
+      "description": "Comma-separated list of allowed CORS origins. Example: https://app.example.com,https://another.example.com",
+      "required": false,
+      "value": "https://nftplatformbackend-production-b67d.up.railway.app"
+    },
+    "DEBUG": {
+      "description": "Enable debug mode (false for production)",
+      "value": "false"
+    },
+    "DATABASE_ECHO": {
+      "description": "Log all SQL queries (false for production)",
+      "value": "false"
+    },
+    "LOG_LEVEL": {
+      "description": "Python logging level (INFO, DEBUG, WARNING, ERROR)",
+      "value": "INFO"
     }
   }
 }

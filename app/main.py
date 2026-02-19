@@ -92,7 +92,12 @@ app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 
 """Serve Telegram Web App static files at /web-app"""
-app.mount("/web-app", StaticFiles(directory="app/static/webapp", html=True), name="webapp")
+import os
+webapp_path = os.path.join(os.path.dirname(__file__), "static", "webapp")
+if os.path.isdir(webapp_path):
+    app.mount("/web-app", StaticFiles(directory=webapp_path, html=True), name="webapp")
+else:
+    logger.warning(f"Web app static directory not found at {webapp_path} - /web-app endpoint will return 404")
 
 """CORS"""
 """ Build allowed origins - include same-origin for web app"""
@@ -144,13 +149,6 @@ async def health_check():
 app.include_router(
     telegram_mint_router,
     prefix="/api/v1/telegram",
-    tags=["telegram"]
-)
-
-# Include telegram router at /telegram prefix to catch /telegram/webhook
-app.include_router(
-    telegram_mint_router,
-    prefix="/telegram",
     tags=["telegram"]
 )
 

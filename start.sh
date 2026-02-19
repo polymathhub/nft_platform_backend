@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Simple startup helper for Linux/macOS
+# Startup helper for Linux/macOS with uvicorn
 set -euo pipefail
 
 # Load .env if present
@@ -13,9 +13,16 @@ ENV=${ENV:-development}
 WORKERS=${WORKERS:-4}
 
 if [ "$ENV" = "production" ]; then
-  echo "Starting in production mode on :$PORT"
-  exec gunicorn app.main:app -w "$WORKERS" -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:"$PORT"
+  echo "Starting in production mode on :$PORT with $WORKERS workers"
+  exec python -m uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port "$PORT" \
+    --workers "$WORKERS"
 else
-  echo "Starting in development mode on :$PORT (auto-reload)"
-  exec uvicorn app.main:app --reload --host 0.0.0.0 --port "$PORT"
+  echo "Starting in development mode on :$PORT (auto-reload enabled)"
+  exec python -m uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port "$PORT" \
+    --reload \
+    --log-level debug
 fi
