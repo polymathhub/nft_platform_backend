@@ -2604,24 +2604,16 @@ async def create_wallet_for_webapp(
             )
         
         # Use proper wallet generation based on blockchain
-        if blockchain_type == BlockchainType.ETHEREUM:
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
-        elif blockchain_type == BlockchainType.POLYGON:
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
-        elif blockchain_type == BlockchainType.ARBITRUM:
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
-        elif blockchain_type == BlockchainType.OPTIMISM:
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
-        elif blockchain_type == BlockchainType.BASE:
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
-        elif blockchain_type == BlockchainType.AVALANCHE:
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, make_primary=True)
+        if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
+                               BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
+                               BlockchainType.BASE, BlockchainType.AVALANCHE):
+            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
         elif blockchain_type == BlockchainType.TON:
-            wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, make_primary=True)
+            wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
         elif blockchain_type == BlockchainType.SOLANA:
-            wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, make_primary=True)
+            wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
         elif blockchain_type == BlockchainType.BITCOIN:
-            wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, make_primary=True)
+            wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
         else:
             error = f"Unsupported blockchain: {blockchain_value}"
         

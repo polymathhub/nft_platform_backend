@@ -86,9 +86,10 @@ async def serve_nft_image(
 
 
 @router.get("/proxy")
+@router.options("/proxy")
 async def proxy_image(
-    url: str,
-    current_user = Depends(get_current_user),
+    url: str = None,
+    current_user = None,
 ) -> StreamingResponse:
     """
     Proxy image requests with security headers.
@@ -99,6 +100,15 @@ async def proxy_image(
     - Dragging the image
     - Saving/downloading
     """
+    # Handle CORS preflight
+    if current_user is None and url is None:
+        from fastapi import Response
+        return Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        })
+    
     try:
         if not url:
             raise HTTPException(status_code=400, detail="URL parameter required")
@@ -116,21 +126,21 @@ async def proxy_image(
                 
                 content_type = resp.headers.get('content-type', 'application/octet-stream')
                 
-                # Stream response with security headers
+                # Stream response with security headers (allow CORS for web app)
                 return StreamingResponse(
                     resp.content.iter_chunked(4096),
                     media_type=content_type,
                     headers={
+                        # CORS headers for web app
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow-Methods": "GET, OPTIONS",
+                        "Access-Control-Allow-Headers": "Content-Type, Authorization",
                         # Prevent context menu/right-click
                         "X-Content-Type-Options": "nosniff",
-                        # Disable caching to prevent offline access
-                        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-                        "Pragma": "no-cache",
-                        "Expires": "0",
-                        # Content security
-                        "Content-Security-Policy": "default-src 'none'",
+                        # Allow caching for performance
+                        "Cache-Control": "public, max-age=3600",
+                        # Prevent framing attacks
                         "X-Frame-Options": "DENY",
-                        "X-Content-Type-Options": "nosniff",
                     }
                 )
                 

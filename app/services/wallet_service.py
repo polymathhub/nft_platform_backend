@@ -494,6 +494,7 @@ class WalletService:
     async def generate_evm_wallet(
         db: AsyncSession,
         user_id: UUID,
+        blockchain: Optional[BlockchainType] = None,
         make_primary: bool = False,
     ) -> tuple[Optional[Wallet], Optional[str]]:
         """Generate a single EVM wallet (shared across EVM-compatible chains).
@@ -503,9 +504,12 @@ class WalletService:
         Crypto.Hash.keccak. Encrypted private key is stored using existing
         `encrypt_sensitive_data` and `mnemonic_encryption_key`.
         """
-        # Idempotent: if user already has an EVM wallet, return it
+        # Default to Ethereum if no blockchain specified
+        blockchain = blockchain or BlockchainType.ETHEREUM
+        
+        # Idempotent: if user already has an EVM wallet for this blockchain, check if it exists
         existing = await WalletService.get_user_wallets(db, user_id, BlockchainType.ETHEREUM)
-        if existing:
+        if existing and blockchain == BlockchainType.ETHEREUM:
             return existing[0], None
 
         # Generate secp256k1 private key
@@ -546,11 +550,11 @@ class WalletService:
         # Encrypt private key
         encrypted = encrypt_sensitive_data(priv_bytes.hex(), settings.mnemonic_encryption_key)
 
-        # Create wallet record (one record represents EVM family)
+        # Create wallet record for the specific blockchain (or ETHEREUM as default)
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
-            blockchain=BlockchainType.ETHEREUM,
+            blockchain=blockchain,
             wallet_type=WalletType.CUSTODIAL,
             address=address,
             is_primary=make_primary,
@@ -584,6 +588,7 @@ class WalletService:
     async def generate_solana_wallet(
         db: AsyncSession,
         user_id: UUID,
+        blockchain: Optional[BlockchainType] = None,
         make_primary: bool = False,
     ) -> tuple[Optional[Wallet], Optional[str]]:
         """Generate an Ed25519 keypair for Solana and store encrypted private key.
@@ -591,6 +596,9 @@ class WalletService:
         Uses base58 encoding for the public key/address. A small internal
         base58 encoder is included to avoid adding external deps.
         """
+        # Default to Solana if no blockchain specified
+        blockchain = blockchain or BlockchainType.SOLANA
+        
         # Idempotent
         existing = await WalletService.get_user_wallets(db, user_id, BlockchainType.SOLANA)
         if existing:
@@ -638,7 +646,7 @@ class WalletService:
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
-            blockchain=BlockchainType.SOLANA,
+            blockchain=blockchain,
             wallet_type=WalletType.CUSTODIAL,
             address=address,
             is_primary=make_primary,
@@ -658,6 +666,7 @@ class WalletService:
     async def generate_bitcoin_wallet(
         db: AsyncSession,
         user_id: UUID,
+        blockchain: Optional[BlockchainType] = None,
         make_primary: bool = False,
     ) -> tuple[Optional[Wallet], Optional[str]]:
         """Generate a Bitcoin P2PKH address (base58check) using secp256k1.
@@ -666,6 +675,9 @@ class WalletService:
         It relies on hashlib supporting RIPEMD160; if not available, it will
         raise an informative error.
         """
+        # Default to Bitcoin if no blockchain specified
+        blockchain = blockchain or BlockchainType.BITCOIN
+        
         existing = await WalletService.get_user_wallets(db, user_id, BlockchainType.BITCOIN)
         if existing:
             return existing[0], None
@@ -725,7 +737,7 @@ class WalletService:
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
-            blockchain=BlockchainType.BITCOIN,
+            blockchain=blockchain,
             wallet_type=WalletType.CUSTODIAL,
             address=address,
             is_primary=make_primary,
@@ -745,6 +757,7 @@ class WalletService:
     async def generate_ton_wallet(
         db: AsyncSession,
         user_id: UUID,
+        blockchain: Optional[BlockchainType] = None,
         make_primary: bool = False,
     ) -> tuple[Optional[Wallet], Optional[str]]:
         """Generate a TON wallet keypair (Ed25519) and store encrypted key.
@@ -752,6 +765,9 @@ class WalletService:
         TON address encoding differs from Solana; for now store public key
         base64 as the address and set metadata.workchain when available.
         """
+        # Default to TON if no blockchain specified
+        blockchain = blockchain or BlockchainType.TON
+        
         existing = await WalletService.get_user_wallets(db, user_id, BlockchainType.TON)
         if existing:
             return existing[0], None
@@ -778,7 +794,7 @@ class WalletService:
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
-            blockchain=BlockchainType.TON,
+            blockchain=blockchain,
             wallet_type=WalletType.CUSTODIAL,
             address=address,
             is_primary=make_primary,
