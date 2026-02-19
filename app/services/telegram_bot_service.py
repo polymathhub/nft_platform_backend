@@ -1,5 +1,6 @@
 """Telegram bot service for NFT operations."""
 
+import asyncio
 import logging
 from typing import Optional, Dict, Any, List
 from uuid import UUID
@@ -724,7 +725,8 @@ class TelegramBotService:
             except ValueError as e:
                 message = f"❌ Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
                 logger.error(f"[WALLET_CREATE] Invalid blockchain: {e}")
-                await self.send_message(chat_id, message)
+                # Send message non-blocking (fire-and-forget)
+                asyncio.create_task(self.send_message(chat_id, message))
                 return None, message
             
             # Use proper wallet generation based on blockchain
@@ -757,7 +759,8 @@ class TelegramBotService:
             if error or not wallet:
                 message = f"❌ Wallet creation failed: {error or 'Unknown error'}"
                 logger.error(f"[WALLET_CREATE] FAILED: {message}")
-                await self.send_message(chat_id, message)
+                # Send message non-blocking (fire-and-forget)
+                asyncio.create_task(self.send_message(chat_id, message))
                 return None, error
             
             # Update metadata
@@ -782,13 +785,15 @@ class TelegramBotService:
                 f"<b>⭐ Primary:</b> Yes\n\n"
                 f"<i>Your wallet is ready! Use it to mint NFTs.</i>"
             )
-            await self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard())
+            # Send message non-blocking (fire-and-forget) - don't wait for Telegram
+            asyncio.create_task(self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard()))
             return wallet, None
             
         except Exception as e:
             logger.error(f"[WALLET_CREATE] EXCEPTION: {type(e).__name__}: {e}", exc_info=True)
             message = f"❌ An error occurred: {str(e)}"
-            await self.send_message(chat_id, message)
+            # Send message non-blocking (fire-and-forget)
+            asyncio.create_task(self.send_message(chat_id, message))
             return None, str(e)
     
     async def handle_wallet_import(
@@ -808,7 +813,8 @@ class TelegramBotService:
                 blockchain_type = BlockchainType(blockchain_lower)
             except ValueError:
                 message = f"❌ Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
-                await self.send_message(chat_id, message)
+                # Send message non-blocking (fire-and-forget)
+                asyncio.create_task(self.send_message(chat_id, message))
                 return None, message
             
             wallet_metadata = {
@@ -827,7 +833,8 @@ class TelegramBotService:
             
             if error:
                 message = f"❌ Wallet import failed: {error}"
-                await self.send_message(chat_id, message)
+                # Send message non-blocking (fire-and-forget)
+                asyncio.create_task(self.send_message(chat_id, message))
                 return None, message
             
             wallet.wallet_metadata = wallet_metadata
@@ -843,13 +850,15 @@ class TelegramBotService:
                 f"<b>⭐ Primary:</b> Yes\n\n"
                 f"<i>Your wallet has been added to your account.</i>"
             )
-            await self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard())
+            # Send message non-blocking (fire-and-forget) - don't wait for Telegram
+            asyncio.create_task(self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard()))
             return wallet, None
             
         except Exception as e:
             logger.error(f"Error in handle_wallet_import: {e}", exc_info=True)
             message = f"❌ An error occurred: {str(e)}"
-            await self.send_message(chat_id, message)
+            # Send message non-blocking (fire-and-forget)
+            asyncio.create_task(self.send_message(chat_id, message))
             return None, str(e)
 
     async def handle_set_primary_wallet(
