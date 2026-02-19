@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.exceptions import HTTPException
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
@@ -205,6 +205,17 @@ if os.path.isdir(webapp_path):
     app.mount("/web-app", StaticFiles(directory=webapp_path, html=True), name="webapp")
 else:
     logger.warning(f"Web app static directory not found at {webapp_path} - /web-app static will not be available")
+
+
+# Serve production index file explicitly so we can keep index-production.html
+@app.get("/web-app", include_in_schema=False)
+@app.get("/web-app/", include_in_schema=False)
+async def serve_webapp_index():
+    index_prod = os.path.join(webapp_path, "index-production.html")
+    if os.path.isfile(index_prod):
+        return FileResponse(index_prod, media_type="text/html")
+    # Fallback to StaticFiles handling (index.html) if production file missing
+    raise StarletteHTTPException(status_code=404, detail="Web app index not found")
 
 
 
