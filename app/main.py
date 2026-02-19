@@ -199,10 +199,10 @@ app.include_router(image_router, prefix="/api/v1")
 # DO NOT add another prefix to avoid double-prefixing
 app.include_router(payment_router)
  
-# Mount web app static files after routers so API endpoints under /web-app/*
-# (POST create/import/etc.) are matched first. StaticFiles only serves GET/HEAD.
+# Mount web app static files under /web-app/static so we can serve a custom
+# production index at /web-app/ while keeping POST API endpoints under /web-app/*
 if os.path.isdir(webapp_path):
-    app.mount("/web-app", StaticFiles(directory=webapp_path, html=True), name="webapp")
+    app.mount("/web-app/static", StaticFiles(directory=webapp_path, html=True), name="webapp_static")
 else:
     logger.warning(f"Web app static directory not found at {webapp_path} - /web-app static will not be available")
 
