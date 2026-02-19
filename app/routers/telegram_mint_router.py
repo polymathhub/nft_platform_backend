@@ -6,6 +6,7 @@ Handles Telegram webhook updates and minting commands.
 import logging
 import json
 import anyio
+import time
 from typing import Optional
 from urllib.parse import parse_qs
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
@@ -71,6 +72,7 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     
     # Try to get init_data from query params first
     init_data_str = request.query_params.get("init_data")
+    logger.debug(f"get_telegram_user_from_request: initial init_data from query: {bool(init_data_str)}")
     
     # If not in query, try to get from body (for POST requests)
     if not init_data_str:
@@ -78,9 +80,11 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
             body = getattr(request.state, 'body', None)
             if body is None:
                 body = await request.body()
+            logger.debug(f"get_telegram_user_from_request: raw body length {len(body) if body else 0}")
             if body:
                 body_dict = json.loads(body)
                 init_data_str = body_dict.get("init_data")
+                logger.debug(f"get_telegram_user_from_request: found init_data in body: {bool(init_data_str)}")
         except Exception:
             pass
     
@@ -94,8 +98,10 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     
     # Parse init_data
     try:
+        start_parse = time.time()
         params = parse_qs(init_data_str)
         data_dict = {key: value[0] if isinstance(value, list) else value for key, value in params.items()}
+        logger.debug(f"get_telegram_user_from_request: parsed init_data keys={list(data_dict.keys())} parse_time={time.time()-start_parse:.3f}s")
     except Exception as e:
         logger.error(f"Failed to parse init_data: {e}")
         raise HTTPException(status_code=400, detail="Invalid init_data")
@@ -121,10 +127,13 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
     
     # Get or create user in database
     try:
+        db_start = time.time()
+        logger.debug(f"get_telegram_user_from_request: querying DB for telegram_id={telegram_id}")
         result = await db.execute(
             select(User).where(User.telegram_id == str(telegram_id))
         )
         user = result.scalar_one_or_none()
+        logger.debug(f"get_telegram_user_from_request: db lookup time={time.time()-db_start:.3f}s, found_user={bool(user)}")
     except Exception as e:
         logger.error(f"Database error: {e}")
         raise HTTPException(status_code=500, detail="Database error")
@@ -2602,20 +2611,28 @@ async def create_wallet_for_webapp(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid blockchain: {blockchain_value}",
             )
-        
+
         # Use proper wallet generation based on blockchain
-        if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
-                               BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
-                               BlockchainType.BASE, BlockchainType.AVALANCHE):
-            wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
-        elif blockchain_type == BlockchainType.TON:
-            wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
-        elif blockchain_type == BlockchainType.SOLANA:
-            wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
-        elif blockchain_type == BlockchainType.BITCOIN:
-            wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
-        else:
-            error = f"Unsupported blockchain: {blockchain_value}"
+        gen_start = time.time()
+        try:
+            if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
+                                   BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
+                                   BlockchainType.BASE, BlockchainType.AVALANCHE):
+                logger.debug("Generating EVM wallet (start)")
+                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
+            elif blockchain_type == BlockchainType.TON:
+                logger.debug("Generating TON wallet (start)")
+                wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
+            elif blockchain_type == BlockchainType.SOLANA:
+                logger.debug("Generating Solana wallet (start)")
+                wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
+            elif blockchain_type == BlockchainType.BITCOIN:
+                logger.debug("Generating Bitcoin wallet (start)")
+                wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
+            else:
+                error = f"Unsupported blockchain: {blockchain_value}"
+        finally:
+            logger.debug(f"Wallet generation finished (time={time.time()-gen_start:.3f}s)")
         
         # Use bot_service to handle wallet creation (proper generation functions)
         # wallet, error = await bot_service.handle_wallet_create(

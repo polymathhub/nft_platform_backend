@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exceptions import HTTPException
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
@@ -127,6 +127,13 @@ app.add_middleware(
 
 @app.get("/")
 async def root_get():
+    # If the web app static directory is available, redirect root to the SPA
+    try:
+        if os.path.isdir(webapp_path):
+            return RedirectResponse(url="/web-app/")
+    except Exception:
+        pass
+
     return {"message": "Server is running", "status": "ok"}
 
 
