@@ -1002,7 +1002,7 @@
       }
       try {
         console.log('[Dashboard] Fetching dashboard data for user:', user.id);
-        const r = await API.call('GET', '/dashboard-data?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/web-app/dashboard-data?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[Dashboard] Response:', r);
         if (r.ok && r.data) {
           const d = r.data;
@@ -1011,12 +1011,22 @@
           const totalWallets = $('totalWallets');
           const totalListings = $('totalListings');
           
-          if (portfolioValue) portfolioValue.textContent = '$' + (d.portfolio_value || '0');
-          if (totalNfts) totalNfts.textContent = d.total_nfts || '0';
-          if (totalWallets) totalWallets.textContent = d.total_wallets || '0';
-          if (totalListings) totalListings.textContent = d.total_listings || '0';
+          // Calculate statistics from backend arrays
+          const nftCount = (d.nfts && d.nfts.length) ? d.nfts.length : 0;
+          const walletCount = (d.wallets && d.wallets.length) ? d.wallets.length : 0;
+          const listingCount = (d.listings && d.listings.length) ? d.listings.length : 0;
           
-          console.log('[Dashboard] Dashboard loaded successfully');
+          // Calculate portfolio value from active listings
+          const portfolioVal = d.listings && d.listings.length > 0 
+            ? d.listings.reduce((sum, listing) => sum + (listing.price || 0), 0).toFixed(2)
+            : '0';
+          
+          if (portfolioValue) portfolioValue.textContent = '$' + portfolioVal;
+          if (totalNfts) totalNfts.textContent = nftCount;
+          if (totalWallets) totalWallets.textContent = walletCount;
+          if (totalListings) totalListings.textContent = listingCount;
+          
+          console.log('[Dashboard] Dashboard loaded successfully', { nftCount, walletCount, listingCount, portfolioVal });
         } else {
           console.error('[Dashboard] Error response:', r);
           showStatus('Failed to load dashboard data', 'error');
