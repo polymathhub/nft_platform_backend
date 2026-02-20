@@ -285,45 +285,30 @@
 
   // ========== API LAYER ==========
   const API = {
+    // Validate response has expected structure
+    _validateResponse(data, expectedFields = []) {
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response: expected object from server');
+      }
+      // Check required fields if specified
+      for (const field of expectedFields) {
+        if (!(field in data)) {
+          throw new Error(`Invalid response: missing required field "${field}"`);
+        }
+      }
+      return data;
+    },
+
     async _fetch(endpoint, options = {}, attempt = 1) {
       const url = `${endpoint}`;
       const method = options.method || 'GET';
+      let controller = null;
+      let timeoutId = null;
       
       try {
         log(`[Attempt ${attempt}] ${method} ${url}`);
         
-        // MANDATORY: Inject Telegram init_data for ALL POST/PUT requests
-        // This MUST be present for Telegram signature verification
-        if (method !== 'GET') {
-          const body = Object.assign({}, options.body || {});
-          
-          // Get fresh initData from WebApp SDK or state
-          let initData = state.initData;
-          if (!initData && typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
-            initData = window.Telegram.WebApp.initData;
-          }
-          
-          // Always set init_data if available (required for auth)
-          if (initData) {
-            body.init_data = initData;
-          } else {
-            log(`WARNING: No init_data available for POST to ${endpoint}`, 'warn');
-          }
-          
-          // Always set user_id if available
-          if (state.user && state.user.id) {
-            body.user_id = state.user.id;
-          }
-          
-          // Validate request payload can be serialized
-          try {
-            options.body = body;
-          } catch (e) {
-            log(`Error preparing request body: ${e.message}`, 'error');
-            throw e;
-          }
-        }
-
+        // CREATE: Body object (only for POST/PUT/PATCH)
         let fetchOptions = {
           method,
           headers: {
@@ -334,75 +319,122 @@
           credentials: 'same-origin',
         };
 
-        // Serialize body with error handling
-        if (options.body) {
+        // FOR POST/PUT: Build body ONCE with init_data and user_id
+        // DO NOT include init_data in URL for POST requests
+        if (method !== 'GET') {
+          const body = Object.assign({}, options.body || {});
+          
+          // Add init_data to body (only if not already present)
+          if (!body.init_data && state.initData) {
+            body.init_data = state.initData;
+          }
+          
+          // Add user_id to body (only if not already present)
+          if (!body.user_id && state.user && state.user.id) {
+            body.user_id = state.user.id;
+          }
+          
+          // Serialize body
           try {
-            fetchOptions.body = JSON.stringify(options.body);
+            fetchOptions.body = JSON.stringify(body);
           } catch (e) {
-            log(`JSON serialization failed: ${e.message}`, 'error');
-            throw new Error(`Invalid request body: ${e.message}`);
+            log(`JSON serialization error: ${e.message}`, 'error');
+            throw new Error(`Cannot serialize request: ${e.message}`);
           }
         }
+
+        // ADD: AbortController for timeout protection
+        controller = new AbortController();
+        fetchOptions.signal = controller.signal;
+        
+        // Set timeout
+        timeoutId = setTimeout(() => {
+          controller.abort();
+          log(`Request timeout after ${CONFIG.TIMEOUT}ms: ${method} ${url}`, 'warn');
+        }, CONFIG.TIMEOUT);
         
         const response = await fetch(url, fetchOptions);
+        clearTimeout(timeoutId);
+        timeoutId = null;
         
         // Debug response status
         if (!response.ok) {
           log(`[${response.status}] ${method} ${endpoint} failed`, 'warn');
         }
         
-        // Fail fast on 401/403 - auth errors
-        if (response.status === 401 || response.status === 403) {
-          log(`${method} ${endpoint} auth failed: ${response.status}`, 'error');
-          throw new Error('Authentication failed - Telegram init_data required or expired');
-        }
-        
+        // Parse response
         let data;
         try {
           data = await response.json();
         } catch (e) {
-          log(`Invalid JSON response from server: ${response.status}`, 'error');
-          throw new Error(`Server error: ${response.status}`);
+          log(`Invalid JSON response: ${response.status}`, 'error');
+          throw new Error(`Server returned invalid JSON (${response.status})`);
         }
         
+        // Fail fast on 401/403 - auth errors
+        if (response.status === 401 || response.status === 403) {
+          log(`${method} ${endpoint} auth failed: ${response.status}`, 'error');
+          throw new Error('Authentication failed - Telegram init_data expired or invalid');
+        }
+        
+        // Handle error responses
         if (!response.ok) {
-          log(`${method} ${endpoint} failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
+          log(`${method} ${endpoint} error: ${response.status} - ${JSON.stringify(data)}`, 'error');
+          
+          // Retry on specific status codes
           if (attempt < CONFIG.RETRY_ATTEMPTS && [408, 429, 500, 502, 503, 504].includes(response.status)) {
-            await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
+            const delay = CONFIG.RETRY_DELAY * attempt;
+            log(`Retrying after ${delay}ms...`, 'log');
+            await new Promise(r => setTimeout(r, delay));
             return this._fetch(endpoint, options, attempt + 1);
           }
-          // Extract detail from response
-          const errorMsg = data?.detail || data?.error || `HTTP ${response.status}`;
+          
+          // Extract error message
+          const errorMsg = data?.detail || data?.error || data?.message || `HTTP ${response.status}`;
           throw new Error(errorMsg);
         }
         
-        // Ensure response is valid object
+        // SUCCESS: Validate response structure
         if (!data || typeof data !== 'object') {
-          throw new Error('Invalid response from server');
+          throw new Error('Server returned invalid response format');
         }
         
         log(`${method} ${endpoint} succeeded`, 'log');
         return data;
+        
       } catch (err) {
-        log(`API error on attempt ${attempt}: ${err.message}`, 'error');
-        if (attempt < CONFIG.RETRY_ATTEMPTS) {
-          await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
-          return this._fetch(endpoint, options, attempt + 1);
-        }
-        // Return graceful error object instead of throwing
+        // Clean up timeout on error
+        if (timeoutId) clearTimeout(timeoutId);
+        if (controller) controller.abort();
+        
         const errorMsg = err.message || 'Unknown error';
-        log(`Final API error for ${endpoint}: ${errorMsg}`, 'error');
-        showStatus(`Error: ${errorMsg}`, 'error');
-        return { success: false, error: errorMsg, detail: errorMsg };
+        log(`API error on attempt ${attempt}: ${errorMsg}`, 'error');
+        
+        // Don't retry on final attempt
+        if (attempt >= CONFIG.RETRY_ATTEMPTS) {
+          log(`Final API error after ${attempt} attempts: ${errorMsg}`, 'error');
+          showStatus(`Error: ${errorMsg}`, 'error');
+          return { 
+            success: false, 
+            error: 'REQUEST_FAILED',
+            detail: errorMsg,
+            status_code: 0
+          };
+        }
+        
+        // Retry with exponential backoff
+        const delay = CONFIG.RETRY_DELAY * attempt;
+        log(`Retrying after ${delay}ms (attempt ${attempt}/${CONFIG.RETRY_ATTEMPTS})...`, 'log');
+        await new Promise(r => setTimeout(r, delay));
+        return this._fetch(endpoint, options, attempt + 1);
       }
     },
 
     // Auth endpoints
     async initSession(initData) {
       // Store initData in state for subsequent authenticated requests
-      try {
-        state.initData = initData;
-      } catch (e) {}
+      state.initData = initData;
+      // Use query parameter ONLY for init endpoint (no body needed)
       return this._fetch(`/web-app/init?init_data=${encodeURIComponent(initData)}`);
     },
 
@@ -419,24 +451,24 @@
     },
 
     async createWallet(blockchain, walletType = 'custodial', isPrimary = false) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/create-wallet`, {
         method: 'POST',
-        body: { blockchain, wallet_type: walletType, is_primary: isPrimary, init_data: initData }
+        body: { blockchain, wallet_type: walletType, is_primary: isPrimary }
       });
     },
 
     async importWallet(blockchain, address, publicKey = null, isPrimary = false) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/import-wallet`, {
         method: 'POST',
-        body: { blockchain, address, public_key: publicKey, is_primary: isPrimary, init_data: initData }
+        body: { blockchain, address, public_key: publicKey, is_primary: isPrimary }
       });
     },
 
     async setPrimaryWallet(walletId, userId = null) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      const body = { wallet_id: walletId, init_data: initData };
+      // Let _fetch inject init_data and user_id - don't manually add them
+      const body = { wallet_id: walletId };
       if (userId) body.user_id = userId;
       return this._fetch(`/web-app/set-primary`, {
         method: 'POST',
@@ -451,7 +483,7 @@
     },
 
     async mintNft(userId, walletId, nftName, description, imageUrl = null) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/mint`, {
         method: 'POST',
         body: {
@@ -460,24 +492,23 @@
           nft_name: nftName,
           nft_description: description,
           image_url: imageUrl,
-          init_data: initData,
         }
       });
     },
 
     async burnNft(userId, nftId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/burn`, {
         method: 'POST',
-        body: { user_id: userId, nft_id: nftId, init_data: initData }
+        body: { user_id: userId, nft_id: nftId }
       });
     },
 
     async transferNft(userId, nftId, toAddress) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/transfer`, {
         method: 'POST',
-        body: { user_id: userId, nft_id: nftId, to_address: toAddress, init_data: initData }
+        body: { user_id: userId, nft_id: nftId, to_address: toAddress }
       });
     },
 
@@ -493,108 +524,78 @@
     },
 
     async listNft(userId, nftId, price, currency = 'USDT') {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/list-nft`, {
         method: 'POST',
-        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency, init_data: initData }
+        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
       });
     },
 
     async makeOffer(userId, listingId, offerPrice) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/make-offer`, {
         method: 'POST',
-        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice), init_data: initData }
+        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice) }
       });
     },
 
     async cancelListing(userId, listingId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/web-app/cancel-listing`, {
         method: 'POST',
-        body: { user_id: userId, listing_id: listingId, init_data: initData }
+        body: { user_id: userId, listing_id: listingId }
       });
     },
 
-    // Dashboard endpoints
     async getDashboardData(userId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(state.initData || '')}`);
     },
 
-    // Payment endpoints (different prefix)
+    // Payment endpoints
     async getBalance() {
-      if (!state.user || !state.user.id) throw new Error('User not authenticated');
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      // Try both v1 and direct payment endpoint paths
-      try {
-        return await this._fetch(`/api/v1/payments/balance?init_data=${encodeURIComponent(initData)}`, {
-          headers: { 'X-User-ID': state.user.id }
-        });
-      } catch (e) {
-        log(`Balance endpoint failed: ${e.message}`, 'warn');
-        return this._fetch(`/api/v1/payments/balance?init_data=${encodeURIComponent(initData)}`);
-      }
+      // Let _fetch inject init_data - request uses X-User-ID header
+      return this._fetch(`/api/v1/payments/balance`);
     },
 
     async getPaymentHistory(limit = 10) {
-      if (!state.user || !state.user.id) throw new Error('User not authenticated');
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/api/v1/payments/history?limit=${limit}&init_data=${encodeURIComponent(initData)}`);
+      return this._fetch(`/api/v1/payments/history?limit=${limit}`);
     },
 
-    async initiateDeposit(walletId, amount, externalAddress = null) {
-      if (!state.user || !state.user.id) throw new Error('User not authenticated');
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+    async initiateDeposit(walletId, amount, externalAddress) {
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/api/v1/payments/deposit/initiate`, {
         method: 'POST',
-        body: {
-          wallet_id: walletId,
-          amount: parseFloat(amount),
-          external_address: externalAddress,
-          init_data: initData
-        }
+        body: { wallet_id: walletId, amount, external_address: externalAddress }
       });
     },
 
     async confirmDeposit(paymentId, transactionHash) {
-      if (!state.user || !state.user.id) throw new Error('User not authenticated');
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/api/v1/payments/deposit/confirm`, {
         method: 'POST',
-        body: {
-          payment_id: paymentId,
-          transaction_hash: transactionHash,
-          init_data: initData
-        }
+        body: { payment_id: paymentId, transaction_hash: transactionHash }
       });
     },
 
     async initiateWithdrawal(walletId, amount, destinationAddress) {
-      if (!state.user || !state.user.id) throw new Error('User not authenticated');
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/api/v1/payments/withdrawal/initiate`, {
         method: 'POST',
-        body: {
-          wallet_id: walletId,
-          amount: parseFloat(amount),
-          destination_address: destinationAddress,
-          init_data: initData
-        }
+        body: { wallet_id: walletId, amount, destination_address: destinationAddress }
       });
     },
 
     async approveWithdrawal(paymentId) {
-      if (!state.user || !state.user.id) throw new Error('User not authenticated');
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Let _fetch inject init_data - don't manually add it
       return this._fetch(`/api/v1/payments/withdrawal/approve`, {
         method: 'POST',
-        body: {
-          payment_id: paymentId,
-          init_data: initData
-        }
+        body: { payment_id: paymentId }
       });
     },
+
+    // Dashboard endpoints  
+    async getDashboardData(userId) {
+      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(state.initData || '')}`);\n    },
   };
 
   // Ui update 
@@ -1770,6 +1771,13 @@
       if (!user || !user.id) {
         throw new Error('Telegram authentication failed - cannot proceed without valid user session');
       }
+
+      // CRITICAL: Verify state.initData was set by initWithTelegram
+      if (!state.initData) {
+        throw new Error('Authentication data not properly initialized');
+      }
+
+      log('✓ state.initData synchronized');
 
       // User authenticated - update UI
       if (dom.userInfo && state.user) {
