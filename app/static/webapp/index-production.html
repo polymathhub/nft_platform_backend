@@ -808,348 +808,38 @@
     </main>
   </div>
 
+  <!-- 
+    Production-grade Telegram WebApp for NFT Platform
+    ================================================
+    HTML Structure: Semantic, accessible markup with responsive design
+    CSS: Embedded for performance (no render-blocking requests)
+    JavaScript: Delegated to external app.js (single source of truth)
+    
+    All application logic lives in app.js for maintainability.
+    This HTML provides the UI shell and framework.
+    
+    Features:
+    - Mobile-first responsive design
+    - Telegram WebApp integration ready
+    - Accessibility-compliant structure
+    - Performance optimized (embedded CSS, deferred JS)
+  -->
+  
   <script>
-    const $ = id => document.getElementById(id);
-    let user = null;
-    let initData = null;
-
-    const API = { 
-      call: async (method, path, body = null) => { 
-        const res = await fetch('/web-app' + path, { 
-          method, 
-          headers: { 'Content-Type': 'application/json' }, 
-          ...(body && { body: JSON.stringify(body) }) 
-        }); 
-        const text = await res.text(); 
-        try { 
-          return { ok: res.ok, status: res.status, data: JSON.parse(text) }; 
-        } catch(e) { 
-          return { ok: res.ok, status: res.status, data: text }; 
-        } 
-      } 
-    };
-
-    function getTelegramInitData() {
-      if (window.Telegram?.WebApp?.initData) {
-        return window.Telegram.WebApp.initData;
-      }
-      return localStorage.getItem('telegram_init_data') || 'test_init_data';
-    }
-
-    function showStatus(msg, type = 'info') {
-      const bar = $('statusBar');
-      const text = $('statusText');
-      const spinner = $('statusSpinner');
-      
-      text.textContent = msg;
-      bar.className = 'status-bar ' + type;
-      spinner.style.display = type === 'info' ? 'inline-block' : 'none';
-      bar.style.display = 'flex';
-      
-      setTimeout(() => { bar.style.display = 'none'; }, type === 'error' ? 4000 : 3000);
-    }
-
-    function switchPage(page) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      $(page + '-page').classList.add('active');
-      document.querySelector(`[onclick*="switchPage('${page}')"]`).classList.add('active');
-      
-      const titles = {
-        dashboard: 'Dashboard',
-        wallets: 'Wallets',
-        nfts: 'My NFTs',
-        mint: 'Mint NFT',
-        marketplace: 'Marketplace',
-        profile: 'Profile'
-      };
-      document.querySelector('.page-title').textContent = titles[page] || 'Dashboard';
-      
-      closeMobileMenu();
-    }
-
-    function closeMobileMenu() {
-      if (window.innerWidth <= 768) {
-        $('sidebar').classList.remove('open');
-        $('menuToggle').classList.remove('open');
-      }
-    }
-
-    async function initApp() {
-      initData = getTelegramInitData();
-      const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
-      
-      if (r.ok && r.data.user) {
-        user = r.data.user;
-        const initial = (user.telegram_username || user.first_name || 'U')[0].toUpperCase();
-        $('userAvatar').textContent = initial;
-        $('userNameDisplay').textContent = user.telegram_username || user.first_name || 'User';
-        $('userIdDisplay').textContent = '#' + user.id;
-        $('profileUsername').textContent = user.telegram_username || 'N/A';
-        $('profileId').textContent = user.id;
-        $('authStatus').textContent = 'Connected';
-        $('authStatus').style.color = 'var(--success)';
-        showStatus('Welcome ' + (user.telegram_username || 'User'), 'success');
-        loadDashboard();
-        loadWallets();
-        loadNFTs();
-        
-        // Handle deep linking from Telegram commands
-        const params = new URLSearchParams(window.location.search);
-        const page = params.get('page');
-        if (page && ['dashboard', 'wallets', 'nfts', 'mint', 'marketplace', 'profile'].includes(page)) {
-          setTimeout(() => switchPage(page), 500);
+    /**
+     * Telegram WebApp Initialization
+     * Must run before app.js to ensure Telegram SDK is ready
+     */
+    if (typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
+      try {
+        window.Telegram.WebApp.ready();
+        if (typeof window.Telegram.WebApp.expand === 'function') {
+          window.Telegram.WebApp.expand();
         }
-      } else {
-        showStatus('Failed to authenticate', 'error');
+      } catch (e) {
+        console.warn('Telegram WebApp initialization:', e.message);
       }
     }
-
-    async function loadDashboard() {
-      if (!user) return;
-      const r = await API.call('GET', '/dashboard-data?user_id=' + user.id);
-      if (r.ok) {
-        const d = r.data;
-        $('portfolioValue').textContent = '$' + (d.portfolio_value || '0');
-        $('totalNfts').textContent = d.total_nfts || '0';
-        $('totalWallets').textContent = d.total_wallets || '0';
-        $('totalListings').textContent = d.total_listings || '0';
-      }
-    }
-
-    async function createWallet() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const bc = $('createBlockchain').value;
-      if (!bc) { showStatus('Select blockchain', 'error'); return; }
-      showStatus('Creating wallet...', 'info');
-      const r = await API.call('POST', '/create-wallet', { blockchain: bc, wallet_type: 'custodial', init_data: initData });
-      if (r.ok) {
-        showStatus('Wallet created successfully', 'success');
-        loadWallets();
-        $('createBlockchain').value = '';
-      } else {
-        showStatus(r.data?.detail || 'Error creating wallet', 'error');
-      }
-    }
-
-    async function importWallet() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const bc = $('importBlockchain').value;
-      const addr = $('importAddress').value;
-      if (!bc || !addr) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Importing wallet...', 'info');
-      const r = await API.call('POST', '/import-wallet', { blockchain: bc, address: addr, init_data: initData });
-      if (r.ok) {
-        showStatus('Wallet imported successfully', 'success');
-        loadWallets();
-        $('importAddress').value = '';
-        $('importBlockchain').value = '';
-      } else {
-        showStatus(r.data?.detail || 'Error importing wallet', 'error');
-      }
-    }
-
-    async function loadWallets() {
-      if (!user) return;
-      const r = await API.call('GET', '/wallets?user_id=' + user.id);
-      const ws = r.ok ? r.data.wallets || [] : [];
-      $('walletsList').innerHTML = ws.length > 0 
-        ? ws.map(w => `
-            <div class="wallet-item">
-              <div class="blockchain-badge">${w.blockchain}</div>
-              <div class="address-text">${w.address}</div>
-              <button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}'); showStatus('Address copied', 'success')">Copy Address</button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets. Create one using the form above.</p>';
-      
-      $('mintWalletSelect').innerHTML = '<option value="">Choose wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain}</option>`).join('');
-    }
-
-    async function loadNFTs() {
-      if (!user) return;
-      const r = await API.call('GET', '/nfts?user_id=' + user.id);
-      const ns = r.ok ? r.data.nfts || [] : [];
-      $('nftList').innerHTML = ns.length > 0 
-        ? ns.map(n => `
-            <div class="nft-item">
-              <strong>${n.name}</strong>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${n.id.slice(0, 12)}...</p>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Status: ${n.status}</p>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Start minting.</p>';
-    }
-
-    async function mint() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const wallet = $('mintWalletSelect').value;
-      const name = $('mintName').value;
-      if (!name || !wallet) { showStatus('Fill all required fields', 'error'); return; }
-      showStatus('Minting NFT...', 'info');
-      const r = await API.call('POST', '/mint', { 
-        wallet_id: wallet, 
-        nft_name: name, 
-        nft_description: $('mintDesc').value || '', 
-        image_url: $('mintImage').value || '', 
-        init_data: initData 
-      });
-      if (r.ok) {
-        showStatus('NFT minted successfully', 'success');
-        loadNFTs();
-        $('mintName').value = '';
-        $('mintDesc').value = '';
-        $('mintImage').value = '';
-        $('mintWalletSelect').value = '';
-      } else {
-        showStatus(r.data?.detail || 'Error minting NFT', 'error');
-      }
-    }
-
-    async function transfer() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const nid = $('transferNFT').value;
-      const addr = $('transferTo').value;
-      if (!nid || !addr) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Transferring NFT...', 'info');
-      const r = await API.call('POST', '/transfer', { nft_id: nid, to_address: addr, init_data: initData });
-      if (r.ok) {
-        showStatus('NFT transferred successfully', 'success');
-        $('transferNFT').value = '';
-        $('transferTo').value = '';
-        loadNFTs();
-      } else {
-        showStatus(r.data?.detail || 'Error transferring NFT', 'error');
-      }
-    }
-
-    async function burn() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const nid = $('burnNFT').value;
-      if (!nid) { showStatus('Enter NFT ID', 'error'); return; }
-      if (!confirm('Are you sure you want to burn this NFT? This action cannot be undone.')) return;
-      showStatus('Burning NFT...', 'info');
-      const r = await API.call('POST', '/burn', { nft_id: nid, init_data: initData });
-      if (r.ok) {
-        showStatus('NFT burned successfully', 'success');
-        $('burnNFT').value = '';
-        loadNFTs();
-      } else {
-        showStatus(r.data?.detail || 'Error burning NFT', 'error');
-      }
-    }
-
-    async function browseListings() {
-      showStatus('Loading listings...', 'info');
-      const r = await API.call('GET', '/marketplace/listings?limit=50');
-      const ls = r.ok ? r.data.listings || [] : [];
-      $('marketplaceListings').innerHTML = ls.length > 0 
-        ? ls.map(l => `
-            <div class="listing-item">
-              <strong>${l.nft_name}</strong>
-              <div class="price-display">${l.price} ${l.currency}</div>
-              <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain}</p>
-              <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('offerListing').value='${l.listing_id}'; showStatus('Enter your offer price', 'info')">Make Offer</button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
-      showStatus('Listings loaded', 'success');
-    }
-
-    function showMarketSection(section) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`[onclick*="showMarketSection('${section}')"]`).classList.add('active');
-      
-      if (section === 'browse') {
-        $('browseSection').style.display = 'block';
-        $('myListingsSection').style.display = 'none';
-        browseListings();
-      } else {
-        $('browseSection').style.display = 'none';
-        $('myListingsSection').style.display = 'block';
-        myListings();
-      }
-    }
-
-    async function myListings() {
-      if (!user) return;
-      const r = await API.call('GET', '/marketplace/mylistings?user_id=' + user.id);
-      const ls = r.ok ? r.data.listings || [] : [];
-      $('myListings').innerHTML = ls.length > 0 
-        ? ls.map(l => `
-            <div class="listing-item">
-              <strong>${l.nft_name}</strong>
-              <div class="price-display">${l.price} ${l.currency}</div>
-              <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('cancelListing').value='${l.listing_id}'">Select to Cancel</button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
-    }
-
-    async function listNFT() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const nid = $('listNFT').value;
-      const price = $('listPrice').value;
-      if (!nid || !price) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Listing NFT...', 'info');
-      const r = await API.call('POST', '/list-nft', { nft_id: nid, price, currency: $('listCurrency').value, init_data: initData });
-      if (r.ok) {
-        showStatus('NFT listed successfully', 'success');
-        $('listNFT').value = '';
-        $('listPrice').value = '';
-        myListings();
-      } else {
-        showStatus(r.data?.detail || 'Error listing NFT', 'error');
-      }
-    }
-
-    async function makeOffer() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const lid = $('offerListing').value;
-      const price = $('offerPrice').value;
-      if (!lid || !price) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Making offer...', 'info');
-      const r = await API.call('POST', '/make-offer', { listing_id: lid, offer_price: price, init_data: initData });
-      if (r.ok) {
-        showStatus('Offer made successfully', 'success');
-        $('offerListing').value = '';
-        $('offerPrice').value = '';
-      } else {
-        showStatus(r.data?.detail || 'Error making offer', 'error');
-      }
-    }
-
-    async function cancelListing() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const lid = $('cancelListing').value;
-      if (!lid) { showStatus('Enter listing ID', 'error'); return; }
-      if (!confirm('Cancel this listing?')) return;
-      showStatus('Cancelling listing...', 'info');
-      const r = await API.call('POST', '/cancel-listing', { listing_id: lid, init_data: initData });
-      if (r.ok) {
-        showStatus('Listing cancelled successfully', 'success');
-        $('cancelListing').value = '';
-        myListings();
-      } else {
-        showStatus(r.data?.detail || 'Error cancelling listing', 'error');
-      }
-    }
-
-    // Mobile Menu Toggle
-    $('menuToggle').addEventListener('click', () => {
-      $('sidebar').classList.toggle('open');
-      $('menuToggle').classList.toggle('open');
-    });
-
-    // Close menu on outside click
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
-        closeMobileMenu();
-      }
-    });
-
-    // Initialize
-    window.addEventListener('DOMContentLoaded', initApp);
   </script>
   <script src="/web-app/static/app.js"></script>
 </body>
