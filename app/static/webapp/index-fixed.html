@@ -947,14 +947,28 @@
     }
 
     async function loadDashboard() {
-      if (!user) return;
-      const r = await API.call('GET', '/dashboard-data?user_id=' + user.id);
-      if (r.ok) {
-        const d = r.data;
-        $('portfolioValue').textContent = '$' + (d.portfolio_value || '0');
-        $('totalNfts').textContent = d.total_nfts || '0';
-        $('totalWallets').textContent = d.total_wallets || '0';
-        $('totalListings').textContent = d.total_listings || '0';
+      if (!user || !user.id) {
+        console.log('[Dashboard] User not ready');
+        return;
+      }
+      try {
+        console.log('[Dashboard] Fetching dashboard data for user:', user.id);
+        const r = await API.call('GET', '/dashboard-data?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        console.log('[Dashboard] Response:', r);
+        if (r.ok && r.data) {
+          const d = r.data;
+          $('portfolioValue').textContent = '$' + (d.portfolio_value || '0');
+          $('totalNfts').textContent = d.total_nfts || '0';
+          $('totalWallets').textContent = d.total_wallets || '0';
+          $('totalListings').textContent = d.total_listings || '0';
+          console.log('[Dashboard] Dashboard loaded successfully');
+        } else {
+          console.error('[Dashboard] Error response:', r);
+          showStatus('Failed to load dashboard data', 'error');
+        }
+      } catch (err) {
+        console.error('[Dashboard] Error:', err);
+        showStatus('Dashboard error: ' + err.message, 'error');
       }
     }
 
@@ -995,35 +1009,57 @@
     }
 
     async function loadWallets() {
-      if (!user) return;
-      const r = await API.call('GET', '/wallets?user_id=' + user.id);
-      const ws = r.ok ? r.data.wallets || [] : [];
-      $('walletsList').innerHTML = ws.length > 0 
-        ? ws.map(w => `
-            <div class="wallet-item">
-              <div class="blockchain-badge">${w.blockchain}</div>
-              <div class="address-text">${w.address}</div>
-              <button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}'); showStatus('Address copied', 'success')">Copy Address</button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets. Create one using the form above.</p>';
-      
-      $('mintWalletSelect').innerHTML = '<option value="">Choose wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain}</option>`).join('');
+      if (!user || !user.id) {
+        console.log('[Wallets] User not ready');
+        return;
+      }
+      try {
+        console.log('[Wallets] Fetching wallets for user:', user.id);
+        const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        console.log('[Wallets] Response:', r);
+        const ws = (r.ok && r.data) ? r.data.wallets || [] : [];
+        $('walletsList').innerHTML = ws.length > 0 
+          ? ws.map(w => `
+              <div class="wallet-item">
+                <div class="blockchain-badge">${w.blockchain?.toUpperCase() || 'UNKNOWN'}</div>
+                <div class="address-text">${w.address || 'N/A'}</div>
+                <button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}'); showStatus('Address copied', 'success')">Copy</button>
+              </div>
+            `).join('')
+          : '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets yet. Create one to start!</p>';
+        
+        $('mintWalletSelect').innerHTML = '<option value="">Select wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase() || 'Wallet'}</option>`).join('');
+        console.log('[Wallets] Loaded', ws.length, 'wallets');
+      } catch (err) {
+        console.error('[Wallets] Error:', err);
+        showStatus('Wallets error: ' + err.message, 'error');
+      }
     }
 
     async function loadNFTs() {
-      if (!user) return;
-      const r = await API.call('GET', '/nfts?user_id=' + user.id);
-      const ns = r.ok ? r.data.nfts || [] : [];
-      $('nftList').innerHTML = ns.length > 0 
-        ? ns.map(n => `
-            <div class="nft-item">
-              <strong>${n.name}</strong>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${n.id.slice(0, 12)}...</p>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Status: ${n.status}</p>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Start minting.</p>';
+      if (!user || !user.id) {
+        console.log('[NFTs] User not ready');
+        return;
+      }
+      try {
+        console.log('[NFTs] Fetching NFTs for user:', user.id);
+        const r = await API.call('GET', '/nfts?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        console.log('[NFTs] Response:', r);
+        const ns = (r.ok && r.data) ? r.data.nfts || [] : [];
+        $('nftList').innerHTML = ns.length > 0 
+          ? ns.map(n => `
+              <div class="nft-item">
+                <strong>${n.name || 'Unnamed NFT'}</strong>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${(n.id || 'N/A').toString().slice(0, 12)}...</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Status: ${n.status || 'PENDING'}</p>
+              </div>
+            `).join('')
+          : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Mint your first NFT!</p>';
+        console.log('[NFTs] Loaded', ns.length, 'NFTs');
+      } catch (err) {
+        console.error('[NFTs] Error:', err);
+        showStatus('NFTs error: ' + err.message, 'error');
+      }
     }
 
     async function mint() {
@@ -1085,20 +1121,28 @@
     }
 
     async function browseListings() {
-      showStatus('Loading listings...', 'info');
-      const r = await API.call('GET', '/marketplace/listings?limit=50');
-      const ls = r.ok ? r.data.listings || [] : [];
-      $('marketplaceListings').innerHTML = ls.length > 0 
-        ? ls.map(l => `
-            <div class="listing-item">
-              <strong>${l.nft_name}</strong>
-              <div class="price-display">${l.price} ${l.currency}</div>
-              <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain}</p>
-              <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('offerListing').value='${l.listing_id}'; showStatus('Enter your offer price', 'info')">Make Offer</button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
-      showStatus('Listings loaded', 'success');
+      try {
+        showStatus('Loading listings...', 'info');
+        console.log('[Marketplace] Fetching listings');
+        const r = await API.call('GET', '/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
+        console.log('[Marketplace] Response:', r);
+        const ls = (r.ok && r.data) ? r.data.listings || [] : [];
+        $('marketplaceListings').innerHTML = ls.length > 0 
+          ? ls.map(l => `
+              <div class="listing-item">
+                <strong>${l.nft_name || 'NFT'}</strong>
+                <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
+                <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain || 'Unknown'}</p>
+                <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('offerListing').value='${l.listing_id}'; showStatus('Enter your offer price', 'info')">Make Offer</button>
+              </div>
+            `).join('')
+          : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
+        showStatus('Listings loaded', 'success');
+        console.log('[Marketplace] Loaded', ls.length, 'listings');
+      } catch (err) {
+        console.error('[Marketplace] Error:', err);
+        showStatus('Marketplace error: ' + err.message, 'error');
+      }
     }
 
     function showMarketSection(section) {
@@ -1117,18 +1161,29 @@
     }
 
     async function myListings() {
-      if (!user) return;
-      const r = await API.call('GET', '/marketplace/mylistings?user_id=' + user.id);
-      const ls = r.ok ? r.data.listings || [] : [];
-      $('myListings').innerHTML = ls.length > 0 
-        ? ls.map(l => `
-            <div class="listing-item">
-              <strong>${l.nft_name}</strong>
-              <div class="price-display">${l.price} ${l.currency}</div>
-              <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('cancelListing').value='${l.listing_id}'">Select to Cancel</button>
-            </div>
-          `).join('')
-        : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
+      if (!user || !user.id) {
+        console.log('[MyListings] User not ready');
+        return;
+      }
+      try {
+        console.log('[MyListings] Fetching my listings for user:', user.id);
+        const r = await API.call('GET', '/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        console.log('[MyListings] Response:', r);
+        const ls = (r.ok && r.data) ? r.data.listings || [] : [];
+        $('myListings').innerHTML = ls.length > 0 
+          ? ls.map(l => `
+              <div class="listing-item">
+                <strong>${l.nft_name || 'NFT'}</strong>
+                <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
+                <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('cancelListing').value='${l.listing_id}'">Select to Cancel</button>
+              </div>
+            `).join('')
+          : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
+        console.log('[MyListings] Loaded', ls.length, 'listings');
+      } catch (err) {
+        console.error('[MyListings] Error:', err);
+        showStatus('My Listings error: ' + err.message, 'error');
+      }
     }
 
     async function listNFT() {
