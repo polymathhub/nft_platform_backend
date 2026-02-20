@@ -1,4 +1,13 @@
-"""Payment router - deposit and withdrawal endpoints."""
+"""Payment router - deposit and withdrawal endpoints.
+
+SOURCE OF TRUTH: All payment endpoints (deposit/withdrawal) are defined here.
+- Frontend calls: /api/v1/payments/*
+- Telegram bot calls: /api/v1/payments/* (via Telegram user auth)
+- NO duplication: These are the ONLY payment endpoints in the backend.
+
+IMPORTANT: Do NOT duplicate these endpoints in other routers (e.g., telegram_mint_router).
+This ensures a single source of truth for payment logic and prevents conflicts.
+"""
 import logging
 from uuid import UUID
 

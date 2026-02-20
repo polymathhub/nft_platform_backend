@@ -2619,25 +2619,35 @@ async def create_wallet_for_webapp(
                 detail=f"Invalid blockchain: {blockchain_value}",
             )
 
-        # Use proper wallet generation based on blockchain
+        # Use proper wallet generation based on blockchain with timeout protection
         gen_start = time.time()
         try:
-            if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
-                                   BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
-                                   BlockchainType.BASE, BlockchainType.AVALANCHE):
-                logger.debug("Generating EVM wallet (start)")
-                wallet, error = await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
-            elif blockchain_type == BlockchainType.TON:
-                logger.debug("Generating TON wallet (start)")
-                wallet, error = await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
-            elif blockchain_type == BlockchainType.SOLANA:
-                logger.debug("Generating Solana wallet (start)")
-                wallet, error = await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
-            elif blockchain_type == BlockchainType.BITCOIN:
-                logger.debug("Generating Bitcoin wallet (start)")
-                wallet, error = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
-            else:
-                error = f"Unsupported blockchain: {blockchain_value}"
+            # Wrap wallet generation with 30-second timeout to prevent hanging
+            async def generate_wallet():
+                if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
+                                       BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
+                                       BlockchainType.BASE, BlockchainType.AVALANCHE):
+                    logger.debug("Generating EVM wallet (start)")
+                    return await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
+                elif blockchain_type == BlockchainType.TON:
+                    logger.debug("Generating TON wallet (start)")
+                    return await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
+                elif blockchain_type == BlockchainType.SOLANA:
+                    logger.debug("Generating Solana wallet (start)")
+                    return await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
+                elif blockchain_type == BlockchainType.BITCOIN:
+                    logger.debug("Generating Bitcoin wallet (start)")
+                    return await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
+                else:
+                    return None, f"Unsupported blockchain: {blockchain_value}"
+            
+            import asyncio
+            try:
+                wallet, error = await asyncio.wait_for(generate_wallet(), timeout=30.0)
+            except asyncio.TimeoutError:
+                logger.error(f"[CREATE_WALLET] TIMEOUT: Wallet generation took >30s for {blockchain_value}")
+                error = f"Wallet generation timeout - blockchain RPC may be unresponsive"
+                wallet = None
         finally:
             logger.debug(f"Wallet generation finished (time={time.time()-gen_start:.3f}s)")
         
@@ -2844,6 +2854,26 @@ async def import_wallet_for_webapp(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to import wallet: {str(e)}",
         )
+
+
+# ==================== Payment Endpoints ====================
+# IMPORTANT: Payment endpoints are EXCLUSIVELY handled by payment_router.py
+# 
+# Rationale:
+#  1. Single Source of Truth: payment_router.py owns all payment logic
+#  2. No Duplication: Prevents inconsistent implementations
+#  3. Frontend Compatibility: Frontend calls /api/v1/payments/* directly
+#  4. Telegram Bot Access: Bot uses /api/v1/payments/* with Telegram auth (via get_telegram_user_from_request)
+#
+# DO NOT add payment endpoints (/web-app/deposit/*, /web-app/balance, etc.) here.
+# Instead, frontend/Telegram use payment_router endpoints:
+#   GET    /api/v1/payments/balance
+#   POST   /api/v1/payments/deposit/initiate
+#   POST   /api/v1/payments/deposit/confirm
+#   POST   /api/v1/payments/withdrawal/initiate
+#   POST   /api/v1/payments/withdrawal/approve
+#
+# See: app/routers/payment_router.py (lines 1-25)
 
 
 # ==================== Polling Handler ====================

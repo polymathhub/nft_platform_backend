@@ -30,7 +30,7 @@
 
   // ========== CONFIGURATION ==========
   const CONFIG = {
-    API_BASE: '/api/v1/telegram',
+    API_BASE: '',
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 500,
     TIMEOUT: 20000,
@@ -286,7 +286,7 @@
   // ========== API LAYER ==========
   const API = {
     async _fetch(endpoint, options = {}, attempt = 1) {
-      const url = `${CONFIG.API_BASE}${endpoint}`;
+      const url = `${endpoint}`;
       const method = options.method || 'GET';
       
       try {
@@ -354,7 +354,7 @@
         // Fail fast on 401/403 - auth errors
         if (response.status === 401 || response.status === 403) {
           log(`${method} ${endpoint} auth failed: ${response.status}`, 'error');
-          throw new Error('Authentication failed - Telegram init_data required');
+          throw new Error('Authentication failed - Telegram init_data required or expired');
         }
         
         let data;
@@ -367,7 +367,7 @@
         
         if (!response.ok) {
           log(`${method} ${endpoint} failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
-          if (attempt < CONFIG.RETRY_ATTEMPTS) {
+          if (attempt < CONFIG.RETRY_ATTEMPTS && [408, 429, 500, 502, 503, 504].includes(response.status)) {
             await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * attempt));
             return this._fetch(endpoint, options, attempt + 1);
           }
@@ -483,7 +483,8 @@
 
     // Marketplace endpoints
     async getMarketplaceListings(limit = 50) {
-      return this._fetch(`/web-app/marketplace/listings?limit=${limit}`);
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/web-app/marketplace/listings?limit=${limit}&init_data=${encodeURIComponent(initData)}`);
     },
 
     async getMyListings(userId) {
@@ -519,6 +520,80 @@
     async getDashboardData(userId) {
       const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
       return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+    },
+
+    // Payment endpoints (different prefix)
+    async getBalance() {
+      if (!state.user || !state.user.id) throw new Error('User not authenticated');
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      // Try both v1 and direct payment endpoint paths
+      try {
+        return await this._fetch(`/api/v1/payments/balance?init_data=${encodeURIComponent(initData)}`, {
+          headers: { 'X-User-ID': state.user.id }
+        });
+      } catch (e) {
+        log(`Balance endpoint failed: ${e.message}`, 'warn');
+        return this._fetch(`/api/v1/payments/balance?init_data=${encodeURIComponent(initData)}`);
+      }
+    },
+
+    async getPaymentHistory(limit = 10) {
+      if (!state.user || !state.user.id) throw new Error('User not authenticated');
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/api/v1/payments/history?limit=${limit}&init_data=${encodeURIComponent(initData)}`);
+    },
+
+    async initiateDeposit(walletId, amount, externalAddress = null) {
+      if (!state.user || !state.user.id) throw new Error('User not authenticated');
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/api/v1/payments/deposit/initiate`, {
+        method: 'POST',
+        body: {
+          wallet_id: walletId,
+          amount: parseFloat(amount),
+          external_address: externalAddress,
+          init_data: initData
+        }
+      });
+    },
+
+    async confirmDeposit(paymentId, transactionHash) {
+      if (!state.user || !state.user.id) throw new Error('User not authenticated');
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/api/v1/payments/deposit/confirm`, {
+        method: 'POST',
+        body: {
+          payment_id: paymentId,
+          transaction_hash: transactionHash,
+          init_data: initData
+        }
+      });
+    },
+
+    async initiateWithdrawal(walletId, amount, destinationAddress) {
+      if (!state.user || !state.user.id) throw new Error('User not authenticated');
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/api/v1/payments/withdrawal/initiate`, {
+        method: 'POST',
+        body: {
+          wallet_id: walletId,
+          amount: parseFloat(amount),
+          destination_address: destinationAddress,
+          init_data: initData
+        }
+      });
+    },
+
+    async approveWithdrawal(paymentId) {
+      if (!state.user || !state.user.id) throw new Error('User not authenticated');
+      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
+      return this._fetch(`/api/v1/payments/withdrawal/approve`, {
+        method: 'POST',
+        body: {
+          payment_id: paymentId,
+          init_data: initData
+        }
+      });
     },
   };
 
@@ -1497,8 +1572,8 @@
       try {
         showStatus('Loading balance...', 'loading');
         
-        const response = await API._fetch(`/api/v1/payments/balance`);
-        if (response.error) throw new Error(response.error);
+        const response = await API.getBalance();
+        if (response.error || !response.success) throw new Error(response.error || response.detail || 'Failed to load balance');
         
         const balance = response || {};
         const total = balance.total_balance_usdt || 0;
@@ -1542,7 +1617,7 @@
         }
         
         // Update payment history
-        const historyResponse = await API._fetch(`/api/v1/payments/history?limit=5`);
+        const historyResponse = await API.getPaymentHistory(5);
         const paymentHistoryList = document.getElementById('paymentHistoryList');
         if (paymentHistoryList && historyResponse.history) {
           paymentHistoryList.innerHTML = historyResponse.history.length ? 
