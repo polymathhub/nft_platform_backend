@@ -550,6 +550,7 @@
       <nav class="nav-menu">
         <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">Dashboard</div>
         <div class="nav-item" data-page="wallets" onclick="switchPage('wallets')">Wallets</div>
+        <div class="nav-item" data-page="payments" onclick="switchPage('payments')">Payments</div>
         <div class="nav-item" data-page="nfts" onclick="switchPage('nfts')">My NFTs</div>
         <div class="nav-item" data-page="mint" onclick="switchPage('mint')">Mint NFT</div>
         <div class="nav-item" data-page="marketplace" onclick="switchPage('marketplace')">Marketplace</div>
@@ -643,6 +644,159 @@
             <h3>Your Wallets</h3>
             <div id="walletsList" style="margin-top: 16px;">
               <p style="color: var(--text-muted); text-align: center; padding: 40px;"><span class="spinner"></span> Loading wallets...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payments Page -->
+        <div id="payments-page" class="page">
+          <h2>Payments</h2>
+          <div class="card" style="margin-bottom: 24px;">
+            <h3>Account Balance</h3>
+            <div style="margin-top: 16px;">
+              <div class="stat-card" style="background: transparent; border: none; padding: 0;">
+                <div class="stat-label">Available USDT Balance</div>
+                <div class="stat-value" id="usdtBalance" style="color: var(--primary);">$0.00</div>
+              </div>
+              <button class="btn btn-secondary btn-small" style="margin-top: 16px;" onclick="loadBalance()">Refresh Balance</button>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab-btn active" data-section="deposit" onclick="showPaymentSection('deposit')">Deposit</button>
+            <button class="tab-btn" data-section="withdraw" onclick="showPaymentSection('withdraw')">Withdraw</button>
+          </div>
+
+          <!-- Deposit Section -->
+          <div id="depositSection">
+            <div class="grid-auto">
+              <div class="card">
+                <h3>Deposit USDT</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Send USDT from your exchange wallet (Binance, Kraken, Coinbase, etc.) to receive funds on the platform.</p>
+                <div class="form-group">
+                  <label>Select Wallet (Optional)</label>
+                  <select id="depositWalletSelect">
+                    <option value="">Auto-detect or create new</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Select Blockchain</label>
+                  <select id="depositBlockchain">
+                    <option value="">Choose blockchain...</option>
+                    <option value="ethereum">Ethereum (ERC20)</option>
+                    <option value="ton">TON (Native)</option>
+                    <option value="solana">Solana (SPL)</option>
+                    <option value="bitcoin">Bitcoin</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Amount (USDT)</label>
+                  <input id="depositAmount" type="number" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="initiateDeposit()">Get Deposit Address</button>
+              </div>
+
+              <div class="card">
+                <h3>Deposit Instructions</h3>
+                <div id="depositInstructions" style="display: none; margin-top: 16px;">
+                  <div style="background: rgba(124, 92, 255, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">Platform Deposit Address</p>
+                    <div class="address-text" id="depositAddressDisplay">—</div>
+                    <button class="btn btn-secondary btn-small" style="width: 100%; margin-top: 8px;" onclick="copyDepositAddress()">Copy Address</button>
+                  </div>
+                  <div style="background: rgba(52, 211, 153, 0.1); padding: 16px; border-radius: 8px; border-left: 3px solid var(--success);">
+                    <p style="font-size: 12px; color: var(--success); font-weight: 600; margin-bottom: 8px;">✓ Ready to Receive</p>
+                    <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                      1. Copy the address above<br>
+                      2. Go to your exchange (Binance, Kraken, etc.)<br>
+                      3. Send USDT to this address<br>
+                      4. Wait for confirmation<br>
+                      5. Balance will update automatically
+                    </p>
+                  </div>
+                  <div style="margin-top: 16px;">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Deposit ID: <span id="depositIdDisplay" style="font-family: monospace;">—</span></p>
+                    <p style="font-size: 11px; color: var(--text-muted);">Status: <span id="depositStatusDisplay" style="color: var(--primary); font-weight: 600;">Pending</span></p>
+                  </div>
+                </div>
+                <div id="depositNoInstructions" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                  <p>Complete the form on the left to get a deposit address</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 24px;">
+              <h3>Recent Deposits</h3>
+              <div id="depositHistory" style="margin-top: 16px;">
+                <p style="color: var(--text-muted); text-align: center; padding: 20px;">No deposit history yet</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Withdraw Section -->
+          <div id="withdrawSection" style="display: none;">
+            <div class="grid-auto">
+              <div class="card">
+                <h3>Withdraw USDT</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Send USDT from your platform account to any external wallet.</p>
+                <div class="form-group">
+                  <label>Select Wallet to Withdraw From</label>
+                  <select id="withdrawWalletSelect">
+                    <option value="">Choose wallet...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Select Blockchain</label>
+                  <select id="withdrawBlockchain">
+                    <option value="">Choose blockchain...</option>
+                    <option value="ethereum">Ethereum (ERC20)</option>
+                    <option value="ton">TON (Native)</option>
+                    <option value="solana">Solana (SPL)</option>
+                    <option value="bitcoin">Bitcoin</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Recipient Address</label>
+                  <input id="withdrawAddress" type="text" placeholder="0x... or wallet address">
+                </div>
+                <div class="form-group">
+                  <label>Amount (USDT)</label>
+                  <input id="withdrawAmount" type="number" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div style="background: rgba(255, 193, 7, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; border-left: 3px solid var(--warning);">
+                  <p style="font-size: 12px; color: var(--text-muted);">Network fee: <span id="networkFeeDisplay" style="color: var(--primary); font-weight: 600;">$0.00</span></p>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="initiateWithdrawal()">Continue</button>
+              </div>
+
+              <div class="card">
+                <h3>Withdrawal Summary</h3>
+                <div id="withdrawalSummary" style="display: none; margin-top: 16px;">
+                  <div style="background: var(--bg-light); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Amount</p>
+                    <p style="font-size: 16px; font-weight: 600; color: var(--text);" id="withdrawSummaryAmount">—</p>
+                  </div>
+                  <div style="background: var(--bg-light); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Network Fee</p>
+                    <p style="font-size: 16px; font-weight: 600; color: var(--text);" id="withdrawSummaryFee">—</p>
+                  </div>
+                  <div style="background: rgba(124, 92, 255, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">You Receive</p>
+                    <p style="font-size: 18px; font-weight: 700; color: var(--primary);" id="withdrawSummaryTotal">—</p>
+                  </div>
+                  <button class="btn btn-primary btn-block" style="margin-top: 16px;" onclick="confirmWithdrawal()">Confirm & Withdraw</button>
+                </div>
+                <div id="withdrawalNoSummary" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                  <p>Complete the form on the left for withdrawal summary</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 24px;">
+              <h3>Recent Withdrawals</h3>
+              <div id="withdrawalHistory" style="margin-top: 16px;">
+                <p style="color: var(--text-muted); text-align: center; padding: 20px;">No withdrawal history yet</p>
+              </div>
             </div>
           </div>
         </div>
@@ -931,6 +1085,7 @@
         const titles = {
           dashboard: 'Dashboard',
           wallets: 'Wallets',
+          payments: 'Payments',
           nfts: 'My NFTs',
           mint: 'Mint NFT',
           marketplace: 'Marketplace',
@@ -1305,6 +1460,342 @@
     window.listNFT = listNFT;
     window.makeOffer = makeOffer;
     window.cancelListing = cancelListing;
+    window.showPaymentSection = showPaymentSection;
+    window.loadBalance = loadBalance;
+    window.initiateDeposit = initiateDeposit;
+    window.copyDepositAddress = copyDepositAddress;
+    window.initiateWithdrawal = initiateWithdrawal;
+    window.confirmWithdrawal = confirmWithdrawal;
+
+    // Payment Functions - Deposit and Withdrawal
+    let currentDepositId = null;
+    let currentDepositAddress = null;
+    let currentWithdrawalPaymentId = null;
+
+    function showPaymentSection(section) {
+      console.log('[Payments] Switching to section:', section);
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('[data-section]').forEach(btn => {
+        if (btn.getAttribute('data-section') === section) {
+          btn.classList.add('active');
+        }
+      });
+      
+      const depositSection = $('depositSection');
+      const withdrawSection = $('withdrawSection');
+      
+      if (section === 'deposit') {
+        if (depositSection) depositSection.style.display = 'block';
+        if (withdrawSection) withdrawSection.style.display = 'none';
+        loadBalance();
+        refreshPaymentWallets('deposit');
+      } else {
+        if (depositSection) depositSection.style.display = 'none';
+        if (withdrawSection) withdrawSection.style.display = 'block';
+        loadBalance();
+        refreshPaymentWallets('withdraw');
+      }
+    }
+
+    async function refreshPaymentWallets(type) {
+      try {
+        const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        const ws = (r.ok && r.data) ? r.data.wallets || [] : [];
+        
+        if (type === 'deposit' && ws.length > 0) {
+          const sel = $('depositWalletSelect');
+          if (sel) {
+            sel.innerHTML = '<option value="">Auto-detect or create new</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()} - ${w.address.slice(0, 10)}...</option>`).join('');
+          }
+        }
+        
+        if (type === 'withdraw' && ws.length > 0) {
+          const sel = $('withdrawWalletSelect');
+          if (sel) {
+            sel.innerHTML = '<option value="">Choose wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()} - ${w.address.slice(0, 10)}...</option>`).join('');
+          }
+        }
+      } catch (err) {
+        console.error('[PaymentWallets] Error:', err);
+      }
+    }
+
+    async function loadBalance() {
+      if (!user || !user.id) {
+        console.log('[Balance] User not ready');
+        return;
+      }
+      try {
+        console.log('[Balance] Fetching balance for user:', user.id);
+        const r = await fetch('/api/v1/payments/balance', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await r.json();
+        console.log('[Balance] Response:', data);
+        
+        if (r.ok && data) {
+          const balance = parseFloat(data.balance || 0);
+          const balanceEl = $('usdtBalance');
+          if (balanceEl) {
+            balanceEl.textContent = '$' + balance.toFixed(2);
+          }
+          console.log('[Balance] Loaded:', balance);
+        } else {
+          console.log('[Balance] Could not load balance, defaulting to $0');
+          const balanceEl = $('usdtBalance');
+          if (balanceEl) balanceEl.textContent = '$0.00';
+        }
+      } catch (err) {
+        console.error('[Balance] Error:', err);
+        const balanceEl = $('usdtBalance');
+        if (balanceEl) balanceEl.textContent = '$0.00';
+      }
+    }
+
+    async function initiateDeposit() {
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
+      const wsel = $('depositWalletSelect');
+      const bcEl = $('depositBlockchain');
+      const amtEl = $('depositAmount');
+      const wallet_id = wsel ? wsel.value : null;
+      const bc = bcEl ? bcEl.value : null;
+      const amount = amtEl ? amtEl.value : null;
+      
+      if (!bc || !amount || parseFloat(amount) <= 0) {
+        showStatus('Select blockchain and enter amount', 'error');
+        return;
+      }
+      
+      if (!wallet_id) {
+        showStatus('Please select a wallet', 'error');
+        return;
+      }
+      
+      showStatus('Initiating deposit...', 'info');
+      try {
+        const r = await fetch('/api/v1/payments/web-app/deposit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            wallet_id: wallet_id,
+            blockchain: bc,
+            amount: parseFloat(amount),
+            init_data: initData
+          })
+        });
+        const data = await r.json();
+        
+        console.log('[Deposit] Response:', data);
+        
+        if (r.ok && data) {
+          currentDepositId = data.payment_id;
+          currentDepositAddress = data.deposit_address || data.platform_address || data.address;
+          
+          const instrDiv = $('depositInstructions');
+          const noInstrDiv = $('depositNoInstructions');
+          const addrDisplay = $('depositAddressDisplay');
+          const idDisplay = $('depositIdDisplay');
+          
+          if (instrDiv) instrDiv.style.display = 'block';
+          if (noInstrDiv) noInstrDiv.style.display = 'none';
+          if (addrDisplay) addrDisplay.textContent = currentDepositAddress;
+          if (idDisplay) idDisplay.textContent = currentDepositId;
+          
+          showStatus('Deposit address ready - copy and send USDT to this address', 'success');
+          loadDepositHistory();
+        } else {
+          showStatus(data?.detail || data?.error || 'Error initiating deposit', 'error');
+        }
+      } catch (err) {
+        console.error('[Deposit] Error:', err);
+        showStatus('Error: ' + err.message, 'error');
+      }
+    }
+
+    function copyDepositAddress() {
+      if (!currentDepositAddress) {
+        showStatus('No deposit address available', 'error');
+        return;
+      }
+      navigator.clipboard.writeText(currentDepositAddress).then(() => {
+        showStatus('Deposit address copied to clipboard', 'success');
+      }).catch(() => {
+        showStatus('Failed to copy address', 'error');
+      });
+    }
+
+    async function loadDepositHistory() {
+      if (!user || !user.id) return;
+      try {
+        const r = await fetch('/api/v1/payments/history?user_id=' + user.id + '&type=deposit&limit=5', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await r.json();
+        const historyEl = $('depositHistory');
+        if (!historyEl) return;
+        
+        if (r.ok && data && data.payments && data.payments.length > 0) {
+          historyEl.innerHTML = data.payments.map(p => `
+            <div class="wallet-item">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 14px;">${p.amount || '0'} USDT</strong>
+                <span style="font-size: 11px; padding: 4px 8px; background: ${p.status === 'confirmed' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(255, 193, 7, 0.2)'}; color: ${p.status === 'confirmed' ? 'var(--success)' : 'var(--warning)'}; border-radius: 4px;">${p.status?.toUpperCase() || 'PENDING'}</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0;">Blockchain: ${p.blockchain?.toUpperCase() || 'Unknown'}</p>
+              <p style="font-size: 11px; color: var(--text-muted);">ID: ${(p.payment_id || p.id || 'N/A').toString().slice(0, 12)}...</p>
+            </div>
+          `).join('');
+        } else {
+          historyEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No deposit history yet</p>';
+        }
+      } catch (err) {
+        console.error('[DepositHistory] Error:', err);
+      }
+    }
+
+    async function initiateWithdrawal() {
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
+      const wsel = $('withdrawWalletSelect');
+      const bcEl = $('withdrawBlockchain');
+      const addrEl = $('withdrawAddress');
+      const amtEl = $('withdrawAmount');
+      
+      const wallet_id = wsel ? wsel.value : null;
+      const bc = bcEl ? bcEl.value : null;
+      const addr = addrEl ? addrEl.value : null;
+      const amount = amtEl ? amtEl.value : null;
+      
+      if (!wallet_id || !bc || !addr || !amount || parseFloat(amount) <= 0 || addr.length < 26) {
+        showStatus('Fill all fields and check address length', 'error');
+        return;
+      }
+      
+      showStatus('Processing withdrawal...', 'info');
+      try {
+        const r = await fetch('/api/v1/payments/web-app/withdrawal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            wallet_id: wallet_id,
+            blockchain: bc,
+            destination_address: addr,
+            amount: parseFloat(amount),
+            init_data: initData
+          })
+        });
+        const data = await r.json();
+        
+        console.log('[Withdrawal] Response:', data);
+        
+        if (r.ok && data) {
+          currentWithdrawalPaymentId = data.payment_id;
+          const networkFee = data.network_fee || data.fee || 0;
+          const total = parseFloat(amount) - parseFloat(networkFee);
+          
+          const summaryDiv = $('withdrawalSummary');
+          const noSummaryDiv = $('withdrawalNoSummary');
+          const amountDisplay = $('withdrawSummaryAmount');
+          const feeDisplay = $('withdrawSummaryFee');
+          const totalDisplay = $('withdrawSummaryTotal');
+          
+          if (summaryDiv) summaryDiv.style.display = 'block';
+          if (noSummaryDiv) noSummaryDiv.style.display = 'none';
+          if (amountDisplay) amountDisplay.textContent = amount + ' USDT';
+          if (feeDisplay) feeDisplay.textContent = networkFee + ' USDT';
+          if (totalDisplay) totalDisplay.textContent = total.toFixed(8) + ' USDT';
+          
+          showStatus('Review withdrawal details and confirm', 'success');
+        } else {
+          showStatus(data?.detail || data?.error || 'Error processing withdrawal', 'error');
+        }
+      } catch (err) {
+        console.error('[Withdrawal] Error:', err);
+        showStatus('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function confirmWithdrawal() {
+      if (!currentWithdrawalPaymentId) {
+        showStatus('No withdrawal in progress', 'error');
+        return;
+      }
+      
+      if (!confirm('Confirm withdrawal? This will send USDT to the address you specified.')) {
+        return;
+      }
+      
+      showStatus('Confirming withdrawal...', 'info');
+      const r = await fetch('/api/v1/payments/withdrawal/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_id: currentWithdrawalPaymentId,
+          init_data: initData
+        })
+      });
+      const data = await r.json();
+      
+      console.log('[WithdrawalConfirm] Response:', data);
+      
+      if (r.ok) {
+        showStatus('Withdrawal confirmed - funds will be sent shortly', 'success');
+        currentWithdrawalPaymentId = null;
+        
+        const summaryDiv = $('withdrawalSummary');
+        const noSummaryDiv = $('withdrawalNoSummary');
+        
+        if (summaryDiv) summaryDiv.style.display = 'none';
+        if (noSummaryDiv) noSummaryDiv.style.display = 'block';
+        
+        const bcEl = $('withdrawBlockchain');
+        const addrEl = $('withdrawAddress');
+        const amtEl = $('withdrawAmount');
+        if (bcEl) bcEl.value = '';
+        if (addrEl) addrEl.value = '';
+        if (amtEl) amtEl.value = '';
+        
+        setTimeout(() => {
+          loadBalance();
+          loadWithdrawalHistory();
+        }, 1000);
+      } else {
+        showStatus(data?.detail || data?.error || 'Error confirming withdrawal', 'error');
+      }
+    }
+
+    async function loadWithdrawalHistory() {
+      if (!user || !user.id) return;
+      try {
+        const r = await fetch('/api/v1/payments/history?user_id=' + user.id + '&type=withdrawal&limit=5', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await r.json();
+        const historyEl = $('withdrawalHistory');
+        if (!historyEl) return;
+        
+        if (r.ok && data && data.payments && data.payments.length > 0) {
+          historyEl.innerHTML = data.payments.map(p => `
+            <div class="wallet-item">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 14px;">${p.amount || '0'} USDT</strong>
+                <span style="font-size: 11px; padding: 4px 8px; background: ${p.status === 'approved' || p.status === 'completed' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(255, 193, 7, 0.2)'}; color: ${p.status === 'approved' || p.status === 'completed' ? 'var(--success)' : 'var(--warning)'}; border-radius: 4px;">${p.status?.toUpperCase() || 'PENDING'}</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0;">To: ${(p.destination_address || 'Unknown').slice(0, 16)}...</p>
+              <p style="font-size: 11px; color: var(--text-muted);">Fee: ${p.network_fee || p.fee || '0'} USDT</p>
+            </div>
+          `).join('');
+        } else {
+          historyEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No withdrawal history yet</p>';
+        }
+      } catch (err) {
+        console.error('[WithdrawalHistory] Error:', err);
+      }
+    }
 
     async function myListings() {
       if (!user || !user.id) {

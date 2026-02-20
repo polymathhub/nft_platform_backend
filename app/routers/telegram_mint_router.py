@@ -17,6 +17,7 @@ from sqlalchemy import select, and_
 from app.database import get_db_session
 from app.models import User, NFT
 from app.models.marketplace import Listing
+from app.models.wallet import BlockchainType
 from app.schemas.wallet import CreateWalletRequest, ImportWalletRequest, WalletResponse
 from app.schemas.nft import WebAppMintNFTRequest, WebAppListNFTRequest, WebAppTransferNFTRequest, WebAppBurnNFTRequest, WebAppSetPrimaryWalletRequest, WebAppMakeOfferRequest, WebAppCancelListingRequest
 from app.services.telegram_bot_service import TelegramBotService
@@ -2779,8 +2780,6 @@ async def create_wallet_for_webapp(
         wallet = None
         error = None
         
-        from app.models.wallet import BlockchainType
-        
         try:
             blockchain_type = BlockchainType(blockchain_value)
         except ValueError:
@@ -3006,10 +3005,9 @@ async def import_wallet_for_webapp(
         wallet, error = await WalletService.import_wallet(
             db=db,
             user_id=user.id,
-            blockchain=blockchain_value,
+            blockchain=BlockchainType(blockchain_value),
             address=request.address,
             public_key=request.public_key,
-            name=f"Imported {blockchain_value.capitalize()} Wallet",
             is_primary=request.is_primary if hasattr(request, 'is_primary') else False,
         )
         
