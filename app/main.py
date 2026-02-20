@@ -30,6 +30,7 @@ from app.routers.image_router import router as image_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
+    SecurityHeadersMiddleware,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,7 @@ Security & request middleware
 # RequestBodyCachingMiddleware MUST be added first to cache bodies early
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
+app.add_middleware(SecurityHeadersMiddleware)  # Security headers with Telegram support
 
 """Serve Telegram Web App static files at /web-app
 Note: static mount moved after router registration so API endpoints under
@@ -135,6 +137,12 @@ async def root_get():
         pass
 
     return {"message": "Server is running", "status": "ok"}
+
+
+@app.get("/app.js", include_in_schema=False)
+async def redirect_app_js():
+    """Redirect legacy /app.js requests to the correct path"""
+    return RedirectResponse(url="/web-app/static/app.js", status_code=301)
 
 
 @app.post("/")
@@ -211,10 +219,18 @@ else:
 @app.get("/web-app", include_in_schema=False)
 @app.get("/web-app/", include_in_schema=False)
 async def serve_webapp_index():
+    # Serve index-fixed.html for Telegram compatibility
+    index_fixed = os.path.join(webapp_path, "index-fixed.html")
+    if os.path.isfile(index_fixed):
+        return FileResponse(index_fixed, media_type="text/html")
+    # Fallback to index-production.html
     index_prod = os.path.join(webapp_path, "index-production.html")
     if os.path.isfile(index_prod):
         return FileResponse(index_prod, media_type="text/html")
-    # Fallback to StaticFiles handling (index.html) if production file missing
+    # Fallback to index.html
+    index_html = os.path.join(webapp_path, "index.html")
+    if os.path.isfile(index_html):
+        return FileResponse(index_html, media_type="text/html")
     raise StarletteHTTPException(status_code=404, detail="Web app index not found")
 
 

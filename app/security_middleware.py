@@ -35,7 +35,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
         
-        response.headers["X-Frame-Options"] = "DENY"
+        # TELEGRAM WEBAPP FIX: Allow framing by Telegram
+        # Only restrict X-Frame-Options for non-web-app routes
+        if request.url.path.startswith("/web-app"):
+            # Allow Telegram to frame the web app
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        else:
+            response.headers["X-Frame-Options"] = "DENY"
+        
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -43,14 +50,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if not settings.debug:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         
+        # TELEGRAM WEBAPP FIX: Adjusted CSP to allow Telegram SDK and unsafe-inline for Telegram compatibility
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://telegram.org https://*.telegram.org; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https:; "
-            "font-src 'self'; "
-            "connect-src 'self'; "
-            "frame-ancestors 'none'; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' https: https://*.telegram.org; "
+            "frame-ancestors 'self' https://*.telegram.org; "
             "base-uri 'self'; "
             "form-action 'self'"
         )
