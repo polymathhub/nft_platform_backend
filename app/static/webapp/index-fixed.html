@@ -545,12 +545,12 @@
       </div>
 
       <nav class="nav-menu">
-        <div class="nav-item active" onclick="switchPage('dashboard')">Dashboard</div>
-        <div class="nav-item" onclick="switchPage('wallets')">Wallets</div>
-        <div class="nav-item" onclick="switchPage('nfts')">My NFTs</div>
-        <div class="nav-item" onclick="switchPage('mint')">Mint NFT</div>
-        <div class="nav-item" onclick="switchPage('marketplace')">Marketplace</div>
-        <div class="nav-item" onclick="switchPage('profile')">Profile</div>
+        <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">Dashboard</div>
+        <div class="nav-item" data-page="wallets" onclick="switchPage('wallets')">Wallets</div>
+        <div class="nav-item" data-page="nfts" onclick="switchPage('nfts')">My NFTs</div>
+        <div class="nav-item" data-page="mint" onclick="switchPage('mint')">Mint NFT</div>
+        <div class="nav-item" data-page="marketplace" onclick="switchPage('marketplace')">Marketplace</div>
+        <div class="nav-item" data-page="profile" onclick="switchPage('profile')">Profile</div>
       </nav>
     </aside>
 
@@ -861,22 +861,51 @@
     }
 
     function switchPage(page) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      $(page + '-page').classList.add('active');
-      document.querySelector(`[onclick*="switchPage('${page}')"]`).classList.add('active');
-      
-      const titles = {
-        dashboard: 'Dashboard',
-        wallets: 'Wallets',
-        nfts: 'My NFTs',
-        mint: 'Mint NFT',
-        marketplace: 'Marketplace',
-        profile: 'Profile'
-      };
-      document.querySelector('.page-title').textContent = titles[page] || 'Dashboard';
-      
-      closeMobileMenu();
+      console.log('[Navigation] Switching to page:', page);
+      try {
+        // Hide all pages and remove active state
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
+        // Show the selected page
+        const targetPage = $(page + '-page');
+        if (targetPage) {
+          targetPage.classList.add('active');
+          console.log('[Navigation] Page activated:', page);
+        } else {
+          console.error('[Navigation] Page not found:', page + '-page');
+          return;
+        }
+        
+        // Mark nav item as active - find any nav-item containing the page name
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+          if (item.textContent.toLowerCase().includes(page.toLowerCase()) || 
+              item.getAttribute('data-page') === page) {
+            item.classList.add('active');
+            console.log('[Navigation] Nav item activated');
+          }
+        });
+        
+        // Update page title
+        const titles = {
+          dashboard: 'Dashboard',
+          wallets: 'Wallets',
+          nfts: 'My NFTs',
+          mint: 'Mint NFT',
+          marketplace: 'Marketplace',
+          profile: 'Profile'
+        };
+        const titleEl = document.querySelector('.page-title');
+        if (titleEl) {
+          titleEl.textContent = titles[page] || 'Dashboard';
+        }
+        
+        closeMobileMenu();
+      } catch (err) {
+        console.error('[Navigation] Error switching page:', err);
+        showStatus('Navigation error: ' + err.message, 'error');
+      }
     }
 
     function closeMobileMenu() {
@@ -885,6 +914,9 @@
         $('menuToggle').classList.remove('open');
       }
     }
+
+    // Expose switchPage to window for onclick handlers
+    window.switchPage = switchPage;
 
     async function initApp() {
       console.log('[App] Initializing...');
@@ -1162,7 +1194,29 @@
     });
 
     // Initialize
-    window.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[Init] DOM Ready - setting up nav listeners');
+      
+      // Setup fallback event listeners for nav items (in case onclick doesn't work in Telegram iframe)
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // Try to get page from data-page attribute first, then fallback to text
+          const page = item.getAttribute('data-page') || 
+                      item.textContent.toLowerCase().split(/\s+/)[0];
+          console.log('[Nav Click] Nav item clicked, page:', page);
+          switchPage(page);
+        });
+      });
+      
+      console.log('[Init] Nav listeners attached - Ready for Telegram!');
+      initApp();
+    });
+    
+    window.addEventListener('load', () => {
+      console.log('[Init] Window loaded');
+    });
   </script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="/web-app/static/app.js"></script>
