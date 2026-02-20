@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: 'unsafe-inline' 'unsafe-eval' blob:; script-src 'self' https: 'unsafe-inline' 'unsafe-eval'; style-src 'self' https: 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https:;">
   <title>NFT Platform</title>
   <style>
     :root {
@@ -30,12 +31,15 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, var(--bg) 0%, #0d1633 100%);
       color: var(--text);
+      position: fixed;
+      overflow: hidden;
     }
 
     .app-wrapper {
       display: flex;
-      height: 100vh;
+      height: 100%;
       overflow: hidden;
+      width: 100%;
     }
 
     /* Mobile Menu Hamburger */
@@ -177,7 +181,6 @@
       background: rgba(124, 92, 255, 0.1);
       color: var(--text);
       border-bottom: 1px solid var(--border);
-      display: flex;
       align-items: center;
       gap: 8px;
       font-size: 13px;
@@ -808,6 +811,19 @@
     </main>
   </div>
 
+  <!-- Load Telegram WebApp FIRST - MUST be before app code -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    // CRITICAL: Initialize Telegram WebApp immediately
+    if (window.Telegram && window.Telegram.WebApp) {
+      console.log('[Telegram Init] WebApp detected, configuring...');
+      window.Telegram.WebApp.expand();
+      window.Telegram.WebApp.enableClosingConfirmation();
+    } else {
+      console.warn('[Telegram Init] Running in non-Telegram environment (localhost)');
+    }
+  </script>
+
   <script>
     const $ = id => document.getElementById(id);
     let user = null;
@@ -838,13 +854,23 @@
     };
 
     function getTelegramInitData() {
+      // Priority: Telegram.WebApp.initData -> localStorage fallback -> test data
+      let data = null;
+      
       if (window.Telegram?.WebApp?.initData) {
+        data = window.Telegram.WebApp.initData;
         console.log('[Telegram] Using Telegram.WebApp.initData');
-        return window.Telegram.WebApp.initData;
+      } else {
+        data = localStorage.getItem('telegram_init_data');
+        if (data) {
+          console.log('[Telegram] Using initData from localStorage');
+        } else {
+          data = 'test_init_data';
+          console.log('[Telegram] Using test initData (localhost mode)');
+        }
       }
-      const fallback = localStorage.getItem('telegram_init_data') || 'test_init_data';
-      console.log('[Telegram] Using fallback initData', fallback ? 'from localStorage' : 'default test data');
-      return fallback;
+      
+      return data || 'test_init_data';
     }
 
     function showStatus(msg, type = 'info') {
@@ -852,12 +878,16 @@
       const text = $('statusText');
       const spinner = $('statusSpinner');
       
+      if (!bar) return; // Safety check
+      
       text.textContent = msg;
       bar.className = 'status-bar ' + type;
       spinner.style.display = type === 'info' ? 'inline-block' : 'none';
       bar.style.display = 'flex';
       
-      setTimeout(() => { bar.style.display = 'none'; }, type === 'error' ? 4000 : 3000);
+      setTimeout(() => { 
+        if (bar) bar.style.display = 'none'; 
+      }, type === 'error' ? 4000 : 3000);
     }
 
     function switchPage(page) {
@@ -877,7 +907,7 @@
           return;
         }
         
-        // Mark nav item as active - find any nav-item containing the page name
+        // Mark nav item as active
         const navItems = document.querySelectorAll('.nav-item');
         navItems.forEach(item => {
           if (item.textContent.toLowerCase().includes(page.toLowerCase()) || 
@@ -910,18 +940,23 @@
 
     function closeMobileMenu() {
       if (window.innerWidth <= 768) {
-        $('sidebar').classList.remove('open');
-        $('menuToggle').classList.remove('open');
+        const sidebar = $('sidebar');
+        const toggle = $('menuToggle');
+        if (sidebar) sidebar.classList.remove('open');
+        if (toggle) toggle.classList.remove('open');
       }
     }
 
-    // Expose switchPage to window for onclick handlers
+    // EXPOSE ALL FUNCTIONS TO WINDOW FOR TELEGRAM ONCLICK HANDLERS
     window.switchPage = switchPage;
+    window.showStatus = showStatus;
+    window.closeMobileMenu = closeMobileMenu;
 
     async function initApp() {
       console.log('[App] Initializing...');
       initData = getTelegramInitData();
-      console.log('[App] initData obtained:', initData.substring(0, 30) + '...');
+      console.log('[App] initData obtained:', initData.substring(0, 50) + '...');
+      
       const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
       console.log('[App] Init response:', r);
       
@@ -929,14 +964,28 @@
         user = r.data.user;
         console.log('[App] User authenticated:', user);
         const initial = (user.telegram_username || user.first_name || 'U')[0].toUpperCase();
-        $('userAvatar').textContent = initial;
-        $('userNameDisplay').textContent = user.telegram_username || user.first_name || 'User';
-        $('userIdDisplay').textContent = '#' + user.id;
-        $('profileUsername').textContent = user.telegram_username || 'N/A';
-        $('profileId').textContent = user.id;
-        $('authStatus').textContent = 'Connected';
-        $('authStatus').style.color = 'var(--success)';
+        
+        const userAvatar = $('userAvatar');
+        const userNameDisplay = $('userNameDisplay');
+        const userIdDisplay = $('userIdDisplay');
+        const authStatus = $('authStatus');
+        
+        if (userAvatar) userAvatar.textContent = initial;
+        if (userNameDisplay) userNameDisplay.textContent = user.telegram_username || user.first_name || 'User';
+        if (userIdDisplay) userIdDisplay.textContent = '#' + user.id;
+        if (authStatus) {
+          authStatus.textContent = 'Connected';
+          authStatus.style.color = 'var(--success)';
+        }
+        
+        const profileUsername = $('profileUsername');
+        const profileId = $('profileId');
+        if (profileUsername) profileUsername.textContent = user.telegram_username || 'N/A';
+        if (profileId) profileId.textContent = user.id;
+        
         showStatus('Welcome ' + (user.telegram_username || 'User'), 'success');
+        
+        // Load data
         loadDashboard();
         loadWallets();
         loadNFTs();
@@ -957,10 +1006,16 @@
         console.log('[Dashboard] Response:', r);
         if (r.ok && r.data) {
           const d = r.data;
-          $('portfolioValue').textContent = '$' + (d.portfolio_value || '0');
-          $('totalNfts').textContent = d.total_nfts || '0';
-          $('totalWallets').textContent = d.total_wallets || '0';
-          $('totalListings').textContent = d.total_listings || '0';
+          const portfolioValue = $('portfolioValue');
+          const totalNfts = $('totalNfts');
+          const totalWallets = $('totalWallets');
+          const totalListings = $('totalListings');
+          
+          if (portfolioValue) portfolioValue.textContent = '$' + (d.portfolio_value || '0');
+          if (totalNfts) totalNfts.textContent = d.total_nfts || '0';
+          if (totalWallets) totalWallets.textContent = d.total_wallets || '0';
+          if (totalListings) totalListings.textContent = d.total_listings || '0';
+          
           console.log('[Dashboard] Dashboard loaded successfully');
         } else {
           console.error('[Dashboard] Error response:', r);
@@ -973,36 +1028,38 @@
     }
 
     async function createWallet() {
-      console.log('[Button Click] createWallet called');
-      if (!user) { showStatus('Not authenticated', 'error'); console.error('User not set'); return; }
-      const bc = $('createBlockchain').value;
-      if (!bc) { showStatus('Select blockchain', 'error'); console.error('No blockchain selected'); return; }
+      console.log('[Action] createWallet called');
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
+      const bcEl = $('createBlockchain');
+      const bc = bcEl ? bcEl.value : null;
+      if (!bc) { showStatus('Select blockchain', 'error'); return; }
       showStatus('Creating wallet...', 'info');
-      console.log(`[API Call] POST /web-app/create-wallet with blockchain=${bc}`);
       const r = await API.call('POST', '/create-wallet', { blockchain: bc, wallet_type: 'custodial', init_data: initData });
-      console.log('[API Response] createWallet:', r);
+      console.log('[API] createWallet response:', r);
       if (r.ok) {
         showStatus('Wallet created successfully', 'success');
         loadWallets();
-        $('createBlockchain').value = '';
+        if (bcEl) bcEl.value = '';
       } else {
         showStatus(r.data?.detail || 'Error creating wallet', 'error');
       }
     }
 
     async function importWallet() {
-      console.log('[Button Click] importWallet called');
+      console.log('[Action] importWallet called');
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const bc = $('importBlockchain').value;
-      const addr = $('importAddress').value;
+      const bcEl = $('importBlockchain');
+      const addrEl = $('importAddress');
+      const bc = bcEl ? bcEl.value : null;
+      const addr = addrEl ? addrEl.value : null;
       if (!bc || !addr) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Importing wallet...', 'info');
       const r = await API.call('POST', '/import-wallet', { blockchain: bc, address: addr, init_data: initData });
       if (r.ok) {
         showStatus('Wallet imported successfully', 'success');
         loadWallets();
-        $('importAddress').value = '';
-        $('importBlockchain').value = '';
+        if (addrEl) addrEl.value = '';
+        if (bcEl) bcEl.value = '';
       } else {
         showStatus(r.data?.detail || 'Error importing wallet', 'error');
       }
@@ -1018,17 +1075,23 @@
         const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[Wallets] Response:', r);
         const ws = (r.ok && r.data) ? r.data.wallets || [] : [];
-        $('walletsList').innerHTML = ws.length > 0 
-          ? ws.map(w => `
-              <div class="wallet-item">
-                <div class="blockchain-badge">${w.blockchain?.toUpperCase() || 'UNKNOWN'}</div>
-                <div class="address-text">${w.address || 'N/A'}</div>
-                <button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}'); showStatus('Address copied', 'success')">Copy</button>
-              </div>
-            `).join('')
-          : '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets yet. Create one to start!</p>';
+        const walletsList = $('walletsList');
+        if (walletsList) {
+          walletsList.innerHTML = ws.length > 0 
+            ? ws.map(w => `
+                <div class="wallet-item">
+                  <div class="blockchain-badge">${w.blockchain?.toUpperCase() || 'UNKNOWN'}</div>
+                  <div class="address-text">${w.address || 'N/A'}</div>
+                  <button class="btn btn-secondary btn-small" onclick="navigator.clipboard.writeText('${w.address}').then(() => showStatus('Address copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
+                </div>
+              `).join('')
+            : '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets yet. Create one to start!</p>';
+        }
         
-        $('mintWalletSelect').innerHTML = '<option value="">Select wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase() || 'Wallet'}</option>`).join('');
+        const mintWalletSelect = $('mintWalletSelect');
+        if (mintWalletSelect) {
+          mintWalletSelect.innerHTML = '<option value="">Select wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase() || 'Wallet'}</option>`).join('');
+        }
         console.log('[Wallets] Loaded', ws.length, 'wallets');
       } catch (err) {
         console.error('[Wallets] Error:', err);
@@ -1046,15 +1109,18 @@
         const r = await API.call('GET', '/nfts?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[NFTs] Response:', r);
         const ns = (r.ok && r.data) ? r.data.nfts || [] : [];
-        $('nftList').innerHTML = ns.length > 0 
-          ? ns.map(n => `
-              <div class="nft-item">
-                <strong>${n.name || 'Unnamed NFT'}</strong>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${(n.id || 'N/A').toString().slice(0, 12)}...</p>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Status: ${n.status || 'PENDING'}</p>
-              </div>
-            `).join('')
-          : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Mint your first NFT!</p>';
+        const nftList = $('nftList');
+        if (nftList) {
+          nftList.innerHTML = ns.length > 0 
+            ? ns.map(n => `
+                <div class="nft-item">
+                  <strong>${n.name || 'Unnamed NFT'}</strong>
+                  <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${(n.id || 'N/A').toString().slice(0, 12)}...</p>
+                  <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Status: ${n.status || 'PENDING'}</p>
+                </div>
+              `).join('')
+            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Mint your first NFT!</p>';
+        }
         console.log('[NFTs] Loaded', ns.length, 'NFTs');
       } catch (err) {
         console.error('[NFTs] Error:', err);
@@ -1064,24 +1130,28 @@
 
     async function mint() {
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const wallet = $('mintWalletSelect').value;
-      const name = $('mintName').value;
+      const walletEl = $('mintWalletSelect');
+      const nameEl = $('mintName');
+      const wallet = walletEl ? walletEl.value : null;
+      const name = nameEl ? nameEl.value : null;
       if (!name || !wallet) { showStatus('Fill all required fields', 'error'); return; }
       showStatus('Minting NFT...', 'info');
+      const descEl = $('mintDesc');
+      const imageEl = $('mintImage');
       const r = await API.call('POST', '/mint', { 
         wallet_id: wallet, 
         nft_name: name, 
-        nft_description: $('mintDesc').value || '', 
-        image_url: $('mintImage').value || '', 
+        nft_description: (descEl ? descEl.value : '') || '', 
+        image_url: (imageEl ? imageEl.value : '') || '', 
         init_data: initData 
       });
       if (r.ok) {
         showStatus('NFT minted successfully', 'success');
         loadNFTs();
-        $('mintName').value = '';
-        $('mintDesc').value = '';
-        $('mintImage').value = '';
-        $('mintWalletSelect').value = '';
+        if (nameEl) nameEl.value = '';
+        if (descEl) descEl.value = '';
+        if (imageEl) imageEl.value = '';
+        if (walletEl) walletEl.value = '';
       } else {
         showStatus(r.data?.detail || 'Error minting NFT', 'error');
       }
@@ -1089,15 +1159,17 @@
 
     async function transfer() {
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const nid = $('transferNFT').value;
-      const addr = $('transferTo').value;
+      const nidEl = $('transferNFT');
+      const addrEl = $('transferTo');
+      const nid = nidEl ? nidEl.value : null;
+      const addr = addrEl ? addrEl.value : null;
       if (!nid || !addr) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Transferring NFT...', 'info');
       const r = await API.call('POST', '/transfer', { nft_id: nid, to_address: addr, init_data: initData });
       if (r.ok) {
         showStatus('NFT transferred successfully', 'success');
-        $('transferNFT').value = '';
-        $('transferTo').value = '';
+        if (nidEl) nidEl.value = '';
+        if (addrEl) addrEl.value = '';
         loadNFTs();
       } else {
         showStatus(r.data?.detail || 'Error transferring NFT', 'error');
@@ -1106,14 +1178,15 @@
 
     async function burn() {
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const nid = $('burnNFT').value;
+      const nidEl = $('burnNFT');
+      const nid = nidEl ? nidEl.value : null;
       if (!nid) { showStatus('Enter NFT ID', 'error'); return; }
       if (!confirm('Are you sure you want to burn this NFT? This action cannot be undone.')) return;
       showStatus('Burning NFT...', 'info');
       const r = await API.call('POST', '/burn', { nft_id: nid, init_data: initData });
       if (r.ok) {
         showStatus('NFT burned successfully', 'success');
-        $('burnNFT').value = '';
+        if (nidEl) nidEl.value = '';
         loadNFTs();
       } else {
         showStatus(r.data?.detail || 'Error burning NFT', 'error');
@@ -1127,16 +1200,19 @@
         const r = await API.call('GET', '/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
         console.log('[Marketplace] Response:', r);
         const ls = (r.ok && r.data) ? r.data.listings || [] : [];
-        $('marketplaceListings').innerHTML = ls.length > 0 
-          ? ls.map(l => `
-              <div class="listing-item">
-                <strong>${l.nft_name || 'NFT'}</strong>
-                <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
-                <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain || 'Unknown'}</p>
-                <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('offerListing').value='${l.listing_id}'; showStatus('Enter your offer price', 'info')">Make Offer</button>
-              </div>
-            `).join('')
-          : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
+        const listingsEl = $('marketplaceListings');
+        if (listingsEl) {
+          listingsEl.innerHTML = ls.length > 0 
+            ? ls.map(l => `
+                <div class="listing-item">
+                  <strong>${l.nft_name || 'NFT'}</strong>
+                  <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
+                  <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain || 'Unknown'}</p>
+                  <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${l.listing_id}'; showStatus('Enter your offer price', 'info'); })()">Make Offer</button>
+                </div>
+              `).join('')
+            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
+        }
         showStatus('Listings loaded', 'success');
         console.log('[Marketplace] Loaded', ls.length, 'listings');
       } catch (err) {
@@ -1157,8 +1233,10 @@
         console.log('[Profile] Response:', r);
         if (r.ok && r.data) {
           user = r.data.user || user;
-          $('profileUsername').textContent = user.telegram_username || user.first_name || 'N/A';
-          $('profileId').textContent = user.id || 'N/A';
+          const profileUsername = $('profileUsername');
+          const profileId = $('profileId');
+          if (profileUsername) profileUsername.textContent = user.telegram_username || user.first_name || 'N/A';
+          if (profileId) profileId.textContent = user.id || 'N/A';
           console.log('[Profile] Profile loaded for:', user.telegram_username);
           showStatus('Profile refreshed', 'success');
         } else {
@@ -1180,21 +1258,32 @@
         }
       });
       
+      const browseSection = $('browseSection');
+      const myListingsSection = $('myListingsSection');
+      
       if (section === 'browse') {
-        $('browseSection').style.display = 'block';
-        $('myListingsSection').style.display = 'none';
+        if (browseSection) browseSection.style.display = 'block';
+        if (myListingsSection) myListingsSection.style.display = 'none';
         browseListings();
       } else {
-        $('browseSection').style.display = 'none';
-        $('myListingsSection').style.display = 'block';
+        if (browseSection) browseSection.style.display = 'none';
+        if (myListingsSection) myListingsSection.style.display = 'block';
         myListings();
       }
     }
 
-    // Expose all functions to window for onclick handlers
-    window.switchPage = switchPage;
-    window.showMarketSection = showMarketSection;
+    // EXPOSE ALL FUNCTIONS TO WINDOW FOR TELEGRAM
+    window.createWallet = createWallet;
+    window.importWallet = importWallet;
+    window.mint = mint;
+    window.transfer = transfer;
+    window.burn = burn;
+    window.browseListings = browseListings;
     window.loadProfile = loadProfile;
+    window.showMarketSection = showMarketSection;
+    window.listNFT = listNFT;
+    window.makeOffer = makeOffer;
+    window.cancelListing = cancelListing;
 
     async function myListings() {
       if (!user || !user.id) {
@@ -1206,15 +1295,18 @@
         const r = await API.call('GET', '/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[MyListings] Response:', r);
         const ls = (r.ok && r.data) ? r.data.listings || [] : [];
-        $('myListings').innerHTML = ls.length > 0 
-          ? ls.map(l => `
-              <div class="listing-item">
-                <strong>${l.nft_name || 'NFT'}</strong>
-                <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
-                <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="$('cancelListing').value='${l.listing_id}'">Select to Cancel</button>
-              </div>
-            `).join('')
-          : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
+        const myListingsEl = $('myListings');
+        if (myListingsEl) {
+          myListingsEl.innerHTML = ls.length > 0 
+            ? ls.map(l => `
+                <div class="listing-item">
+                  <strong>${l.nft_name || 'NFT'}</strong>
+                  <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
+                  <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${l.listing_id}'; })()">Select to Cancel</button>
+                </div>
+              `).join('')
+            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
+        }
         console.log('[MyListings] Loaded', ls.length, 'listings');
       } catch (err) {
         console.error('[MyListings] Error:', err);
@@ -1224,15 +1316,18 @@
 
     async function listNFT() {
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const nid = $('listNFT').value;
-      const price = $('listPrice').value;
+      const nidEl = $('listNFT');
+      const priceEl = $('listPrice');
+      const nid = nidEl ? nidEl.value : null;
+      const price = priceEl ? priceEl.value : null;
       if (!nid || !price) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Listing NFT...', 'info');
-      const r = await API.call('POST', '/list-nft', { nft_id: nid, price, currency: $('listCurrency').value, init_data: initData });
+      const currencyEl = $('listCurrency');
+      const r = await API.call('POST', '/list-nft', { nft_id: nid, price, currency: currencyEl ? currencyEl.value : 'ETH', init_data: initData });
       if (r.ok) {
         showStatus('NFT listed successfully', 'success');
-        $('listNFT').value = '';
-        $('listPrice').value = '';
+        if (nidEl) nidEl.value = '';
+        if (priceEl) priceEl.value = '';
         myListings();
       } else {
         showStatus(r.data?.detail || 'Error listing NFT', 'error');
@@ -1241,15 +1336,17 @@
 
     async function makeOffer() {
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const lid = $('offerListing').value;
-      const price = $('offerPrice').value;
+      const lidEl = $('offerListing');
+      const priceEl = $('offerPrice');
+      const lid = lidEl ? lidEl.value : null;
+      const price = priceEl ? priceEl.value : null;
       if (!lid || !price) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Making offer...', 'info');
       const r = await API.call('POST', '/make-offer', { listing_id: lid, offer_price: price, init_data: initData });
       if (r.ok) {
         showStatus('Offer made successfully', 'success');
-        $('offerListing').value = '';
-        $('offerPrice').value = '';
+        if (lidEl) lidEl.value = '';
+        if (priceEl) priceEl.value = '';
       } else {
         showStatus(r.data?.detail || 'Error making offer', 'error');
       }
@@ -1257,14 +1354,15 @@
 
     async function cancelListing() {
       if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const lid = $('cancelListing').value;
+      const lidEl = $('cancelListing');
+      const lid = lidEl ? lidEl.value : null;
       if (!lid) { showStatus('Enter listing ID', 'error'); return; }
       if (!confirm('Cancel this listing?')) return;
       showStatus('Cancelling listing...', 'info');
       const r = await API.call('POST', '/cancel-listing', { listing_id: lid, init_data: initData });
       if (r.ok) {
         showStatus('Listing cancelled successfully', 'success');
-        $('cancelListing').value = '';
+        if (lidEl) lidEl.value = '';
         myListings();
       } else {
         showStatus(r.data?.detail || 'Error cancelling listing', 'error');
@@ -1272,44 +1370,52 @@
     }
 
     // Mobile Menu Toggle
-    $('menuToggle').addEventListener('click', () => {
-      $('sidebar').classList.toggle('open');
-      $('menuToggle').classList.toggle('open');
-    });
-
-    // Close menu on outside click
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
-        closeMobileMenu();
-      }
-    });
-
-    // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('[Init] DOM Ready - setting up nav listeners');
+      const menuToggle = $('menuToggle');
+      const sidebar = $('sidebar');
       
-      // Setup fallback event listeners for nav items (in case onclick doesn't work in Telegram iframe)
+      if (menuToggle) {
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (sidebar) sidebar.classList.toggle('open');
+          menuToggle.classList.toggle('open');
+        });
+      }
+
+      // Close menu on outside click
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
+          closeMobileMenu();
+        }
+      });
+
+      // Setup nav item listeners
       document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          // Try to get page from data-page attribute first, then fallback to text
           const page = item.getAttribute('data-page') || 
                       item.textContent.toLowerCase().split(/\s+/)[0];
-          console.log('[Nav Click] Nav item clicked, page:', page);
+          console.log('[Nav Click] Clicked, page:', page);
           switchPage(page);
         });
       });
       
-      console.log('[Init] Nav listeners attached - Ready for Telegram!');
+      console.log('[Init] DOM Ready - App initialized!');
       initApp();
     });
-    
-    window.addEventListener('load', () => {
-      console.log('[Init] Window loaded');
-    });
+
+    // Safety: Initialize app if DOMContentLoaded already fired
+    if (document.readyState === 'loading') {
+      // Still loading
+    } else {
+      // Already loaded
+      setTimeout(() => {
+        if (!user) initApp();
+      }, 100);
+    }
   </script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="/web-app/static/app.js"></script>
+</body>
+</html>
 </body>
 </html>
