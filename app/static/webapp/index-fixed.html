@@ -815,25 +815,36 @@
 
     const API = { 
       call: async (method, path, body = null) => { 
-        const res = await fetch('/web-app' + path, { 
-          method, 
-          headers: { 'Content-Type': 'application/json' }, 
-          ...(body && { body: JSON.stringify(body) }) 
-        }); 
-        const text = await res.text(); 
-        try { 
-          return { ok: res.ok, status: res.status, data: JSON.parse(text) }; 
-        } catch(e) { 
-          return { ok: res.ok, status: res.status, data: text }; 
-        } 
+        try {
+          const fullPath = '/web-app' + path;
+          console.log(`[API] ${method} ${fullPath}`, body || '');
+          const res = await fetch(fullPath, { 
+            method, 
+            headers: { 'Content-Type': 'application/json' }, 
+            ...(body && { body: JSON.stringify(body) }) 
+          }); 
+          console.log(`[API Response] ${method} ${fullPath} - Status: ${res.status}`);
+          const text = await res.text(); 
+          try { 
+            return { ok: res.ok, status: res.status, data: JSON.parse(text) }; 
+          } catch(e) { 
+            return { ok: res.ok, status: res.status, data: text }; 
+          }
+        } catch (err) {
+          console.error(`[API Error] ${method} ${path}:`, err);
+          return { ok: false, status: 0, data: { error: err.message } };
+        }
       } 
     };
 
     function getTelegramInitData() {
       if (window.Telegram?.WebApp?.initData) {
+        console.log('[Telegram] Using Telegram.WebApp.initData');
         return window.Telegram.WebApp.initData;
       }
-      return localStorage.getItem('telegram_init_data') || 'test_init_data';
+      const fallback = localStorage.getItem('telegram_init_data') || 'test_init_data';
+      console.log('[Telegram] Using fallback initData', fallback ? 'from localStorage' : 'default test data');
+      return fallback;
     }
 
     function showStatus(msg, type = 'info') {
@@ -876,11 +887,15 @@
     }
 
     async function initApp() {
+      console.log('[App] Initializing...');
       initData = getTelegramInitData();
+      console.log('[App] initData obtained:', initData.substring(0, 30) + '...');
       const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
+      console.log('[App] Init response:', r);
       
       if (r.ok && r.data.user) {
         user = r.data.user;
+        console.log('[App] User authenticated:', user);
         const initial = (user.telegram_username || user.first_name || 'U')[0].toUpperCase();
         $('userAvatar').textContent = initial;
         $('userNameDisplay').textContent = user.telegram_username || user.first_name || 'User';
@@ -894,6 +909,7 @@
         loadWallets();
         loadNFTs();
       } else {
+        console.error('[App] Auth failed:', r);
         showStatus('Failed to authenticate', 'error');
       }
     }
@@ -911,11 +927,14 @@
     }
 
     async function createWallet() {
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
+      console.log('[Button Click] createWallet called');
+      if (!user) { showStatus('Not authenticated', 'error'); console.error('User not set'); return; }
       const bc = $('createBlockchain').value;
-      if (!bc) { showStatus('Select blockchain', 'error'); return; }
+      if (!bc) { showStatus('Select blockchain', 'error'); console.error('No blockchain selected'); return; }
       showStatus('Creating wallet...', 'info');
+      console.log(`[API Call] POST /web-app/create-wallet with blockchain=${bc}`);
       const r = await API.call('POST', '/create-wallet', { blockchain: bc, wallet_type: 'custodial', init_data: initData });
+      console.log('[API Response] createWallet:', r);
       if (r.ok) {
         showStatus('Wallet created successfully', 'success');
         loadWallets();
@@ -926,6 +945,7 @@
     }
 
     async function importWallet() {
+      console.log('[Button Click] importWallet called');
       if (!user) { showStatus('Not authenticated', 'error'); return; }
       const bc = $('importBlockchain').value;
       const addr = $('importAddress').value;
