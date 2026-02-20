@@ -88,7 +88,7 @@ class ActivityLog(Base):
     description = Column(String(500), nullable=True)
     
     # Metadata (flexible storage for additional context)
-    metadata = Column(JSON, nullable=True, default={})
+    activity_metadata = Column(JSON, nullable=True, default={})
     
     # IP address and user agent
     ip_address = Column(String(50), nullable=True)

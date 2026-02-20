@@ -64,7 +64,7 @@ class ActivityService:
                 resource_type=resource_type,
                 resource_id=resource_id,
                 description=description,
-                metadata=metadata or {},
+                activity_metadata=metadata or {},
                 ip_address=ip_address,
                 user_agent=user_agent,
                 status=status,

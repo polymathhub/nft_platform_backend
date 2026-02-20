@@ -80,12 +80,15 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
             body = getattr(request.state, 'body', None)
             if body is None:
                 body = await request.body()
+                # IMPORTANT: Cache body in request.state so endpoints can reuse it
+                request.state.body = body
             logger.debug(f"get_telegram_user_from_request: raw body length {len(body) if body else 0}")
             if body:
                 body_dict = json.loads(body)
                 init_data_str = body_dict.get("init_data")
                 logger.debug(f"get_telegram_user_from_request: found init_data in body: {bool(init_data_str)}")
-        except Exception:
+        except Exception as e:
+            logger.debug(f"get_telegram_user_from_request: error reading body: {e}")
             pass
     
     # If no init_data provided, reject request (Telegram user REQUIRED)
@@ -2017,10 +2020,17 @@ async def web_app_mint_nft(
     try:
         # Parse request body manually
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[MINT_NFT] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[MINT_NFT] No cached body, reading from stream")
+                body_data = await http_request.json()
             request = WebAppMintNFTRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[MINT_NFT] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2209,10 +2219,17 @@ async def web_app_transfer_nft(
     try:
         # Parse request body manually
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[TRANSFER_NFT] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[TRANSFER_NFT] No cached body, reading from stream")
+                body_data = await http_request.json()
             request = WebAppTransferNFTRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[TRANSFER_NFT] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2278,10 +2295,17 @@ async def web_app_burn_nft(
     try:
         # Parse request body manually
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[BURN_NFT] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[BURN_NFT] No cached body, reading from stream")
+                body_data = await http_request.json()
             request = WebAppBurnNFTRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[BURN_NFT] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2340,10 +2364,17 @@ async def web_app_set_primary_wallet(
     try:
         # Parse request body manually
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[SET_PRIMARY] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[SET_PRIMARY] No cached body, reading from stream")
+                body_data = await http_request.json()
             request = WebAppSetPrimaryWalletRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[SET_PRIMARY] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2402,10 +2433,17 @@ async def web_app_make_offer(
     try:
         # Parse request body manually
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[MAKE_OFFER] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[MAKE_OFFER] No cached body, reading from stream")
+                body_data = await http_request.json()
             request = WebAppMakeOfferRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[MAKE_OFFER] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2486,10 +2524,17 @@ async def web_app_cancel_listing(
     try:
         # Parse request body manually
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[CANCEL_LISTING] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[CANCEL_LISTING] No cached body, reading from stream")
+                body_data = await http_request.json()
             request = WebAppCancelListingRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[CANCEL_LISTING] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2668,10 +2713,18 @@ async def create_wallet_for_webapp(
     try:
         # Parse request body manually to avoid double-consumption
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[CREATE_WALLET] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[CREATE_WALLET] No cached body, reading from stream")
+                body_data = await http_request.json()
+            logger.info(f"[CREATE_WALLET] Request body: {body_data}")
             request = CreateWalletRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"
@@ -2679,6 +2732,7 @@ async def create_wallet_for_webapp(
         
         # Validate auth dictionary
         if not auth or not isinstance(auth, dict):
+            logger.error(f"[CREATE_WALLET] Auth invalid: auth={auth}, type={type(auth)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication required",
@@ -2687,7 +2741,10 @@ async def create_wallet_for_webapp(
         user_id = auth.get("user_id")
         user = auth.get("user_obj")
         
+        logger.info(f"[CREATE_WALLET] Auth check: user_id={user_id}, user={user}")
+        
         if not user_id or not user:
+            logger.error(f"[CREATE_WALLET] Missing user data: user_id={user_id}, user_obj={user}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication data",
@@ -2696,6 +2753,8 @@ async def create_wallet_for_webapp(
         telegram_username = user.telegram_username
         telegram_id = user.telegram_id
         chat_id = telegram_id  # Use telegram_id as chat_id for bot_service
+        
+        logger.info(f"[CREATE_WALLET] User verified: telegram_id={telegram_id}, username={telegram_username}")
         
         # Validate request
         if not request or not request.blockchain:
@@ -2732,35 +2791,59 @@ async def create_wallet_for_webapp(
 
         # Use proper wallet generation based on blockchain with timeout protection
         gen_start = time.time()
+        wallet = None
+        error = None
+        
         try:
             # Wrap wallet generation with 30-second timeout to prevent hanging
             async def generate_wallet():
-                if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
-                                       BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
-                                       BlockchainType.BASE, BlockchainType.AVALANCHE):
-                    logger.debug("Generating EVM wallet (start)")
-                    return await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
-                elif blockchain_type == BlockchainType.TON:
-                    logger.debug("Generating TON wallet (start)")
-                    return await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
-                elif blockchain_type == BlockchainType.SOLANA:
-                    logger.debug("Generating Solana wallet (start)")
-                    return await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
-                elif blockchain_type == BlockchainType.BITCOIN:
-                    logger.debug("Generating Bitcoin wallet (start)")
-                    return await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
-                else:
-                    return None, f"Unsupported blockchain: {blockchain_value}"
+                try:
+                    logger.debug(f"[CREATE_WALLET] Generating {blockchain_type} wallet for user {user.id}")
+                    if blockchain_type in (BlockchainType.ETHEREUM, BlockchainType.POLYGON, 
+                                           BlockchainType.ARBITRUM, BlockchainType.OPTIMISM,
+                                           BlockchainType.BASE, BlockchainType.AVALANCHE):
+                        logger.debug(f"[CREATE_WALLET] Calling generate_evm_wallet for {blockchain_type}")
+                        result = await WalletService.generate_evm_wallet(db=db, user_id=user.id, blockchain=blockchain_type, make_primary=True)
+                        logger.debug(f"[CREATE_WALLET] EVM wallet gen result: {result}")
+                        return result
+                    elif blockchain_type == BlockchainType.TON:
+                        logger.debug("[CREATE_WALLET] Calling generate_ton_wallet")
+                        result = await WalletService.generate_ton_wallet(db=db, user_id=user.id, blockchain=BlockchainType.TON, make_primary=True)
+                        logger.debug(f"[CREATE_WALLET] TON wallet gen result: {result}")
+                        return result
+                    elif blockchain_type == BlockchainType.SOLANA:
+                        logger.debug("[CREATE_WALLET] Calling generate_solana_wallet")
+                        result = await WalletService.generate_solana_wallet(db=db, user_id=user.id, blockchain=BlockchainType.SOLANA, make_primary=True)
+                        logger.debug(f"[CREATE_WALLET] Solana wallet gen result: {result}")
+                        return result
+                    elif blockchain_type == BlockchainType.BITCOIN:
+                        logger.debug("[CREATE_WALLET] Calling generate_bitcoin_wallet")
+                        result = await WalletService.generate_bitcoin_wallet(db=db, user_id=user.id, blockchain=BlockchainType.BITCOIN, make_primary=True)
+                        logger.debug(f"[CREATE_WALLET] Bitcoin wallet gen result: {result}")
+                        return result
+                    else:
+                        logger.error(f"[CREATE_WALLET] Unsupported blockchain: {blockchain_value}")
+                        return None, f"Unsupported blockchain: {blockchain_value}"
+                except Exception as e:
+                    logger.error(f"[CREATE_WALLET] Error in generate_wallet: {e}", exc_info=True)
+                    raise
             
             import asyncio
             try:
-                wallet, error = await asyncio.wait_for(generate_wallet(), timeout=30.0)
+                result = await asyncio.wait_for(generate_wallet(), timeout=30.0)
+                if isinstance(result, tuple) and len(result) == 2:
+                    wallet, error = result
+                else:
+                    logger.error(f"[CREATE_WALLET] Invalid result format from wallet generation: {result}")
+                    error = "Invalid wallet generation result"
             except asyncio.TimeoutError:
                 logger.error(f"[CREATE_WALLET] TIMEOUT: Wallet generation took >30s for {blockchain_value}")
                 error = f"Wallet generation timeout - blockchain RPC may be unresponsive"
-                wallet = None
+        except Exception as e:
+            logger.error(f"[CREATE_WALLET] Exception in wallet generation: {e}", exc_info=True)
+            error = str(e)
         finally:
-            logger.debug(f"Wallet generation finished (time={time.time()-gen_start:.3f}s)")
+            logger.debug(f"[CREATE_WALLET] Wallet generation finished (time={time.time()-gen_start:.3f}s)")
         
         # Use bot_service to handle wallet creation (proper generation functions)
         # wallet, error = await bot_service.handle_wallet_create(
@@ -2796,6 +2879,7 @@ async def create_wallet_for_webapp(
         
         # Log successful wallet creation
         try:
+            logger.debug(f"[CREATE_WALLET] Logging activity for wallet {wallet.id}")
             await ActivityService.log_wallet_created(
                 db=db,
                 user_id=user.id,
@@ -2805,10 +2889,14 @@ async def create_wallet_for_webapp(
                 telegram_id=telegram_id,
                 telegram_username=telegram_username,
             )
+            logger.debug("[CREATE_WALLET] Activity logged, committing db")
             await db.commit()
+            logger.debug("[CREATE_WALLET] Activity commit successful")
         except Exception as e:
-            logger.error(f"Failed to log activity: {e}")
+            logger.error(f"[CREATE_WALLET] Failed to log activity: {e}", exc_info=True)
+            # Don't fail if activity logging fails - wallet is already created
         
+        logger.debug(f"[CREATE_WALLET] Returning wallet response: {wallet.blockchain.value}, {wallet.address}")
         return {
             "success": True,
             "wallet": {
@@ -2824,9 +2912,12 @@ async def create_wallet_for_webapp(
         logger.debug("Client disconnected during create-wallet")
         return {"success": False, "detail": "Client disconnected"}
     except HTTPException:
+        logger.debug(f"HTTPException raised in create-wallet, re-raising")
         raise
     except Exception as e:
-        logger.error(f"Create wallet error: {e}", exc_info=True)
+        logger.error(f"[CREATE_WALLET] FATAL ERROR: {type(e).__name__}: {e}", exc_info=True)
+        import traceback
+        logger.error(f"[CREATE_WALLET] Stack trace:\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create wallet: {str(e)}",
@@ -2859,10 +2950,18 @@ async def import_wallet_for_webapp(
     try:
         # Parse request body manually to avoid double-consumption
         try:
-            body_data = await http_request.json()
+            # Try to use cached body from request.state first
+            body = getattr(http_request.state, 'body', None)
+            if body:
+                logger.debug(f"[IMPORT_WALLET] Using cached body (length={len(body)})")
+                body_data = json.loads(body)
+            else:
+                logger.debug("[IMPORT_WALLET] No cached body, reading from stream")
+                body_data = await http_request.json()
+            logger.info(f"[IMPORT_WALLET] Request body: {body_data}")
             request = ImportWalletRequest(**body_data)
         except Exception as e:
-            logger.error(f"Failed to parse request: {e}")
+            logger.error(f"[IMPORT_WALLET] Failed to parse request: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid request body: {str(e)}"

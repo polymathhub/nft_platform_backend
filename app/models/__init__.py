@@ -8,6 +8,7 @@ from app.models.collection import Collection
 from app.models.escrow import Escrow, EscrowStatus
 from app.models.payment import Payment, PaymentType, PaymentStatus
 from app.models.admin import AdminLog, AdminLogAction, AdminSettings
+from app.models.activity import ActivityLog, ActivityType
 
 __all__ = [
     "User",
@@ -40,4 +41,6 @@ __all__ = [
     "AdminLog",
     "AdminLogAction",
     "AdminSettings",
+    "ActivityLog",
+    "ActivityType",
 ]
