@@ -865,8 +865,18 @@
         if (data) {
           console.log('[Telegram] Using initData from localStorage');
         } else {
-          data = 'test_init_data';
-          console.log('[Telegram] Using test initData (localhost mode)');
+          // Generate test init_data with proper structure for development
+          const testUserId = Math.random().toString(36).substr(2, 9);
+          const testUser = {
+            id: Math.floor(Math.random() * 1000000000),
+            is_bot: false,
+            first_name: "TestUser",
+            username: "testuser_" + testUserId
+          };
+          data = 'query_id=test&user=' + encodeURIComponent(JSON.stringify(testUser)) + '&auth_date=' + Math.floor(Date.now() / 1000) + '&hash=test';
+          console.log('[Telegram] Using generated test initData (dev mode)');
+          // Save to localStorage for consistency
+          localStorage.setItem('telegram_init_data', data);
         }
       }
       
