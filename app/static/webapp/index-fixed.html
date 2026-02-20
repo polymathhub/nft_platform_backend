@@ -708,8 +708,8 @@
         <div id="marketplace-page" class="page">
           <h2>Marketplace</h2>
           <div class="tabs">
-            <button class="tab-btn active" onclick="showMarketSection('browse')">Browse Listings</button>
-            <button class="tab-btn" onclick="showMarketSection('mylistings')">My Listings</button>
+            <button class="tab-btn active" data-section="browse" onclick="showMarketSection('browse')">Browse Listings</button>
+            <button class="tab-btn" data-section="mylistings" onclick="showMarketSection('mylistings')">My Listings</button>
           </div>
 
           <!-- Browse Section -->
@@ -1145,9 +1145,40 @@
       }
     }
 
+    async function loadProfile() {
+      if (!user || !user.id) {
+        console.log('[Profile] User not ready');
+        showStatus('User not authenticated', 'error');
+        return;
+      }
+      try {
+        console.log('[Profile] Fetching profile data for user:', user.id);
+        const r = await API.call('GET', '/user?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        console.log('[Profile] Response:', r);
+        if (r.ok && r.data) {
+          user = r.data.user || user;
+          $('profileUsername').textContent = user.telegram_username || user.first_name || 'N/A';
+          $('profileId').textContent = user.id || 'N/A';
+          console.log('[Profile] Profile loaded for:', user.telegram_username);
+          showStatus('Profile refreshed', 'success');
+        } else {
+          console.error('[Profile] Error response:', r);
+          showStatus('Failed to load profile data', 'error');
+        }
+      } catch (err) {
+        console.error('[Profile] Error:', err);
+        showStatus('Profile error: ' + err.message, 'error');
+      }
+    }
+
     function showMarketSection(section) {
+      console.log('[Market] Switching to section:', section);
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`[onclick*="showMarketSection('${section}')"]`).classList.add('active');
+      document.querySelectorAll('[data-section]').forEach(btn => {
+        if (btn.getAttribute('data-section') === section) {
+          btn.classList.add('active');
+        }
+      });
       
       if (section === 'browse') {
         $('browseSection').style.display = 'block';
@@ -1159,6 +1190,11 @@
         myListings();
       }
     }
+
+    // Expose all functions to window for onclick handlers
+    window.switchPage = switchPage;
+    window.showMarketSection = showMarketSection;
+    window.loadProfile = loadProfile;
 
     async function myListings() {
       if (!user || !user.id) {
