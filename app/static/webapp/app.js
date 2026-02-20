@@ -595,7 +595,8 @@
 
     // Dashboard endpoints  
     async getDashboardData(userId) {
-      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(state.initData || '')}`);\n    },
+      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(state.initData || '')}`);
+    },
   };
 
   // Ui update 
