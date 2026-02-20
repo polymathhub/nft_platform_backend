@@ -2012,6 +2012,7 @@ async def web_app_mint_nft(
     """Mint NFT via web app with Telegram authentication."""
     import anyio
     from uuid import UUID
+    from app.models import Wallet
 
     try:
         # Parse request body manually
@@ -2034,6 +2035,28 @@ async def web_app_mint_nft(
         
         # User already authenticated via dependency
         user = telegram_user["user_obj"]
+
+        # Check wallet exists and belongs to user
+        try:
+            wallet_result = await db.execute(
+                select(Wallet).where(
+                    and_(Wallet.id == request.wallet_id, Wallet.user_id == user.id)
+                )
+            )
+            wallet = wallet_result.scalar_one_or_none()
+            if not wallet:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Wallet not found or does not belong to user",
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Wallet lookup error: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to validate wallet",
+            )
 
         # Mint NFT
         nft, error = await NFTService.mint_nft_with_blockchain_confirmation(
@@ -2075,8 +2098,8 @@ async def web_app_mint_nft(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Mint error: {e}", exc_info=False)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Mint operation failed")
+        logger.error(f"Mint error: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Mint operation failed: {str(e)}")
 
 
 @router.post("/web-app/list-nft")

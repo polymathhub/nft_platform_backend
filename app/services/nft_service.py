@@ -29,35 +29,39 @@ class NFTService:
         royalty_percentage: int,
         metadata: Optional[dict] = None,
     ) -> tuple[Optional[NFT], Optional[str]]:
-        result = await db.execute(
-            select(Wallet).where(
-                and_(Wallet.id == wallet_id, Wallet.user_id == user_id)
+        try:
+            result = await db.execute(
+                select(Wallet).where(
+                    and_(Wallet.id == wallet_id, Wallet.user_id == user_id)
+                )
             )
-        )
-        wallet = result.scalar_one_or_none()
-        if not wallet:
-            return None, "Wallet not found or not owned by user"
+            wallet = result.scalar_one_or_none()
+            if not wallet:
+                return None, "Wallet not found or not owned by user"
 
-        global_nft_id = f"GNFT-{wallet.blockchain.value.upper()}-{uuid_module.uuid4().hex[:12]}"
+            global_nft_id = f"GNFT-{wallet.blockchain.value.upper()}-{uuid_module.uuid4().hex[:12]}"
 
-        nft = NFT(
-            user_id=user_id,
-            wallet_id=wallet_id,
-            name=name,
-            description=description,
-            global_nft_id=global_nft_id,
-            blockchain=wallet.blockchain.value,
-            owner_address=wallet.address,
-            status=NFTStatus.PENDING,
-            image_url=image_url,
-            royalty_percentage=royalty_percentage,
-            nft_metadata=metadata or {},
-            is_locked=False,
-        )
-        db.add(nft)
-        await db.commit()
-        await db.refresh(nft)
-        return nft, None
+            nft = NFT(
+                user_id=user_id,
+                wallet_id=wallet_id,
+                name=name,
+                description=description,
+                global_nft_id=global_nft_id,
+                blockchain=wallet.blockchain.value,
+                owner_address=wallet.address,
+                status=NFTStatus.PENDING,
+                image_url=image_url,
+                royalty_percentage=royalty_percentage,
+                nft_metadata=metadata or {},
+                is_locked=False,
+            )
+            db.add(nft)
+            await db.commit()
+            await db.refresh(nft)
+            return nft, None
+        except Exception as e:
+            logger.error(f"Failed to mint NFT: {e}", exc_info=True)
+            return None, f"Database error: {str(e)}"
 
     @staticmethod
     async def update_nft_after_mint(
