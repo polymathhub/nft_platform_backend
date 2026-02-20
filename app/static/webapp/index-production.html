@@ -893,6 +893,13 @@
         loadDashboard();
         loadWallets();
         loadNFTs();
+        
+        // Handle deep linking from Telegram commands
+        const params = new URLSearchParams(window.location.search);
+        const page = params.get('page');
+        if (page && ['dashboard', 'wallets', 'nfts', 'mint', 'marketplace', 'profile'].includes(page)) {
+          setTimeout(() => switchPage(page), 500);
+        }
       } else {
         showStatus('Failed to authenticate', 'error');
       }
