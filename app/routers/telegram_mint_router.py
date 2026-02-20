@@ -2005,7 +2005,7 @@ async def web_app_get_dashboard_data(
 
 @router.post("/web-app/mint")
 async def web_app_mint_nft(
-    request: WebAppMintNFTRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2014,6 +2014,17 @@ async def web_app_mint_nft(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppMintNFTRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id from request matches authenticated telegram user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
@@ -2070,7 +2081,7 @@ async def web_app_mint_nft(
 
 @router.post("/web-app/list-nft")
 async def web_app_list_nft(
-    request: WebAppListNFTRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2079,6 +2090,17 @@ async def web_app_list_nft(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppListNFTRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id matches authenticated user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
@@ -2153,7 +2175,7 @@ async def web_app_list_nft(
 
 @router.post("/web-app/transfer")
 async def web_app_transfer_nft(
-    request: WebAppTransferNFTRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2162,6 +2184,17 @@ async def web_app_transfer_nft(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppTransferNFTRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id matches authenticated user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
@@ -2211,7 +2244,7 @@ async def web_app_transfer_nft(
 
 @router.post("/web-app/burn")
 async def web_app_burn_nft(
-    request: WebAppBurnNFTRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2220,6 +2253,17 @@ async def web_app_burn_nft(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppBurnNFTRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id matches authenticated user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
@@ -2262,7 +2306,7 @@ async def web_app_burn_nft(
 
 @router.post("/web-app/set-primary")
 async def web_app_set_primary_wallet(
-    request: WebAppSetPrimaryWalletRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2271,6 +2315,17 @@ async def web_app_set_primary_wallet(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppSetPrimaryWalletRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id matches authenticated user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
@@ -2313,7 +2368,7 @@ async def web_app_set_primary_wallet(
 
 @router.post("/web-app/make-offer")
 async def web_app_make_offer(
-    request: WebAppMakeOfferRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2322,6 +2377,17 @@ async def web_app_make_offer(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppMakeOfferRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id matches authenticated user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
@@ -2386,7 +2452,7 @@ async def web_app_make_offer(
 
 @router.post("/web-app/cancel-listing")
 async def web_app_cancel_listing(
-    request: WebAppCancelListingRequest,
+    http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -2395,6 +2461,17 @@ async def web_app_cancel_listing(
     from uuid import UUID
 
     try:
+        # Parse request body manually
+        try:
+            body_data = await http_request.json()
+            request = WebAppCancelListingRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate user_id matches authenticated user
         if str(request.user_id) != telegram_user["user_id"]:
             raise HTTPException(
