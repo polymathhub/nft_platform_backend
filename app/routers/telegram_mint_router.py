@@ -2544,7 +2544,7 @@ async def get_my_listings(
 
 @router.post("/web-app/create-wallet", response_model=dict)
 async def create_wallet_for_webapp(
-    request: CreateWalletRequest,
+    http_request: Request,  # Get raw request first  
     db: AsyncSession = Depends(get_db_session),
     auth: dict = Depends(get_telegram_user_from_request),
     background_tasks: BackgroundTasks = BackgroundTasks(),
@@ -2566,6 +2566,17 @@ async def create_wallet_for_webapp(
     from app.models.activity import ActivityType
     
     try:
+        # Parse request body manually to avoid double-consumption
+        try:
+            body_data = await http_request.json()
+            request = CreateWalletRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate auth dictionary
         if not auth or not isinstance(auth, dict):
             raise HTTPException(
@@ -2724,7 +2735,7 @@ async def create_wallet_for_webapp(
 
 @router.post("/web-app/import-wallet", response_model=dict)
 async def import_wallet_for_webapp(
-    request: ImportWalletRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db_session),
     auth: dict = Depends(get_telegram_user_from_request),
 ) -> dict:
@@ -2746,6 +2757,17 @@ async def import_wallet_for_webapp(
     from app.models.activity import ActivityType
     
     try:
+        # Parse request body manually to avoid double-consumption
+        try:
+            body_data = await http_request.json()
+            request = ImportWalletRequest(**body_data)
+        except Exception as e:
+            logger.error(f"Failed to parse request: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid request body: {str(e)}"
+            )
+        
         # Validate auth
         if not auth or not isinstance(auth, dict):
             raise HTTPException(
