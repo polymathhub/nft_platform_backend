@@ -1044,7 +1044,7 @@
       const bc = bcEl ? bcEl.value : null;
       if (!bc) { showStatus('Select blockchain', 'error'); return; }
       showStatus('Creating wallet...', 'info');
-      const r = await API.call('POST', '/create-wallet', { blockchain: bc, wallet_type: 'custodial', init_data: initData });
+      const r = await API.call('POST', '/web-app/create-wallet', { blockchain: bc, wallet_type: 'custodial', init_data: initData });
       console.log('[API] createWallet response:', r);
       if (r.ok) {
         showStatus('Wallet created successfully', 'success');
@@ -1064,7 +1064,7 @@
       const addr = addrEl ? addrEl.value : null;
       if (!bc || !addr) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Importing wallet...', 'info');
-      const r = await API.call('POST', '/import-wallet', { blockchain: bc, address: addr, init_data: initData });
+      const r = await API.call('POST', '/web-app/import-wallet', { blockchain: bc, address: addr, init_data: initData });
       if (r.ok) {
         showStatus('Wallet imported successfully', 'success');
         loadWallets();
@@ -1082,7 +1082,7 @@
       }
       try {
         console.log('[Wallets] Fetching wallets for user:', user.id);
-        const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/web-app/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[Wallets] Response:', r);
         const ws = (r.ok && r.data) ? r.data.wallets || [] : [];
         const walletsList = $('walletsList');
@@ -1116,7 +1116,7 @@
       }
       try {
         console.log('[NFTs] Fetching NFTs for user:', user.id);
-        const r = await API.call('GET', '/nfts?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/web-app/nfts?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[NFTs] Response:', r);
         const ns = (r.ok && r.data) ? r.data.nfts || [] : [];
         const nftList = $('nftList');
@@ -1148,7 +1148,8 @@
       showStatus('Minting NFT...', 'info');
       const descEl = $('mintDesc');
       const imageEl = $('mintImage');
-      const r = await API.call('POST', '/mint', { 
+      const r = await API.call('POST', '/web-app/mint', { 
+        user_id: user.id,
         wallet_id: wallet, 
         nft_name: name, 
         nft_description: (descEl ? descEl.value : '') || '', 
@@ -1175,7 +1176,7 @@
       const addr = addrEl ? addrEl.value : null;
       if (!nid || !addr) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Transferring NFT...', 'info');
-      const r = await API.call('POST', '/transfer', { nft_id: nid, to_address: addr, init_data: initData });
+      const r = await API.call('POST', '/web-app/transfer', { user_id: user.id, nft_id: nid, to_address: addr, init_data: initData });
       if (r.ok) {
         showStatus('NFT transferred successfully', 'success');
         if (nidEl) nidEl.value = '';
@@ -1193,7 +1194,7 @@
       if (!nid) { showStatus('Enter NFT ID', 'error'); return; }
       if (!confirm('Are you sure you want to burn this NFT? This action cannot be undone.')) return;
       showStatus('Burning NFT...', 'info');
-      const r = await API.call('POST', '/burn', { nft_id: nid, init_data: initData });
+      const r = await API.call('POST', '/web-app/burn', { user_id: user.id, nft_id: nid, init_data: initData });
       if (r.ok) {
         showStatus('NFT burned successfully', 'success');
         if (nidEl) nidEl.value = '';
@@ -1333,7 +1334,7 @@
       if (!nid || !price) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Listing NFT...', 'info');
       const currencyEl = $('listCurrency');
-      const r = await API.call('POST', '/list-nft', { nft_id: nid, price, currency: currencyEl ? currencyEl.value : 'ETH', init_data: initData });
+      const r = await API.call('POST', '/web-app/list', { user_id: user.id, nft_id: nid, price, currency: currencyEl ? currencyEl.value : 'ETH', init_data: initData });
       if (r.ok) {
         showStatus('NFT listed successfully', 'success');
         if (nidEl) nidEl.value = '';
@@ -1352,7 +1353,7 @@
       const price = priceEl ? priceEl.value : null;
       if (!lid || !price) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Making offer...', 'info');
-      const r = await API.call('POST', '/make-offer', { listing_id: lid, offer_price: price, init_data: initData });
+      const r = await API.call('POST', '/web-app/make-offer', { user_id: user.id, listing_id: lid, offer_price: price, init_data: initData });
       if (r.ok) {
         showStatus('Offer made successfully', 'success');
         if (lidEl) lidEl.value = '';
@@ -1369,7 +1370,7 @@
       if (!lid) { showStatus('Enter listing ID', 'error'); return; }
       if (!confirm('Cancel this listing?')) return;
       showStatus('Cancelling listing...', 'info');
-      const r = await API.call('POST', '/cancel-listing', { listing_id: lid, init_data: initData });
+      const r = await API.call('POST', '/web-app/cancel-listing', { user_id: user.id, listing_id: lid, init_data: initData });
       if (r.ok) {
         showStatus('Listing cancelled successfully', 'success');
         if (lidEl) lidEl.value = '';
