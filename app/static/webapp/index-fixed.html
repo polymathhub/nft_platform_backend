@@ -2048,7 +2048,16 @@
         console.log('[MyListings] Fetching my listings for user:', user.id);
         const r = await API.call('GET', '/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[MyListings] Response:', r);
-        const ls = (r.ok && r.data) ? r.dat>
+        const ls = (r.ok && r.data) ? r.data.listings || [] : [];
+        const myListingsEl = $('myListings');
+        if (myListingsEl) {
+          myListingsEl.innerHTML = ls.length > 0 
+            ? ls.map(l => {
+                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=My+NFT+' + encodeURIComponent(l.nft_name || 'NFT');
+                const listingId = l.listing_id || l.id || 'N/A';
+                const shortId = listingId.toString().slice(0, 8);
+                return `
+                  <div class="listing-item">
                     <img src="${imageUrl}" alt="${l.nft_name || 'NFT'}" class="listing-item-image">
                     <div class="listing-item-content" style="padding: 14px;">
                       <strong style="font-size: 15px; display: block; margin-bottom: 10px;">${l.nft_name || 'My NFT'}</strong>
@@ -2065,16 +2074,7 @@
                       </div>
                     </div>
                     <div class="listing-item-footer">
-                      <button class="btn btn-danger" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointer;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${listingId}'; showStatus('Ready to cancel - click the Cancel button below', 'info'); })()">Cancel Listing
-                    <div style="padding: 16px;">
-                      <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${l.nft_name || 'NFT'}</strong>
-                      <div class="price-display" style="margin: 8px 0; font-size: 16px;">${l.price || '0'} ${l.currency || 'USD'}</div>
-                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${shortId}...</span>
-                        <button class="btn btn-small" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; font-size: 10px;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
-                      </div>
-                      <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0;">Status: Active</p>
-                      <button class="btn btn-danger btn-small" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${listingId}'; showStatus('Ready to cancel - click Cancel button', 'info'); })()">Select to Cancel</button>
+                      <button class="btn btn-danger" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointer;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${listingId}'; showStatus('Ready to cancel - click the Cancel button below', 'info'); })()">Cancel Listing</button>
                     </div>
                   </div>
                 `;
