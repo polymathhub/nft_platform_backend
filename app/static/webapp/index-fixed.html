@@ -1522,24 +1522,35 @@
         if (nftList) {
           nftList.innerHTML = ns.length > 0 
             ? ns.map(n => {
-                const imageUrl = n.image_url || 'https://via.placeholder.com/200x200?text=' + encodeURIComponent(n.name || 'NFT');
+                const imageUrl = n.image_url || 'https://via.placeholder.com/300x300?text=NFT+Gallery&bg=7c5cff&c=fff';
                 const nftId = n.id || 'N/A';
-                const shortId = nftId.toString().slice(0, 8);
+                const fullId = nftId.toString();
+                const shortId = fullId.slice(0, 12);
+                const statusColor = n.status === 'MINTED' ? '#34d399' : n.status === 'TRANSFERRED' ? '#7c5cff' : '#fbbf24';
+                const statusText = n.status || 'PENDING';
                 return `
-                  <div class="nft-item" style="border-radius: 12px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column;">
-                    <div style="width: 100%; height: 120px; background-image: url('${imageUrl}'); background-size: cover; background-position: center; border-bottom: 1px solid var(--border);"></div>
-                    <div style="padding: 12px; flex: 1; display: flex; flex-direction: column;">
-                      <strong style="font-size: 13px; margin-bottom: 6px;">${n.name || 'Unnamed NFT'}</strong>
-                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-                        <span style="font-size: 10px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
-                        <button class="btn btn-small" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 3px 6px; font-size: 9px; flex-shrink: 0;" onclick="navigator.clipboard.writeText('${nftId}').then(() => showStatus('NFT ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
+                  <div class="nft-item" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(124,92,255,0.05) 100%); display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(124,92,255,0.1);">
+                    <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                      <img src="${imageUrl}" alt="${n.name || 'NFT'}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #7c5cff 0%, #a78bfa 100%)';"/>
+                      <div style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); font-size: 11px; font-weight: 600; color: ${statusColor}; letter-spacing: 0.5px;">${statusText}</div>
+                    </div>
+                    <div style="padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                      <div>
+                        <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">NFT</div>
+                        <strong style="font-size: 16px; line-height: 1.4; color: var(--text); font-weight: 600; word-break: break-word;">${n.name || 'Unnamed NFT'}</strong>
                       </div>
-                      <p style="font-size: 11px; color: var(--text-muted); margin-top: auto;">Status: <span style="color: ${n.status === 'MINTED' ? 'var(--success)' : n.status === 'TRANSFERRED' ? 'var(--primary)' : 'var(--warning)'};">${n.status || 'PENDING'}</span></p>
+                      <div style="background: rgba(124,92,255,0.08); border: 1px solid rgba(124,92,255,0.2); border-radius: 12px; padding: 12px; font-family: 'Monaco', 'Courier New', monospace; font-size: 12px;">
+                        <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Token ID</div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                          <span style="color: var(--primary); font-weight: 500; word-break: break-all; flex: 1;">${shortId}</span>
+                          <button class="btn btn-small" style="background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); color: white; border: none; padding: 6px 10px; font-size: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(124,92,255,0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='';" onclick="navigator.clipboard.writeText('${fullId}').then(() => showStatus('NFT ID copied to clipboard', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 `;
               }).join('')
-            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Mint your first NFT!</p>';
+            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px; font-size: 14px;">No NFTs yet. Mint your first NFT to get started!</p>';
         }
         console.log('[NFTs] Loaded', ns.length, 'NFTs');
       } catch (err) {
@@ -1625,35 +1636,40 @@
         if (listingsEl) {
           listingsEl.innerHTML = ls.length > 0 
             ? ls.map(l => {
-                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=NFT+' + encodeURIComponent(l.nft_name || 'Listing');
+                const imageUrl = l.image_url || 'https://via.placeholder.com/400x400?text=Marketplace&bg=7c5cff&c=fff';
                 const listingId = l.listing_id || l.id || 'N/A';
-                const shortId = listingId.toString().slice(0, 8);
+                const fullId = listingId.toString();
+                const shortId = fullId.slice(0, 12);
+                const price = parseFloat(l.price || 0);
+                const currency = l.currency || 'USD';
                 return `
-                  <div class="listing-item">
-                    <img src="${imageUrl}" alt="${l.nft_name || 'NFT'}" class="listing-item-image">
-                    <div class="listing-item-content" style="padding: 14px;">
-                      <strong style="font-size: 15px; display: block; margin-bottom: 10px;">${l.nft_name || 'Listing NFT'}</strong>
-                      <div class="price-display" style="font-size: 18px; margin-bottom: 12px;">${l.price || '0'} ${l.currency || 'USD'}</div>
-                      <div style="padding: 10px; background: var(--bg); border-radius: 6px; margin-bottom: 12px;">
-                        <p style="font-size: 10px; color: var(--text-muted); margin: 0 0 6px 0;">Listing ID</p>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                          <span style="font-size: 11px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
-                          <button class="btn btn-small" style="background: var(--primary); color: white; border: none; padding: 5px 10px; font-size: 9px; flex-shrink: 0; cursor: pointer;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied!', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
-                        </div>
+                  <div class="listing-item" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(124,92,255,0.05) 100%); display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(124,92,255,0.1);">
+                    <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                      <img src="${imageUrl}" alt="${l.nft_name || 'Listing'}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #7c5cff 0%, #a78bfa 100%)';">
+                      <div style="position: absolute; top: 12px; left: 12px; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; color: white; letter-spacing: 1px; text-transform: uppercase;">Live</div>
+                      <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-family: 'Monaco', monospace; font-size: 13px; font-weight: 600; color: #fbbf24;">${price.toFixed(2)} ${currency}</div>
+                    </div>
+                    <div style="padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+                      <div>
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">Collection Item</div>
+                        <strong style="font-size: 16px; line-height: 1.4; color: var(--text); font-weight: 600; word-break: break-word;">${l.nft_name || 'Untitled'}</strong>
                       </div>
-                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px; background: rgba(124, 92, 255, 0.1); border-radius: 6px; border-left: 3px solid var(--primary);">
-                        <span style="font-size: 10px; display: block;">
-                          <strong style="color: var(--primary);">Blockchain:</strong> ${l.blockchain?.toUpperCase() || 'Unknown'}
-                        </span>
+                      <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(124,92,255,0.08); border-radius: 10px; border: 1px solid rgba(124,92,255,0.15);">
+                        <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 8px var(--primary);"></div>
+                        <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${l.blockchain?.toUpperCase() || 'Unknown'} Network</span>
+                      </div>
+                      <div style="background: rgba(124,92,255,0.06); border: 1px solid rgba(124,92,255,0.2); border-radius: 12px; padding: 12px; font-family: 'Monaco', monospace;">
+                        <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Token ID</div>
+                        <div style="font-size: 11px; word-break: break-all; color: var(--primary); font-weight: 500; line-height: 1.5;">${shortId}</div>
                       </div>
                     </div>
-                    <div class="listing-item-footer">
-                      <button class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointer;" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${listingId}'; showStatus('Enter your offer price', 'info'); })()">Make Offer</button>
+                    <div style="padding: 12px 18px; border-top: 1px solid rgba(124,92,255,0.1);">
+                      <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); border: none; color: white;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(124,92,255,0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='';" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${fullId}'; showStatus('Listing loaded - Enter your offer price', 'info'); })()">Make Offer</button>
                     </div>
                   </div>
                 `;
               }).join('')
-            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
+            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px; font-size: 14px;">No listings available yet</p>';
         }
         showStatus('Listings loaded', 'success');
         console.log('[Marketplace] Loaded', ls.length, 'listings');
@@ -2077,33 +2093,37 @@
         if (myListingsEl) {
           myListingsEl.innerHTML = ls.length > 0 
             ? ls.map(l => {
-                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=My+NFT+' + encodeURIComponent(l.nft_name || 'NFT');
+                const imageUrl = l.image_url || 'https://via.placeholder.com/400x400?text=My+Collection&bg=7c5cff&c=fff';
                 const listingId = l.listing_id || l.id || 'N/A';
-                const shortId = listingId.toString().slice(0, 8);
+                const fullId = listingId.toString();
+                const shortId = fullId.slice(0, 12);
+                const price = parseFloat(l.price || 0);
+                const currency = l.currency || 'USD';
                 return `
-                  <div class="listing-item">
-                    <img src="${imageUrl}" alt="${l.nft_name || 'NFT'}" class="listing-item-image">
-                    <div class="listing-item-content" style="padding: 14px;">
-                      <strong style="font-size: 15px; display: block; margin-bottom: 10px;">${l.nft_name || 'My NFT'}</strong>
-                      <div class="price-display" style="font-size: 18px; margin-bottom: 12px;">${l.price || '0'} ${l.currency || 'USD'}</div>
-                      <div style="padding: 10px; background: var(--bg); border-radius: 6px; margin-bottom: 12px;">
-                        <p style="font-size: 10px; color: var(--text-muted); margin: 0 0 6px 0;">Listing ID</p>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                          <span style="font-size: 11px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
-                          <button class="btn btn-small" style="background: var(--primary); color: white; border: none; padding: 5px 10px; font-size: 9px; flex-shrink: 0; cursor: pointer;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied!', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
-                        </div>
+                  <div class="listing-item" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(52,211,153,0.05) 100%); display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(52,211,153,0.2);">
+                    <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                      <img src="${imageUrl}" alt="${l.nft_name || 'My NFT'}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #34d399 0%, #6ee7b7 100%)';">
+                      <div style="position: absolute; top: 12px; left: 12px; background: linear-gradient(135deg, #34d399 0%, #6ee7b7 100%); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; color: white; letter-spacing: 1px; text-transform: uppercase;">Active</div>
+                      <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-family: 'Monaco', monospace; font-size: 13px; font-weight: 600; color: #34d399;">${price.toFixed(2)} ${currency}</div>
+                    </div>
+                    <div style="padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+                      <div>
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">Your NFT</div>
+                        <strong style="font-size: 16px; line-height: 1.4; color: var(--text); font-weight: 600; word-break: break-word;">${l.nft_name || 'Untitled'}</strong>
                       </div>
-                      <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 6px; border-left: 3px solid var(--success);">
-                        <span style="font-size: 10px; color: var(--success); font-weight: 600;">● Active</span>
+                      <div style="background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); border-radius: 12px; padding: 12px; font-family: 'Monaco', monospace;">
+                        <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Token ID</div>
+                        <div style="font-size: 11px; word-break: break-all; color: var(--success); font-weight: 500; line-height: 1.5;">${shortId}</div>
                       </div>
                     </div>
-                    <div class="listing-item-footer">
-                      <button class="btn btn-danger" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointer;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${listingId}'; showStatus('Ready to cancel - click the Cancel button below', 'info'); })()">Cancel Listing</button>
+                    <div style="padding: 12px 18px; border-top: 1px solid rgba(52,211,153,0.15); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                      <button class="btn btn-secondary" style="padding: 11px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--success);" onmouseover="this.style.background='rgba(52,211,153,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(52,211,153,0.1)'; this.style.transform='none';" onclick="navigator.clipboard.writeText('${fullId}').then(() => showStatus('ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
+                      <button class="btn btn-danger" style="padding: 11px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(239,68,68,0.1)'; this.style.transform='none';" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${fullId}'; showStatus('Ready to cancel listing', 'info'); })()">Delist</button>
                     </div>
                   </div>
                 `;
               }).join('')
-            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
+            : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px; font-size: 14px;">No active listings yet</p>';
         }
         console.log('[MyListings] Loaded', ls.length, 'listings');
       } catch (err) {
