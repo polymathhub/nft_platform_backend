@@ -403,6 +403,195 @@
       border-radius: 8px;
       margin-bottom: 12px;
     }
+    
+    /* Enhanced NFT and Listing Card Styling */
+    .nft-item {
+      background: var(--bg-card);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+    }
+    
+    .nft-item:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 32px rgba(124, 92, 255, 0.25);
+      border-color: var(--primary);
+    }
+
+    .listing-item {
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--bg-light) 0%, rgba(124, 92, 255, 0.05) 100%);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .listing-item:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 32px rgba(124, 92, 255, 0.25);
+      border-color: var(--primary);
+    }
+
+    .nft-item-image, .listing-item-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .nft-item:hover .nft-item-image,
+    .listing-item:hover .listing-item-image {
+      transform: scale(1.05);
+    }
+
+    .nft-item-content, .listing-item-content {
+      flex-grow: 1;
+    }
+
+    .listing-item-footer {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nft-item::before, .listing-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .nft-item:hover::before, .listing-item:hover::before {
+      transform: scaleX(1);
+    }
+
+    /* Form Info Boxes and Tips */
+    .form-info-box {
+      background: rgba(124, 92, 255, 0.1);
+      border: 1px solid rgba(124, 92, 255, 0.3);
+      border-left: 4px solid var(--primary);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .form-info-box strong {
+      display: block;
+      color: var(--primary);
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .form-tip {
+      background: rgba(76, 175, 80, 0.1);
+      border-left: 4px solid var(--success);
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .form-tip::before {
+      content: '✓ ';
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    /* ointer-events: none;
+      border-radius: 14px;
+      z-index: 1;
+    }
+    
+    .nft-item:hover::after {
+      opacity: 1;
+    }
+    
+    /* NFT Image Section */
+    .nft-item > div:first-child {
+      width: 100%;
+      height: 160px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-size: cover;
+      background-position: center;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .nft-item > div:first-child::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.02);
+      z-index: 1;
+    }
+    
+    /* Listing Item Enhanced */
+    .listing-item {
+      background: var(--bg-card);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+    
+    .listing-item:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 32px rgba(124, 92, 255, 0.25);
+      border-color: var(--primary);
+    }
+    
+    /* Listing Image Section */
+    .listing-item > div:first-child {
+      width: 100%;
+      height: 180px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-size: cover;
+      background-position: center;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .listing-item > div:first-child::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.02);
+      z-index: 1;
+    }
 
     .blockchain-badge {
       display: inline-block;
@@ -891,17 +1080,10 @@
             </div>
           </div>
 
-          <!-- My Listings Section -->
-          <div id="myListingsSection" style="display: none;">
-            <div class="card" style="margin-bottom: 24px;">
-              <h3>Your Listings</h3>
-              <div id="myListings" class="grid-auto" style="margin-top: 16px;">
-                <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;"><span class="spinner"></span> Loading...</p>
-              </div>
-            </div>
-            <div class="grid-auto">
-              <div class="card">
-                <h3>List NFT</h3>
+          <!-- My Listings Sectioinfo-box">
+                  <strong>💡 Pro Tip</strong>
+                  USDT listings get maximum visibility and attract more buyers!
+                </div>
                 <div class="form-group">
                   <label>NFT ID</label>
                   <input id="listNFT" type="text" placeholder="NFT ID...">
@@ -913,10 +1095,23 @@
                 <div class="form-group">
                   <label>Currency</label>
                   <select id="listCurrency">
+                    <option value="USDT" selected>USDT (Recommended)</option>
+                    <option value="USDC">USDC</option>
+                    <option value="ETH">ETH</option>
+                    <option value="SOL">SOL</option>
+                    <option value="BTC">BT
+                <div class="form-group">
+                  <label>Price</label>
+                  <input id="listPrice" type="number" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label>Currency</label>
+                  <select id="listCurrency">
+                    <option value="USDT" selected>USDT (Recommended)</option>
+                    <option value="USDC">USDC</option>
                     <option value="ETH">ETH</option>
                     <option value="SOL">SOL</option>
                     <option value="BTC">BTC</option>
-                    <option value="USDC">USDC</option>
                   </select>
                 </div>
                 <button class="btn btn-primary btn-block" onclick="listNFT()">List NFT</button>
@@ -1217,16 +1412,23 @@
         if (bcEl) bcEl.value = '';
       } else {
         showStatus(r.data?.detail || 'Error creating wallet', 'error');
-      }
-    }
-
-    async function importWallet() {
-      console.log('[Action] importWallet called');
-      if (!user) { showStatus('Not authenticated', 'error'); return; }
-      const bcEl = $('importBlockchain');
-      const addrEl = $('importAddress');
-      const bc = bcEl ? bcEl.value : null;
-      const addr = addrEl ? addrEl.value : null;
+      }const statusColor = n.status === 'MINTED' ? 'var(--success)' : n.status === 'TRANSFERRED' ? 'var(--primary)' : 'var(--warning)';
+                return `
+                  <div class="nft-item">
+                    <img src="${imageUrl}" alt="${n.name || 'NFT'}" class="nft-item-image" style="height: 200px;">
+                    <div class="nft-item-content">
+                      <div style="margin-bottom: 12px;">
+                        <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${n.name || 'Unnamed NFT'}</strong>
+                        <span class="blockchain-badge" style="background: rgba(124, 92, 255, 0.15); color: var(--primary);">NFT Collection</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 6px;">
+                        <span style="font-size: 11px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
+                        <button class="btn btn-small" style="background: var(--primary); color: white; border: none; padding: 6px 10px; font-size: 10px; flex-shrink: 0; cursor: pointer;" onclick="navigator.clipboard.writeText('${nftId}').then(() => showStatus('NFT ID copied!', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
+                      </div>
+                      <div style="padding: 10px; background: rgba(124, 92, 255, 0.1); border-radius: 6px; border-left: 3px solid var(--primary);">
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 6px 0;">Status</p>
+                        <p style="font-size: 12px; color: ${statusColor}; font-weight: 600; margin: 0;">${n.status || 'PENDING'}</p>
+                      </div
       if (!bc || !addr) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Importing wallet...', 'info');
       const r = await API.call('POST', '/import-wallet', { blockchain: bc, address: addr, init_data: initData });
@@ -1384,21 +1586,30 @@
       try {
         showStatus('Loading listings...', 'info');
         console.log('[Marketplace] Fetching listings');
-        const r = await API.call('GET', '/web-app/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
         console.log('[Marketplace] Response:', r);
         const ls = (r.ok && r.data) ? r.data.listings || [] : [];
         const listingsEl = $('marketplaceListings');
-        if (listingsEl) {
-          listingsEl.innerHTML = ls.length > 0 
-            ? ls.map(l => {
-                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=NFT+' + encodeURIComponent(l.nft_name || 'NFT');
-                const listingId = l.listing_id || l.id || 'N/A';
-                const shortId = listingId.toString().slice(0, 8);
-                return `
-                  <div class="listing-item" style="border-radius: 12px; overflow: hidden; background: var(--bg-card); transition: all 0.3s;">
-                    <div style="width: 100%; height: 180px; background-image: url('${imageUrl}'); background-size: cover; background-position: center; border-bottom: 1px solid var(--border);"></div>
-                    <div style="padding: 16px;">
-                      <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${l.nft_name || 'NFT'}</strong>
+        if (listingsEl) {>
+                    <img src="${imageUrl}" alt="${l.nft_name || 'NFT'}" class="listing-item-image">
+                    <div class="listing-item-content" style="padding: 14px;">
+                      <strong style="font-size: 15px; display: block; margin-bottom: 10px;">${l.nft_name || 'Listing NFT'}</strong>
+                      <div class="price-display" style="font-size: 18px; margin-bottom: 12px;">${l.price || '0'} ${l.currency || 'USD'}</div>
+                      <div style="padding: 10px; background: var(--bg); border-radius: 6px; margin-bottom: 12px;">
+                        <p style="font-size: 10px; color: var(--text-muted); margin: 0 0 6px 0;">Listing ID</p>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <span style="font-size: 11px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
+                          <button class="btn btn-small" style="background: var(--primary); color: white; border: none; padding: 5px 10px; font-size: 9px; flex-shrink: 0; cursor: pointer;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied!', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
+                        </div>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px; background: rgba(124, 92, 255, 0.1); border-radius: 6px; border-left: 3px solid var(--primary);">
+                        <span style="font-size: 10px; display: block;">
+                          <strong style="color: var(--primary);">Blockchain:</strong> ${l.blockchain?.toUpperCase() || 'Unknown'}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="listing-item-footer">
+                      <button class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointerame || 'NFT'}</strong>
                       <div class="price-display" style="margin: 8px 0; font-size: 16px;">${l.price || '0'} ${l.currency || 'USD'}</div>
                       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                         <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${shortId}...</span>
@@ -1827,19 +2038,26 @@
       }
       try {
         console.log('[MyListings] Fetching my listings for user:', user.id);
-        const r = await API.call('GET', '/web-app/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[MyListings] Response:', r);
-        const ls = (r.ok && r.data) ? r.data.listings || [] : [];
-        const myListingsEl = $('myListings');
-        if (myListingsEl) {
-          myListingsEl.innerHTML = ls.length > 0 
-            ? ls.map(l => {
-                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=My+NFT+' + encodeURIComponent(l.nft_name || 'NFT');
-                const listingId = l.listing_id || l.id || 'N/A';
-                const shortId = listingId.toString().slice(0, 8);
-                return `
-                  <div class="listing-item" style="border-radius: 12px; overflow: hidden; background: var(--bg-card); transition: all 0.3s;">
-                    <div style="width: 100%; height: 180px; background-image: url('${imageUrl}'); background-size: cover; background-position: center; border-bottom: 1px solid var(--border);"></div>
+        const ls = (r.ok && r.data) ? r.dat>
+                    <img src="${imageUrl}" alt="${l.nft_name || 'NFT'}" class="listing-item-image">
+                    <div class="listing-item-content" style="padding: 14px;">
+                      <strong style="font-size: 15px; display: block; margin-bottom: 10px;">${l.nft_name || 'My NFT'}</strong>
+                      <div class="price-display" style="font-size: 18px; margin-bottom: 12px;">${l.price || '0'} ${l.currency || 'USD'}</div>
+                      <div style="padding: 10px; background: var(--bg); border-radius: 6px; margin-bottom: 12px;">
+                        <p style="font-size: 10px; color: var(--text-muted); margin: 0 0 6px 0;">Listing ID</p>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <span style="font-size: 11px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
+                          <button class="btn btn-small" style="background: var(--primary); color: white; border: none; padding: 5px 10px; font-size: 9px; flex-shrink: 0; cursor: pointer;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied!', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
+                        </div>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 6px; border-left: 3px solid var(--success);">
+                        <span style="font-size: 10px; color: var(--success); font-weight: 600;">● Active</span>
+                      </div>
+                    </div>
+                    <div class="listing-item-footer">
+                      <button class="btn btn-danger" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointer;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${listingId}'; showStatus('Ready to cancel - click the Cancel button below', 'info'); })()">Cancel Listing
                     <div style="padding: 16px;">
                       <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${l.nft_name || 'NFT'}</strong>
                       <div class="price-display" style="margin: 8px 0; font-size: 16px;">${l.price || '0'} ${l.currency || 'USD'}</div>
@@ -1871,7 +2089,7 @@
       if (!nid || !price || parseFloat(price) <= 0) { showStatus('Fill all fields with valid price', 'error'); return; }
       showStatus('Listing NFT...', 'info');
       const currencyEl = $('listCurrency');
-      const r = await API.call('POST', '/web-app/list-nft', { 
+      const r = await API.call('POST', '/list-nft', { 
         user_id: user.id, 
         nft_id: nid, 
         price: parseFloat(price), 
@@ -1882,7 +2100,7 @@
         showStatus('NFT listed successfully! Ready for offers.', 'success');
         if (nidEl) nidEl.value = '';
         if (priceEl) priceEl.value = '';
-        if (currencyEl) currencyEl.value = 'USDICT';
+        if (currencyEl) currencyEl.value = 'USDT';
         setTimeout(() => myListings(), 500);
       } else {
         showStatus(r.data?.detail || r.data?.error || 'Error listing NFT', 'error');
@@ -1907,7 +2125,7 @@
       if (!confirm(confirmMsg)) return;
       
       showStatus('Making offer and reserving USDT from your account...', 'info');
-      const r = await API.call('POST', '/web-app/make-offer', { 
+      const r = await API.call('POST', '/make-offer', { 
         user_id: user.id, 
         listing_id: lid, 
         offer_price: offerAmount,
@@ -1931,7 +2149,7 @@
       if (!lid) { showStatus('Select a listing to cancel', 'error'); return; }
       if (!confirm('Cancel this listing? It will no longer be available for offers.')) return;
       showStatus('Cancelling listing...', 'info');
-      const r = await API.call('POST', '/web-app/cancel-listing', { 
+      const r = await API.call('POST', '/cancel-listing', { 
         user_id: user.id, 
         listing_id: lid, 
         init_data: initData 
