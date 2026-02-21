@@ -1321,45 +1321,70 @@
     window.closeMobileMenu = closeMobileMenu;
 
     async function initApp() {
-      console.log('[App] Initializing...');
-      initData = getTelegramInitData();
-      console.log('[App] initData obtained:', initData.substring(0, 50) + '...');
-      
-      const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
-      console.log('[App] Init response:', r);
-      
-      if (r.ok && r.data.user) {
-        user = r.data.user;
-        console.log('[App] User authenticated:', user);
-        const initial = (user.telegram_username || user.first_name || 'U')[0].toUpperCase();
+      try {
+        console.log('[App] Initializing...');
+        initData = getTelegramInitData();
+        console.log('[App] initData obtained:', initData.substring(0, 50) + '...');
         
-        const userAvatar = $('userAvatar');
-        const userNameDisplay = $('userNameDisplay');
-        const userIdDisplay = $('userIdDisplay');
-        const authStatus = $('authStatus');
-        
-        if (userAvatar) userAvatar.textContent = initial;
-        if (userNameDisplay) userNameDisplay.textContent = user.telegram_username || user.first_name || 'User';
-        if (userIdDisplay) userIdDisplay.textContent = '#' + user.id;
-        if (authStatus) {
-          authStatus.textContent = 'Connected';
-          authStatus.style.color = 'var(--success)';
+        try {
+          const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
+          console.log('[App] Init response:', r);
+          
+          if (r.ok && r.data && r.data.user) {
+            user = r.data.user;
+            console.log('[App] User authenticated:', user);
+            const initial = (user.telegram_username || user.first_name || 'U')[0].toUpperCase();
+            
+            const userAvatar = $('userAvatar');
+            const userNameDisplay = $('userNameDisplay');
+            const userIdDisplay = $('userIdDisplay');
+            const authStatus = $('authStatus');
+            
+            if (userAvatar) userAvatar.textContent = initial;
+            if (userNameDisplay) userNameDisplay.textContent = user.telegram_username || user.first_name || 'User';
+            if (userIdDisplay) userIdDisplay.textContent = '#' + user.id;
+            if (authStatus) {
+              authStatus.textContent = 'Connected';
+              authStatus.style.color = 'var(--success)';
+            }
+            
+            const profileUsername = $('profileUsername');
+            const profileId = $('profileId');
+            if (profileUsername) profileUsername.textContent = user.telegram_username || 'N/A';
+            if (profileId) profileId.textContent = user.id;
+            
+            showStatus('Welcome ' + (user.telegram_username || 'User'), 'success');
+            
+            // Load data
+            loadDashboard();
+            loadWallets();
+            loadNFTs();
+          } else {
+            throw new Error(r.data?.detail || 'Authentication failed');
+          }
+        } catch (apiError) {
+          console.error('[App] API Error:', apiError.message);
+          const authStatus = $('authStatus');
+          if (authStatus) {
+            authStatus.textContent = 'Connection Issue - ' + apiError.message;
+            authStatus.style.color = 'var(--warning)';
+          }
+          showStatus('API Error: ' + apiError.message, 'error');
+          // Still try to load UI even if auth fails
+          setTimeout(() => {
+            loadDashboard();
+            loadWallets();
+            loadNFTs();
+          }, 500);
         }
-        
-        const profileUsername = $('profileUsername');
-        const profileId = $('profileId');
-        if (profileUsername) profileUsername.textContent = user.telegram_username || 'N/A';
-        if (profileId) profileId.textContent = user.id;
-        
-        showStatus('Welcome ' + (user.telegram_username || 'User'), 'success');
-        
-        // Load data
-        loadDashboard();
-        loadWallets();
-        loadNFTs();
-      } else {
-        console.error('[App] Auth failed:', r);
-        showStatus('Failed to authenticate', 'error');
+      } catch (err) {
+        console.error('[App] Fatal Error:', err);
+        const authStatus = $('authStatus');
+        if (authStatus) {
+          authStatus.textContent = 'Error: ' + err.message;
+          authStatus.style.color = 'var(--error)';
+        }
+        showStatus('Fatal Error: ' + err.message, 'error');
       }
     }
 
@@ -2171,50 +2196,65 @@
       }
     }
 
-    // Mobile Menu Toggle
+    // Mobile Menu Toggle - Setup in DOMContentLoaded
     document.addEventListener('DOMContentLoaded', () => {
+      console.log('[DOM] DOMContentLoaded event fired');
       const menuToggle = $('menuToggle');
       const sidebar = $('sidebar');
       
-      if (menuToggle) {
+      if (menuToggle && sidebar) {
+        console.log('[Menu] Attaching click listener to menu toggle');
         menuToggle.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          if (sidebar) sidebar.classList.toggle('open');
+          console.log('[Menu] Toggle clicked');
+          sidebar.classList.toggle('open');
           menuToggle.classList.toggle('open');
         });
+      } else {
+        console.warn('[Menu] Menu toggle or sidebar not found', { menuToggle, sidebar });
       }
 
       // Close menu on outside click
       document.addEventListener('click', (e) => {
-        if (!e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
-          closeMobileMenu();
+        if (sidebar && !e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
+          sidebar.classList.remove('open');
+          if (menuToggle) menuToggle.classList.remove('open');
         }
       });
 
       // Setup nav item listeners
-      document.querySelectorAll('.nav-item').forEach(item => {
+      const navItems = document.querySelectorAll('.nav-item');
+      console.log('[Nav] Found', navItems.length, 'nav items');
+      navItems.forEach((item, idx) => {
         item.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
           const page = item.getAttribute('data-page') || 
                       item.textContent.toLowerCase().split(/\s+/)[0];
-          console.log('[Nav Click] Clicked, page:', page);
+          console.log('[Nav Click] Item', idx, 'clicked, page:', page);
           switchPage(page);
+          closeMobileMenu();
         });
       });
       
-      console.log('[Init] DOM Ready - App initialized!');
+      console.log('[Init] DOM Ready - Calling initApp()');
       initApp();
     });
 
-    // Safety: Initialize app if DOMContentLoaded already fired
+    // Safety: Initialize app if DOMContentLoaded already fired or won't fire
     if (document.readyState === 'loading') {
-      // Still loading
+      console.log('[Safety] Document still loading, DOMContentLoaded will handle init');
     } else {
-      // Already loaded
+      console.log('[Safety] Document already loaded, scheduling init fallback');
       setTimeout(() => {
-        if (!user) initApp();
-      }, 100);
+        if (!user) {
+          console.log('[Safety] User not set, calling initApp as fallback');
+          initApp();
+        } else {
+          console.log('[Safety] User already set, skipping init fallback');
+        }
+      }, 200);
     }
   </script>
 </body>
