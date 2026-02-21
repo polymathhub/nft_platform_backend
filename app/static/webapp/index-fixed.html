@@ -1529,23 +1529,21 @@
                 const statusColor = n.status === 'MINTED' ? '#34d399' : n.status === 'TRANSFERRED' ? '#7c5cff' : '#fbbf24';
                 const statusText = n.status || 'PENDING';
                 return `
-                  <div class="nft-item" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(124,92,255,0.05) 100%); display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(124,92,255,0.1);">
-                    <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <div class="nft-item" style="border-radius: 18px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(124,92,255,0.08);" onmouseover="this.style.boxShadow='0 8px 24px rgba(124,92,255,0.2)'; this.style.transform='translateY(-4px)';" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'; this.style.transform='none';">
+                    <div style="position: relative; width: 100%; aspect-ratio: 1.1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
                       <img src="${imageUrl}" alt="${n.name || 'NFT'}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #7c5cff 0%, #a78bfa 100%)';"/>
-                      <div style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); font-size: 11px; font-weight: 600; color: ${statusColor}; letter-spacing: 0.5px;">${statusText}</div>
+                      <div style="position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,0.5); backdrop-filter: blur(12px); padding: 7px 13px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.15); font-size: 11px; font-weight: 700; color: ${statusColor}; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${statusText}</div>
                     </div>
-                    <div style="padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                      <div style="border-bottom: 1px solid rgba(124,92,255,0.1); padding-bottom: 14px;">
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7;">Token ID</div>
+                        <div style="font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; font-weight: 600; color: var(--primary); word-break: break-all; line-height: 1.5;">${fullId}</div>
+                      </div>
                       <div>
-                        <div style="font-size: 13px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">NFT</div>
-                        <strong style="font-size: 16px; line-height: 1.4; color: var(--text); font-weight: 600; word-break: break-word;">${n.name || 'Unnamed NFT'}</strong>
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">Collection</div>
+                        <strong style="font-size: 17px; line-height: 1.3; color: var(--text); font-weight: 700; word-break: break-word;">${n.name || 'Unnamed NFT'}</strong>
                       </div>
-                      <div style="background: rgba(124,92,255,0.08); border: 1px solid rgba(124,92,255,0.2); border-radius: 12px; padding: 12px; font-family: 'Monaco', 'Courier New', monospace; font-size: 12px;">
-                        <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Token ID</div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                          <span style="color: var(--primary); font-weight: 500; word-break: break-all; flex: 1;">${shortId}</span>
-                          <button class="btn btn-small" style="background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); color: white; border: none; padding: 6px 10px; font-size: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(124,92,255,0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='';" onclick="navigator.clipboard.writeText('${fullId}').then(() => showStatus('NFT ID copied to clipboard', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
-                        </div>
-                      </div>
+                      <button class="btn btn-small" style="align-self: flex-start; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); color: white; border: none; padding: 10px 16px; font-size: 12px; border-radius: 10px; cursor: pointer; font-weight: 700; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(124,92,255,0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='';" onclick="navigator.clipboard.writeText('${fullId}').then(() => showStatus('NFT ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">✓ Copy ID</button>
                     </div>
                   </div>
                 `;
@@ -1639,32 +1637,31 @@
                 const imageUrl = l.image_url || 'https://via.placeholder.com/400x400?text=Marketplace&bg=7c5cff&c=fff';
                 const listingId = l.listing_id || l.id || 'N/A';
                 const fullId = listingId.toString();
-                const shortId = fullId.slice(0, 12);
                 const price = parseFloat(l.price || 0);
                 const currency = l.currency || 'USD';
                 return `
-                  <div class="listing-item" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(124,92,255,0.05) 100%); display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(124,92,255,0.1);">
-                    <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <div class="listing-item" style="border-radius: 18px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(124,92,255,0.08);" onmouseover="this.style.boxShadow='0 8px 24px rgba(124,92,255,0.2)'; this.style.transform='translateY(-4px)';" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'; this.style.transform='none';">
+                    <div style="position: relative; width: 100%; aspect-ratio: 1.1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
                       <img src="${imageUrl}" alt="${l.nft_name || 'Listing'}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #7c5cff 0%, #a78bfa 100%)';">
-                      <div style="position: absolute; top: 12px; left: 12px; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; color: white; letter-spacing: 1px; text-transform: uppercase;">Live</div>
-                      <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-family: 'Monaco', monospace; font-size: 13px; font-weight: 600; color: #fbbf24;">${price.toFixed(2)} ${currency}</div>
+                      <div style="position: absolute; top: 14px; left: 14px; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); backdrop-filter: blur(12px); padding: 8px 15px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.2); font-size: 11px; font-weight: 800; color: white; letter-spacing: 1.2px; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">◆ Live</div>
+                      <div style="position: absolute; bottom: 14px; right: 14px; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); padding: 10px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.15); font-family: 'Monaco', monospace; font-size: 14px; font-weight: 700; color: #fbbf24; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${price.toFixed(2)} ${currency}</div>
                     </div>
-                    <div style="padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                      <div style="border-bottom: 1px solid rgba(124,92,255,0.1); padding-bottom: 14px;">
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7;">Token ID</div>
+                        <div style="font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; font-weight: 600; color: var(--primary); word-break: break-all; line-height: 1.5;">${fullId}</div>
+                      </div>
                       <div>
-                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">Collection Item</div>
-                        <strong style="font-size: 16px; line-height: 1.4; color: var(--text); font-weight: 600; word-break: break-word;">${l.nft_name || 'Untitled'}</strong>
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">Collection</div>
+                        <strong style="font-size: 17px; line-height: 1.3; color: var(--text); font-weight: 700; word-break: break-word;">${l.nft_name || 'Untitled'}</strong>
                       </div>
-                      <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(124,92,255,0.08); border-radius: 10px; border: 1px solid rgba(124,92,255,0.15);">
-                        <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 8px var(--primary);"></div>
-                        <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${l.blockchain?.toUpperCase() || 'Unknown'} Network</span>
-                      </div>
-                      <div style="background: rgba(124,92,255,0.06); border: 1px solid rgba(124,92,255,0.2); border-radius: 12px; padding: 12px; font-family: 'Monaco', monospace;">
-                        <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Token ID</div>
-                        <div style="font-size: 11px; word-break: break-all; color: var(--primary); font-weight: 500; line-height: 1.5;">${shortId}</div>
+                      <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: rgba(124,92,255,0.06); border-radius: 10px; border: 1px solid rgba(124,92,255,0.15);">
+                        <div style="width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 8px rgba(124,92,255,0.6);"></div>
+                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">${l.blockchain?.toUpperCase() || 'Unknown'} Network</span>
                       </div>
                     </div>
-                    <div style="padding: 12px 18px; border-top: 1px solid rgba(124,92,255,0.1);">
-                      <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); border: none; color: white;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(124,92,255,0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='';" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${fullId}'; showStatus('Listing loaded - Enter your offer price', 'info'); })()">Make Offer</button>
+                    <div style="padding: 14px 20px; border-top: 1px solid rgba(124,92,255,0.1);">
+                      <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border-radius: 11px; transition: all 0.3s; background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%); border: none; color: white; letter-spacing: 0.5px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(124,92,255,0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='';" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${fullId}'; showStatus('Listing loaded - Enter your offer price', 'info'); })()">Make Offer</button>
                     </div>
                   </div>
                 `;
@@ -2096,29 +2093,28 @@
                 const imageUrl = l.image_url || 'https://via.placeholder.com/400x400?text=My+Collection&bg=7c5cff&c=fff';
                 const listingId = l.listing_id || l.id || 'N/A';
                 const fullId = listingId.toString();
-                const shortId = fullId.slice(0, 12);
                 const price = parseFloat(l.price || 0);
                 const currency = l.currency || 'USD';
                 return `
-                  <div class="listing-item" style="border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(52,211,153,0.05) 100%); display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(52,211,153,0.2);">
-                    <div style="position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <div class="listing-item" style="border-radius: 18px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); border: 1px solid rgba(52,211,153,0.15);" onmouseover="this.style.boxShadow='0 8px 24px rgba(52,211,153,0.2)'; this.style.transform='translateY(-4px)';" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'; this.style.transform='none';">
+                    <div style="position: relative; width: 100%; aspect-ratio: 1.1 / 1; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
                       <img src="${imageUrl}" alt="${l.nft_name || 'My NFT'}" style="width: 100%; height: 100%; object-fit: cover; object-position: center;" onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(135deg, #34d399 0%, #6ee7b7 100%)';">
-                      <div style="position: absolute; top: 12px; left: 12px; background: linear-gradient(135deg, #34d399 0%, #6ee7b7 100%); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; color: white; letter-spacing: 1px; text-transform: uppercase;">Active</div>
-                      <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-family: 'Monaco', monospace; font-size: 13px; font-weight: 600; color: #34d399;">${price.toFixed(2)} ${currency}</div>
+                      <div style="position: absolute; top: 14px; left: 14px; background: linear-gradient(135deg, #34d399 0%, #6ee7b7 100%); backdrop-filter: blur(12px); padding: 8px 15px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.2); font-size: 11px; font-weight: 800; color: white; letter-spacing: 1.2px; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">✓ Active</div>
+                      <div style="position: absolute; bottom: 14px; right: 14px; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); padding: 10px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.15); font-family: 'Monaco', monospace; font-size: 14px; font-weight: 700; color: #34d399; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${price.toFixed(2)} ${currency}</div>
                     </div>
-                    <div style="padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                      <div style="border-bottom: 1px solid rgba(52,211,153,0.1); padding-bottom: 14px;">
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7;">Token ID</div>
+                        <div style="font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; font-weight: 600; color: var(--success); word-break: break-all; line-height: 1.5;">${fullId}</div>
+                      </div>
                       <div>
-                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;">Your NFT</div>
-                        <strong style="font-size: 16px; line-height: 1.4; color: var(--text); font-weight: 600; word-break: break-word;">${l.nft_name || 'Untitled'}</strong>
-                      </div>
-                      <div style="background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); border-radius: 12px; padding: 12px; font-family: 'Monaco', monospace;">
-                        <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Token ID</div>
-                        <div style="font-size: 11px; word-break: break-all; color: var(--success); font-weight: 500; line-height: 1.5;">${shortId}</div>
+                        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">Your NFT</div>
+                        <strong style="font-size: 17px; line-height: 1.3; color: var(--text); font-weight: 700; word-break: break-word;">${l.nft_name || 'Untitled'}</strong>
                       </div>
                     </div>
-                    <div style="padding: 12px 18px; border-top: 1px solid rgba(52,211,153,0.15); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                      <button class="btn btn-secondary" style="padding: 11px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--success);" onmouseover="this.style.background='rgba(52,211,153,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(52,211,153,0.1)'; this.style.transform='none';" onclick="navigator.clipboard.writeText('${fullId}').then(() => showStatus('ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
-                      <button class="btn btn-danger" style="padding: 11px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(239,68,68,0.1)'; this.style.transform='none';" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${fullId}'; showStatus('Ready to cancel listing', 'info'); })()">Delist</button>
+                    <div style="padding: 14px 20px; border-top: 1px solid rgba(52,211,153,0.1); display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                      <button class="btn btn-secondary" style="padding: 11px; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 11px; transition: all 0.3s; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.3); color: var(--success); letter-spacing: 0.3px;" onmouseover="this.style.background='rgba(52,211,153,0.15)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(52,211,153,0.08)'; this.style.transform='none';" onclick="navigator.clipboard.writeText('${fullId}').then(() => showStatus('ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">✓ Copy ID</button>
+                      <button class="btn btn-danger" style="padding: 11px; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 11px; transition: all 0.3s; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; letter-spacing: 0.3px;" onmouseover="this.style.background='rgba(239,68,68,0.15)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(239,68,68,0.08)'; this.style.transform='none';" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${fullId}'; showStatus('Ready to cancel listing', 'info'); })()">Delist</button>
                     </div>
                   </div>
                 `;
