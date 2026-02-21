@@ -1088,7 +1088,18 @@
             </div>
           </div>
 
-          <!-- My Listings Sectioinfo-box">
+          <!-- My Listings Section -->
+          <div id="myListingsSection" style="display: none;">
+            <div class="card" style="margin-bottom: 24px;">
+              <h3>My Active Listings</h3>
+              <div id="myListings" class="grid-auto" style="margin-top: 16px;">
+                <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;"><span class="spinner"></span> Loading...</p>
+              </div>
+            </div>
+            <div class="grid-auto">
+              <div class="card">
+                <h3>List New NFT</h3>
+                <div class="form-info-box">
                   <strong>💡 Pro Tip</strong>
                   USDT listings get maximum visibility and attract more buyers!
                 </div>
@@ -1096,18 +1107,6 @@
                   <label>NFT ID</label>
                   <input id="listNFT" type="text" placeholder="NFT ID...">
                 </div>
-                <div class="form-group">
-                  <label>Price</label>
-                  <input id="listPrice" type="number" placeholder="0.00" step="0.01">
-                </div>
-                <div class="form-group">
-                  <label>Currency</label>
-                  <select id="listCurrency">
-                    <option value="USDT" selected>USDT (Recommended)</option>
-                    <option value="USDC">USDC</option>
-                    <option value="ETH">ETH</option>
-                    <option value="SOL">SOL</option>
-                    <option value="BTC">BT
                 <div class="form-group">
                   <label>Price</label>
                   <input id="listPrice" type="number" placeholder="0.00" step="0.01">
@@ -1308,10 +1307,17 @@
 
     function closeMobileMenu() {
       if (window.innerWidth <= 768) {
+        console.log('[Mobile] Closing mobile menu');
         const sidebar = $('sidebar');
         const toggle = $('menuToggle');
-        if (sidebar) sidebar.classList.remove('open');
-        if (toggle) toggle.classList.remove('open');
+        if (sidebar) {
+          sidebar.classList.remove('open');
+          console.log('[Mobile] Sidebar closed');
+        }
+        if (toggle) {
+          toggle.classList.remove('open');
+          console.log('[Mobile] Toggle reset');
+        }
       }
     }
 
@@ -1445,23 +1451,16 @@
         if (bcEl) bcEl.value = '';
       } else {
         showStatus(r.data?.detail || 'Error creating wallet', 'error');
-      }const statusColor = n.status === 'MINTED' ? 'var(--success)' : n.status === 'TRANSFERRED' ? 'var(--primary)' : 'var(--warning)';
-                return `
-                  <div class="nft-item">
-                    <img src="${imageUrl}" alt="${n.name || 'NFT'}" class="nft-item-image" style="height: 200px;">
-                    <div class="nft-item-content">
-                      <div style="margin-bottom: 12px;">
-                        <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${n.name || 'Unnamed NFT'}</strong>
-                        <span class="blockchain-badge" style="background: rgba(124, 92, 255, 0.15); color: var(--primary);">NFT Collection</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 6px;">
-                        <span style="font-size: 11px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
-                        <button class="btn btn-small" style="background: var(--primary); color: white; border: none; padding: 6px 10px; font-size: 10px; flex-shrink: 0; cursor: pointer;" onclick="navigator.clipboard.writeText('${nftId}').then(() => showStatus('NFT ID copied!', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
-                      </div>
-                      <div style="padding: 10px; background: rgba(124, 92, 255, 0.1); border-radius: 6px; border-left: 3px solid var(--primary);">
-                        <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 6px 0;">Status</p>
-                        <p style="font-size: 12px; color: ${statusColor}; font-weight: 600; margin: 0;">${n.status || 'PENDING'}</p>
-                      </div
+      }
+    }
+
+    async function importWallet() {
+      console.log('[Action] importWallet called');
+      if (!user) { showStatus('Not authenticated', 'error'); return; }
+      const bcEl = $('importBlockchain');
+      const addrEl = $('importAddress');
+      const bc = bcEl ? bcEl.value : null;
+      const addr = addrEl ? addrEl.value : null;
       if (!bc || !addr) { showStatus('Fill all fields', 'error'); return; }
       showStatus('Importing wallet...', 'info');
       const r = await API.call('POST', '/import-wallet', { blockchain: bc, address: addr, init_data: initData });
@@ -1623,7 +1622,14 @@
         console.log('[Marketplace] Response:', r);
         const ls = (r.ok && r.data) ? r.data.listings || [] : [];
         const listingsEl = $('marketplaceListings');
-        if (listingsEl) {>
+        if (listingsEl) {
+          listingsEl.innerHTML = ls.length > 0 
+            ? ls.map(l => {
+                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=NFT+' + encodeURIComponent(l.nft_name || 'Listing');
+                const listingId = l.listing_id || l.id || 'N/A';
+                const shortId = listingId.toString().slice(0, 8);
+                return `
+                  <div class="listing-item">
                     <img src="${imageUrl}" alt="${l.nft_name || 'NFT'}" class="listing-item-image">
                     <div class="listing-item-content" style="padding: 14px;">
                       <strong style="font-size: 15px; display: block; margin-bottom: 10px;">${l.nft_name || 'Listing NFT'}</strong>
@@ -1642,14 +1648,7 @@
                       </div>
                     </div>
                     <div class="listing-item-footer">
-                      <button class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointerame || 'NFT'}</strong>
-                      <div class="price-display" style="margin: 8px 0; font-size: 16px;">${l.price || '0'} ${l.currency || 'USD'}</div>
-                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${shortId}...</span>
-                        <button class="btn btn-small" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; font-size: 10px;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
-                      </div>
-                      <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0;">Blockchain: ${l.blockchain?.toUpperCase() || 'Unknown'}</p>
-                      <button class="btn btn-primary btn-small" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${listingId}'; showStatus('Enter your offer price', 'info'); })()">Make Offer</button>
+                      <button class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 12px; cursor: pointer;" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${listingId}'; showStatus('Enter your offer price', 'info'); })()">Make Offer</button>
                     </div>
                   </div>
                 `;
