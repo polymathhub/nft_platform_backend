@@ -1287,13 +1287,24 @@
         const nftList = $('nftList');
         if (nftList) {
           nftList.innerHTML = ns.length > 0 
-            ? ns.map(n => `
-                <div class="nft-item">
-                  <strong>${n.name || 'Unnamed NFT'}</strong>
-                  <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">ID: ${(n.id || 'N/A').toString().slice(0, 12)}...</p>
-                  <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Status: ${n.status || 'PENDING'}</p>
-                </div>
-              `).join('')
+            ? ns.map(n => {
+                const imageUrl = n.image_url || 'https://via.placeholder.com/200x200?text=' + encodeURIComponent(n.name || 'NFT');
+                const nftId = n.id || 'N/A';
+                const shortId = nftId.toString().slice(0, 8);
+                return `
+                  <div class="nft-item" style="border-radius: 12px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column;">
+                    <div style="width: 100%; height: 120px; background-image: url('${imageUrl}'); background-size: cover; background-position: center; border-bottom: 1px solid var(--border);"></div>
+                    <div style="padding: 12px; flex: 1; display: flex; flex-direction: column;">
+                      <strong style="font-size: 13px; margin-bottom: 6px;">${n.name || 'Unnamed NFT'}</strong>
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                        <span style="font-size: 10px; color: var(--text-muted); font-family: monospace; flex: 1; word-break: break-all;">${shortId}...</span>
+                        <button class="btn btn-small" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 3px 6px; font-size: 9px; flex-shrink: 0;" onclick="navigator.clipboard.writeText('${nftId}').then(() => showStatus('NFT ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy</button>
+                      </div>
+                      <p style="font-size: 11px; color: var(--text-muted); margin-top: auto;">Status: <span style="color: ${n.status === 'MINTED' ? 'var(--success)' : n.status === 'TRANSFERRED' ? 'var(--primary)' : 'var(--warning)'};">${n.status || 'PENDING'}</span></p>
+                    </div>
+                  </div>
+                `;
+              }).join('')
             : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No NFTs yet. Mint your first NFT!</p>';
         }
         console.log('[NFTs] Loaded', ns.length, 'NFTs');
@@ -1373,20 +1384,32 @@
       try {
         showStatus('Loading listings...', 'info');
         console.log('[Marketplace] Fetching listings');
-        const r = await API.call('GET', '/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/web-app/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
         console.log('[Marketplace] Response:', r);
         const ls = (r.ok && r.data) ? r.data.listings || [] : [];
         const listingsEl = $('marketplaceListings');
         if (listingsEl) {
           listingsEl.innerHTML = ls.length > 0 
-            ? ls.map(l => `
-                <div class="listing-item">
-                  <strong>${l.nft_name || 'NFT'}</strong>
-                  <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
-                  <p style="font-size: 12px; color: var(--text-muted);">${l.blockchain || 'Unknown'}</p>
-                  <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${l.listing_id}'; showStatus('Enter your offer price', 'info'); })()">Make Offer</button>
-                </div>
-              `).join('')
+            ? ls.map(l => {
+                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=NFT+' + encodeURIComponent(l.nft_name || 'NFT');
+                const listingId = l.listing_id || l.id || 'N/A';
+                const shortId = listingId.toString().slice(0, 8);
+                return `
+                  <div class="listing-item" style="border-radius: 12px; overflow: hidden; background: var(--bg-card); transition: all 0.3s;">
+                    <div style="width: 100%; height: 180px; background-image: url('${imageUrl}'); background-size: cover; background-position: center; border-bottom: 1px solid var(--border);"></div>
+                    <div style="padding: 16px;">
+                      <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${l.nft_name || 'NFT'}</strong>
+                      <div class="price-display" style="margin: 8px 0; font-size: 16px;">${l.price || '0'} ${l.currency || 'USD'}</div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${shortId}...</span>
+                        <button class="btn btn-small" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; font-size: 10px;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
+                      </div>
+                      <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0;">Blockchain: ${l.blockchain?.toUpperCase() || 'Unknown'}</p>
+                      <button class="btn btn-primary btn-small" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('offerListing'); if (el) el.value='${listingId}'; showStatus('Enter your offer price', 'info'); })()">Make Offer</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')
             : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No listings available</p>';
         }
         showStatus('Listings loaded', 'success');
@@ -1804,19 +1827,32 @@
       }
       try {
         console.log('[MyListings] Fetching my listings for user:', user.id);
-        const r = await API.call('GET', '/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        const r = await API.call('GET', '/web-app/marketplace/mylistings?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
         console.log('[MyListings] Response:', r);
         const ls = (r.ok && r.data) ? r.data.listings || [] : [];
         const myListingsEl = $('myListings');
         if (myListingsEl) {
           myListingsEl.innerHTML = ls.length > 0 
-            ? ls.map(l => `
-                <div class="listing-item">
-                  <strong>${l.nft_name || 'NFT'}</strong>
-                  <div class="price-display">${l.price || '0'} ${l.currency || 'USD'}</div>
-                  <button class="btn btn-small btn-secondary" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${l.listing_id}'; })()">Select to Cancel</button>
-                </div>
-              `).join('')
+            ? ls.map(l => {
+                const imageUrl = l.image_url || 'https://via.placeholder.com/300x200?text=My+NFT+' + encodeURIComponent(l.nft_name || 'NFT');
+                const listingId = l.listing_id || l.id || 'N/A';
+                const shortId = listingId.toString().slice(0, 8);
+                return `
+                  <div class="listing-item" style="border-radius: 12px; overflow: hidden; background: var(--bg-card); transition: all 0.3s;">
+                    <div style="width: 100%; height: 180px; background-image: url('${imageUrl}'); background-size: cover; background-position: center; border-bottom: 1px solid var(--border);"></div>
+                    <div style="padding: 16px;">
+                      <strong style="font-size: 14px; display: block; margin-bottom: 8px;">${l.nft_name || 'NFT'}</strong>
+                      <div class="price-display" style="margin: 8px 0; font-size: 16px;">${l.price || '0'} ${l.currency || 'USD'}</div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${shortId}...</span>
+                        <button class="btn btn-small" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; font-size: 10px;" onclick="navigator.clipboard.writeText('${listingId}').then(() => showStatus('Listing ID copied', 'success')).catch(() => showStatus('Copy failed', 'error'))">Copy ID</button>
+                      </div>
+                      <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0;">Status: Active</p>
+                      <button class="btn btn-danger btn-small" style="margin-top: 12px; width: 100%;" onclick="(() => { const el = document.getElementById('cancelListing'); if (el) el.value='${listingId}'; showStatus('Ready to cancel - click Cancel button', 'info'); })()">Select to Cancel</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')
             : '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 80px 20px;">No active listings</p>';
         }
         console.log('[MyListings] Loaded', ls.length, 'listings');
@@ -1832,17 +1868,24 @@
       const priceEl = $('listPrice');
       const nid = nidEl ? nidEl.value : null;
       const price = priceEl ? priceEl.value : null;
-      if (!nid || !price) { showStatus('Fill all fields', 'error'); return; }
+      if (!nid || !price || parseFloat(price) <= 0) { showStatus('Fill all fields with valid price', 'error'); return; }
       showStatus('Listing NFT...', 'info');
       const currencyEl = $('listCurrency');
-      const r = await API.call('POST', '/web-app/list', { user_id: user.id, nft_id: nid, price, currency: currencyEl ? currencyEl.value : 'ETH', init_data: initData });
+      const r = await API.call('POST', '/web-app/list-nft', { 
+        user_id: user.id, 
+        nft_id: nid, 
+        price: parseFloat(price), 
+        currency: (currencyEl ? currencyEl.value : 'USDT').toUpperCase(), 
+        init_data: initData 
+      });
       if (r.ok) {
-        showStatus('NFT listed successfully', 'success');
+        showStatus('NFT listed successfully! Ready for offers.', 'success');
         if (nidEl) nidEl.value = '';
         if (priceEl) priceEl.value = '';
-        myListings();
+        if (currencyEl) currencyEl.value = 'USDICT';
+        setTimeout(() => myListings(), 500);
       } else {
-        showStatus(r.data?.detail || 'Error listing NFT', 'error');
+        showStatus(r.data?.detail || r.data?.error || 'Error listing NFT', 'error');
       }
     }
 
@@ -1852,15 +1895,32 @@
       const priceEl = $('offerPrice');
       const lid = lidEl ? lidEl.value : null;
       const price = priceEl ? priceEl.value : null;
-      if (!lid || !price) { showStatus('Fill all fields', 'error'); return; }
-      showStatus('Making offer...', 'info');
-      const r = await API.call('POST', '/make-offer', { user_id: user.id, listing_id: lid, offer_price: price, init_data: initData });
+      if (!lid || !price || parseFloat(price) <= 0) { showStatus('Enter valid listing ID and offer price', 'error'); return; }
+      
+      // Calculate commission: 2% of offer price goes to platform
+      const offerAmount = parseFloat(price);
+      const platformCommission = offerAmount * 0.02;
+      const sellerReceives = offerAmount - platformCommission;
+      
+      // Confirm offer with commission breakdown
+      const confirmMsg = `Offer: ${offerAmount.toFixed(2)} USDT\nPlatform Fee (2%): ${platformCommission.toFixed(2)} USDT\nSeller Receives: ${sellerReceives.toFixed(2)} USDT\n\nContinue?`;
+      if (!confirm(confirmMsg)) return;
+      
+      showStatus('Making offer and reserving USDT from your account...', 'info');
+      const r = await API.call('POST', '/web-app/make-offer', { 
+        user_id: user.id, 
+        listing_id: lid, 
+        offer_price: offerAmount,
+        currency: 'USDT',
+        init_data: initData 
+      });
       if (r.ok) {
-        showStatus('Offer made successfully', 'success');
+        showStatus('Offer made successfully! USDT reserved from your deposited account.', 'success');
         if (lidEl) lidEl.value = '';
         if (priceEl) priceEl.value = '';
+        setTimeout(() => { browseListings(); loadBalance(); }, 500);
       } else {
-        showStatus(r.data?.detail || 'Error making offer', 'error');
+        showStatus(r.data?.detail || r.data?.error || 'Error making offer', 'error');
       }
     }
 
@@ -1868,16 +1928,20 @@
       if (!user) { showStatus('Not authenticated', 'error'); return; }
       const lidEl = $('cancelListing');
       const lid = lidEl ? lidEl.value : null;
-      if (!lid) { showStatus('Enter listing ID', 'error'); return; }
-      if (!confirm('Cancel this listing?')) return;
+      if (!lid) { showStatus('Select a listing to cancel', 'error'); return; }
+      if (!confirm('Cancel this listing? It will no longer be available for offers.')) return;
       showStatus('Cancelling listing...', 'info');
-      const r = await API.call('POST', '/cancel-listing', { user_id: user.id, listing_id: lid, init_data: initData });
+      const r = await API.call('POST', '/web-app/cancel-listing', { 
+        user_id: user.id, 
+        listing_id: lid, 
+        init_data: initData 
+      });
       if (r.ok) {
         showStatus('Listing cancelled successfully', 'success');
         if (lidEl) lidEl.value = '';
-        myListings();
+        setTimeout(() => myListings(), 500);
       } else {
-        showStatus(r.data?.detail || 'Error cancelling listing', 'error');
+        showStatus(r.data?.detail || r.data?.error || 'Error cancelling listing', 'error');
       }
     }
 
