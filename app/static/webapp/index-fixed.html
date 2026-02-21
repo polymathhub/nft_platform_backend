@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: 'unsafe-inline' 'unsafe-eval' blob:; script-src 'self' https: 'unsafe-inline' 'unsafe-eval'; style-src 'self' https: 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https:;">
-  <title>NFT Platform</title>
+  <title>GiftedForge</title>
   <style>
     :root {
       --primary: #7c5cff;
@@ -78,10 +78,18 @@
     }
 
     .logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 4px;
+      height: 48px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .logo img {
+      height: 100%;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
     }
 
     .user-badge {
@@ -726,7 +734,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="logo">NFT Platform</div>
+        <div class="logo"><img src="https://image2url.com/r2/default/images/1771655252572-8d015362-b90c-4907-ab74-abd12402eeda.png" alt="GiftedForge" style="height: 48px; width: auto;"></div>
         <div class="user-badge" id="userBadge">
           <div class="user-avatar" id="userAvatar">U</div>
           <div class="user-info">
@@ -783,7 +791,7 @@
           </div>
           <div class="card">
             <h3>Quick Actions</h3>
-            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 13px;">Manage your NFT platform</p>
+            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 13px;">Manage your digital assets on GiftedForge</p>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
               <button class="btn btn-primary btn-small" onclick="switchPage('wallets')">Create Wallet</button>
               <button class="btn btn-primary btn-small" onclick="switchPage('mint')">Mint NFT</button>
