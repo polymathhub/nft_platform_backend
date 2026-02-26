@@ -60,6 +60,14 @@
     if (modalSpinner) modalSpinner.classList.add('hidden');
   }
 
+  function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+  }
+
   function formatAddr(addr) {
     if (!addr) return 'N/A';
     return addr.length > 20 ? addr.slice(0, 10) + '...' + addr.slice(-8) : addr;
@@ -100,22 +108,39 @@
     async callEndpoint(urlOrPath, options = {}) {
       const url = urlOrPath.startsWith('http') ? urlOrPath : `${API_BASE}${urlOrPath}`;
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
         const response = await fetch(url, {
           method: options.method || 'GET',
           headers: { 
             'Content-Type': 'application/json',
             ...options.headers 
           },
-          body: options.body ? JSON.stringify(options.body) : undefined
+          body: options.body ? JSON.stringify(options.body) : undefined,
+          signal: controller.signal
         });
+        
+        clearTimeout(timeout);
         
         if (!response.ok) {
           const errorText = await response.text();
-          const msg = response.status === 401 ? 'Unauthorized' : `HTTP ${response.status}`;
+          const msg = response.status === 401 ? 'Unauthorized' : 
+                      response.status === 404 ? 'Not found' :
+                      response.status === 500 ? 'Server error' :
+                      `HTTP ${response.status}`;
           throw new Error(`${msg}: ${errorText.slice(0, 100)}`);
         }
         return await response.json();
       } catch (err) {
+        if (err.name === 'AbortError') {
+          console.error(`API Timeout [${url}]`);
+          throw new Error('Request timeout - please check your connection');
+        }
+        if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+          console.error(`API Network Error [${url}]`);
+          throw new Error('Network error - unable to reach server');
+        }
         console.error(`API Error [${url}]:`, err);
         throw err;
       }
@@ -859,10 +884,24 @@
 
   // ========== INIT ==========
   if (window.Telegram?.WebApp) window.Telegram.WebApp.ready();
+  
+  // Global error handlers for stability
+  window.addEventListener('error', (event) => {
+    console.error('Uncaught error:', event.error);
+    showStatus(`Error: ${event.error?.message || 'Unknown error'}`, 'error', false);
+  });
+  
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    showStatus(`Error: ${event.reason?.message || 'Request failed'}`, 'error', false);
+  });
+  
   window.addEventListener('load', initApp);
   setInterval(async () => {
     if (state.user && state.currentPage === 'dashboard') {
-      try { await loadAllData(); } catch (e) {}
+      try { await loadAllData(); } catch (e) {
+        console.warn('Auto-refresh failed:', e);
+      }
     }
   }, 30000);
 
