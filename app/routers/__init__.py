@@ -7,6 +7,8 @@ from app.routers.attestation_router import router as attestation_router
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.admin_router import router as admin_router
 from app.routers.payment_router import router as payment_router
+from app.routers.referrals import router as referrals_router
+from app.routers.stars_payment import router as stars_payment_router
 
 __all__ = [
     "auth_router",
@@ -18,4 +20,6 @@ __all__ = [
     "telegram_mint_router",
     "admin_router",
     "payment_router",
+    "referrals_router",
+    "stars_payment_router",
 ]

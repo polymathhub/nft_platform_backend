@@ -58,7 +58,9 @@ class AdminSettings(Base):
     __tablename__ = "admin_settings"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
-    # Commission settings
+
+     #Commission settings
+    
     commission_rate = Column(DECIMAL(5, 2), default=2.0, nullable=False)  # 2% default
     commission_wallet = Column(String(255), nullable=False)  # Wallet address to receive commissions
     commission_blockchain = Column(String(50), nullable=False, default="ethereum")  # Blockchain for commission wallet

@@ -9,6 +9,7 @@ from app.models.escrow import Escrow, EscrowStatus
 from app.models.payment import Payment, PaymentType, PaymentStatus
 from app.models.admin import AdminLog, AdminLogAction, AdminSettings
 from app.models.activity import ActivityLog, ActivityType
+from app.models.referral import Referral, ReferralStatus, ReferralCommission, CommissionStatus
 
 __all__ = [
     "User",
@@ -43,4 +44,8 @@ __all__ = [
     "AdminSettings",
     "ActivityLog",
     "ActivityType",
+    "Referral",
+    "ReferralStatus",
+    "ReferralCommission",
+    "CommissionStatus",
 ]

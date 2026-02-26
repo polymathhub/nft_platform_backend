@@ -21,6 +21,8 @@ from app.routers import (
     attestation_router,
     admin_router,
     payment_router,
+    referrals_router,
+    stars_payment_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -206,6 +208,14 @@ app.include_router(image_router, prefix="/api/v1")
 # Payment router already has /api/v1/payments prefix in its definition
 # DO NOT add another prefix to avoid double-prefixing
 app.include_router(payment_router)
+
+# Referral router already has /api/v1/referrals prefix in its definition
+# DO NOT add another prefix to avoid double-prefixing
+app.include_router(referrals_router)
+
+# Telegram Stars payment router already has /api/v1/stars prefix in its definition
+# DO NOT add another prefix to avoid double-prefixing
+app.include_router(stars_payment_router)
  
 # Mount web app static files under /web-app/static so we can serve a custom
 # production index at /web-app/ while keeping POST API endpoints under /web-app/*
@@ -219,18 +229,18 @@ else:
 @app.get("/web-app", include_in_schema=False)
 @app.get("/web-app/", include_in_schema=False)
 async def serve_webapp_index():
-    # Serve index-fixed.html for Telegram compatibility
-    index_fixed = os.path.join(webapp_path, "index-fixed.html")
-    if os.path.isfile(index_fixed):
-        return FileResponse(index_fixed, media_type="text/html")
+    # Serve index.html (new Telegram-native version)
+    index_html = os.path.join(webapp_path, "index.html")
+    if os.path.isfile(index_html):
+        return FileResponse(index_html, media_type="text/html")
     # Fallback to index-production.html
     index_prod = os.path.join(webapp_path, "index-production.html")
     if os.path.isfile(index_prod):
         return FileResponse(index_prod, media_type="text/html")
-    # Fallback to index.html
-    index_html = os.path.join(webapp_path, "index.html")
-    if os.path.isfile(index_html):
-        return FileResponse(index_html, media_type="text/html")
+    # Fallback to index-fixed.html for legacy
+    index_fixed = os.path.join(webapp_path, "index-fixed.html")
+    if os.path.isfile(index_fixed):
+        return FileResponse(index_fixed, media_type="text/html")
     raise StarletteHTTPException(status_code=404, detail="Web app index not found")
 
 

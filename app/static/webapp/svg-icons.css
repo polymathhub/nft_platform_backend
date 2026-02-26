@@ -1,0 +1,382 @@
+/**
+ * SVG Icons Stylesheet
+ * Professional styles for SVG icon system with accessibility and animations
+ */
+
+/* ========== SVG ICON BASE STYLES ========== */
+
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: inherit;
+  overflow: visible;
+}
+
+.icon svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* ========== ICON SIZES ========== */
+
+.icon--xs {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.icon--sm {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.icon--md {
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+}
+
+.icon--lg {
+  width: 32px;
+  height: 32px;
+  font-size: 32px;
+}
+
+.icon--xl {
+  width: 40px;
+  height: 40px;
+  font-size: 40px;
+}
+
+.icon--2xl {
+  width: 48px;
+  height: 48px;
+  font-size: 48px;
+}
+
+/* ========== ICON BUTTON STYLES ========== */
+
+.icon-btn,
+button.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: 1px solid var(--color-border, #2f3a5f);
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-bg-tertiary, #1a2647);
+  color: var(--color-text-secondary, #8b92a8);
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0;
+  line-height: 0;
+}
+
+.icon-btn:hover {
+  background: var(--color-bg-hover, #2f3a5f);
+  border-color: var(--color-accent-primary, #3b82f6);
+  color: var(--color-accent-primary, #3b82f6);
+}
+
+.icon-btn:active {
+  background: var(--color-bg-surface, #232d4d);
+  border-color: var(--color-accent-primary, #3b82f6);
+  color: var(--color-accent-primary, #3b82f6);
+  transform: scale(0.95);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--color-accent-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.icon-btn .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ========== ICON ANIMATIONS ========== */
+
+@keyframes svg-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes svg-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes svg-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes svg-wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes svg-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes svg-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Animation Classes */
+
+.svg-icon-animate {
+  animation: svg-spin 1s linear infinite;
+}
+
+.svg-icon-animate.pulse {
+  animation: svg-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.svg-icon-animate.bounce {
+  animation: svg-bounce 1s ease-in-out infinite;
+}
+
+.svg-icon-animate.wiggle {
+  animation: svg-wiggle 0.5s ease-in-out infinite;
+}
+
+.svg-icon-animate.fade-in {
+  animation: svg-fade-in 0.3s ease-in;
+}
+
+.svg-icon-animate.bounce-in {
+  animation: svg-bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ========== ICON STATES ========== */
+
+.icon--success {
+  color: var(--color-status-success, #10b981);
+}
+
+.icon--error {
+  color: var(--color-status-error, #ef4444);
+}
+
+.icon--warning {
+  color: var(--color-status-warning, #f59e0b);
+}
+
+.icon--info {
+  color: var(--color-status-info, #3b82f6);
+}
+
+.icon--muted {
+  color: var(--color-text-tertiary, #5f677a);
+  opacity: 0.6;
+}
+
+.icon--disabled {
+  color: var(--color-text-disabled, #464d63);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ========== ICON FALLBACK ========== */
+
+.svg-icon-fallback {
+  background: var(--color-bg-tertiary, #1a2647);
+  border: 1px dashed var(--color-border, #2f3a5f);
+  border-radius: var(--radius-md, 6px);
+}
+
+/* ========== ICON GROUPS ========== */
+
+.icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-group.vertical {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.icon-group.stacked {
+  gap: 0;
+  position: relative;
+}
+
+.icon-group.stacked .icon:not(:first-child) {
+  position: absolute;
+  margin-left: -12px;
+}
+
+/* ========== ICON WITH TEXT ========== */
+
+.icon-with-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.icon-with-text.icon-right {
+  flex-direction: row-reverse;
+}
+
+.icon-with-text small {
+  font-size: 0.875em;
+  display: inline;
+}
+
+/* ========== RESPONSIVE ICONS ========== */
+
+@media (max-width: 640px) {
+  .icon--lg {
+    width: 28px;
+    height: 28px;
+    font-size: 28px;
+  }
+
+  .icon--xl {
+    width: 32px;
+    height: 32px;
+    font-size: 32px;
+  }
+
+  .icon-btn {
+    padding: 6px;
+  }
+
+  .icon-btn .icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ========== ACCESSIBILITY ========== */
+
+@media (prefers-reduced-motion: reduce) {
+  .svg-icon-animate,
+  .svg-icon-animate.pulse,
+  .svg-icon-animate.bounce,
+  .svg-icon-animate.wiggle,
+  .svg-icon-animate.fade-in,
+  .svg-icon-animate.bounce-in {
+    animation: none;
+  }
+
+  /* Fallback to simple opacity change */
+  .svg-icon-animate {
+    opacity: 0.7;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+  .icon {
+    stroke-width: 1.75;
+  }
+
+  .icon-btn {
+    border-width: 2px;
+  }
+}
+
+/* Dark mode (explicit) */
+@media (prefers-color-scheme: dark) {
+  .icon-btn {
+    background: var(--color-bg-tertiary, #1a2647);
+    border-color: var(--color-border, #2f3a5f);
+    color: var(--color-text-secondary, #8b92a8);
+  }
+}
+
+/* Light mode (explicit) */
+@media (prefers-color-scheme: light) {
+  .icon-btn {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #6b7280;
+  }
+
+  .icon-btn:hover {
+    background: #e5e7eb;
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+}
+
+/* ========== UTILITY CLASSES ========== */
+
+.icon-inline {
+  display: inline;
+  margin: 0 4px;
+}
+
+.icon-block {
+  display: block;
+  margin: 12px 0;
+}
+
+.icon-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-spin {
+  animation: svg-spin 1s linear infinite;
+}
+
+.icon-pulse {
+  animation: svg-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

@@ -1,0 +1,5215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>GiftedForge - NFT Marketplace</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="svg-icons.css">
+  <script src="svg-icons.js"></script>
+  <style>
+    /* DESIGN SYSTEM - PREMIUM CLASSICAL THEME */
+    :root {
+      /* Colors - Sophisticated Palette */
+      --primary: #5b4bdb;
+      --primary-light: #7c6ff9;
+      --primary-dark: #3d2f91;
+      --accent: #d946a6;
+      
+      --color-bg-primary: #ffffff;
+      --color-bg-secondary: #f8fafc;
+      --color-bg-tertiary: #f0f2f5;
+      --color-bg-surface: #e8ecf1;
+      --color-bg-hover: #dfe5eb;
+      
+      --color-text-primary: #1a1a1a;
+      --color-text-secondary: #64748b;
+      --color-text-tertiary: #94a3b8;
+      --color-text-disabled: #cbd5e1;
+      
+      --color-border: #e2e8f0;
+      --color-border-light: #f1f5f9;
+      --color-border-focus: #4a7dd9;
+      
+      --color-accent-primary: #3b82f6;
+      --color-accent-secondary: #10b981;
+      --color-accent-tertiary: #f59e0b;
+      
+      --color-status-success: #10b981;
+      --color-status-warning: #f59e0b;
+      --color-status-error: #ef4444;
+      --color-status-info: #3b82f6;
+      
+      /* Spacing - 4px System */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 28px;
+      --space-8: 32px;
+      --space-10: 40px;
+      
+      /* Typography */
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
+      --font-family-mono: "Menlo", "Monaco", "Courier New", monospace;
+      
+      --font-size-xs: 11px;
+      --font-size-sm: 12px;
+      --font-size-md: 13px;
+      --font-size-base: 14px;
+      --font-size-lg: 15px;
+      --font-size-xl: 16px;
+      --font-size-2xl: 18px;
+      --font-size-3xl: 22px;
+      --font-size-4xl: 28px;
+      
+      --font-weight-light: 300;
+      --font-weight-regular: 400;
+      --font-weight-medium: 500;
+      --font-weight-semibold: 600;
+      --font-weight-bold: 700;
+      
+      /* Line Height */
+      --line-height-tight: 1.4;
+      --line-height-normal: 1.5;
+      --line-height-relaxed: 1.6;
+      
+      /* Radius */
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      
+      /* Timing */
+      --transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      
+      /* Shadows - Layered Depth */
+      --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+      --shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.15);
+      --shadow-md: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 8px 16px 0 rgba(0, 0, 0, 0.25);
+      --shadow-xl: 0 16px 32px 0 rgba(0, 0, 0, 0.3);
+      --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* RESET */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: var(--font-family);
+      background: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-md);
+      line-height: 1.5;
+    }
+    
+    button {
+      font-family: var(--font-family);
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+    }
+    
+    input, textarea {
+      font-family: var(--font-family);
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-base);
+      transition: all var(--transition-normal);
+      line-height: var(--line-height-normal);
+    }
+    
+    input::placeholder, textarea::placeholder {
+      color: var(--color-text-tertiary);
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--color-accent-primary);
+      background: var(--color-bg-hover);
+      box-shadow: var(--shadow-focus);
+    }
+    
+    input:disabled, textarea:disabled {
+      background: var(--color-bg-secondary);
+      color: var(--color-text-disabled);
+      cursor: not-allowed;
+      border-color: var(--color-border-light);
+    }
+    
+    /* LAYOUT */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .header {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      backdrop-filter: blur(20px);
+    }
+    
+    .header-menu {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    
+    .header-menu svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-text-primary);
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .header-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .header-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--color-text-secondary);
+    }
+    
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 6px;
+      height: 6px;
+      background: #ef4444;
+      border-radius: 50%;
+    }
+    
+    .header-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 12px rgba(91, 75, 219, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .header-avatar:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 20px rgba(91, 75, 219, 0.3);
+    }
+    
+    .branding-center {
+      display: none !important;
+    }
+    
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 16px;
+      padding-bottom: calc(120px + 16px);
+    }
+    
+    .content::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    .content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .content::-webkit-scrollbar-thumb {
+      background: var(--color-bg-surface);
+      border-radius: 2px;
+    }
+    
+    /* NAVIGATION - PREMIUM ROUNDED */
+    .nav-bottom {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      height: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(180deg, #0f1622 0%, #1a1f3a 100%);
+      z-index: 1000;
+      padding: 16px;
+      padding-bottom: max(20px, calc(16px + env(safe-area-inset-bottom)));
+      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 48px;
+      margin: 0 auto;
+    }
+    
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 11px 16px;
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      position: relative;
+      text-transform: uppercase;
+      border-radius: 24px;
+    }
+
+    .nav-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+      border-radius: 24px;
+      opacity: 0;
+      transition: opacity 280ms ease, background 280ms ease;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .nav-item::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1.5px solid rgba(255, 255, 255, 0);
+      border-radius: 24px;
+      transition: border-color 280ms ease;
+      pointer-events: none;
+    }
+
+    .nav-item svg {
+      width: 22px;
+      height: 22px;
+      color: rgba(255, 255, 255, 0.55);
+      transition: color 280ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 280ms ease, transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: block;
+      flex-shrink: 0;
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+    }
+    
+    .nav-item:hover::before {
+      opacity: 1;
+    }
+
+    .nav-item:hover {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .nav-item:hover svg {
+      color: rgba(255, 255, 255, 0.85);
+      transform: translateY(-2px);
+      filter: drop-shadow(0 3px 8px rgba(91, 75, 219, 0.25));
+    }
+    
+    .nav-item.active {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      color: var(--primary);
+      border-radius: 26px;
+      padding: 11px 24px;
+      box-shadow: 0 12px 32px rgba(91, 75, 219, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-item.active::after {
+      border-color: rgba(91, 75, 219, 0.1);
+    }
+
+    .nav-item.active svg {
+      color: var(--primary);
+      filter: drop-shadow(0 2px 8px rgba(91, 75, 219, 0.35));
+      transform: none;
+    }
+
+    .nav-item.active .nav-label {
+      display: inline;
+    }
+
+    .nav-label {
+      display: none;
+    }
+
+    .nav-item.active .nav-label {
+      display: inline;
+    }
+    
+    /* WELCOME SECTION */
+    .welcome-section {
+      margin-bottom: 24px;
+    }
+    
+    .welcome-greeting {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--color-text-primary);
+      letter-spacing: -0.4px;
+      margin-bottom: 4px;
+    }
+    
+    /* BALANCE CARD */
+    .balance-card {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 24px;
+      padding: 28px 24px;
+      margin-bottom: 28px;
+      color: white;
+      box-shadow: 0 16px 40px rgba(91, 75, 219, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .balance-label {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.9;
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .balance-amount {
+      font-size: 38px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .balance-currency {
+      font-size: 13px;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+
+    .balance-status {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 14px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+    }
+    
+    /* STATS GRID */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 249, 250, 0.5) 100%);
+      border-radius: 18px;
+      padding: 20px 16px;
+      border: 1px solid rgba(91, 75, 219, 0.1);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(91, 75, 219, 0.2);
+      box-shadow: 0 12px 32px rgba(91, 75, 219, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 250, 0.7) 100%);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-number {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--color-text-primary);
+      letter-spacing: -0.2px;
+    }
+    
+    /* QUICK ACTIONS */
+    .quick-actions {
+      margin-bottom: 28px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--color-text-primary);
+      margin-bottom: 14px;
+      letter-spacing: -0.2px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .action-button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 18px 14px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 249, 250, 0.5) 100%);
+      border: 1px solid rgba(91, 75, 219, 0.08);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .action-button:hover {
+      transform: translateY(-4px);
+      border-color: rgba(91, 75, 219, 0.2);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 250, 0.7) 100%);
+      box-shadow: 0 8px 20px rgba(91, 75, 219, 0.1);
+    }
+
+    .action-button:active {
+      transform: translateY(-1px);
+    }
+
+    .action-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(91, 75, 219, 0.2);
+      font-size: 18px;
+      transition: all 280ms ease;
+    }
+
+    .action-button:hover .action-icon {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(91, 75, 219, 0.3);
+    }
+
+    .action-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      text-align: center;
+      letter-spacing: -0.1px;
+    }
+    
+    /* COLLECTIONS */
+    .collections-section {
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .view-all {
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .collections-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .collection-card {
+      background: var(--color-bg-secondary);
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .collection-card:hover {
+      border-color: rgba(91, 75, 219, 0.2);
+      box-shadow: 0 12px 32px rgba(91, 75, 219, 0.12);
+      transform: translateY(-4px);
+    }
+
+    .collection-image {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 52px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .collection-image::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 280ms ease;
+      pointer-events: none;
+    }
+
+    .collection-card:hover .collection-image::before {
+      opacity: 1;
+    }
+
+    .collection-info {
+      padding: 14px;
+    }
+
+    .collection-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 4px;
+      letter-spacing: -0.1px;
+    }
+
+    .collection-status {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .collection-price {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.1px;
+    }
+
+    .collection-button {
+      width: 100%;
+      padding: 10px 12px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      border: none;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 8px rgba(91, 75, 219, 0.2);
+      letter-spacing: 0.2px;
+    }
+
+    .collection-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 75, 219, 0.3);
+    }
+
+    .collection-button:active {
+      transform: translateY(0);
+    }
+    
+    /* ACTIVITY */
+    .activity-section {
+      margin-bottom: 24px;
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(248, 249, 250, 0.5) 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(91, 75, 219, 0.08);
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+
+    .activity-item:hover {
+      border-color: rgba(91, 75, 219, 0.15);
+      box-shadow: 0 4px 12px rgba(91, 75, 219, 0.08);
+      transform: translateX(4px);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.7) 100%);
+    }
+
+    .activity-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(91, 75, 219, 0.2);
+      font-size: 20px;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 2px;
+      letter-spacing: -0.1px;
+    }
+
+    .activity-time {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      font-weight: 500;
+    }
+
+    .activity-amount {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      text-align: right;
+      letter-spacing: -0.1px;
+    }
+
+    .activity-amount.positive {
+      color: #10b981;
+    }
+
+    .activity-amount.negative {
+      color: #ef4444;
+    }
+    
+    /* COMPONENTS */
+    .card {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-smooth);
+    }
+    
+    .card:hover {
+      border-color: var(--color-accent-primary);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-4);
+    }
+    
+    .card-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .card-label {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    
+    .badge {
+      display: inline-block;
+      background: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+      font-weight: var(--font-weight-semibold);
+      transition: all var(--transition-normal);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge.status-active {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: var(--color-status-success);
+      color: var(--color-status-success);
+    }
+    
+    .badge.status-pending {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: var(--color-status-warning);
+      color: var(--color-status-warning);
+    }
+    
+    .badge.status-error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--color-status-error);
+      color: var(--color-status-error);
+    }
+    
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-normal);
+      border: 1px solid transparent;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      outline: none;
+    }
+    
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+      pointer-events: none;
+    }
+    
+    .btn:active::before {
+      width: 300px;
+      height: 300px;
+    }
+    
+    .btn:focus-visible {
+      box-shadow: var(--shadow-focus);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, #2563eb 100%);
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-secondary {
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+      border-color: var(--color-border);
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--color-bg-hover);
+      border-color: var(--color-accent-primary);
+      color: var(--color-accent-primary);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary:active {
+      transform: translateY(0);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-ghost {
+      background: transparent;
+      color: var(--color-text-secondary);
+      border-color: transparent;
+    }
+    
+    .btn-ghost:hover {
+      background: var(--color-bg-tertiary);
+      color: var(--color-accent-primary);
+      border-color: var(--color-border);
+    }
+    
+    .btn-block {
+      width: 100%;
+    }
+    
+    .btn-sm {
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+    
+    .btn-loading {
+      position: relative;
+      color: transparent;
+    }
+    
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      top: 50%;
+      left: 50%;
+      margin-left: -7px;
+      margin-top: -7px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* GRID */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+    }
+    
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+    
+    /* SECTION */
+    .section {
+      margin-bottom: var(--space-6);
+    }
+    
+    .section-title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      margin-bottom: var(--space-4);
+      color: var(--color-text-primary);
+    }
+    
+    .section-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-3);
+    }
+    
+    /* TABLES / LISTS */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-xs);
+    }
+    
+    .table th {
+      text-align: left;
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--color-bg-tertiary);
+    }
+    
+    .table tbody tr {
+      transition: background var(--transition-normal);
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    
+    .table tbody tr:hover {
+      background: var(--color-bg-tertiary);
+    }
+    
+    .table tbody tr:last-child {
+      border-bottom: none;
+    }
+    
+    .table td {
+      padding: var(--space-4);
+    }
+    
+    .table-cell-label {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+    
+    .table-cell-value {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      font-family: var(--font-family-mono);
+    }
+    
+    /* MODALS */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 14, 39, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      z-index: 2000;
+      animation: fadeIn var(--transition-smooth);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal {
+      background: var(--color-bg-secondary);
+      border-top: 1px solid var(--color-border);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      width: 100%;
+      max-width: 100%;
+      padding: var(--space-6);
+      padding-bottom: calc(var(--space-6) + max(0, env(safe-area-inset-bottom)));
+      animation: slideUp var(--transition-smooth);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    /* CONTENT TRANSITIONS FOR PAGE SWITCHING */
+    #content {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-6);
+    }
+    
+    .modal-title {
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text-primary);
+    }
+    
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      font-size: 20px;
+      line-height: 1;
+      background: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+    
+    .modal-close .icon {
+      width: 18px;
+      height: 18px;
+    }
+    
+    .modal-close:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+    
+    /* STATUS STATES */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: var(--space-8);
+      color: var(--color-text-secondary);
+    }
+    
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      text-align: center;
+    }
+    
+    .empty-icon {
+      font-size: var(--font-size-3xl);
+      margin-bottom: var(--space-4);
+      opacity: 0.5;
+    }
+    
+    .empty-text {
+      font-size: var(--font-size-md);
+      color: var(--color-text-secondary);
+    }
+    
+    .error-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--color-status-error);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      color: var(--color-status-error);
+      font-size: var(--font-size-base);
+      margin-bottom: var(--space-4);
+      animation: slideDown var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .success-banner {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--color-status-success);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      color: var(--color-status-success);
+      font-size: var(--font-size-base);
+      margin-bottom: var(--space-4);
+      animation: slideDown var(--transition-smooth);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    @keyframes slideDown {
+      from { 
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+      to { 
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    /* MARKETPLACE GRID */
+    .nft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: var(--space-5);
+      padding: var(--space-2) 0;
+    }
+    
+    .nft-card {
+      background: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      transition: all var(--transition-smooth);
+      box-shadow: var(--shadow-xs);
+      position: relative;
+    }
+    
+    .nft-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--color-accent-primary);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .nft-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity var(--transition-smooth);
+      pointer-events: none;
+    }
+    
+    .nft-card:hover::after {
+      opacity: 1;
+    }
+    
+    .nft-image {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, var(--color-bg-hover) 0%, var(--color-bg-surface) 100%);
+      object-fit: cover;
+      display: block;
+    }
+    
+    .nft-info {
+      padding: var(--space-4);
+    }
+    
+    .nft-name {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .nft-price {
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-accent-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+    
+    /* FORMS */
+    .form-group {
+      margin-bottom: var(--space-4);
+    }
+    
+    .form-label {
+      display: block;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-2);
+    }
+    
+    .form-input {
+      width: 100%;
+    }
+    
+    .form-helper {
+      display: block;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-tertiary);
+      margin-top: var(--space-1);
+    }
+    
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+      border-bottom: 2px solid var(--color-border-light);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    
+    .tab {
+      padding: var(--space-3) 0;
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-secondary);
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition-normal);
+      position: relative;
+    }
+    
+    .tab:hover {
+      color: var(--color-text-primary);
+    }
+    
+    .tab.active {
+      color: var(--color-accent-primary);
+      border-bottom-color: var(--color-accent-primary);
+    }
+    
+    /* ROWS */
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-3) 0;
+    }
+    
+    .row-label {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+    }
+    
+    .row-value {
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-primary);
+    }
+    
+    .row-value.positive {
+      color: var(--color-status-success);
+    }
+    
+    .row-value.negative {
+      color: var(--color-status-error);
+    }
+    
+    /* WALLET POPUP */
+    .wallet-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      z-index: 2000;
+    }
+    
+    .wallet-popup-overlay.active {
+      display: flex;
+    }
+    
+    .wallet-popup {
+      background: var(--color-bg-secondary);
+      border-top: 1px solid var(--color-border);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      width: 100%;
+      padding: var(--space-6);
+      padding-bottom: calc(var(--space-6) + max(0, env(safe-area-inset-bottom)));
+      animation: slideUp var(--transition-normal);
+    }
+    
+    .wallet-popup-title {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-semibold);
+      margin-bottom: var(--space-4);
+    }
+    
+    .wallet-popup-desc {
+      font-size: var(--font-size-md);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-6);
+      line-height: 1.6;
+    }
+    
+    .wallet-popup-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    
+    /* MARKETPLACE CONTROLS */
+    .market-controls {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+      align-items: center;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+      flex: 1;
+    }
+    
+    .sort-dropdown {
+      background: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      font-family: var(--font-family);
+      min-width: 140px;
+    }
+    
+    .toggle-group {
+      display: flex;
+      gap: 0;
+      background: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 2px;
+    }
+    
+    .toggle-btn {
+      padding: var(--space-2) var(--space-3);
+      background: transparent;
+      cursor: pointer;
+      border: none;
+      color: var(--color-text-secondary);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .toggle-btn.active {
+      background: var(--color-bg-surface);
+      color: var(--color-accent-primary);
+      border-radius: var(--radius-sm);
+    }
+    
+    .toggle-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    
+    /* FILTER MODAL */
+    .filter-modal {
+      background: var(--color-bg-secondary);
+      border-top: 1px solid var(--color-border);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      width: 100%;
+      padding: var(--space-4);
+      padding-bottom: calc(var(--space-4) + max(0, env(safe-area-inset-bottom)));
+      animation: slideUp var(--transition-normal);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .filter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-6);
+    }
+    
+    .filter-section {
+      margin-bottom: var(--space-6);
+    }
+    
+    .filter-section-title {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .filter-range-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2);
+    }
+    
+    .filter-range-inputs input {
+      font-size: var(--font-size-sm);
+    }
+    
+    /* VISIBILITY */
+    .hidden {
+      display: none !important;
+    }
+    
+    .invisible {
+      visibility: hidden;
+    }
+
+    /* MOBILE-FIRST RESPONSIVE DESIGN */
+    @media (max-width: 640px) {
+      .content {
+        padding: 14px;
+        padding-bottom: calc(110px + 14px);
+      }
+
+      .header {
+        padding: 12px 14px;
+      }
+
+      .welcome-greeting {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .balance-card {
+        padding: 24px 20px;
+        margin-bottom: 24px;
+      }
+
+      .balance-amount {
+        font-size: 28px;
+      }
+
+      .stats-grid {
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .stat-card {
+        padding: 16px 14px;
+        border-radius: 16px;
+      }
+
+      .stat-number {
+        font-size: 18px;
+      }
+
+      .section-title {
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+
+      .actions-grid {
+        gap: 10px;
+      }
+
+      .action-button {
+        padding: 14px 10px;
+        border-radius: 10px;
+      }
+
+      .action-icon {
+        width: 28px;
+        height: 28px;
+      }
+
+      .action-label {
+        font-size: 11px;
+      }
+
+      .collections-grid {
+        gap: 10px;
+      }
+
+      .activity-item {
+        padding: 10px;
+        gap: 10px;
+      }
+
+      .activity-icon {
+        width: 36px;
+        height: 36px;
+      }
+
+      .nav-bottom {
+        gap: 4px;
+        padding: 14px;
+        padding-bottom: max(16px, calc(14px + env(safe-area-inset-bottom)));
+        border-radius: 44px;
+        bottom: 14px;
+        left: 14px;
+        right: 14px;
+      }
+
+      .nav-item {
+        padding: 10px 12px;
+        font-size: 10px;
+        gap: 5px;
+        border-radius: 20px;
+      }
+
+      .nav-item svg {
+        width: 19px;
+        height: 19px;
+      }
+
+      .nav-item.active {
+        padding: 10px 18px;
+        border-radius: 22px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .content {
+        padding: 12px;
+        padding-bottom: calc(100px + 12px);
+      }
+
+      .header {
+        padding: 10px 12px;
+      }
+
+      .welcome-greeting {
+        font-size: 15px;
+      }
+
+      .balance-card {
+        padding: 20px 16px;
+        margin-bottom: 20px;
+      }
+
+      .balance-amount {
+        font-size: 24px;
+      }
+
+      .balance-label {
+        font-size: 11px;
+      }
+
+      .section-title {
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .stats-grid {
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        padding: 14px 12px;
+        border-radius: 14px;
+      }
+
+      .stat-label {
+        font-size: 11px;
+      }
+
+      .stat-number {
+        font-size: 16px;
+      }
+
+      .actions-grid {
+        gap: 8px;
+      }
+
+      .action-button {
+        padding: 12px 8px;
+        border-radius: 8px;
+      }
+
+      .action-icon {
+        width: 24px;
+        height: 24px;
+      }
+
+      .action-label {
+        font-size: 10px;
+      }
+
+      .collections-grid {
+        gap: 8px;
+      }
+
+      .collection-image {
+        font-size: 36px;
+      }
+
+      .activity-item {
+        padding: 8px;
+        gap: 8px;
+      }
+
+      .activity-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+      }
+
+      .activity-title {
+        font-size: 12px;
+      }
+
+      .activity-time {
+        font-size: 10px;
+      }
+
+      .activity-amount {
+        font-size: 12px;
+      }
+
+      .nav-bottom {
+        gap: 2px;
+        padding: 12px;
+        padding-bottom: max(14px, calc(12px + env(safe-area-inset-bottom)));
+        border-radius: 40px;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+      }
+
+      .nav-item {
+        padding: 8px 9px;
+        font-size: 8px;
+        gap: 3px;
+        border-radius: 18px;
+      }
+
+      .nav-item svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      .nav-item.active {
+        padding: 8px 13px;
+        border-radius: 20px;
+      }
+
+      .header-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+      }
+    }
+  </style>
+  <!-- Production Integration Layer -->
+  <script src="api-service.js"></script>
+  <script src="app-state.js"></script>
+  <script src="ui-utils.js"></script>
+  <script src="modal-forms.js"></script>
+  <style>
+    /* MODAL & FORM STYLING */
+    #modalOverlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal {
+      background: linear-gradient(135deg, rgba(15, 22, 34, 0.95) 0%, rgba(26, 31, 58, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(30px);
+      max-height: 90vh;
+      width: 90%;
+      max-width: 500px;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      top: 0;
+      background: inherit;
+      border-radius: 20px 20px 0 0;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: color 0.2s;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+    }
+
+    .btn-close:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-body {
+      padding: 24px;
+      color: white;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 24px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.9);
+      text-transform: capitalize;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 14px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(91, 75, 219, 0.6);
+      box-shadow: 0 0 0 3px rgba(91, 75, 219, 0.1);
+    }
+
+    .form-group input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .form-help {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      margin: 0;
+    }
+
+    .form-divider {
+      padding-top: 12px;
+      margin-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-divider h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .input-group input {
+      flex: 1;
+    }
+
+    .currency-select {
+      width: 100px;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .radio-label,
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .radio-label input,
+    .checkbox-label input {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #5b4bdb;
+    }
+
+    .radio-label:hover,
+    .checkbox-label:hover {
+      color: white;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-actions button {
+      flex: 1;
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #5b4bdb 0%, #7c6ff9 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(91, 75, 219, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .nft-preview {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .preview-image {
+      width: 80px;
+      height: 80px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #5b4bdb, #d946a6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .preview-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .preview-info h3 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      color: white;
+    }
+
+    .preview-info p {
+      margin: 0;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .notifications-list {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .notification-item {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+    }
+
+    .notification-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .notification-item.unread {
+      background: rgba(91, 75, 219, 0.1);
+      border-left: 3px solid #5b4bdb;
+      padding-left: 13px;
+    }
+
+    .notif-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notif-content h4 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .notif-content p {
+      margin: 0 0 4px 0;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .notif-time {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .unread-dot {
+      width: 8px;
+      height: 8px;
+      background: #5b4bdb;
+      border-radius: 50%;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .transaction-detail {
+      max-width: 400px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .detail-row label {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-row span {
+      font-size: 14px;
+      color: white;
+      font-weight: 500;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(91, 75, 219, 0.2);
+      border: 1px solid rgba(91, 75, 219, 0.4);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #7c6ff9;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6ee7b7;
+    }
+
+    .status-badge.pending,
+    .status-badge.processing {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .status-badge.failed,
+    .status-badge.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    .address {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: all;
+      transition: background 0.2s;
+    }
+
+    .address:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .detail-actions {
+      padding-top: 16px;
+      margin-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .detail-actions a {
+      display: inline-block;
+      padding: 10px 16px;
+      background: rgba(91, 75, 219, 0.2);
+      border: 1px solid rgba(91, 75, 219, 0.4);
+      border-radius: 8px;
+      color: #7c6ff9;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .detail-actions a:hover {
+      background: rgba(91, 75, 219, 0.3);
+      border-color: rgba(91, 75, 219, 0.6);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Scrollbar styling for modals */
+    .modal::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .modal::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .modal::-webkit-scrollbar-thumb {
+      background: rgba(91, 75, 219, 0.5);
+      border-radius: 4px;
+    }
+
+    .modal::-webkit-scrollbar-thumb:hover {
+      background: rgba(91, 75, 219, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- HEADER -->
+    <header class="header">
+      <button class="header-menu" id="menuBtn" aria-label="Menu">
+        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-menu"></use></svg>
+      </button>
+      <div class="header-actions">
+        <button class="header-icon" id="notificationBell" aria-label="Notifications">
+          <svg aria-hidden="true"><use xlink:href="icons.svg#icon-bell"></use></svg>
+          <span class="notification-badge" data-notification-badge></span>
+        </button>
+        <div class="header-avatar" id="userAvatar">JD</div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="content" id="content">
+      <!-- DASHBOARD VIEW -->
+      <div id="dashboardContent" style="padding: 20px 0;">
+        <!-- Welcome Section -->
+        <section style="padding: 0 20px; margin-bottom: 24px;">
+          <p style="
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+          ">Welcome back, <span id="userName">User</span> 👋</p>
+        </section>
+
+        <!-- Primary Balance Card - Real Data -->
+        <section style="
+          padding: 20px;
+          margin: 0 20px 24px;
+          background: linear-gradient(135deg, var(--primary) 0%, #d946a6 100%);
+          border-radius: 16px;
+          color: white;
+          box-shadow: 0 8px 32px rgba(91, 75, 219, 0.2);
+        ">
+          <div style="
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+          ">
+            <div>
+              <p style="
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                opacity: 0.9;
+                text-transform: uppercase;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+              ">Total Balance</p>
+              <div style="
+                font-size: 32px;
+                font-weight: 700;
+                margin-bottom: 4px;
+              ">$<span id="dashboardBalance">0.00</span></div>
+              <p style="
+                margin: 0;
+                font-size: 12px;
+                opacity: 0.8;
+              ">USD</p>
+            </div>
+            <button onclick="if(window.appInitializer) window.appInitializer.showPaymentSection('deposit')" style="
+              background: rgba(255,255,255,0.2);
+              color: white;
+              border: 1px solid rgba(255,255,255,0.3);
+              padding: 8px 16px;
+              border-radius: 8px;
+              font-size: 12px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.3s;
+            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+              + Deposit
+            </button>
+          </div>
+          
+          <!-- Wallet Info -->
+          <div style="
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            opacity: 0.85;
+          ">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span>💼</span>
+              <span id="dashboardWalletStatus">No wallet</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Grid - Real Data -->
+        <section style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          padding: 0 20px;
+          margin-bottom: 24px;
+        ">
+          <div style="
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+          ">
+            <p style="
+              margin: 0 0 8px 0;
+              font-size: 11px;
+              color: var(--text-muted);
+              text-transform: uppercase;
+              font-weight: 600;
+            ">NFTs Owned</p>
+            <p style="
+              margin: 0;
+              font-size: 24px;
+              font-weight: 700;
+              color: var(--text);
+            " id="dashboardNFTCount">0</p>
+          </div>
+
+          <div style="
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+          ">
+            <p style="
+              margin: 0 0 8px 0;
+              font-size: 11px;
+              color: var(--text-muted);
+              text-transform: uppercase;
+              font-weight: 600;
+            ">Active Listings</p>
+            <p style="
+              margin: 0;
+              font-size: 24px;
+              font-weight: 700;
+              color: var(--text);
+            " id="dashboardListingCount">0</p>
+          </div>
+
+          <div style="
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+          ">
+            <p style="
+              margin: 0 0 8px 0;
+              font-size: 11px;
+              color: var(--text-muted);
+              text-transform: uppercase;
+              font-weight: 600;
+            ">Wallets</p>
+            <p style="
+              margin: 0;
+              font-size: 24px;
+              font-weight: 700;
+              color: var(--text);
+            " id="dashboardWalletCount">0</p>
+          </div>
+
+          <div style="
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+          ">
+            <p style="
+              margin: 0 0 8px 0;
+              font-size: 11px;
+              color: var(--text-muted);
+              text-transform: uppercase;
+              font-weight: 600;
+            ">Portfolio Value</p>
+            <p style="
+              margin: 0;
+              font-size: 24px;
+              font-weight: 700;
+              color: var(--primary);
+            " id="dashboardPortfolioValue">$0.00</p>
+          </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section style="
+          padding: 20px;
+          margin: 0 20px 24px;
+        ">
+          <h3 style="
+            margin: 0 0 16px 0;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+          ">Quick Actions</h3>
+          
+          <div style="
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+          ">
+            <button onclick="window.switchPage('mint')" style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 8px;
+              padding: 16px 12px;
+              background: var(--bg-card);
+              border: 1px solid var(--border-color);
+              border-radius: 12px;
+              cursor: pointer;
+              transition: all 0.3s;
+              color: var(--text);
+            " onmouseover="this.style.border='1px solid var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.15)'" onmouseout="this.style.border='1px solid var(--border-color)'; this.style.boxShadow=''">
+              <span style="font-size: 18px;">✨</span>
+              <span style="font-size: 12px; font-weight: 600;">Mint NFT</span>
+            </button>
+
+            <button onclick="window.switchPage('wallet')" style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 8px;
+              padding: 16px 12px;
+              background: var(--bg-card);
+              border: 1px solid var(--border-color);
+              border-radius: 12px;
+              cursor: pointer;
+              transition: all 0.3s;
+              color: var(--text);
+            " onmouseover="this.style.border='1px solid var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.15)'" onmouseout="this.style.border='1px solid var(--border-color)'; this.style.boxShadow=''">
+              <span style="font-size: 18px;">💼</span>
+              <span style="font-size: 12px; font-weight: 600;">My Wallets</span>
+            </button>
+
+            <button onclick="window.switchPage('market')" style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 8px;
+              padding: 16px 12px;
+              background: var(--bg-card);
+              border: 1px solid var(--border-color);
+              border-radius: 12px;
+              cursor: pointer;
+              transition: all 0.3s;
+              color: var(--text);
+            " onmouseover="this.style.border='1px solid var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.15)'" onmouseout="this.style.border='1px solid var(--border-color)'; this.style.boxShadow=''">
+              <span style="font-size: 18px;">🛒</span>
+              <span style="font-size: 12px; font-weight: 600;">Browse</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Your Collection Section - Real NFT Data -->
+        <section style="padding: 0 20px; margin-bottom: 24px;">
+          <div style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+          ">
+            <h3 style="
+              margin: 0;
+              font-size: 16px;
+              font-weight: 700;
+              color: var(--text);
+            ">Your Collection</h3>
+            <button onclick="window.switchPage('home')" style="
+              color: var(--primary);
+              background: transparent;
+              border: none;
+              font-size: 12px;
+              font-weight: 600;
+              cursor: pointer;
+            ">View All →</button>
+          </div>
+
+          <div id="collectionGrid" style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 24px;
+          ">
+            <div style="
+              text-align: center;
+              padding: 40px 20px;
+              background: var(--bg-card);
+              border: 1px dashed var(--border-color);
+              border-radius: 12px;
+              color: var(--text-muted);
+            ">
+              <p style="margin: 0; font-size: 12px;">No NFTs yet</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recent Activity Section - Real Data -->
+        <section style="padding: 20px;">
+          <h3 style="
+            margin: 0 0 16px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+          ">Recent Activity</h3>
+
+          <div id="activityFeed" style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          ">
+            <div style="
+              text-align: center;
+              padding: 40px 20px;
+              background: var(--bg-card);
+              border: 1px dashed var(--border-color);
+              border-radius: 12px;
+              color: var(--text-muted);
+            ">
+              <p style="margin: 0; font-size: 12px;">No activity yet</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- WALLET VIEW PLACEHOLDER -->
+      <div id="walletContent" style="display: none; padding: 20px;">
+        <section data-section="wallets"></section>
+      </div>
+
+      <!-- MINT VIEW PLACEHOLDER -->
+      <div id="mintContent" style="display: none; padding: 20px;">
+        <section data-section="mint"></section>
+      </div>
+
+      <!-- MARKETPLACE VIEW PLACEHOLDER -->
+      <div id="marketplaceContent" style="display: none; padding: 20px;">
+        <section data-section="marketplace"></section>
+      </div>
+
+      <!-- PROFILE VIEW PLACEHOLDER -->
+      <div id="profileContent" style="display: none; padding: 20px;">
+        <section data-section="profile"></section>
+      </div>
+
+      <!-- ACTIVITY VIEW PLACEHOLDER -->
+      <div id="activityContent" style="display: none; padding: 20px;">
+        <section data-section="activity"></section>
+      </div>
+    </main>
+
+      <!-- Marketplace Section -->
+      <section class="marketplace-section">
+        <div class="section-header">
+          <h2 class="section-title">Explore Marketplace</h2>
+          <span class="view-all" id="viewAllMarket">View All</span>
+        </div>
+        <div class="marketplace-grid" data-section="marketplace">
+          <div class="loading-indicator">
+            <div class="spinner"></div>
+            <p>Loading marketplace...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="nav-bottom">
+      <button class="nav-item active" data-view="home" onclick="window.switchPage('home')" aria-label="Home">
+        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-home"></use></svg>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" data-view="wallet" onclick="window.switchPage('wallet')" aria-label="Wallet">
+        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-wallet"></use></svg>
+        <span class="nav-label">Wallet</span>
+      </button>
+      <button class="nav-item" data-view="mint" onclick="window.switchPage('mint')" aria-label="Mint">
+        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-plus"></use></svg>
+        <span class="nav-label">Mint</span>
+      </button>
+      <button class="nav-item" data-view="market" onclick="window.switchPage('market')" aria-label="Market">
+        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-grid"></use></svg>
+        <span class="nav-label">Market</span>
+      </button>
+      <button class="nav-item" data-view="profile" onclick="window.switchPage('profile')" aria-label="Profile">
+        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-profile"></use></svg>
+        <span class="nav-label">Profile</span>
+      </button>
+    </nav>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal" id="modal"></div>
+    </div>
+  </div>
+
+  <!-- Load Telegram WebApp FIRST - MUST be before app code -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <script src="svg-icons.js"></script>
+  <script>
+    // ============================================================
+    // TELEGRAM CONFIGURATION
+    // ============================================================
+    if (window.Telegram && window.Telegram.WebApp) {
+      console.log('[Telegram Init] WebApp detected, configuring...');
+      window.Telegram.WebApp.expand();
+      window.Telegram.WebApp.enableClosingConfirmation();
+    } else {
+      console.warn('[Telegram Init] Running in non-Telegram environment (localhost)');
+    }
+
+    // ============================================================
+    // GLOBAL STATE & UTILITIES
+    // ============================================================
+    // ============================================================
+    // GLOBAL WALLET & APP STATE
+    // ============================================================
+    const $ = id => document.getElementById(id);
+    let user = null;
+    let initData = null;
+    let connectedWallet = null;
+    let connectedWallets = [];
+
+    // Wallet state management
+    const WalletManager = {
+      isConnected: () => connectedWallet && connectedWallet.address,
+      getConnected: () => connectedWallet,
+      getAll: () => connectedWallets,
+      setConnected: (wallet) => {
+        connectedWallet = wallet;
+        localStorage.setItem('connected_wallet', JSON.stringify(wallet));
+        window.dispatchEvent(new CustomEvent('walletConnected', { detail: wallet }));
+      },
+      setAll: (wallets) => {
+        connectedWallets = wallets;
+        localStorage.setItem('connected_wallets', JSON.stringify(wallets));
+      },
+      load: () => {
+        const saved = localStorage.getItem('connected_wallet');
+        if (saved) {
+          connectedWallet = JSON.parse(saved);
+          return true;
+        }
+        return false;
+      }
+    };
+
+    // Telegram Init Data Handler
+    function getTelegramInitData() {
+      let data = null;
+      
+      if (window.Telegram?.WebApp?.initData) {
+        data = window.Telegram.WebApp.initData;
+        console.log('[Auth] Using Telegram.WebApp.initData');
+      } else {
+        data = localStorage.getItem('telegram_init_data');
+        if (data) {
+          console.log('[Auth] Using initData from localStorage');
+        } else {
+          // Generate test init_data with proper structure for development
+          const testUserId = Math.random().toString(36).substr(2, 9);
+          const testUser = {
+            id: Math.floor(Math.random() * 1000000000),
+            is_bot: false,
+            first_name: 'TestUser',
+            username: 'testuser_' + testUserId
+          };
+          data = 'query_id=test&user=' + encodeURIComponent(JSON.stringify(testUser)) + '&auth_date=' + Math.floor(Date.now() / 1000) + '&hash=test';
+          console.log('[Auth] Using generated test initData (dev mode)');
+          localStorage.setItem('telegram_init_data', data);
+        }
+      }
+      
+      return data || 'test_init_data';
+    }
+
+    // API HTTP Client
+    const API = {
+      call: async function(method, path, body = null) {
+        try {
+          const fullPath = '/web-app' + path;
+          console.log(`[API] ${method} ${fullPath}`, body || '');
+          
+          const res = await fetch(fullPath, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            ...(body && { body: JSON.stringify(body) })
+          });
+          
+          console.log(`[API Response] ${method} ${fullPath} - Status: ${res.status}`);
+          const text = await res.text();
+          
+          try {
+            return { ok: res.ok, status: res.status, data: JSON.parse(text) };
+          } catch(e) {
+            return { ok: res.ok, status: res.status, data: text };
+          }
+        } catch (err) {
+          console.error(`[API Error] ${method} ${path}:`, err);
+          return { ok: false, status: 0, data: { error: err.message } };
+        }
+      }
+    };
+
+    // Status/Toast Notification
+    function showStatus(msg, type = 'info') {
+      // Create toast if it doesn't exist
+      let toast = document.getElementById('appToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'appToast';
+        document.body.appendChild(toast);
+      }
+
+      // Apply styles based on type
+      const bgColor = {
+        'success': '#34d399',
+        'error': '#ef4444',
+        'warning': '#fbbf24',
+        'info': '#3b82f6'
+      }[type] || '#3b82f6';
+
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+        font-size: 14px;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideUp 0.3s ease-out;
+      `;
+
+      // Add spinner for info type
+      if (type === 'info') {
+        toast.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;"></div>' + msg;
+      } else {
+        toast.textContent = msg;
+      }
+
+      // Auto hide
+      setTimeout(() => {
+        if (toast) toast.style.display = 'none';
+      }, type === 'error' ? 4000 : 3000);
+
+      // Add animation styles if not present
+      if (!document.querySelector('style[data-toast-animation]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-toast-animation', 'true');
+        style.textContent = `
+          @keyframes slideUp {
+            from {
+              transform: translateY(100px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    // Application Initialization
+    async function initApp() {
+      try {
+        console.log('[App] Initializing...');
+        initData = getTelegramInitData();
+        console.log('[App] initData obtained:', initData.substring(0, 50) + '...');
+        
+        try {
+          const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
+          console.log('[App] Init response:', r);
+          
+          if (r.ok && r.data && r.data.user) {
+            user = r.data.user;
+            console.log('[App] User authenticated:', user);
+            
+            // Display user info with real telegram username
+            displayUserBadge(user);
+            
+            // Load connected wallets
+            console.log('[App] Loading connected wallets...');
+            const hasWallet = await loadConnectedWallets();
+            
+            if (!hasWallet) {
+              console.log('[App] No wallet connected - user will need to connect one');
+              // Will show wallet connection prompt when accessing wallet-dependent features
+            } else {
+              console.log('[App] Wallet connected, loading dashboard...');
+            }
+            
+            showStatus('Welcome back ' + (user.telegram_username || user.first_name), 'success');
+            
+            // Hide auth prompt if visible
+            const app = document.getElementById('app');
+            if (app && app.classList.contains('auth-prompt')) {
+              app.classList.remove('auth-prompt');
+            }
+          } else {
+            throw new Error(r.data?.detail || 'Authentication failed');
+          }
+        } catch (apiError) {
+          console.error('[App] API Error:', apiError.message);
+          showStatus('Auth Error: ' + apiError.message, 'error');
+        }
+      } catch (err) {
+        console.error('[App] Fatal Error:', err);
+        showStatus('Fatal Error: ' + err.message, 'error');
+      }
+    }
+
+    function displayUserBadge(userObj) {
+      // Update user avatar with initials
+      const avatar = document.querySelector('[data-user-avatar]');
+      const userName = document.querySelector('[data-user-name]');
+      const userId = document.querySelector('[data-user-id]');
+      const greetingEl = document.querySelector('[data-greeting]');
+      
+      if (userObj.id) {
+        const initial = (userObj.telegram_username || userObj.first_name || 'U')[0].toUpperCase();
+        const displayName = userObj.telegram_username || userObj.first_name || 'User';
+        
+        if (avatar) {
+          avatar.textContent = initial;
+          avatar.style.background = 'linear-gradient(135deg, #5b4bdb, #a78bfa)';
+          avatar.style.color = 'white';
+        }
+        if (userName) {
+          userName.textContent = displayName;
+        }
+        if (userId) {
+          userId.textContent = '#' + userObj.id;
+        }
+        if (greetingEl) {
+          greetingEl.textContent = `Welcome back ${displayName}`;
+        }
+      }
+    }
+
+    // ============================================================
+    // WALLET CONNECTION FLOW
+    // ============================================================
+    
+    async function loadConnectedWallets() {
+      if (!user || !user.id) return false;
+      
+      try {
+        console.log('[Wallets] Loading connected wallets for user:', user.id);
+        const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+        
+        if (r.ok && r.data && r.data.wallets) {
+          WalletManager.setAll(r.data.wallets);
+          
+          // Auto-select primary wallet if exists
+          const primaryWallet = r.data.wallets.find(w => w.is_primary);
+          if (primaryWallet) {
+            WalletManager.setConnected(primaryWallet);
+            console.log('[Wallets] Primary wallet set:', primaryWallet.address);
+            return true;
+          } else if (r.data.wallets.length > 0) {
+            // Fallback to first wallet
+            WalletManager.setConnected(r.data.wallets[0]);
+            console.log('[Wallets] First wallet set:', r.data.wallets[0].address);
+            return true;
+          }
+        }
+        return false;
+      } catch (err) {
+        console.error('[Wallets] Error loading wallets:', err);
+        return false;
+      }
+    }
+
+    function showWalletConnectModal() {
+      const modalOverlay = document.getElementById('modalOverlay');
+      const modal = document.getElementById('modal');
+      
+      if (!modal || !modalOverlay) return;
+
+      modal.innerHTML = `
+        <div class="wallet-connect-modal" style="
+          position: relative;
+          background: white;
+          border-radius: 20px;
+          padding: 40px 30px;
+          max-width: 420px;
+          width: 100%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+          animation: slideUp 0.3s ease-out;
+        ">
+          <!-- Close Button -->
+          <button onclick="document.getElementById('modalOverlay').style.display='none'" style="
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+          ">×</button>
+
+          <h2 style="
+            margin: 0 0 16px 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            text-align: center;
+          ">Connect Your Wallet</h2>
+
+          <p style="
+            margin: 0 0 32px 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+          ">To access all features and manage your NFTs, please connect a wallet using WalletConnect or TON Connect.</p>
+
+          <!-- Wallet Options -->
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button onclick="initiateWalletConnection('ton')" style="
+              width: 100%;
+              padding: 14px 16px;
+              background: linear-gradient(135deg, #0098EA 0%, #0077B6 100%);
+              color: white;
+              border: none;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 15px;
+              cursor: pointer;
+              transition: all 0.3s;
+            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(0,152,234,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
+              🔷 Connect TON Wallet
+            </button>
+
+            <button onclick="initiateWalletConnection('ethereum')" style="
+              width: 100%;
+              padding: 14px 16px;
+              background: linear-gradient(135deg, #627EEA 0%, #764BA2 100%);
+              color: white;
+              border: none;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 15px;
+              cursor: pointer;
+              transition: all 0.3s;
+            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(98,126,234,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
+              ◆ Connect Ethereum Wallet
+            </button>
+
+            <button onclick="initiateWalletConnection('solana')" style="
+              width: 100%;
+              padding: 14px 16px;
+              background: linear-gradient(135deg, #14F195 0%, #00D9FF 100%);
+              color: #000;
+              border: none;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 15px;
+              cursor: pointer;
+              transition: all 0.3s;
+            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(20,241,149,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
+              ◎ Connect Solana Wallet
+            </button>
+          </div>
+
+          <p style="
+            margin: 32px 0 0 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+          ">Your wallet is secure and only used for NFT transactions.</p>
+        </div>
+      `;
+
+      modalOverlay.style.display = 'flex';
+      modalOverlay.style.position = 'fixed';
+      modalOverlay.style.top = '0';
+      modalOverlay.style.left = '0';
+      modalOverlay.style.right = '0';
+      modalOverlay.style.bottom = '0';
+      modalOverlay.style.background = 'rgba(0,0,0,0.5)';
+      modalOverlay.style.alignItems = 'center';
+      modalOverlay.style.justifyContent = 'center';
+      modalOverlay.style.zIndex = '9999';
+
+      // Close on overlay click
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+          modalOverlay.style.display = 'none';
+        }
+      });
+    }
+
+    async function initiateWalletConnection(blockchain) {
+      if (!user || !user.id) {
+        showStatus('User not authenticated', 'error');
+        return;
+      }
+
+      try {
+        showStatus(`Initiating ${blockchain} wallet connection...`, 'info');
+        console.log('[WalletConnect] Initiating connection for blockchain:', blockchain);
+
+        // Call backend to initiate WalletConnect
+        const res = await fetch('/walletconnect/initiate?user_id=' + user.id + '&blockchain=' + blockchain, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+        console.log('[WalletConnect] Response:', data);
+
+        if (!data.success) {
+          throw new Error(data.detail || 'Failed to initiate connection');
+        }
+
+        // Show connection URI/QR code to user
+        showWalletConnectQR(data.uri, blockchain, data.session_id);
+
+      } catch (err) {
+        console.error('[WalletConnect] Error:', err);
+        showStatus('Failed to initiate wallet connection: ' + err.message, 'error');
+      }
+    }
+
+    function showWalletConnectQR(uri, blockchain, sessionId) {
+      const modal = document.getElementById('modal');
+      
+      if (!modal) return;
+
+      modal.innerHTML = `
+        <div class="wallet-qr-modal" style="
+          position: relative;
+          background: white;
+          border-radius: 20px;
+          padding: 40px 30px;
+          max-width: 420px;
+          width: 100%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+          text-align: center;
+          animation: slideUp 0.3s ease-out;
+        ">
+          <h3 style="
+            margin: 0 0 24px 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+          ">Scan QR Code</h3>
+
+          <div style="
+            background: #f5f5f5;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+          ">
+            <div style="
+              width: 256px;
+              height: 256px;
+              background: white;
+              border-radius: 12px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+              color: #999;
+              text-align: center;
+              padding: 12px;
+            ">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(uri)}" alt="WalletConnect QR" style="max-width: 100%; max-height: 100%;">
+            </div>
+          </div>
+
+          <p style="
+            margin: 0 0 24px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+          ">Scan this QR code with your ${blockchain} wallet app to complete the connection</p>
+
+          <button onclick="document.getElementById('modalOverlay').style.display='none'" style="
+            width: 100%;
+            padding: 12px 16px;
+            background: #f0f0f0;
+            color: var(--text);
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+          ">Close</button>
+
+          <p style="
+            margin: 20px 0 0 0;
+            font-size: 12px;
+            color: var(--text-muted);
+          ">Session ID: ${sessionId.substring(0, 8)}...</p>
+        </div>
+      `;
+    }
+
+    // Check if user requires wallet connection for page access
+    function requireWalletConnection() {
+      if (!WalletManager.isConnected()) {
+        showStatus('Please connect a wallet to access this feature', 'warning');
+        showWalletConnectModal();
+        return false;
+      }
+      return true;
+    }
+
+    // ============================================================
+    // TELEGRAM STARS PAYMENT INTEGRATION
+    // ============================================================
+
+    const TelegramStars = {
+      async createInvoice(itemIds, totalStars) {
+        try {
+          console.log('[Stars] Creating invoice for items:', itemIds, 'Amount:', totalStars);
+          
+          const res = await fetch('/api/v1/stars/invoice/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              invoice_id: 'inv_' + Math.random().toString(36).substr(2, 12),
+              item_ids: itemIds,
+              total_amount: totalStars,
+              currency: 'XTR'
+            })
+          });
+
+          const data = await res.json();
+          console.log('[Stars] Invoice created:', data);
+          
+          if (!data.success && !data.invoice_link) {
+            throw new Error(data.detail || 'Failed to create invoice');
+          }
+
+          return data;
+        } catch (err) {
+          console.error('[Stars] Error creating invoice:', err);
+          throw err;
+        }
+      },
+
+      async processPayment(invoiceLink) {
+        try {
+          console.log('[Stars] Processing payment for invoice link');
+          
+          if (window.Telegram?.WebApp?.openInvoice) {
+            window.Telegram.WebApp.openInvoice(invoiceLink);
+          } else {
+            // Fallback: open in new window
+            window.open(invoiceLink, '_blank');
+          }
+        } catch (err) {
+          console.error('[Stars] Error processing payment:', err);
+          throw err;
+        }
+      },
+
+      async confirmPayment(invoiceId, paymentChargeId) {
+        try {
+          console.log('[Stars] Confirming payment:', invoiceId);
+          
+          const res = await fetch('/api/v1/stars/payment/success', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              invoice_id: invoiceId,
+              telegram_payment_charge_id: paymentChargeId,
+              provider_payment_charge_id: paymentChargeId,
+              total_amount: 0,
+              currency: 'XTR'
+            })
+          });
+
+          const data = await res.json();
+          console.log('[Stars] Payment confirmed:', data);
+          return data;
+        } catch (err) {
+          console.error('[Stars] Error confirming payment:', err);
+          throw err;
+        }
+      }
+    };
+
+    // Show payment confirmation with Telegram Stars
+    async function initiateTelegramStarsPayment(listings) {
+      if (!user) {
+        showStatus('Please authenticate first', 'error');
+        return;
+      }
+
+      try {
+        const itemIds = listings.map(l => l.id);
+        const totalStars = listings.reduce((sum, l) => sum + (l.price_stars || Math.floor(l.price * 10)), 0);
+
+        console.log('[Payment] Initiating Telegram Stars payment');
+        showStatus('Creating payment invoice...', 'info');
+
+        const invoice = await TelegramStars.createInvoice(itemIds, totalStars);
+        
+        showStatus('Opening payment...', 'info');
+        await TelegramStars.processPayment(invoice.invoice_link);
+
+        return invoice;
+      } catch (err) {
+        console.error('[Payment] Error:', err);
+        showStatus('Payment failed: ' + err.message, 'error');
+      }
+    }
+
+    // ============================================================
+    // PRODUCTION APP INITIALIZATION & DATA BINDING
+    // ============================================================
+
+    class AppInitializer {
+      constructor() {
+        this.api = window.api;
+        this.state = window.appState;
+        this.initialized = false;
+      }
+
+      async initialize() {
+        try {
+          console.log('[App Init] Starting application initialization...');
+          
+          // Store reference to this for global access
+          window.appInitializer = this;
+          
+          // Load saved wallet state
+          WalletManager.load();
+          console.log('[App Init] Wallet state loaded. Connected:', WalletManager.isConnected());
+          
+          // Initialize SVG Icon System
+          if (!window.svgIcons) {
+            window.svgIcons = new SvgIconSystem({
+              spritePath: 'icons.svg',
+              defaultSize: '24',
+              defaultClass: 'icon',
+              cacheIcons: true,
+            });
+          }
+
+          // Step 1: Attempt Telegram authentication
+          console.log('[App Init] Step 1: Authenticating with Telegram...');
+          await initApp();
+          
+          // If user is authenticated, show main app
+          if (user && user.id) {
+            console.log('[App Init] User authenticated, preparing app...');
+            
+            // Load dashboard data
+            await this.loadDashboardData();
+            
+            // Setup event listeners for navigation
+            this.setupEventListeners();
+          } else {
+            // Show auth prompt if not authenticated
+            console.log('[App Init] No user authenticated, showing auth prompt');
+            this.showAuthPrompt();
+            
+            // But still setup event listeners for when user authenticates later
+            this.setupEventListeners();
+          }
+
+          // Step 2: Initialize Telegram if available
+          if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+            this.initializeTelegram();
+          }
+
+          // Step 3: Setup subscriptions
+          this.subscribeToStateChanges();
+          
+          // Step 4: Listen for wallet connection events
+          window.addEventListener('walletConnected', () => {
+            console.log('[App Init] Wallet connection detected, reloading data...');
+            this.loadDashboardData();
+          });
+          
+          console.log('[App Init] Initialization complete');
+          this.initialized = true;
+        } catch (error) {
+          console.error('[App Init] Initialization failed:', error);
+          showStatus('App initialization failed', 'error');
+        }
+      }
+
+      async loadDashboardData() {
+        if (!user || !user.id) {
+          console.log('[Dashboard] User not yet authenticated');
+          return;
+        }
+
+        try {
+          console.log('[Dashboard] Loading dashboard data for user:', user.id);
+          
+          // Use web-app endpoints with initData for authentication
+          const dashboardPromise = API.call('GET', '/dashboard-data?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+          const walletsPromise = loadConnectedWallets();
+          const nftsPromise = API.call('GET', '/nfts?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+
+          const [dashboardRes, walletLoaded, nftsRes] = await Promise.all([
+            dashboardPromise,
+            walletsPromise,
+            nftsPromise
+          ]);
+
+          console.log('[Dashboard] Responses:', { dashboardRes, walletLoaded, nftsRes });
+
+          // Process dashboard data if available
+          if (dashboardRes.ok && dashboardRes.data) {
+            const d = dashboardRes.data;
+            const portfolioValue = (d.portfolio_value || 0).toFixed(2);
+            const nftCount = (d.nfts && d.nfts.length) || 0;
+            const walletCount = (d.wallets && d.wallets.length) || 0;
+            const listingCount = (d.listings && d.listings.length) || 0;
+
+            // Update state
+            if (this.state) {
+              this.state.setActiveListings(d.listings || []);
+            }
+
+            console.log('[Dashboard] Stats -', { nftCount, walletCount, listingCount, portfolioValue });
+          }
+
+          // Process NFTs if available
+          if (nftsRes.ok && nftsRes.data) {
+            const nfts = nftsRes.data.nfts || [];
+            if (this.state) {
+              this.state.setUserNFTs(nfts);
+            }
+            console.log('[Dashboard] Loaded', nfts.length, 'NFTs');
+          }
+
+          // Display wallet status
+          const walletStatusEl = document.querySelector('[data-wallet-status]');
+          if (walletStatusEl) {
+            if (WalletManager.isConnected()) {
+              const connectedWallet = WalletManager.getConnected();
+              walletStatusEl.innerHTML = `
+                <div style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  padding: 8px 12px;
+                  background: linear-gradient(135deg, rgba(52,211,153,0.1), rgba(52,211,153,0.05));
+                  border: 1px solid rgba(52,211,153,0.2);
+                  border-radius: 8px;
+                  font-size: 12px;
+                  color: var(--success);
+                  font-weight: 600;
+                ">
+                  <span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span>
+                  ${connectedWallet.blockchain ? connectedWallet.blockchain.toUpperCase() : 'Wallet'} Connected
+                </div>
+              `;
+            } else {
+              walletStatusEl.innerHTML = `
+                <button onclick="showWalletConnectModal()" style="
+                  padding: 8px 12px;
+                  background: linear-gradient(135deg, var(--primary), #d946a6);
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 12px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  transition: all 0.3s;
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
+                  🔗 Connect Wallet
+                </button>
+              `;
+            }
+          }
+
+          // Update UI
+          this.updateDashboardUI();
+          console.log('[Dashboard] Dashboard data loaded successfully');
+        } catch (error) {
+          console.error('[Dashboard] Error loading dashboard data:', error);
+          showStatus('Failed to load dashboard data', 'error');
+        }
+      }
+
+      updateDashboardUI() {
+        const user = this.state.currentUser;
+        const summary = this.state.getSummary();
+
+        // Update welcome greeting with real user name
+        const userName = document.getElementById('userName');
+        if (userName && user) {
+          userName.textContent = user.first_name || 'User';
+        }
+
+        // Update user avatar with real initials
+        const userAvatar = document.getElementById('userAvatar');
+        if (userAvatar && user) {
+          const initials =
+            ((user.first_name?.[0] || '') + (user.last_name?.[0] || '')).toUpperCase() || 'User';
+          userAvatar.textContent = initials;
+        }
+
+        // Update balance card with real USDT balance
+        const balanceDisplay = document.getElementById('dashboardBalance');
+        if (balanceDisplay) {
+          const balance = summary.walletBalance || 0;
+          balanceDisplay.textContent = balance.toFixed(2);
+        }
+
+        // Update wallet status
+        const walletStatus = document.getElementById('dashboardWalletStatus');
+        if (walletStatus) {
+          if (WalletManager.isConnected()) {
+            const wallet = WalletManager.getConnected();
+            walletStatus.textContent = `${wallet.blockchain ? wallet.blockchain.toUpperCase() : 'Wallet'} Connected`;
+          } else {
+            walletStatus.textContent = 'No wallet connected';
+          }
+        }
+
+        // Update stats grid with real data
+        const nftCount = document.getElementById('dashboardNFTCount');
+        if (nftCount) {
+          nftCount.textContent = String(summary.nfts || 0);
+        }
+
+        const listingCount = document.getElementById('dashboardListingCount');
+        if (listingCount) {
+          listingCount.textContent = String(summary.activeListings || 0);
+        }
+
+        const walletCount = document.getElementById('dashboardWalletCount');
+        if (walletCount) {
+          walletCount.textContent = String(summary.wallets || 0);
+        }
+
+        const portfolioValue = document.getElementById('dashboardPortfolioValue');
+        if (portfolioValue) {
+          const value = summary.portfolioValue || summary.walletBalance || 0;
+          portfolioValue.textContent = '$' + value.toFixed(2);
+        }
+
+        // Update collections section with real NFTs
+        this.updateCollectionsUI();
+
+        // Update activity feed with real transactions
+        this.updateActivityFeed();
+      }
+
+      updateCollectionsUI() {
+        const nfts = this.state.userNFTs || [];
+        const collectionGrid = document.getElementById('collectionGrid');
+
+        if (!collectionGrid) return;
+
+        if (nfts.length === 0) {
+          collectionGrid.innerHTML = `
+            <div style="
+              text-align: center;
+              padding: 40px 20px;
+              background: var(--bg-card);
+              border: 1px dashed var(--border-color);
+              border-radius: 12px;
+              color: var(--text-muted);
+              grid-column: 1 / -1;
+            ">
+              <p style="margin: 0; font-size: 12px;">No NFTs yet</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Show all NFTs in a compact grid layout
+        collectionGrid.innerHTML = nfts
+          .slice(0, 20)
+          .map((nft) => `
+            <div style="
+              background: var(--bg-card);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              overflow: hidden;
+              transition: all 0.2s;
+              display: flex;
+              flex-direction: column;
+            " onmouseover="this.style.boxShadow='0 2px 8px rgba(91,75,219,0.2)'; this.style.transform='scale(1.05)'" onmouseout="this.style.boxShadow=''; this.style.transform='scale(1)'">
+              <div style="
+                background: linear-gradient(135deg, #5b4bdb, #d946a6);
+                height: 90px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                flex-shrink: 0;
+              ">
+                ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="font-size: 32px;">🖼️</div>'}
+              </div>
+              <div style="padding: 6px 8px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <p style="margin: 0; font-size: 10px; font-weight: 700; color: var(--text); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${nft.name || 'NFT'}</p>
+                <button onclick="if(window.appInitializer) window.appInitializer.viewNFTDetail('${nft.id || ''}')" style="
+                  width: 100%;
+                  margin-top: 4px;
+                  padding: 4px 6px;
+                  background: var(--primary);
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  font-size: 9px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">View</button>
+              </div>
+            </div>
+          `)
+          .join('');
+      }
+
+      updateActivityFeed() {
+        const activityContainer = document.getElementById('activityFeed');
+        if (!activityContainer) return;
+
+        if (!user || !user.id) {
+          activityContainer.innerHTML = `
+            <div style="
+              text-align: center;
+              padding: 40px 20px;
+              background: var(--bg-card);
+              border: 1px dashed var(--border-color);
+              border-radius: 12px;
+              color: var(--text-muted);
+            ">
+              <p style="margin: 0; font-size: 12px;">Loading activity...</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Fetch real transaction activity data
+        Promise.all([
+          API.call('GET', '/dashboard-data?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData)),
+          API.call('GET', '/referrals/me?init_data=' + encodeURIComponent(initData))
+        ])
+          .then(([dashRes, refRes]) => {
+            let html = '';
+
+            // Add referral earnings widget
+            if (refRes.ok && refRes.data) {
+              const ref = refRes.data;
+              html += `
+                <div style="
+                  background: linear-gradient(135deg, #5b4bdb 0%, #d946a6 100%);
+                  border-radius: 12px;
+                  padding: 16px;
+                  color: white;
+                  margin-bottom: 16px;
+                ">
+                  <div style="display: flex; gap: 16px;">
+                    <div style="flex: 1;">
+                      <p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referral Earnings</p>
+                      <p style="margin: 0; font-size: 18px; font-weight: 700;">⭐ ${(ref.lifetime_earnings || 0).toFixed(2)}</p>
+                    </div>
+                    <div style="flex: 1; text-align: right;">
+                      <p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referred Users</p>
+                      <p style="margin: 0; font-size: 18px; font-weight: 700;">${ref.total_referrals || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+
+            // Add recent transactions
+            if (dashRes.ok && dashRes.data && dashRes.data.transactions && dashRes.data.transactions.length > 0) {
+              const transactions = dashRes.data.transactions.slice(0, 5);
+              html += transactions
+                .map(tx => {
+                  const getIcon = (type) => {
+                    if (type && type.includes('mint')) return '✨';
+                    if (type && type.includes('transfer')) return '➡️';
+                    if (type && type.includes('sale')) return '💰';
+                    if (type && type.includes('purchase')) return '🛒';
+                    return '📋';
+                  };
+                  
+                  return `
+                    <div style="
+                      display: flex;
+                      gap: 12px;
+                      padding: 12px;
+                      background: var(--bg-card);
+                      border: 1px solid var(--border-color);
+                      border-radius: 8px;
+                      margin-bottom: 8px;
+                    ">
+                      <div style="
+                        font-size: 20px;
+                        flex-shrink: 0;
+                      ">${getIcon(tx.type)}</div>
+                      <div style="flex: 1; min-width: 0;">
+                        <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: var(--text);">${tx.title || 'Transaction'}</p>
+                        <p style="margin: 0; font-size: 11px; color: var(--text-muted);">${tx.time_ago || 'Recently'}</p>
+                      </div>
+                      <div style="text-align: right; flex-shrink: 0;">
+                        <p style="margin: 0; font-size: 12px; font-weight: 600; color: ${tx.amount && tx.amount.includes('-') ? '#ef4444' : '#10b981'};">${tx.amount || ''}</p>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('');
+            } else {
+              html += `
+                <div style="
+                  text-align: center;
+                  padding: 40px 20px;
+                  background: var(--bg-card);
+                  border: 1px dashed var(--border-color);
+                  border-radius: 12px;
+                  color: var(--text-muted);
+                ">
+                  <p style="margin: 0; font-size: 12px;">No activity yet</p>
+                </div>
+              `;
+            }
+
+            activityContainer.innerHTML = html;
+          })
+          .catch(err => {
+            console.error('[Activity] Error loading activity:', err);
+            activityContainer.innerHTML = `
+              <div style="
+                text-align: center;
+                padding: 40px 20px;
+                background: var(--bg-card);
+                border: 1px dashed var(--border-color);
+                border-radius: 12px;
+                color: var(--text-muted);
+              ">
+                <p style="margin: 0; font-size: 12px;">Failed to load activity</p>
+              </div>
+            `;
+          });
+      }
+
+      viewNFTDetail(nftId) {
+        const nft = (this.state.userNFTs || []).find(n => String(n.id) === String(nftId));
+        if (!nft) {
+          showStatus('NFT not found', 'error');
+          return;
+        }
+
+        const price = nft.price || 0;
+        const usdValue = (price * 1.25).toFixed(2);
+        const blockchain = (nft.blockchain || 'Unknown').toUpperCase();
+        const status = nft.status || 'For Sale';
+
+        // Helper functions for backend calls
+        const handleBuyNow = async () => {
+          const buyBtn = event.target;
+          buyBtn.disabled = true;
+          buyBtn.innerHTML = '⏳ Processing...';
+          
+          try {
+            const response = await API.call('POST', '/marketplace/purchase', {
+              nft_id: nft.id,
+              user_id: user.id,
+              amount: price,
+              blockchain: nft.blockchain,
+              init_data: initData
+            });
+
+            if (response.ok) {
+              showStatus('Purchase initiated! Check your wallet.', 'success');
+              setTimeout(() => {
+                document.querySelector('[style*="position: fixed"]')?.remove();
+                this.loadDashboardData();
+              }, 1500);
+            } else {
+              throw new Error(response.data?.detail || 'Purchase failed');
+            }
+          } catch (error) {
+            console.error('[NFTDetail] Purchase error:', error);
+            showStatus('Error: ' + error.message, 'error');
+            buyBtn.disabled = false;
+            buyBtn.innerHTML = '💳 Buy Now';
+          }
+        };
+
+        const handleMakeOffer = async () => {
+          const offerAmount = prompt('Enter your offer amount (in USDT):');
+          if (!offerAmount || parseFloat(offerAmount) <= 0) {
+            showStatus('Invalid offer amount', 'error');
+            return;
+          }
+
+          const offerBtn = event.target;
+          offerBtn.disabled = true;
+          offerBtn.innerHTML = '⏳ Submitting...';
+
+          try {
+            const response = await API.call('POST', '/marketplace/offer', {
+              nft_id: nft.id,
+              user_id: user.id,
+              offer_amount: parseFloat(offerAmount),
+              init_data: initData
+            });
+
+            if (response.ok) {
+              showStatus('Offer submitted successfully!', 'success');
+              setTimeout(() => {
+                this.loadDashboardData();
+              }, 1500);
+            } else {
+              throw new Error(response.data?.detail || 'Offer submission failed');
+            }
+          } catch (error) {
+            console.error('[NFTDetail] Offer error:', error);
+            showStatus('Error: ' + error.message, 'error');
+            offerBtn.disabled = false;
+            offerBtn.innerHTML = '✏️ Make Offer';
+          }
+        };
+
+        const detailHTML = `
+          <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-out;
+          " onclick="if(event.target === this) this.remove()">
+            <div style="
+              background: var(--bg);
+              border-radius: 16px;
+              max-width: 600px;
+              width: 100%;
+              max-height: 90vh;
+              overflow-y: auto;
+              animation: slideUp 0.3s ease-out;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            ">
+              <!-- Close Button -->
+              <button onclick="this.closest('[style*=position: fixed]').remove()" style="
+                position: fixed;
+                top: 32px;
+                right: 32px;
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                color: var(--text);
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                z-index: 10000;
+                transition: all 0.2s;
+              " onmouseover="this.style.background='#DAD8FF'; this.style.color='#6B6AFD'" onmouseout="this.style.background='var(--bg-card)'; this.style.color='var(--text)'">✕</button>
+
+              <!-- Image Section -->
+              <div style="
+                width: 100%;
+                height: 320px;
+                background: linear-gradient(135deg, #6B6AFD 0%, #8b70de 50%, #0E0636 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                position: relative;
+              ">
+                ${nft.image_url ? `<img src="${nft.image_url}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="font-size: 80px;">🖼️</div>'}
+              </div>
+
+              <!-- Content Section -->
+              <div style="padding: 28px;">
+                <!-- Title & Collection -->
+                <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #2C2C2C;">${nft.name || 'Untitled NFT'}</h1>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                  <span style="font-size: 13px; color: #6B6AFD; font-weight: 600;">From ${nft.collection || 'Collection'}</span>
+                  ${nft.verified ? '<span style="color: #6B6AFD; font-weight: 700;">✓ Verified</span>' : ''}
+                </div>
+
+                <!-- Status Badges -->
+                <div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;">
+                  <span style="
+                    background: #DAD8FF;
+                    color: #6B6AFD;
+                    padding: 6px 14px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 700;
+                  ">${status}</span>
+                  <span style="
+                    background: rgba(107, 106, 253, 0.1);
+                    color: #6B6AFD;
+                    padding: 6px 14px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 700;
+                  ">${blockchain}</span>
+                </div>
+
+                <!-- Price Card -->
+                <div style="
+                  background: linear-gradient(135deg, #F5F7FB 0%, #DAD8FF 100%);
+                  border: 1px solid rgba(107, 106, 253, 0.2);
+                  border-radius: 12px;
+                  padding: 20px;
+                  margin-bottom: 24px;
+                ">
+                  <p style="margin: 0 0 8px 0; font-size: 11px; color: #6B6AFD; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Current Price</p>
+                  <div style="display: flex; gap: 8px; align-items: baseline;">
+                    <span style="font-size: 36px; font-weight: 700; color: #0E0636;">${price.toFixed(2)}</span>
+                    <span style="color: #6B6AFD; font-size: 14px; font-weight: 600;">≈ $${usdValue} USD</span>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 12px;
+                  margin-bottom: 28px;
+                ">
+                  <button id="buyNowBtn" style="
+                    padding: 14px 20px;
+                    background: linear-gradient(135deg, #6B6AFD 0%, #8b70de 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    box-shadow: 0 4px 12px rgba(107, 106, 253, 0.3);
+                  " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(107, 106, 253, 0.4)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(107, 106, 253, 0.3)'">
+                    💳 Buy Now
+                  </button>
+                  <button id="makeOfferBtn" style="
+                    padding: 14px 20px;
+                    background: white;
+                    color: #6B6AFD;
+                    border: 2px solid #6B6AFD;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                  " onmouseover="this.style.background='#DAD8FF'" onmouseout="this.style.background='white'">
+                    ✏️ Make Offer
+                  </button>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div style="
+                  display: flex;
+                  gap: 28px;
+                  border-bottom: 1px solid #DAD8FF;
+                  margin-bottom: 24px;
+                  overflow-x: auto;
+                " id="nftDetailTabs">
+                  <button onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=details]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'" style="
+                    border: none;
+                    background: none;
+                    color: #6B6AFD;
+                    font-weight: 700;
+                    font-size: 13px;
+                    padding-bottom: 12px;
+                    cursor: pointer;
+                    border-bottom: 2px solid #6B6AFD;
+                    white-space: nowrap;
+                  ">Details</button>
+                  <button style="
+                    border: none;
+                    background: none;
+                    color: #6B6AFD;
+                    font-weight: 700;
+                    font-size: 13px;
+                    padding-bottom: 12px;
+                    cursor: pointer;
+                    border-bottom: 2px solid transparent;
+                    white-space: nowrap;
+                  " onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=offers]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'">Offers</button>
+                  <button style="
+                    border: none;
+                    background: none;
+                    color: #6B6AFD;
+                    font-weight: 700;
+                    font-size: 13px;
+                    padding-bottom: 12px;
+                    cursor: pointer;
+                    border-bottom: 2px solid transparent;
+                    white-space: nowrap;
+                  " onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=stats]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'">Stats</button>
+                  <button style="
+                    border: none;
+                    background: none;
+                    color: #6B6AFD;
+                    font-weight: 700;
+                    font-size: 13px;
+                    padding-bottom: 12px;
+                    cursor: pointer;
+                    border-bottom: 2px solid transparent;
+                    white-space: nowrap;
+                  " onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=history]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'">History</button>
+                </div>
+
+                <!-- Details Tab -->
+                <div data-nft-tab="details">
+                  <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0E0636;">Rarity & Attributes</h3>
+                  <div style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                  ">
+                    ${nft.attributes && nft.attributes.length > 0 ? nft.attributes.slice(0, 4).map(attr => `
+                      <div style="
+                        background: #F5F7FB;
+                        border: 1px solid #DAD8FF;
+                        border-radius: 10px;
+                        padding: 14px;
+                      ">
+                        <p style="margin: 0 0 6px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">${attr.trait_type || 'Attribute'}</p>
+                        <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #0E0636;">${attr.value || 'Unknown'}</p>
+                        <p style="margin: 0; font-size: 9px; color: #6B6AFD;">${attr.rarity && attr.rarity.percentage ? attr.rarity.percentage + ' rarity' : 'Unranked'}</p>
+                      </div>
+                    `).join('') : `
+                      <p style="color: #6B6AFD; font-size: 12px; grid-column: 1/-1;">No attributes available</p>
+                    `}
+                  </div>
+                  ${nft.description ? `
+                    <div style="
+                      background: #F5F7FB;
+                      border: 1px solid #DAD8FF;
+                      border-radius: 10px;
+                      padding: 14px;
+                    ">
+                      <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #0E0636;">Description</h4>
+                      <p style="margin: 0; font-size: 12px; color: #2C2C2C; line-height: 1.6;">${nft.description}</p>
+                    </div>
+                  ` : ''}
+                </div>
+
+                <!-- Offers Tab -->
+                <div data-nft-tab="offers" style="display: none;">
+                  <p style="color: #6B6AFD; font-size: 12px; text-align: center; padding: 20px; background: #F5F7FB; border-radius: 10px;">No offers yet. Be the first to make one!</p>
+                </div>
+
+                <!-- Stats Tab -->
+                <div data-nft-tab="stats" style="display: none;">
+                  <div style="
+                    background: #F5F7FB;
+                    border: 1px solid #DAD8FF;
+                    border-radius: 10px;
+                    padding: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                  ">
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Blockchain</p>
+                      <p style="margin: 0; font-size: 13px; color: #0E0636; font-weight: 600;">${blockchain}</p>
+                    </div>
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Token ID</p>
+                      <p style="margin: 0; font-size: 12px; color: #0E0636; font-family: monospace; word-break: break-all; font-weight: 600;">${nft.token_id || nft.id || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Contract Address</p>
+                      <p style="margin: 0; font-size: 11px; color: #0E0636; font-family: monospace; word-break: break-all; font-weight: 600;">${nft.contract_address ? nft.contract_address.substring(0, 20) + '...' : 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- History Tab -->
+                <div data-nft-tab="history" style="display: none;">
+                  <p style="color: #6B6AFD; font-size: 12px; text-align: center; padding: 20px; background: #F5F7FB; border-radius: 10px;">No transaction history</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', detailHTML);
+
+        // Attach event listeners after DOM insertion
+        setTimeout(() => {
+          const buyBtn = document.getElementById('buyNowBtn');
+          const offerBtn = document.getElementById('makeOfferBtn');
+          
+          if (buyBtn) {
+            buyBtn.addEventListener('click', handleBuyNow);
+          }
+          if (offerBtn) {
+            offerBtn.addEventListener('click', handleMakeOffer);
+          }
+        }, 0);
+      }
+
+      async loadWalletDetails() {
+        try {
+          if (!user || !user.id) return;
+
+          console.log('[Wallet] Loading wallet details...');
+          const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+
+          if (r.ok && r.data) {
+            WalletManager.setAll(r.data.wallets || []);
+            
+            // Render wallet list
+            const walletSection = document.querySelector('[data-section="wallets"]');
+            if (walletSection) {
+              const wallets = r.data.wallets || [];
+              if (wallets.length === 0) {
+                walletSection.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No wallets connected. Use the connect button above.</p>';
+              } else {
+                walletSection.innerHTML = wallets.map(w => `
+                  <div class="wallet-card" style="
+                    padding: 16px;
+                    background: var(--bg-card);
+                    border-radius: 12px;
+                    border: 1px solid var(--border-color);
+                    margin-bottom: 12px;
+                  ">
+                    <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
+                      <div style="flex: 1; min-width: 0;">
+                        <p style="margin: 0 0 4px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">
+                          ${w.blockchain ? w.blockchain.toUpperCase() : 'Unknown'}
+                        </p>
+                        <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: var(--text); font-family: monospace; word-break: break-all;">
+                          ${w.address.substring(0, 16)}...${w.address.substring(w.address.length - 8)}
+                        </p>
+                        ${w.is_primary ? '<p style="margin: 0; font-size: 11px; color: var(--primary); font-weight: 600;">✓ Primary Wallet</p>' : ''}
+                      </div>
+                      <button onclick="navigator.clipboard.writeText('${w.address}').then(() => showStatus('Address copied', 'success')).catch(() => showStatus('Copy failed', 'error'))" style="
+                        padding: 6px 12px;
+                        background: var(--primary);
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        white-space: nowrap;
+                      ">Copy</button>
+                    </div>
+                  </div>
+                `).join('');
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[Wallet] Error loading wallet details:', err);
+        }
+      }
+
+      // PAYMENT/DEPOSIT/WITHDRAWAL FUNCTIONS (from index-fixed.html)
+      async loadBalance() {
+        if (!user || !user.id) return;
+        try {
+          const r = await API.call('GET', '/payments/balance?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+          if (r.ok && r.data) {
+            const balanceEl = document.getElementById('usdtBalance');
+            if (balanceEl) {
+              const balance = r.data.balance || r.data.usdt_balance || 0;
+              balanceEl.textContent = '$' + parseFloat(balance).toFixed(2);
+            }
+            console.log('[Balance] Loaded:', r.data.balance);
+          }
+        } catch (err) {
+          console.error('[Balance] Error:', err);
+        }
+      }
+
+      async initiateDeposit() {
+        if (!user) {
+          showStatus('Not authenticated', 'error');
+          return;
+        }
+        
+        const wsel = document.getElementById('depositWalletSelect');
+        const bcEl = document.getElementById('depositBlockchain');
+        const amtEl = document.getElementById('depositAmount');
+        
+        const wallet_id = wsel ? wsel.value : null;
+        const bc = bcEl ? bcEl.value : null;
+        const amount = amtEl ? amtEl.value : null;
+        
+        if (!bc || !amount || parseFloat(amount) <= 0) {
+          showStatus('Select blockchain and enter amount', 'error');
+          return;
+        }
+
+        showStatus('Initiating deposit...', 'info');
+        try {
+          const r = await API.call('POST', '/payments/web-app/deposit', {
+            user_id: user.id,
+            wallet_id: wallet_id,
+            blockchain: bc,
+            amount: parseFloat(amount),
+            init_data: initData
+          });
+          
+          if (r.ok && r.data) {
+            window.currentDepositId = r.data.payment_id;
+            window.currentDepositAddress = r.data.deposit_address || r.data.platform_address || r.data.address;
+            
+            const instrDiv = document.getElementById('depositInstructions');
+            const noInstrDiv = document.getElementById('depositNoInstructions');
+            const addrDisplay = document.getElementById('depositAddressDisplay');
+            const idDisplay = document.getElementById('depositIdDisplay');
+            
+            if (instrDiv) instrDiv.style.display = 'block';
+            if (noInstrDiv) noInstrDiv.style.display = 'none';
+            if (addrDisplay) addrDisplay.textContent = window.currentDepositAddress;
+            if (idDisplay) idDisplay.textContent = window.currentDepositId;
+            
+            showStatus('Deposit address ready - copy and send USDT to this address', 'success');
+            this.loadDepositHistory();
+          } else {
+            throw new Error(r.data?.detail || r.data?.error || 'Error initiating deposit');
+          }
+        } catch (err) {
+          console.error('[Deposit] Error:', err);
+          showStatus('Error: ' + err.message, 'error');
+        }
+      }
+
+      copyDepositAddress() {
+        if (!window.currentDepositAddress) {
+          showStatus('No deposit address available', 'error');
+          return;
+        }
+        navigator.clipboard.writeText(window.currentDepositAddress).then(() => {
+          showStatus('Deposit address copied to clipboard', 'success');
+        }).catch(() => {
+          showStatus('Failed to copy address', 'error');
+        });
+      }
+
+      async loadDepositHistory() {
+        if (!user || !user.id) return;
+        try {
+          const r = await API.call('GET', '/payments/history?user_id=' + encodeURIComponent(user.id) + '&type=deposit&limit=5&init_data=' + encodeURIComponent(initData));
+          const historyEl = document.getElementById('depositHistory');
+          if (!historyEl) return;
+          
+          if (r.ok && r.data && r.data.payments && r.data.payments.length > 0) {
+            historyEl.innerHTML = r.data.payments.map(p => `
+              <div style="padding: 12px; background: var(--color-bg-secondary); border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--primary);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong style="font-size: 13px;">${p.amount || '0'} USDT</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">${p.status || 'Pending'}</span>
+                </div>
+                <p style="margin: 4px 0; font-size: 11px; color: var(--text-muted);">ID: ${(p.id || '').substring(0, 12)}...</p>
+              </div>
+            `).join('');
+          } else {
+            historyEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No deposit history yet</p>';
+          }
+        } catch (err) {
+          console.error('[DepositHistory] Error:', err);
+        }
+      }
+
+      async initiateWithdrawal() {
+        if (!user) {
+          showStatus('Not authenticated', 'error');
+          return;
+        }
+        
+        const wsel = document.getElementById('withdrawWalletSelect');
+        const bcEl = document.getElementById('withdrawBlockchain');
+        const addrEl = document.getElementById('withdrawAddress');
+        const amtEl = document.getElementById('withdrawAmount');
+        
+        const wallet_id = wsel ? wsel.value : null;
+        const bc = bcEl ? bcEl.value : null;
+        const addr = addrEl ? addrEl.value : null;
+        const amount = amtEl ? amtEl.value : null;
+        
+        if (!wallet_id || !bc || !addr || !amount || parseFloat(amount) <= 0 || addr.length < 26) {
+          showStatus('Fill all fields and check address length', 'error');
+          return;
+        }
+
+        showStatus('Initiating withdrawal...', 'info');
+        try {
+          const r = await API.call('POST', '/payments/web-app/withdrawal', {
+            user_id: user.id,
+            wallet_id: wallet_id,
+            blockchain: bc,
+            destination_address: addr,
+            amount: parseFloat(amount),
+            init_data: initData
+          });
+          
+          if (r.ok && r.data) {
+            window.currentWithdrawalPaymentId = r.data.payment_id;
+            const networkFee = r.data.network_fee || r.data.fee || 0;
+            const total = parseFloat(amount) - parseFloat(networkFee);
+            
+            const summaryDiv = document.getElementById('withdrawalSummary');
+            const noSummaryDiv = document.getElementById('withdrawalNoSummary');
+            
+            if (summaryDiv) summaryDiv.style.display = 'block';
+            if (noSummaryDiv) noSummaryDiv.style.display = 'none';
+            
+            const amountDisplay = document.getElementById('withdrawSummaryAmount');
+            const feeDisplay = document.getElementById('withdrawSummaryFee');
+            const totalDisplay = document.getElementById('withdrawSummaryTotal');
+            
+            if (amountDisplay) amountDisplay.textContent = '$' + parseFloat(amount).toFixed(2);
+            if (feeDisplay) feeDisplay.textContent = '$' + parseFloat(networkFee).toFixed(2);
+            if (totalDisplay) totalDisplay.textContent = '$' + total.toFixed(2);
+            
+            showStatus('Withdrawal summary ready - review and confirm', 'success');
+          } else {
+            throw new Error(r.data?.detail || r.data?.error || 'Error initiating withdrawal');
+          }
+        } catch (err) {
+          console.error('[Withdrawal] Error:', err);
+          showStatus('Error: ' + err.message, 'error');
+        }
+      }
+
+      async confirmWithdrawal() {
+        if (!window.currentWithdrawalPaymentId) {
+          showStatus('No pending withdrawal', 'error');
+          return;
+        }
+
+        showStatus('Confirming withdrawal...', 'info');
+        try {
+          const r = await API.call('POST', '/payments/withdrawal/approve', {
+            payment_id: window.currentWithdrawalPaymentId,
+            init_data: initData
+          });
+          
+          if (r.ok) {
+            showStatus('Withdrawal confirmed - funds will be sent shortly', 'success');
+            window.currentWithdrawalPaymentId = null;
+            
+            const summaryDiv = document.getElementById('withdrawalSummary');
+            const noSummaryDiv = document.getElementById('withdrawalNoSummary');
+            
+            if (summaryDiv) summaryDiv.style.display = 'none';
+            if (noSummaryDiv) noSummaryDiv.style.display = 'block';
+            
+            // Reset form
+            const bcEl = document.getElementById('withdrawBlockchain');
+            const addrEl = document.getElementById('withdrawAddress');
+            const amtEl = document.getElementById('withdrawAmount');
+            if (bcEl) bcEl.value = '';
+            if (addrEl) addrEl.value = '';
+            if (amtEl) amtEl.value = '';
+            
+            setTimeout(() => {
+              this.loadBalance();
+              this.loadWithdrawalHistory();
+            }, 1000);
+          } else {
+            throw new Error(r.data?.detail || r.data?.error || 'Error confirming withdrawal');
+          }
+        } catch (err) {
+          console.error('[WithdrawalConfirm] Error:', err);
+          showStatus('Error: ' + err.message, 'error');
+        }
+      }
+
+      async loadWithdrawalHistory() {
+        if (!user || !user.id) return;
+        try {
+          const r = await API.call('GET', '/payments/history?user_id=' + encodeURIComponent(user.id) + '&type=withdrawal&limit=5&init_data=' + encodeURIComponent(initData));
+          const historyEl = document.getElementById('withdrawalHistory');
+          if (!historyEl) return;
+          
+          if (r.ok && r.data && r.data.payments && r.data.payments.length > 0) {
+            historyEl.innerHTML = r.data.payments.map(p => `
+              <div style="padding: 12px; background: var(--color-bg-secondary); border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--warning);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <strong style="font-size: 13px;">- ${p.amount || '0'} USDT</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">${p.status || 'Pending'}</span>
+                </div>
+                <p style="margin: 4px 0; font-size: 10px; color: var(--text-muted); word-break: break-all;">To: ${(p.destination_address || p.address || '').substring(0, 20)}...</p>
+              </div>
+            `).join('');
+          } else {
+            historyEl.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No withdrawal history yet</p>';
+          }
+        } catch (err) {
+          console.error('[WithdrawalHistory] Error:', err);
+        }
+      }
+
+      async refreshPaymentWallets(type) {
+        try {
+          const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+          const ws = (r.ok && r.data) ? r.data.wallets || [] : [];
+          
+          if (type === 'deposit' && ws.length > 0) {
+            const sel = document.getElementById('depositWalletSelect');
+            if (sel) {
+              sel.innerHTML = '<option value="">Auto-detect or create new</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()} - ${w.address.slice(0, 10)}...</option>`).join('');
+            }
+          }
+          
+          if (type === 'withdraw' && ws.length > 0) {
+            const sel = document.getElementById('withdrawWalletSelect');
+            if (sel) {
+              sel.innerHTML = '<option value="">Select wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()} - ${w.address.slice(0, 10)}...</option>`).join('');
+            }
+          }
+        } catch (err) {
+          console.error('[PaymentWallets] Error:', err);
+        }
+      }
+
+      showPaymentSection(section) {
+        console.log('[Payments] Switching to section:', section);
+        const depositSection = document.getElementById('depositSection');
+        const withdrawSection = document.getElementById('withdrawSection');
+        
+        if (section === 'deposit') {
+          if (depositSection) depositSection.style.display = 'block';
+          if (withdrawSection) withdrawSection.style.display = 'none';
+          this.loadBalance();
+          this.refreshPaymentWallets('deposit');
+        } else if (section === 'withdraw') {
+          if (depositSection) depositSection.style.display = 'none';
+          if (withdrawSection) withdrawSection.style.display = 'block';
+          this.loadBalance();
+          this.refreshPaymentWallets('withdraw');
+        }
+      }
+
+      async loadProfileData() {
+        try {
+          if (!user || !user.id) return;
+
+          console.log('[Profile] Loading profile data...');
+          const [profileRes, referralRes] = await Promise.all([
+            API.call('GET', '/user?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData)),
+            API.call('GET', '/referrals/me?init_data=' + encodeURIComponent(initData))
+          ]);
+
+          const userData = profileRes.ok && profileRes.data ? profileRes.data.user : null;
+          const referralData = referralRes.ok && referralRes.data ? referralRes.data : null;
+          
+          // Update profile display
+          const profileSection = document.querySelector('[data-section="profile"]');
+          if (profileSection) {
+            profileSection.innerHTML = `
+              <div style="padding: 24px;">
+                <!-- PROFILE INFORMATION -->
+                <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 700;">👤 Account</h2>
+                
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Username</p>
+                      <p style="margin: 0; font-size: 16px; font-weight: 600;">${userData?.telegram_username || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">User ID</p>
+                      <p style="margin: 0; font-size: 16px; font-weight: 600; font-family: monospace; word-break: break-all;">#${userData?.id || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Account Status</p>
+                      <p style="margin: 0; font-size: 16px; font-weight: 600; color: ${userData?.is_verified ? 'var(--success)' : 'var(--warning)'};">
+                        ${userData?.is_verified ? '✓ Verified' : 'Pending Verification'}
+                      </p>
+                    </div>
+                    <div>
+                      <p style="margin: 0 0 4px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Role</p>
+                      <p style="margin: 0; font-size: 16px; font-weight: 600;">${userData?.user_role || 'User'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- REFERRAL PROGRAM SECTION -->
+                ${referralData ? `
+                <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 700;">🎁 Referral Program</h2>
+                
+                <!-- REFERRAL STATS -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                  <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Referrals</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: 700;">${referralData.total_referrals || 0}</p>
+                  </div>
+                  <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Earnings</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: 700; color: var(--primary);">⭐ ${(referralData.lifetime_earnings || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <!-- REFERRAL CODE SECTION -->
+                <div style="background: linear-gradient(135deg, var(--primary), #d946a6); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; opacity: 0.9; font-weight: 600;">Your Referral Code</p>
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <code style="
+                      background: rgba(255,255,255,0.2);
+                      padding: 8px 12px;
+                      border-radius: 8px;
+                      font-size: 18px;
+                      font-weight: 700;
+                      flex: 1;
+                      word-break: break-all;
+                      font-family: monospace;
+                    ">${referralData.code}</code>
+                    <button onclick="
+                      navigator.clipboard.writeText('${referralData.code}').then(() => {
+                        showStatus('Referral code copied!', 'success');
+                      }).catch(() => {
+                        showStatus('Failed to copy', 'error');
+                      });
+                    " style="
+                      background: rgba(255,255,255,0.3);
+                      color: white;
+                      border: none;
+                      padding: 8px 16px;
+                      border-radius: 8px;
+                      cursor: pointer;
+                      font-weight: 600;
+                      white-space: nowrap;
+                      transition: all 0.3s;
+                    " onmouseover="this.style.background='rgba(255,255,255,0.5)'" onmouseout="this.style.background='rgba(255,255,255,0.3)'">
+                      📋 Copy
+                    </button>
+                  </div>
+                  <p style="margin: 0; font-size: 12px; opacity: 0.9;">Share this code to earn 10% commission on referrals' purchases!</p>
+                </div>
+
+                <!-- REFERRED USERS -->
+                ${referralData.referred_users && referralData.referred_users.length > 0 ? `
+                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700;">People You've Referred</h3>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                  ${referralData.referred_users.map((u, idx) => `
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                      <div>
+                        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">${u.user_name}</p>
+                        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Referred ${new Date(u.referred_at).toLocaleDateString()}</p>
+                      </div>
+                      <div style="text-align: right;">
+                        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: var(--primary);">⭐ ${(u.earnings || 0).toFixed(2)}</p>
+                        <p style="margin: 0; font-size: 11px; color: var(--text-muted);">${u.purchase_count} purchases</p>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+                ` : `
+                <div style="background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 40px 20px; text-align: center;">
+                  <p style="margin: 0; color: var(--text-muted); font-size: 14px;">👥 No referrals yet. Share your code to get started!</p>
+                </div>
+                `}
+
+                <!-- PENDING COMMISSIONS -->
+                ${referralData.pending_commissions > 0 ? `
+                <div style="background: linear-gradient(135deg, #f59e0b, #f97316); border-radius: 12px; padding: 20px; margin-top: 24px; color: white;">
+                  <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; opacity: 0.9; font-weight: 600;">Pending Commissions</p>
+                  <p style="margin: 0; font-size: 24px; font-weight: 700;">⭐ ${(referralData.pending_commissions || 0).toFixed(2)}</p>
+                </div>
+                ` : ''}
+                ` : `
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; text-align: center;">
+                  <p style="margin: 0; color: var(--text-muted);">Loading referral data...</p>
+                </div>
+                `}
+              </div>
+            `;
+          }
+        } catch (err) {
+          console.error('[Profile] Error loading profile data:', err);
+          showStatus('Failed to load profile', 'error');
+        }
+      }
+
+      async loadMintInterface() {
+        try {
+          if (!user || !user.id) {
+            showStatus('Please authenticate first', 'warning');
+            return;
+          }
+
+          console.log('[Mint] Loading mint interface...');
+          
+          // Get user's wallets for the mint form
+          const r = await API.call('GET', '/wallets?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData));
+
+          if (r.ok && r.data) {
+            const wallets = r.data.wallets || [];
+            
+            // Render mint interface
+            const mintSection = document.querySelector('[data-section="mint"]');
+            if (mintSection) {
+              mintSection.innerHTML = `
+                <div style="padding: 24px; max-width: 600px;">
+                  <h2 style="margin: 0 0 24px 0; font-size: 28px; font-weight: 700;">✨ Mint NFT</h2>
+                  
+                  ${!WalletManager.isConnected() ? `
+                    <div style="
+                      background: var(--color-bg-secondary);
+                      border: 1px solid var(--border-color);
+                      border-radius: 12px;
+                      padding: 24px;
+                      text-align: center;
+                      margin-bottom: 24px;
+                    ">
+                      <p style="margin: 0 0 16px 0; color: var(--text-muted);">⚠️ Wallet connection required to mint NFTs</p>
+                      <button onclick="window.showWalletConnectModal()" style="
+                        padding: 12px 24px;
+                        background: linear-gradient(135deg, var(--primary), #d946a6);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      ">Connect Wallet</button>
+                    </div>
+                  ` : `
+                    <div style="
+                      background: var(--bg-card);
+                      border: 1px solid var(--border-color);
+                      border-radius: 12px;
+                      padding: 24px;
+                    ">
+                      <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">NFT Name</label>
+                        <input type="text" id="mintName" placeholder="Enter NFT name" style="
+                          width: 100%;
+                          padding: 12px;
+                          background: var(--color-bg-secondary);
+                          border: 1px solid var(--border-color);
+                          border-radius: 8px;
+                          color: var(--text);
+                          font-size: 14px;
+                          box-sizing: border-box;
+                        " />
+                      </div>
+
+                      <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Description</label>
+                        <textarea id="mintDesc" placeholder="Describe your NFT" style="
+                          width: 100%;
+                          padding: 12px;
+                          background: var(--color-bg-secondary);
+                          border: 1px solid var(--border-color);
+                          border-radius: 8px;
+                          color: var(--text);
+                          font-size: 14px;
+                          min-height: 100px;
+                          font-family: inherit;
+                          box-sizing: border-box;
+                        "></textarea>
+                      </div>
+
+                      <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Image URL</label>
+                        <input type="url" id="mintImage" placeholder="https://example.com/image.jpg" style="
+                          width: 100%;
+                          padding: 12px;
+                          background: var(--color-bg-secondary);
+                          border: 1px solid var(--border-color);
+                          border-radius: 8px;
+                          color: var(--text);
+                          font-size: 14px;
+                          box-sizing: border-box;
+                        " />
+                      </div>
+
+                      <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Wallet</label>
+                        <select id="mintWallet" style="
+                          width: 100%;
+                          padding: 12px;
+                          background: var(--color-bg-secondary);
+                          border: 1px solid var(--border-color);
+                          border-radius: 8px;
+                          color: var(--text);
+                          font-size: 14px;
+                          box-sizing: border-box;
+                        ">
+                          <option value="">Select wallet...</option>
+                          ${wallets.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase() || 'Unknown'} - ${w.address.substring(0, 12)}...</option>`).join('')}
+                        </select>
+                      </div>
+
+                      <button onclick="if(window.appInitializer) window.appInitializer.submitMintNFT()" style="
+                        width: 100%;
+                        padding: 14px 24px;
+                        background: linear-gradient(135deg, var(--primary), #d946a6);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        font-size: 15px;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                      " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(91,75,219,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
+                        ✨ Mint NFT
+                      </button>
+                    </div>
+                  `}
+                </div>
+              `;
+            }
+            
+            console.log('[Mint] Interface loaded with', wallets.length, 'wallets');
+          }
+        } catch (err) {
+          console.error('[Mint] Error loading mint interface:', err);
+          showStatus('Failed to load mint interface', 'error');
+        }
+      }
+
+      async submitMintNFT() {
+        try {
+          if (!user || !user.id) {
+            showStatus('Not authenticated', 'error');
+            return;
+          }
+
+          const walletId = document.getElementById('mintWallet')?.value;
+          const name = document.getElementById('mintName')?.value;
+          const desc = document.getElementById('mintDesc')?.value;
+          const image = document.getElementById('mintImage')?.value;
+
+          if (!walletId || !name) {
+            showStatus('Please fill in wallet and name fields', 'error');
+            return;
+          }
+
+          showStatus('Minting NFT...', 'info');
+          const r = await API.call('POST', '/mint', {
+            user_id: user.id,
+            wallet_id: walletId,
+            nft_name: name,
+            nft_description: desc || '',
+            image_url: image || '',
+            init_data: initData
+          });
+
+          if (r.ok) {
+            showStatus('NFT minted successfully! 🎉', 'success');
+            // Clear form
+            document.getElementById('mintName').value = '';
+            document.getElementById('mintDesc').value = '';
+            document.getElementById('mintImage').value = '';
+            
+            // Reload and show home
+            setTimeout(() => {
+              this.switchPage('home');
+            }, 1500);
+          } else {
+            throw new Error(r.data?.detail || 'Minting failed');
+          }
+        } catch (err) {
+          console.error('[Mint] Submit error:', err);
+          showStatus('Minting error: ' + err.message, 'error');
+        }
+      }
+
+      initializeTelegram() {
+        if (typeof Telegram === 'undefined' || !Telegram.WebApp) return;
+
+        const tg = Telegram.WebApp;
+        tg.ready();
+
+        // Set theme
+        tg.setHeaderColor('#0f1622');
+        tg.setBackgroundColor('#0f1622');
+
+        // Get user data
+        const tgUser = tg.initDataUnsafe?.user;
+        if (tgUser) {
+          console.log('📱 Telegram user:', tgUser.first_name);
+        }
+      }
+
+      // WORKING PAGE SWITCHING FUNCTION - Core Navigation Logic
+      switchPage(view) {
+        console.log('[Navigation] Switching to view:', view);
+        
+        const WALLET_REQUIRED_VIEWS = ['wallet', 'mint', 'market', 'profile'];
+        
+        // Check wallet requirement for restricted views
+        if (WALLET_REQUIRED_VIEWS.includes(view) && !WalletManager.isConnected()) {
+          showStatus('Wallet connection required to access this feature', 'warning');
+          showWalletConnectModal();
+          return;
+        }
+        
+        // Update nav items active state
+        document.querySelectorAll('.nav-item').forEach(item => {
+          const itemView = item.dataset.view || item.getAttribute('data-view');
+          if (itemView === view) {
+            item.classList.add('active');
+          } else {
+            item.classList.remove('active');
+          }
+        });
+        
+        // Update app state
+        if (this.state && typeof this.state.setActiveView === 'function') {
+          this.state.setActiveView(view);
+        }
+        
+        // Load view-specific data
+        const contentDiv = document.getElementById('content');
+        if (contentDiv) {
+          // Fade out
+          contentDiv.style.opacity = '0';
+          contentDiv.style.transform = 'translateY(10px)';
+          
+          // Load new content after fade
+          setTimeout(async () => {
+            try {
+              if (view === 'home') {
+                await this.loadDashboardData();
+              } else if (view === 'wallet') {
+                await this.loadWalletDetails();
+              } else if (view === 'mint') {
+                await this.loadMintInterface();
+              } else if (view === 'market') {
+                await this.loadMarketplaceListings();
+              } else if (view === 'profile') {
+                await this.loadProfileData();
+              }
+              
+              // Fade in
+              contentDiv.style.opacity = '1';
+              contentDiv.style.transform = 'translateY(0)';
+            } catch (err) {
+              console.error('[Navigation] Error loading view:', err);
+              showStatus('Failed to load view', 'error');
+            }
+          }, 150);
+        } else {
+          // Fallback - just load data
+          if (view === 'home') {
+            this.loadDashboardData();
+          } else if (view === 'wallet') {
+            this.loadWalletDetails();
+          } else if (view === 'mint') {
+            this.loadMintInterface();
+          } else if (view === 'market') {
+            this.loadMarketplaceListings();
+          } else if (view === 'profile') {
+            this.loadProfileData();
+          }
+        }
+      }
+
+      setupEventListeners() {
+        // Navigation items - connect onclick to switchPage function
+        document.querySelectorAll('.nav-item').forEach((item) => {
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = item.dataset.view || item.getAttribute('data-view');
+            if (view) {
+              this.switchPage(view);
+            }
+          });
+        });
+
+        // Create Wallet Button - Connect Wallet instead
+        const createWalletBtn = document.getElementById('createWalletBtn');
+        if (createWalletBtn) {
+          createWalletBtn.addEventListener('click', () => {
+            if (!WalletManager.isConnected()) {
+              showWalletConnectModal();
+            } else {
+              showStatus('Wallet already connected: ' + WalletManager.getConnected().address.substring(0, 10) + '...', 'info');
+            }
+          });
+        }
+
+        // Mint NFT Button - open modal with wallet check
+        const mintNftBtn = document.getElementById('mintNftBtn');
+        if (mintNftBtn) {
+          mintNftBtn.addEventListener('click', () => {
+            if (!requireWalletConnection()) return;
+            window.modalManager.show('mint-nft');
+          });
+        }
+
+        // Browse Market Button
+        const browseMarketBtn = document.getElementById('browseMarketBtn');
+        if (browseMarketBtn) {
+          browseMarketBtn.addEventListener('click', async () => {
+            if (!WalletManager.isConnected()) {
+              showWalletConnectModal();
+              return;
+            }
+            
+            // First navigate to market view
+            const navItem = document.querySelector('.nav-item[data-view="market"]');
+            if (navItem) {
+              document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+              navItem.classList.add('active');
+            }
+            this.state.setActiveView('market');
+            await this.loadMarketplaceListings();
+          });
+        }
+
+        // Notification Bell Click
+        const notificationBell = document.getElementById('notificationBell');
+        if (notificationBell) {
+          notificationBell.addEventListener('click', () => {
+            window.modalManager.show('notifications');
+          });
+        }
+
+        // User Avatar Click - open profile modal
+        const userAvatar = document.getElementById('userAvatar');
+        if (userAvatar) {
+          userAvatar.addEventListener('click', () => {
+            window.modalManager.show('user-profile');
+          });
+        }
+      }
+
+      async loadMarketplaceListings() {
+        try {
+          console.log('[Marketplace] Loading listings...');
+          const r = await API.call('GET', '/marketplace/listings?limit=50&init_data=' + encodeURIComponent(initData));
+          
+          if (r.ok && r.data) {
+            const listings = r.data.listings || [];
+            if (this.state) {
+              this.state.setActiveListings(listings);
+            }
+            this.renderMarketplace();
+            console.log('[Marketplace] Loaded', listings.length, 'listings');
+          } else {
+            throw new Error(r.data?.detail || 'Failed to load listings');
+          }
+        } catch (error) {
+          console.error('[Marketplace] Error:', error);
+          showStatus('Failed to load marketplace', 'error');
+        }
+      }
+
+      renderMarketplace() {
+        const listings = this.state.activeListings || [];
+        const marketContainer = document.querySelector('[data-section="marketplace"]');
+
+        if (!marketContainer) return;
+
+        if (listings.length === 0) {
+          marketContainer.innerHTML = `
+            <div style="
+              grid-column: 1 / -1;
+              background: linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg-tertiary));
+              border-radius: 16px;
+              padding: 60px 24px;
+              text-align: center;
+              border: 1px dashed var(--border-color);
+            ">
+              <div style="font-size: 48px; margin-bottom: 16px;">🛒</div>
+              <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700;">No Listings Available</h3>
+              <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Check back soon for new amazing NFTs</p>
+            </div>
+          `;
+          return;
+        }
+
+        marketContainer.innerHTML = listings
+          .slice(0, 12)
+          .map((listing, idx) => {
+            const priceStars = listing.price_stars || Math.floor((listing.price || 0) * 10);
+            const imageUrl = listing.nft?.image_url || listing.image_url || 'https://via.placeholder.com/400x400?text=NFT&bg=7c5cff&c=fff';
+            
+            return `
+              <div class="listing-card" style="
+                background: var(--bg-card);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                transition: all 0.3s ease;
+                cursor: pointer;
+                animation: slideUp 0.4s ease-out;
+                animation-delay: ${idx * 0.05}s;
+              " onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.15)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'; this.style.transform='none'">
+                <div class="listing-image" style="
+                  background: linear-gradient(135deg, #5b4bdb, #d946a6);
+                  height: 200px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  overflow: hidden;
+                ">
+                  <img src="${imageUrl}" alt="${listing.nft?.name || 'NFT'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='🖼️'">
+                </div>
+                <div class="listing-content" style="padding: 16px;">
+                  <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${listing.nft?.name || 'Untitled NFT'}
+                  </h3>
+                  <p class="listing-price" style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--primary);">
+                    ⭐ ${priceStars} Stars
+                  </p>
+                  <button class="btn-primary btn-small" data-listing-id="${listing.id}" data-listing-price="${priceStars}" style="
+                    width: 100%;
+                    padding: 10px 12px;
+                    background: linear-gradient(135deg, var(--primary), #d946a6);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                  " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(91,75,219,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
+                    🌟 Buy with Stars
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        // Attach buy handlers with Telegram Stars payment
+        marketContainer.querySelectorAll('.btn-primary[data-listing-id]').forEach((btn) => {
+          btn.addEventListener('click', async (e) => {
+            const listingId = btn.dataset.listingId;
+            const priceStars = parseInt(btn.dataset.listingPrice || 0);
+            
+            if (!WalletManager.isConnected()) {
+              showStatus('Wallet connection required to purchase', 'warning');
+              showWalletConnectModal();
+              return;
+            }
+            
+            await this.buyListingWithStars(listingId, priceStars);
+          });
+        });
+      }
+
+      async buyListingWithStars(listingId, priceStars) {
+        try {
+          if (!user || !user.id) {
+            showStatus('User not authenticated', 'error');
+            return;
+          }
+
+          console.log('[Marketplace] Initiating Stars payment for listing:', listingId, 'Price:', priceStars);
+          
+          showStatus('Creating payment invoice...', 'info');
+          
+          // Create invoice for this listing
+          const invoice = await TelegramStars.createInvoice([listingId], priceStars);
+          
+          if (!invoice || !invoice.invoice_link) {
+            throw new Error('Failed to create payment invoice');
+          }
+
+          console.log('[Marketplace] Invoice created, opening payment...');
+          showStatus('Opening Telegram Stars payment...', 'info');
+          
+          // Open payment with Telegram WebApp
+          await TelegramStars.processPayment(invoice.invoice_link);
+          
+          // After payment, user will be redirected back
+          setTimeout(async () => {
+            showStatus('Processing your purchase...', 'info');
+            await this.loadMarketplaceListings();
+          }, 2000);
+          
+        } catch (error) {
+          console.error('[Marketplace] Purchase error:', error);
+          showStatus('Purchase failed: ' + error.message, 'error');
+        }
+      }
+
+      showAuthPrompt() {
+        const app = document.getElementById('app');
+        if (app) {
+          app.classList.add('auth-prompt');
+          app.innerHTML = `
+            <div style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              background: linear-gradient(135deg, 
+                var(--color-bg-primary) 0%,
+                var(--color-bg-secondary) 100%);
+              padding: 20px;
+              text-align: center;
+              font-family: var(--font-family-base);
+            ">
+              <!-- Animated Logo Container -->
+              <div style="
+                margin-bottom: 40px;
+                animation: logoFloat 3s ease-in-out infinite;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">
+                <div style="
+                  position: relative;
+                  width: 120px;
+                  height: 120px;
+                  border-radius: 24px;
+                  overflow: hidden;
+                  box-shadow: 0 20px 60px rgba(91, 75, 219, 0.25);
+                  background: linear-gradient(135deg, rgba(91,75,219,0.1), rgba(217,70,166,0.1));
+                  border: 1px solid rgba(91,75,219,0.2);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                ">
+                  <img 
+                    src="https://image2url.com/r2/default/images/1772038574061-2f19bf29-4d1f-4476-bcd4-87ef52e809e2.jpg"
+                    alt="GiftedForge Logo"
+                    style="
+                      width: 100%;
+                      height: 100%;
+                      object-fit: cover;
+                      border-radius: 24px;
+                    "
+                  />
+                </div>
+              </div>
+
+              <!-- Title -->
+              <h1 style="
+                font-size: 32px;
+                font-weight: 700;
+                color: var(--text);
+                margin: 0 0 16px 0;
+                letter-spacing: -0.5px;
+              ">
+                GiftedForge
+              </h1>
+
+              <!-- Subtitle -->
+              <p style="
+                font-size: 16px;
+                color: var(--text-secondary);
+                margin: 0 0 40px 0;
+                max-width: 280px;
+                line-height: 1.5;
+              ">
+                Connect your Telegram account to access the NFT marketplace
+              </p>
+
+              <!-- Loading Spinner -->
+              <div style="
+                width: 48px;
+                height: 48px;
+                border: 4px solid var(--color-bg-tertiary);
+                border-top-color: var(--primary);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-bottom: 24px;
+              "></div>
+
+              <!-- Status Text -->
+              <p style="
+                font-size: 14px;
+                color: var(--text-muted);
+                margin: 0;
+              ">
+                Authenticating...
+              </p>
+
+              <!-- Help Text -->
+              <p style="
+                font-size: 12px;
+                color: var(--text-muted);
+                margin-top: 40px;
+                opacity: 0.7;
+              ">
+                If not redirected, please refresh the page
+              </p>
+            </div>
+
+            <style>
+              @keyframes logoFloat {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-12px); }
+              }
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+              #app.auth-prompt main,
+              #app.auth-prompt nav {
+                display: none;
+              }
+            </style>
+          `;
+        }
+      }
+
+      subscribeToStateChanges() {
+        // Subscribe to user changes
+        appState.subscribe('user', (user) => {
+          if (!user) {
+            this.showAuthPrompt();
+          }
+        });
+
+        // Subscribe to view changes
+        appState.subscribe('view', (view) => {
+          location.hash = `#${view}`;
+        });
+
+        // Subscribe to notifications
+        appState.subscribe('notifications', (notifications) => {
+          const badge = document.querySelector('[data-notification-badge]');
+          if (badge) {
+            badge.textContent = this.state.unreadCount;
+            badge.style.display = this.state.unreadCount > 0 ? 'flex' : 'none';
+          }
+        });
+      }
+    }
+
+    // ============================================================
+    // EXPOSE GLOBAL FUNCTIONS FOR WINDOW & ONCLICK HANDLERS
+    // ============================================================
+    window.showWalletConnectModal = showWalletConnectModal;
+    window.initiateWalletConnection = initiateWalletConnection;
+    window.requireWalletConnection = requireWalletConnection;
+    window.initiateTelegramStarsPayment = initiateTelegramStarsPayment;
+    window.TelegramStars = TelegramStars;
+    window.WalletManager = WalletManager;
+    window.showStatus = showStatus;
+
+    // Initialize the app
+    const appInit = new AppInitializer();
+    window.appInitializer = appInit;
+    
+    // Make switchPage available globally for onclick handlers
+    window.switchPage = (view) => appInit.switchPage(view);
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => appInit.initialize());
+    } else {
+      appInit.initialize();
+    }
+  </script>
+</body>
+</html>

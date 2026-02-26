@@ -152,3 +152,5 @@ class UserOrdersResponse(BaseModel):
     page: int
     per_page: int
     items: list[OrderResponse]
+
+    

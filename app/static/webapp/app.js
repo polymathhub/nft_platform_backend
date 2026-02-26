@@ -1,1815 +1,1389 @@
 /**
- * NFT Platform - Complete Web App v2
- * Production-ready Telegram WebApp with full backend integration
- * All features: Wallets, NFTs, Marketplace, Minting, Transfers
+ * GiftedForge - Telegram Mini App (Production Edition)
+ * State-driven, cache-aware NFT marketplace
+ * No external dependencies, Telegram-native first
  */
 
 (() => {
   'use strict';
 
-  // ========== DOM ELEMENTS ==========
+  // ========== DOM REFERENCES ==========
   const dom = {
     app: document.getElementById('app'),
-    sidebar: document.getElementById('sidebar'),
     mainContent: document.getElementById('mainContent'),
     pages: {},
-    status: document.getElementById('status'),
-    statusText: document.getElementById('statusText'),
-    statusSpinner: document.getElementById('statusSpinner'),
-    userInfo: document.getElementById('userInfo'),
-    modal: document.getElementById('modal'),
-    modalTitle: document.getElementById('modalTitle'),
-    modalBody: document.getElementById('modalBody'),
+    navTabs: Array.from(document.querySelectorAll('.nav-tab')),
     modalOverlay: document.getElementById('modalOverlay'),
+    toastContainer: null,
   };
 
-  // Get all page elements
-  document.querySelectorAll('[data-page]').forEach(el => {
+  document.querySelectorAll('.page').forEach((el) => {
     dom.pages[el.dataset.page] = el;
   });
 
-  // ========== CONFIGURATION ==========
-  const CONFIG = {
-    API_BASE: '',
-    RETRY_ATTEMPTS: 3,
-    RETRY_DELAY: 500,
-    TIMEOUT: 20000,
+  // ========== ENHANCED STATE SYSTEM ==========
+  const app = {
+    // UI State
+    ui: {
+      currentPage: 'market',
+      modals: {
+        item: null,        // { item, type }
+        referral: null,
+        profile: null,
+        settings: null,
+      },
+      filters: {
+        market: 'all',
+        sort: 'recent',
+        search: '',
+      },
+      loading: new Set(),         // granular loading
+      errors: new Map(),
+      navCollapsed: false,
+    },
+
+    // User State
+    user: null,
+    auth: {
+      initData: null,
+      isAuthenticated: false,
+      sessionId: null,
+      lastAuthCheck: 0,
+    },
+
+    // Data State (with cache metadata)
+    data: {
+      listings: {
+        items: [],
+        total: 0,
+        page: 0,
+        lastFetch: 0,
+        ttl: 60000,        // 1 min
+      },
+      myItems: {
+        items: [],
+        total: 0,
+        lastFetch: 0,
+        ttl: 120000,       // 2 min
+      },
+      referrals: {
+        code: null,
+        earnings: 0,
+        referredCount: 0,
+        pendingRewards: 0,
+        history: [],
+        network: [],
+        lastFetch: 0,
+        ttl: 300000,       // 5 min
+      },
+      transactions: {
+        items: [],
+        total: 0,
+        lastFetch: 0,
+        ttl: 300000,
+      },
+      profile: null,
+      profileStats: null,
+    },
+
+    // Cart State
+    cart: {
+      items: [],
+      total: 0,
+      currency: 'STARS',
+      status: 'open',
+    },
+
+    // Creator State
+    creator: {
+      isCreator: false,
+      drafts: [],
+      published: [],
+      earnings: 0,
+      totalSold: 0,
+    },
   };
 
-  // ========== STATE ==========
-  const state = {
-    user: null,
-    wallets: [],
-    nfts: [],
-    listings: [],
-    currentPage: 'dashboard',
-    initData: null,
+  // ========== CONFIG ==========
+  const CONFIG = {
+    API_BASE: '/api/v1',
+    TIMEOUT: 15000,
+    RETRY_ATTEMPTS: 2,
+    STAR_TO_USDT: 0.004,
+    CACHE_DURATION: 60000,
   };
 
   // ========== UTILITIES ==========
   function log(msg, type = 'log') {
-    const prefix = { log: '[INFO]', error: '[ERROR]', warn: '[WARN]' };
-    console.log(`${prefix[type] || '[' + type.toUpperCase() + ']'} ${msg}`);
+    console.log(`[${type.toUpperCase()}] ${msg}`);
   }
 
-  function showStatus(msg, type = 'info') {
-    log(msg, type === 'error' ? 'error' : 'log');
-    if (!dom.statusText) return;
-    
-    dom.statusText.textContent = msg;
-    dom.status.className = `status-alert ${type}`;
-    dom.status.style.display = 'block';
-    
-    if (dom.statusSpinner) {
-      dom.statusSpinner.style.display = ['info', 'loading'].includes(type) ? 'block' : 'none';
+  function showToast(msg, type = 'info', duration = 3000) {
+    if (!dom.toastContainer) {
+      dom.toastContainer = document.createElement('div');
+      dom.toastContainer.id = 'toastContainer';
+      dom.toastContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3000;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      `;
+      document.body.appendChild(dom.toastContainer);
     }
 
-    if (type === 'success' || type === 'error') {
-      setTimeout(() => {
-        if (dom.status) dom.status.style.display = 'none';
-      }, 4000);
-    }
-  }
-
-  function showModal(title, html, buttons = []) {
-    if (!dom.modal) return;
-    if (dom.modalTitle) dom.modalTitle.textContent = title;
-    if (dom.modalBody) dom.modalBody.innerHTML = html;
-    
-    // Add buttons if provided
-    let buttonsHtml = '';
-    if (buttons.length) {
-      buttonsHtml = `<div style="display:flex;gap:10px;margin-top:20px;">` +
-        buttons.map(btn => `<button onclick="${btn.action}" class="btn ${btn.class || 'btn-primary'}" style="flex:1;">${btn.label}</button>`).join('') +
-        `</div>`;
-      if (dom.modalBody) dom.modalBody.innerHTML += buttonsHtml;
-    }
-    
-    dom.modal.style.display = 'flex';
-  }
-
-  function closeModal() {
-    if (dom.modal) dom.modal.style.display = 'none';
-  }
-
-  // ========== IMAGE PROTECTION ==========
-  /**
-   * Protect images from being copied, downloaded, or saved
-   * Disables: right-click, drag-and-drop, keyboard shortcuts (Ctrl+S, Ctrl+C)
-   */
-  function protectImage(element) {
-    if (!element) return;
-
-    // Disable right-click context menu
-    element.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    });
-
-    // Disable drag and drop
-    element.addEventListener('dragstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    });
-
-    // Disable selection
-    element.addEventListener('selectstart', (e) => {
-      e.preventDefault();
-      return false;
-    });
-
-    // Disable pointer events to prevent saving
-    if (element.tagName === 'IMG') {
-      element.style.pointerEvents = 'none';
-      element.style.userSelect = 'none';
-      element.style.WebkitUserSelect = 'none';
-    }
-  }
-
-  /**
-   * Protect all NFT images on the current page
-   */
-  function protectAllImages() {
-    // Protect all img elements with NFT images
-    document.querySelectorAll('img[alt*="NFT"], img[alt*="nft"], img[src*="image"]').forEach(img => {
-      protectImage(img);
-    });
-
-    // Protect background images (div elements with background-image style)
-    document.querySelectorAll('[style*="background-image"]').forEach(div => {
-      protectImage(div);
-      // Additional protection for background images
-      div.style.userSelect = 'none';
-      div.style.WebkitUserSelect = 'none';
-    });
-  }
-
-  /**
-   * Add global keyboard shortcut protection
-   */
-  function protectKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
-      // Block Ctrl+S (Save), Ctrl+C (Copy), Ctrl+A (Select All) on images
-      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'c')) {
-        // Only block if the event target or any parent is an image-related element
-        let target = e.target;
-        let isImageElement = false;
-        
-        while (target && target !== document) {
-          if (target.tagName === 'IMG' || 
-              target.style?.backgroundImage || 
-              target.className?.includes('nft') ||
-              target.className?.includes('image')) {
-            isImageElement = true;
-            break;
-          }
-          target = target.parentElement;
-        }
-
-        if (isImageElement) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-      }
-    }, true);
-
-    // Block Print Screen / Prt Sc
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'PrintScreen') {
-        e.preventDefault();
-        return false;
-      }
-    });
-  }
-
-  /**
-   * Apply additional CSS protections
-   */
-  function applyImageProtectionStyles() {
-    // Check if style tag already exists
-    if (document.getElementById('nft-image-protection-styles')) {
-      return;
-    }
-
-    const style = document.createElement('style');
-    style.id = 'nft-image-protection-styles';
-    style.textContent = `
-      /* NFT Image Protection */
-      img[alt*="NFT"],
-      img[alt*="nft"],
-      img[src*="image"],
-      [style*="background-image"] {
-        user-select: none !important;
-        -webkit-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-        pointer-events: none !important;
-        -webkit-touch-callout: none !important;
-        -webkit-user-drag: none !important;
-      }
-
-      /* Prevent drag on NFT images */
-      img {
-        -webkit-user-drag: none;
-        -khtml-user-drag: none;
-        -moz-user-drag: none;
-        -o-user-drag: none;
-        user-drag: none;
-      }
-
-      /* Disable text selection in NFT containers */
-      .card img,
-      [class*="nft"] img {
-        -webkit-user-select: none;
-        user-select: none;
-      }
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${type}`;
+    toast.textContent = msg;
+    toast.style.cssText = `
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      animation: slideDown 0.3s ease;
+      pointer-events: auto;
+      cursor: pointer;
+      ${type === 'success' ? 'background: rgba(52, 211, 153, 0.1); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3);' : ''}
+      ${type === 'error' ? 'background: rgba(255, 59, 48, 0.1); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3);' : ''}
+      ${type === 'info' ? 'background: rgba(0, 136, 204, 0.1); color: #0088cc; border: 1px solid rgba(0, 136, 204, 0.3);' : ''}
     `;
-    document.head.appendChild(style);
-  }
 
-  function switchPage(pageName) {
-    // Hide all pages
-    Object.values(dom.pages).forEach(page => {
-      if (page) page.style.display = 'none';
+    dom.toastContainer.appendChild(toast);
+    window.haptic?.light();
+
+    const timeout = setTimeout(() => {
+      toast.style.animation = 'slideUp 0.3s ease';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+
+    toast.addEventListener('click', () => {
+      clearTimeout(timeout);
+      toast.remove();
     });
-    
-    // Show selected page
-    if (dom.pages[pageName]) {
-      dom.pages[pageName].style.display = 'block';
-      state.currentPage = pageName;
-      
-      // Update nav
-      document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.dataset.page === pageName) item.classList.add('active');
-      });
-      
-      // Update page title
-      const titles = {
-        dashboard: 'Dashboard',
-        wallets: 'My Wallets',
-        nfts: 'My NFTs',
-        mint: 'Create NFT',
-        marketplace: 'Marketplace',
-        profile: 'Profile',
-        help: 'Help & Support',
-      };
-      document.getElementById('pageTitle').textContent = titles[pageName] || 'NFT Platform';
-      
-      // Load page data
-      loadPageData(pageName);
-      
-      // Apply image protection
-      protectAllImages();
-    }
   }
 
-  async function loadPageData(pageName) {
-    try {
-      switch(pageName) {
-        case 'dashboard': await updateDashboard(); break;
-        case 'wallets': await updateWalletsList(); break;
-        case 'nfts': await updateNftList(); break;
-        case 'marketplace': await updateMarketplaceList(); break;
-        case 'profile': await updateProfilePage(); break;
-      }
-      // Protect images after loading page data
-      setTimeout(protectAllImages, 100);
-    } catch (err) {
-      log(`Error loading ${pageName}: ${err.message}`, 'error');
+  // ========== CACHE HELPERS ==========
+  const apiCache = new Map();
+
+  function shouldRefresh(dataKey) {
+    const data = app.data[dataKey];
+    if (!data) return true;
+    return Date.now() - data.lastFetch > data.ttl;
+  }
+
+  function cacheSet(key, data) {
+    apiCache.set(key, { data, timestamp: Date.now() });
+  }
+
+  function cacheGet(key) {
+    const cached = apiCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CONFIG.CACHE_DURATION) {
+      return cached.data;
     }
+    return null;
   }
 
   // ========== API LAYER ==========
-  const API = {
-    // Validate response has expected structure
-    _validateResponse(data, expectedFields = []) {
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response: expected object from server');
+  async function apiCall(endpoint, options = {}) {
+    const { method = 'GET', body = null, cache = true } = options;
+    const cacheKey = `${endpoint}:${JSON.stringify(options)}`;
+
+    // Check cache for GET requests
+    if (method === 'GET' && cache) {
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        log(`Cache hit: ${endpoint}`, 'log');
+        return cached;
       }
-      // Check required fields if specified
-      for (const field of expectedFields) {
-        if (!(field in data)) {
-          throw new Error(`Invalid response: missing required field "${field}"`);
-        }
+    }
+
+    try {
+      const fetchOptions = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(CONFIG.TIMEOUT),
+      };
+
+      if (body) fetchOptions.body = JSON.stringify(body);
+
+      const response = await fetch(`${CONFIG.API_BASE}${endpoint}`, fetchOptions);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(error.detail || `HTTP ${response.status}`);
       }
+
+      const data = await response.json();
+
+      // Cache success
+      if (method === 'GET' && cache) {
+        cacheSet(cacheKey, data);
+      }
+
       return data;
-    },
-
-    async _fetch(endpoint, options = {}, attempt = 1) {
-      const url = `${endpoint}`;
-      const method = options.method || 'GET';
-      let controller = null;
-      let timeoutId = null;
+    } catch (error) {
+      log(`API Error [${endpoint}]: ${error.message}`, 'error');
       
-      try {
-        log(`[Attempt ${attempt}] ${method} ${url}`);
-        
-        // CREATE: Body object (only for POST/PUT/PATCH)
-        let fetchOptions = {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            ...options.headers,
-          },
-          credentials: 'same-origin',
-        };
-
-        // FOR POST/PUT: Build body ONCE with init_data and user_id
-        // DO NOT include init_data in URL for POST requests
-        if (method !== 'GET') {
-          const body = Object.assign({}, options.body || {});
-          
-          // Add init_data to body (only if not already present)
-          if (!body.init_data && state.initData) {
-            body.init_data = state.initData;
-          }
-          
-          // Add user_id to body (only if not already present)
-          if (!body.user_id && state.user && state.user.id) {
-            body.user_id = state.user.id;
-          }
-          
-          // Serialize body
-          try {
-            fetchOptions.body = JSON.stringify(body);
-          } catch (e) {
-            log(`JSON serialization error: ${e.message}`, 'error');
-            throw new Error(`Cannot serialize request: ${e.message}`);
-          }
-        }
-
-        // ADD: AbortController for timeout protection
-        controller = new AbortController();
-        fetchOptions.signal = controller.signal;
-        
-        // Set timeout
-        timeoutId = setTimeout(() => {
-          controller.abort();
-          log(`Request timeout after ${CONFIG.TIMEOUT}ms: ${method} ${url}`, 'warn');
-        }, CONFIG.TIMEOUT);
-        
-        const response = await fetch(url, fetchOptions);
-        clearTimeout(timeoutId);
-        timeoutId = null;
-        
-        // Debug response status
-        if (!response.ok) {
-          log(`[${response.status}] ${method} ${endpoint} failed`, 'warn');
-        }
-        
-        // Parse response
-        let data;
-        try {
-          data = await response.json();
-        } catch (e) {
-          log(`Invalid JSON response: ${response.status}`, 'error');
-          throw new Error(`Server returned invalid JSON (${response.status})`);
-        }
-        
-        // Fail fast on 401/403 - auth errors
-        if (response.status === 401 || response.status === 403) {
-          log(`${method} ${endpoint} auth failed: ${response.status}`, 'error');
-          throw new Error('Authentication failed - Telegram init_data expired or invalid');
-        }
-        
-        // Handle error responses
-        if (!response.ok) {
-          log(`${method} ${endpoint} error: ${response.status} - ${JSON.stringify(data)}`, 'error');
-          
-          // Retry on specific status codes
-          if (attempt < CONFIG.RETRY_ATTEMPTS && [408, 429, 500, 502, 503, 504].includes(response.status)) {
-            const delay = CONFIG.RETRY_DELAY * attempt;
-            log(`Retrying after ${delay}ms...`, 'log');
-            await new Promise(r => setTimeout(r, delay));
-            return this._fetch(endpoint, options, attempt + 1);
-          }
-          
-          // Extract error message
-          const errorMsg = data?.detail || data?.error || data?.message || `HTTP ${response.status}`;
-          throw new Error(errorMsg);
-        }
-        
-        // SUCCESS: Validate response structure
-        if (!data || typeof data !== 'object') {
-          throw new Error('Server returned invalid response format');
-        }
-        
-        log(`${method} ${endpoint} succeeded`, 'log');
-        return data;
-        
-      } catch (err) {
-        // Clean up timeout on error
-        if (timeoutId) clearTimeout(timeoutId);
-        if (controller) controller.abort();
-        
-        const errorMsg = err.message || 'Unknown error';
-        log(`API error on attempt ${attempt}: ${errorMsg}`, 'error');
-        
-        // Don't retry on final attempt
-        if (attempt >= CONFIG.RETRY_ATTEMPTS) {
-          log(`Final API error after ${attempt} attempts: ${errorMsg}`, 'error');
-          showStatus(`Error: ${errorMsg}`, 'error');
-          return { 
-            success: false, 
-            error: 'REQUEST_FAILED',
-            detail: errorMsg,
-            status_code: 0
-          };
-        }
-        
-        // Retry with exponential backoff
-        const delay = CONFIG.RETRY_DELAY * attempt;
-        log(`Retrying after ${delay}ms (attempt ${attempt}/${CONFIG.RETRY_ATTEMPTS})...`, 'log');
-        await new Promise(r => setTimeout(r, delay));
-        return this._fetch(endpoint, options, attempt + 1);
+      // Try stale cache on error
+      const cached = apiCache.get(cacheKey);
+      if (cached) {
+        log(`Using stale cache for ${endpoint}`, 'warn');
+        return cached.data;
       }
-    },
 
-    // Auth endpoints
-    async initSession(initData) {
-      // Store initData in state for subsequent authenticated requests
-      state.initData = initData;
-      // Use query parameter ONLY for init endpoint (no body needed)
-      return this._fetch(`/web-app/init?init_data=${encodeURIComponent(initData)}`);
-    },
+      throw error;
+    }
+  }
 
-    // User endpoints
-    async getUser(userId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/web-app/user?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-    },
+  // ========== TELEGRAM INTEGRATION ==========
+  function initTelegramWebApp() {
+    if (window.Telegram?.WebApp) {
+      const webApp = window.Telegram.WebApp;
+      webApp.ready();
+      webApp.setHeaderColor('#0a0e27');
+      webApp.setBackgroundColor('#0a0e27');
 
-    // Wallet endpoints
-    async getWallets(userId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/web-app/wallets?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-    },
+      app.auth.initData = webApp.initData;
+      app.auth.isAuthenticated = !!webApp.initData;
 
-    async createWallet(blockchain, walletType = 'custodial', isPrimary = false) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/create-wallet`, {
-        method: 'POST',
-        body: { blockchain, wallet_type: walletType, is_primary: isPrimary }
+      window.haptic = {
+        light: () => webApp.HapticFeedback?.impactOccurred?.('light'),
+        medium: () => webApp.HapticFeedback?.impactOccurred?.('medium'),
+        heavy: () => webApp.HapticFeedback?.impactOccurred?.('heavy'),
+        selection: () => webApp.HapticFeedback?.selectionChanged?.(),
+        notification: (type = 'success') => webApp.HapticFeedback?.notificationOccurred?.(type),
+      };
+
+      log('Telegram WebApp initialized');
+    }
+  }
+
+  // ========== TELEGRAM STARS PAYMENT FLOW ==========
+  
+  /**
+   * Initialize Telegram Stars payment for cart items.
+   * Creates invoice, calculates commissions, initiates payment.
+   */
+  async function initiateTelegramStarsPayment() {
+    if (!app.cart.items.length) {
+      showToast('Cart is empty', 'error');
+      return;
+    }
+
+    try {
+      app.ui.loading.add('checkout');
+
+      // Process each item in cart using real production purchase flow
+      const cartTotal = app.cart.items.reduce((sum, item) => sum + (item.price || 0), 0);
+      const invoiceId = generateInvoiceId();
+
+      // Process purchases via production system
+      const results = [];
+      for (const item of app.cart.items) {
+        try {
+          const result = await window.prodApp.purchaseFlow(
+            item.id,                    // listingId
+            item.nft_id,               // nftId
+            app.user.id,               // buyerId
+            item.price,                // offerPrice
+            'STARS'                    // currency
+          );
+          results.push(result);
+          log(`Purchase completed for ${item.name}`, 'success');
+        } catch (itemError) {
+          log(`Failed to purchase ${item.name}: ${itemError.message}`, 'error');
+        }
+      }
+
+      if (results.length > 0) {
+        showToast(`${results.length} purchase(s) successful! 🎉`, 'success');
+        window.haptic?.notification?.('success');
+        app.cart.items = [];
+        app.cart.total = 0;
+        
+        // Reload marketplace and inventory
+        await loadMarketplace();
+        await loadMyItems();
+        router.navigate('market');
+      } else {
+        showToast('No purchases completed', 'error');
+      }
+    } catch (error) {
+      showToast(`Checkout failed: ${error.message}`, 'error');
+      log(`Checkout error: ${error.message}`, 'error');
+    } finally {
+      app.ui.loading.delete('checkout');
+    }
+  }
+
+  /**
+   * Generate unique invoice ID.
+   */
+  function generateInvoiceId() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 10);
+    return `inv_${timestamp}_${random}`;
+  }
+
+  /**
+   * Show payment breakdown modal with commission details.
+   */
+  function showPaymentBreakdown(invoiceData) {
+    const breakdown = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing); margin: var(--spacing) 0;">
+        <div style="background: rgba(0,136,204,0.1); padding: var(--spacing); border-radius: 8px;">
+          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Total Amount</div>
+          <div style="font-size: 20px; font-weight: bold; color: #fff;">${invoiceData.total_stars} ⭐</div>
+        </div>
+        <div style="background: rgba(100,200,50,0.1); padding: var(--spacing); border-radius: 8px;">
+          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Creator Gets</div>
+          <div style="font-size: 20px; font-weight: bold; color: #64c832;">${invoiceData.net_creator_payout} ⭐</div>
+        </div>
+      </div>
+      <div style="margin-top: var(--spacing); padding: var(--spacing); background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+          <span>Platform Fee (2%)</span>
+          <span style="color: #ff6b6b;">-${invoiceData.platform_commission} ⭐</span>
+        </div>
+        ${invoiceData.referral_commission > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: #888;">
+            <span>Your Referral Bonus</span>
+            <span style="color: #4ecdc4;">+${invoiceData.referral_commission} ⭐</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <button class="modal-close" onclick="document.getElementById('itemModal').style.display='none'">✕</button>
+      <div style="margin-top: 24px;">
+        <div class="modal-title">Complete Purchase</div>
+        ${breakdown}
+      </div>
+      <button onclick="initiateTelegramStarsPayment()" style="width: 100%; margin-top: var(--spacing); padding: 12px; background: #0088cc; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+        Pay with Telegram Stars ⭐
+      </button>
+      <button onclick="document.getElementById('itemModal').style.display='none'" style="width: 100%; margin-top: 8px; padding: 12px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+        Cancel
+      </button>
+    `;
+
+    const modalEl = document.getElementById('itemModal');
+    const oldModal = modalEl.querySelector('.modal');
+    if (oldModal) oldModal.remove();
+    modalEl.appendChild(modal);
+    modalEl.style.display = 'flex';
+  }
+
+  /**
+   * Callback when Telegram payment dialog closes.
+   * Handles both success and cancellation.
+   */
+  function onTelegramPaymentClosed(isSuccessful) {
+    if (isSuccessful) {
+      showToast('Payment processing... ⏳', 'info');
+      // Payment handler will be called via webhook/callback
+      // For now, we poll for payment confirmation
+      pollPaymentStatus();
+    } else {
+      showToast('Payment cancelled', 'info');
+    }
+  }
+
+  /**
+   * Poll server for payment confirmation status.
+   * In production, use WebSocket or Server-Sent Events for real-time updates.
+   */
+  async function pollPaymentStatus(maxAttempts = 30) {
+    let attempts = 0;
+    const initialBalance = app.user?.stars_balance || 0;
+
+    const checkStatus = async () => {
+      if (attempts >= maxAttempts) {
+        showToast('Payment confirmation timeout. Please check your balance.', 'error');
+        return;
+      }
+
+      try {
+        // Check user's current balance to infer if payment succeeded
+        const user = await apiCall('/auth/me');
+        
+        if (user.stars_balance > initialBalance) {
+          // Stars increased = payment succeeded!
+          const earnedStars = user.stars_balance - initialBalance;
+          
+          app.user = user;
+          app.cart.items = [];
+          
+          showToast(`Payment confirmed! +${earnedStars} ⭐`, 'success');
+          window.haptic?.notification?.('success');
+          
+          // Reload data
+          renderCartPage();
+          await loadMyItems();
+          await loadTransactions();
+          
+          log(`Payment confirmed, balance: ${user.stars_balance}`, 'success');
+          return;
+        }
+      } catch (error) {
+        log(`Payment status check failed: ${error.message}`, 'warn');
+      }
+
+      attempts++;
+      // Wait before next attempt (exponential backoff)
+      setTimeout(checkStatus, Math.min(1000 * (attempts / 5), 5000));
+    };
+
+    checkStatus();
+  }
+
+  /**
+   * Calculate commission breakdown for transparency.
+   */
+  function calculateCommissions(totalStars, hasReferrer = true) {
+    const platformRate = 0.02; // 2%
+    const referralRate = 0.1; // 10% of platform fee
+
+    const platformFee = Math.floor(totalStars * platformRate);
+    const referralCommission = hasReferrer ? Math.floor(platformFee * referralRate) : 0;
+    const creatorPayout = totalStars - platformFee;
+
+    return {
+      total: totalStars,
+      platformFee,
+      referralCommission,
+      creatorPayout,
+    };
+  }
+
+  // ========== WALLET SIGN-IN FLOW ==========
+
+  /**
+   * Initialize wallet sign-in flow.
+   * Supports MetaMask, WalletConnect, and other EVM wallets.
+   */
+  async function initWalletSignIn() {
+    try {
+      // Check for Web3 provider (MetaMask, etc.)
+      if (!window.ethereum) {
+        showToast('Please install MetaMask or use a Web3 wallet', 'error');
+        return;
+      }
+
+      showToast('Requesting wallet connection...', 'info');
+
+      // Request account access
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const walletAddress = accounts[0].toLowerCase();
+
+      log(`Wallet connected: ${walletAddress}`, 'success');
+
+      // Get sign-in message from backend
+      const messageData = await apiCall('/stars/wallet/message', { cache: false });
+
+      // Sign the message with the wallet
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [messageData.message, walletAddress],
       });
-    },
 
-    async importWallet(blockchain, address, publicKey = null, isPrimary = false) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/import-wallet`, {
-        method: 'POST',
-        body: { blockchain, address, public_key: publicKey, is_primary: isPrimary }
-      });
-    },
+      log(`Message signed`, 'success');
 
-    async setPrimaryWallet(walletId, userId = null) {
-      // Let _fetch inject init_data and user_id - don't manually add them
-      const body = { wallet_id: walletId };
-      if (userId) body.user_id = userId;
-      return this._fetch(`/web-app/set-primary`, {
-        method: 'POST',
-        body,
-      });
-    },
-
-    // NFT endpoints
-    async getNfts(userId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/web-app/nfts?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-    },
-
-    async mintNft(userId, walletId, nftName, description, imageUrl = null) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/mint`, {
+      // Send signature to backend for authentication
+      const authData = await apiCall('/stars/wallet/signin', {
         method: 'POST',
         body: {
-          user_id: userId,
-          wallet_id: walletId,
-          nft_name: nftName,
-          nft_description: description,
-          image_url: imageUrl,
-        }
+          wallet_address: walletAddress,
+          chain: 'ethereum',
+          message: messageData.message,
+          signature: signature,
+        },
+        cache: false,
       });
+
+      // Store auth token
+      localStorage.setItem('auth_token', authData.access_token);
+      app.auth.token = authData.access_token;
+      app.auth.isAuthenticated = true;
+
+      // Load user data
+      app.user = {
+        id: authData.user_id,
+        username: authData.username,
+        telegram_id: walletAddress,
+      };
+
+      showToast(`Signed in as ${authData.is_new ? 'new user' : authData.username}! 🔐`, 'success');
+      window.haptic?.notification?.('success');
+
+      log(`Wallet authentication successful`, 'success');
+
+      // Redirect to marketplace
+      router.navigate('market');
+      await render();
+    } catch (error) {
+      if (error.code === 4001) {
+        showToast('Wallet connection cancelled', 'info');
+      } else {
+        showToast(`Wallet sign-in failed: ${error.message}`, 'error');
+      }
+      log(`Wallet sign-in error: ${error.message}`, 'error');
+    }
+  }
+  class Modal {
+    constructor(type, data = {}) {
+      this.type = type;
+      this.data = data;
+      this.errors = new Map();
+      this.loading = false;
+    }
+
+    static types = {
+      itemDetail: 'showItemDetailModal',
+      referralShare: 'showReferralModal',
+      profileEdit: 'showProfileModal',
+      checkout: 'showCheckoutModal',
+    };
+
+    close() {
+      app.ui.modals[this.type === 'itemDetail' ? 'item' : this.type] = null;
+      render();
+    }
+  }
+
+  function showModal(title, content, actions = []) {
+    const modal = dom.modalOverlay;
+    let existingModal = modal.querySelector('.modal');
+
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    const modalEl = document.createElement('div');
+    modalEl.className = 'modal';
+    modalEl.innerHTML = `
+      <button class="modal-close" onclick="window.__closeModal()">✕</button>
+      <div style="margin-top: 24px;">
+        ${title ? `<div class="modal-title">${title}</div>` : ''}
+        ${content}
+      </div>
+      ${
+        actions.length
+          ? `
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: var(--spacing);">
+          ${actions
+            .map(
+              (action) => `
+            <button 
+              class="modal-button ${action.type === 'primary' ? 'primary' : 'secondary'}"
+              onclick="window.__handleModalAction(${action.id})"
+            >
+              ${action.label}
+            </button>
+          `
+            )
+            .join('')}
+        </div>
+      `
+          : ''
+      }
+    `;
+
+    // Store actions globally for safe invocation
+    window.__modalActions = actions;
+
+    modal.appendChild(modalEl);
+    modal.classList.add('active');
+    window.haptic?.light();
+  }
+
+  window.__closeModal = function () {
+    dom.modalOverlay.classList.remove('active');
+    const modal = dom.modalOverlay.querySelector('.modal');
+    if (modal) modal.remove();
+    app.ui.modals = { item: null, referral: null, profile: null, settings: null };
+    window.__modalActions = [];
+  };
+
+  window.__handleModalAction = function (actionId) {
+    const action = window.__modalActions[actionId];
+    if (action && action.handler) action.handler();
+  };
+
+  // ========== ROUTER & NAVIGATION ==========
+  const router = {
+    pages: ['market', 'create', 'stars', 'cart', 'myitems', 'profile', 'creator'],
+    history: [],
+
+    navigate(page, params = {}) {
+      if (!this.pages.includes(page)) return;
+
+      app.ui.currentPage = page;
+      app.ui.modals = {};
+
+      loadPageContent(page, params);
+      render();
     },
 
-    async burnNft(userId, nftId) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/burn`, {
-        method: 'POST',
-        body: { user_id: userId, nft_id: nftId }
-      });
-    },
-
-    async transferNft(userId, nftId, toAddress) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/transfer`, {
-        method: 'POST',
-        body: { user_id: userId, nft_id: nftId, to_address: toAddress }
-      });
-    },
-
-    // Marketplace endpoints
-    async getMarketplaceListings(limit = 50) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/web-app/marketplace/listings?limit=${limit}&init_data=${encodeURIComponent(initData)}`);
-    },
-
-    async getMyListings(userId) {
-      const initData = state.initData || (window.Telegram?.WebApp?.initData || '');
-      return this._fetch(`/web-app/marketplace/mylistings?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-    },
-
-    async listNft(userId, nftId, price, currency = 'USDT') {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/list-nft`, {
-        method: 'POST',
-        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
-      });
-    },
-
-    async makeOffer(userId, listingId, offerPrice) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/make-offer`, {
-        method: 'POST',
-        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice) }
-      });
-    },
-
-    async cancelListing(userId, listingId) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/web-app/cancel-listing`, {
-        method: 'POST',
-        body: { user_id: userId, listing_id: listingId }
-      });
-    },
-
-    async getDashboardData(userId) {
-      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(state.initData || '')}`);
-    },
-
-    // Payment endpoints
-    async getBalance() {
-      // Let _fetch inject init_data - request uses X-User-ID header
-      return this._fetch(`/api/v1/payments/balance`);
-    },
-
-    async getPaymentHistory(limit = 10) {
-      return this._fetch(`/api/v1/payments/history?limit=${limit}`);
-    },
-
-    async initiateDeposit(walletId, amount, externalAddress) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/api/v1/payments/deposit/initiate`, {
-        method: 'POST',
-        body: { wallet_id: walletId, amount, external_address: externalAddress }
-      });
-    },
-
-    async confirmDeposit(paymentId, transactionHash) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/api/v1/payments/deposit/confirm`, {
-        method: 'POST',
-        body: { payment_id: paymentId, transaction_hash: transactionHash }
-      });
-    },
-
-    async initiateWithdrawal(walletId, amount, destinationAddress) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/api/v1/payments/withdrawal/initiate`, {
-        method: 'POST',
-        body: { wallet_id: walletId, amount, destination_address: destinationAddress }
-      });
-    },
-
-    async approveWithdrawal(paymentId) {
-      // Let _fetch inject init_data - don't manually add it
-      return this._fetch(`/api/v1/payments/withdrawal/approve`, {
-        method: 'POST',
-        body: { payment_id: paymentId }
-      });
-    },
-
-    // Dashboard endpoints  
-    async getDashboardData(userId) {
-      return this._fetch(`/web-app/dashboard-data?user_id=${userId}&init_data=${encodeURIComponent(state.initData || '')}`);
+    back() {
+      if (this.history.length === 0) return;
+      const { page } = this.history.pop();
+      app.ui.currentPage = page;
+      render();
     },
   };
 
-  // Ui update 
-
-  function formatAddress(addr) {
-    if (!addr || addr.length < 10) return addr;
-    return addr.slice(0, 6) + '...' + addr.slice(-4);
+  function loadPageContent(page, params = {}) {
+    switch (page) {
+      case 'market':
+        if (shouldRefresh('listings')) loadMarketplace();
+        break;
+      case 'myitems':
+        if (shouldRefresh('myItems')) loadMyItems();
+        break;
+      case 'stars':
+        if (shouldRefresh('referrals')) loadReferrals();
+        loadTransactions();
+        break;
+      case 'profile':
+        loadProfile();
+        break;
+      case 'creator':
+        loadCreatorStats();
+        break;
+    }
   }
 
-  function formatCurrency(num) {
-    return parseFloat(num).toFixed(2);
-  }
+  // ========== MARKETPLACE PAGE ==========
+  async function loadMarketplace() {
+    app.ui.loading.add('market');
+    app.ui.errors.delete('market');
 
-  async function updateDashboard() {
     try {
-      if (!state.user || !state.user.id) {
-        showStatus('User not authenticated', 'error');
-        return;
-      }
+      // Load real marketplace data from database via ProductionInit
+      const listings = await window.prodApp.loadMarketplaceData(0, 50);
+      app.data.listings = {
+        items: listings || [],
+        total: listings?.length || 0,
+        page: 0,
+        lastFetch: Date.now(),
+        ttl: 60000,
+      };
+      app.ui.loading.delete('market');
+    } catch (error) {
+      app.ui.errors.set('market', error.message);
+      app.ui.loading.delete('market');
+      showToast(`Failed to load marketplace: ${error.message}`, 'error');
+    }
+  }
 
-      showStatus('Loading dashboard...', 'loading');
-      
-      const dashData = await API.getDashboardData(state.user.id);
-      
-      if (!dashData || !dashData.success) {
-        throw new Error(dashData?.error || dashData?.detail || 'Failed to load dashboard');
-      }
-      
-      const wallets = dashData.wallets || [];
-      const nfts = dashData.nfts || [];
-      const listings = dashData.listings || [];
-      
-      // Populate state so wallets and NFTs are available for actions
-      state.wallets = wallets;
-      state.nfts = nfts;
-      state.listings = listings;
-      
-      // Update stats
-      const stats = document.getElementById('dashboardStats');
-      if (stats) {
-        const portfolioValue = (nfts.length * 100).toFixed(2);
-        stats.innerHTML = `
-          <div class="stat-box">
-            <div class="stat-label">Wallets</div>
-            <div class="stat-value">${wallets.length}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">NFTs</div>
-            <div class="stat-value">${nfts.length}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">Listings</div>
-            <div class="stat-value">${listings.filter(l => l.active || l.status === 'ACTIVE').length}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">Est. Value</div>
-            <div class="stat-value">$${portfolioValue}</div>
-          </div>
-        `;
-      }
-      
-      // Update recent wallets
-      const recentWallets = document.getElementById('recentWallets');
-      if (recentWallets && wallets.length) {
-        recentWallets.innerHTML = wallets.slice(0, 3).map(w => `
-          <div class="card" style="padding:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div>
-                <strong>${(w.blockchain || 'Unknown').toUpperCase()}</strong>
-                ${w.is_primary ? '<span class="blockchain-badge primary-badge">Primary</span>' : ''}
+  function createCollectibleCard(item, type = 'listing') {
+    const card = document.createElement('div');
+    card.className = 'collectible-card';
+
+    const status = item.status || 'minted';
+    const statusLabel = status === 'listed' ? 'Listed' : 'Minted';
+    const statusClass = status === 'listed' ? 'listed' : 'minted';
+
+    const imageUrl = item.image_url || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23142031" width="200" height="200"/%3E%3Ctext x="100" y="100" text-anchor="middle" dy=".3em" fill="%238892b0" font-size="14"%3ENo Image%3C/text%3E%3C/svg%3E';
+
+    card.innerHTML = `
+      <div class="collectible-image-container">
+        <img src="${imageUrl}" alt="${item.name || 'Collectible'}" class="collectible-image" loading="lazy" />
+        <div class="collectible-status ${statusClass}">${statusLabel}</div>
+      </div>
+      <div class="collectible-info">
+        <div class="collectible-name">${item.name || 'Unnamed'}</div>
+        ${item.price ? `<div class="collectible-price"><span class="collectible-price-stars">${item.price}</span> ⭐</div>` : ''}
+        ${item.rarity_tier ? `<div class="collectible-rarity">${item.rarity_tier}</div>` : ''}
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      showItemModal(item, type);
+    });
+
+    return card;
+  }
+
+  function showItemModal(item, type = 'listing') {
+    const rarity = item.rarity_tier || item.rarity || 'Common';
+    const imageUrl = item.image_url || item.image || '';
+
+    const actions = [];
+    if (type === 'listing') {
+      actions.push({
+        id: 0,
+        label: `Buy Now - ${item.price} ⭐`,
+        type: 'primary',
+        handler: () => addToCart(item.id),
+      });
+      actions.push({
+        id: 1,
+        label: 'Make Offer...',
+        type: 'secondary',
+        handler: () => showToast('Make offer feature coming soon', 'info'),
+      });
+    } else if (type === 'myitem') {
+      const isListed = item.status === 'listed';
+      actions.push({
+        id: 0,
+        label: isListed ? 'Unlist' : 'List for Sale',
+        type: 'primary',
+        handler: () => toggleListing(item.id),
+      });
+      actions.push({
+        id: 1,
+        label: 'View Details',
+        type: 'secondary',
+        handler: () => showToast('View details coming soon', 'info'),
+      });
+    }
+
+    const content = `
+      <img src="${imageUrl}" alt="${item.name}" class="modal-image" />
+      <div class="modal-subtitle">${rarity.toUpperCase()}</div>
+      <div class="modal-section">
+        <div class="modal-section-label">Description</div>
+        <div class="modal-section-value">${item.description || 'No description'}</div>
+      </div>
+      ${item.price ? `
+        <div class="modal-section">
+          <div class="modal-section-label">Price</div>
+          <div class="modal-section-value">${item.price} ⭐</div>
+        </div>
+      ` : ''}
+      ${item.attributes && Object.keys(item.attributes).length ? `
+        <div class="modal-section">
+          <div class="modal-section-label">Attributes</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            ${Object.entries(item.attributes).map(([key, value]) => `
+              <div style="padding: 8px; background: var(--tg-bg); border-radius: 6px; text-align: center; font-size: 12px;">
+                <div style="color: var(--tg-text-secondary); margin-bottom: 2px;">${key}</div>
+                <div style="color: var(--tg-text); font-weight: 600;">${value}</div>
               </div>
-              <code style="font-size:11px;">${formatAddress(w.address || '')}</code>
-            </div>
+            `).join('')}
           </div>
-        `).join('');
-      }
-      
-      // Update recent NFTs
-      const recentNfts = document.getElementById('recentNfts');
-      if (recentNfts && nfts.length) {
-        recentNfts.innerHTML = nfts.slice(0, 3).map(nft => `
-          <div class="card" style="padding:12px;">
-            <div style="display:flex;gap:12px;">
-              ${nft.image_url ? `
-                <img src="${nft.image_url}" 
-                     alt="${nft.name}" 
-                     style="width:40px;height:40px;border-radius:4px;object-fit:cover;" 
-                     onerror="this.style.display='none'">
-              ` : ''}
-              <div style="flex:1;min-width:0;">
-                <strong>${nft.name || 'NFT'}</strong>
-                <div style="font-size:12px;color:var(--text-secondary);">${(nft.blockchain || 'Unknown').toUpperCase()}</div>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      }
-      
-      showStatus('Dashboard loaded', 'success');
-    } catch (err) {
-      log(`Dashboard error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
+        </div>
+      ` : ''}
+    `;
+
+    showModal(item.name, content, actions);
+  }
+
+  function addToCart(itemId) {
+    const item = app.data.listings.items.find((l) => l.id === itemId);
+    if (!item) return;
+
+    const exists = app.cart.items.find((c) => c.id === itemId);
+    if (!exists) {
+      app.cart.items.push(item);
+      app.cart.total += item.price || 0;
+      window.haptic?.notification?.('success');
+      showToast('Added to cart!', 'success');
+      window.__closeModal();
+      render();
+    } else {
+      showToast('Already in cart', 'info');
     }
   }
 
-  async function updateWalletsList() {
-    try {
-      if (!state.user || !state.user.id) {
-        showStatus('User not authenticated', 'error');
-        return;
-      }
+  function toggleListing(itemId) {
+    showToast('Toggle listing feature coming soon', 'info');
+  }
 
-      showStatus('Loading wallets...', 'loading');
-      
-      const data = await API.getWallets(state.user.id);
-      if (!data || !data.success) throw new Error(data?.error || data?.detail || 'Failed to load wallets');
-      
-      state.wallets = data.wallets || [];
-      
-      const container = document.getElementById('walletsList');
-      if (!container) return;
-      
-      if (!state.wallets.length) {
-        container.innerHTML = '<div class="card"><p style="color:var(--text-secondary);">No wallets yet. Create one to get started.</p></div>';
-        return;
-      }
-      
-      container.innerHTML = state.wallets.map(w => `
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div>
-              <strong>${(w.blockchain || 'Wallet').toUpperCase()}</strong>
-              ${w.is_primary ? '<span class="blockchain-badge primary-badge">Primary</span>' : ''}
-            </div>
-            <small style="color:var(--text-secondary);">${new Date(w.created_at || Date.now()).toLocaleDateString()}</small>
-          </div>
-          <code style="display:block;word-break:break-all;padding:12px;background:rgba(0,0,0,0.2);border-radius:4px;font-size:11px;margin-bottom:12px;">${w.address || 'N/A'}</code>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-secondary" onclick="if(window.showWalletDetails)window.showWalletDetails('${w.id}')" style="flex:1;min-width:80px;">Details</button>
-            <button class="btn btn-secondary" onclick="if(window.depositModal)window.depositModal('${w.id}')" style="flex:1;min-width:80px;">Deposit</button>
-            <button class="btn btn-secondary" onclick="if(window.withdrawalModal)window.withdrawalModal('${w.id}')" style="flex:1;min-width:80px;">💸 Withdraw</button>
-            ${!w.is_primary ? `<button class="btn btn-secondary" onclick="if(window.setPrimary)window.setPrimary('${w.id}')" style="flex:1;min-width:80px;">Set Primary</button>` : ''}
-          </div>
-        </div>
-      `).join('');
-      
-      showStatus('Wallets loaded', 'success');
-    } catch (err) {
-      log(`Wallets error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
+  // ========== MY ITEMS PAGE ==========
+  async function loadMyItems() {
+    app.ui.loading.add('myItems');
+
+    try {
+      // Load real user NFT inventory from database
+      const nfts = await window.prodApp.loadUserInventory(0, 50);
+      app.data.myItems = {
+        items: nfts || [],
+        total: nfts?.length || 0,
+        lastFetch: Date.now(),
+        ttl: 120000,
+      };
+      app.ui.loading.delete('myItems');
+    } catch (error) {
+      app.ui.errors.set('myItems', error.message);
+      app.ui.loading.delete('myItems');
+      showToast(`Failed to load items: ${error.message}`, 'error');
     }
   }
 
-  async function updateNftList() {
+  // ========== REFERRALS PAGE ==========
+  async function loadReferrals() {
+    if (!app.user || !app.user.id) return;
+
     try {
-      showStatus('Loading NFTs...', 'loading');
-      
-      const data = await API.getNfts(state.user.id);
-      if (!data.success) throw new Error(data.error || 'Failed to load NFTs');
-      
-      state.nfts = data.nfts || [];
-      
-      const container = document.getElementById('nftList');
-      if (!container) return;
-      
-      if (!state.nfts.length) {
-        container.innerHTML = '<div class="card"><p style="color:var(--text-secondary);">No NFTs yet. Create one to get started.</p></div>';
-        return;
-      }
-      
-      container.innerHTML = state.nfts.map(nft => `
-        <div class="card">
-          <div class="nft-image-container" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-            ${nft.image_url ? `
-              <img src="${nft.image_url}" 
-                   alt="${nft.name}" 
-                   style="width:100%;height:100%;object-fit:cover;" 
-                   onerror="this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);font-size:12px;\\">Image failed to load</span>'">
-            ` : `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>`}
-          </div>
-          <div style="margin-bottom:12px;">
-            <strong>${nft.name}</strong>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${nft.description || 'No description'}</p>
-          </div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <span class="blockchain-badge">${nft.blockchain?.toUpperCase()}</span>
-            <span class="blockchain-badge" style="background:${nft.status === 'LISTED' ? '#ff6b6b' : '#51cf66'};">${nft.status || 'UNLISTED'}</span>
-          </div>
-          <div style="display:flex;gap:10px;">
-            <button class="btn btn-secondary" onclick="window.showNftDetails('${nft.id}')">Details</button>
-            ${nft.status !== 'LISTED' ? `<button class="btn btn-secondary" onclick="window.listNftModal('${nft.id}')">Sell</button>` : ''}
-          </div>
-        </div>
-      `).join('');
-      
-      showStatus('NFTs loaded', 'success');
-    } catch (err) {
-      log(`NFTs error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
+      // Load real referral data from database
+      const referralData = await window.prodApp.data.fetchReferralData();
+      const referralStats = await window.prodApp.data.fetchReferralStats();
+
+      app.data.referrals = {
+        code: referralData?.code,
+        earnings: referralData?.lifetime_earnings || 0,
+        referredCount: referralData?.referred_count || 0,
+        pendingRewards: referralStats?.pending_commissions || 0,
+        network: referralData?.referred_users || [],
+        history: referralStats?.commission_history || [],
+        lastFetch: Date.now(),
+        ttl: 300000,
+      };
+    } catch (error) {
+      log(`Referral load failed: ${error.message}`, 'warn');
     }
   }
 
-  async function updateMarketplaceList() {
+  async function loadTransactions() {
     try {
-      showStatus('Loading marketplace...', 'loading');
-      
-      const data = await API.getMarketplaceListings(50);
-      if (!data.success) throw new Error(data.error || 'Failed to load marketplace');
-      
-      state.listings = data.listings || [];
-      
-      const container = document.getElementById('marketplaceList');
-      if (!container) return;
-      
-      if (!state.listings.length) {
-        container.innerHTML = '<div class="card"><p style="color:var(--text-secondary);">No listings available right now.</p></div>';
-        return;
-      }
-      
-      container.innerHTML = state.listings.map(listing => `
-        <div class="card">
-          <div class="listing-image-container" style="width:100%;height:200px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-            ${listing.image_url ? `
-              <img src="${listing.image_url}" 
-                   alt="${listing.nft_name}" 
-                   style="width:100%;height:100%;object-fit:cover;" 
-                   onerror="this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);font-size:12px;\\">Image failed to load</span>'">
-            ` : `<span style="color:rgba(255,255,255,0.5);font-size:12px;">No image</span>`}
-          </div>
-          <div style="margin-bottom:12px;">
-            <strong>${listing.nft_name}</strong>
-            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">By <strong>${listing.seller_name || 'Anonymous'}</strong></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div>
-              <div style="font-size:14px;font-weight:bold;">$${formatCurrency(listing.price)}</div>
-              <div style="font-size:12px;color:var(--text-secondary);">${listing.currency}</div>
-            </div>
-            <span class="blockchain-badge">${listing.blockchain?.toUpperCase()}</span>
-          </div>
-          <button class="btn btn-primary" onclick="window.buyNftModal('${listing.id}')">Buy Now</button>
-        </div>
-      `).join('');
-      
-      showStatus('Marketplace loaded', 'success');
-    } catch (err) {
-      log(`Marketplace error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
+      // Load real payment history from database
+      const paymentHistory = await window.prodApp.data.fetchPaymentHistory();
+      app.data.transactions = {
+        items: paymentHistory || [],
+        total: paymentHistory?.length || 0,
+        lastFetch: Date.now(),
+        ttl: 300000,
+      };
+    } catch (error) {
+      log(`Transaction load failed: ${error.message}`, 'warn');
     }
   }
 
-  async function updateProfilePage() {
+  function copyReferralLink() {
+    const code = app.data.referrals.code;
+    if (!code) {
+      showToast('No referral code available', 'error');
+      return;
+    }
+
+    const link = `https://t.me/giftedforge_bot?start=ref_${code}`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+      showToast('Referral link copied! 📋', 'success');
+    } else {
+      const tmp = document.createElement('textarea');
+      tmp.value = link;
+      document.body.appendChild(tmp);
+      tmp.select();
+      document.execCommand('copy');
+      document.body.removeChild(tmp);
+      showToast('Link copied!', 'success');
+    }
+
+    window.haptic?.medium();
+  }
+
+  // ========== PROFILE PAGE ==========
+  async function loadProfile() {
     try {
-      if (!state.user) throw new Error('User not loaded');
+      const [user, stats] = await Promise.all([
+        apiCall('/auth/me'),
+        apiCall('/users/me/stats'),
+      ]);
+
+      app.user = user;
+      app.creator.isCreator = user.is_creator || false;
+      app.data.profile = user;
+      app.data.profileStats = stats;
+    } catch (error) {
+      log(`Profile load failed: ${error.message}`, 'warn');
+      showToast('Failed to load profile', 'error');
+    }
+  }
+
+  async function loadCreatorStats() {
+    if (!app.creator.isCreator) return;
+
+    try {
+      const data = await apiCall('/creator/stats');
+      app.creator.earnings = data.total_earnings || 0;
+      app.creator.totalSold = data.total_sold || 0;
+      app.creator.published = data.published_items || [];
+    } catch (error) {
+      log(`Creator stats load failed: ${error.message}`, 'warn');
+    }
+  }
+
+  async function toggleCreatorMode() {
+    const isEnabling = !app.creator.isCreator;
+    app.ui.loading.add('creator');
+    
+    try {
+      if (isEnabling) {
+        // Use production setup creator profile flow
+        const result = await window.prodApp.setupCreatorProfile(
+          app.user?.username || 'Creator',
+          'Emerging NFT creator',
+          app.user?.avatar_url || ''
+        );
+        app.user.is_creator = true;
+        app.creator.isCreator = true;
+        showToast('Creator mode enabled! 🎨', 'success');
+      } else {
+        app.creator.isCreator = false;
+        showToast('Creator mode disabled', 'info');
+      }
+      render();
+    } catch (error) {
+      showToast(`Failed to toggle creator mode: ${error.message}`, 'error');
+      app.creator.isCreator = !isEnabling;
+    } finally {
+      app.ui.loading.delete('creator');
+    }
+  }
+
+  async function saveCreatorProfile() {
+    const name = document.getElementById('creatorName')?.value?.trim();
+    const bio = document.getElementById('creatorBio')?.value?.trim();
+
+    if (!name || name.length < 3) {
+      showToast('Creator name must be at least 3 characters', 'error');
+      return;
+    }
+
+    try {
+      // Use real production creator profile setup
+      await window.prodApp.setupCreatorProfile(name, bio, app.user?.avatar_url || '');
+      showToast('Creator profile saved! 🎨', 'success');
+      app.user.creator_name = name;
+      app.user.creator_bio = bio;
+      app.user.is_creator = true;
+    } catch (error) {
+      showToast(`Error: ${error.message}`, 'error');
+    }
+  }
+
+  async function logoutApp() {
+    app.user = null;
+    app.auth.isAuthenticated = false;
+    app.data = { listings: { items: [], total: 0, lastFetch: 0, ttl: 60000 }, myItems: { items: [], total: 0, lastFetch: 0, ttl: 120000 }, referrals: { code: null, earnings: 0, referredCount: 0, pendingRewards: 0, history: [], network: [], lastFetch: 0, ttl: 300000 }, transactions: { items: [], total: 0, lastFetch: 0, ttl: 300000 }, profile: null, profileStats: null };
+    router.navigate('market');
+    showToast('Logged out', 'success');
+  }
+
+  // ========== PAGE RENDERING ==========
+  async function render() {
+    const page = router.currentPage || 'market';
+
+    // Hide all pages
+    document.querySelectorAll('[data-page]').forEach(p => p.style.display = 'none');
+
+    // Show current page
+    const currentPageEl = document.querySelector(`[data-page="${page}"]`);
+    if (currentPageEl) currentPageEl.style.display = 'block';
+
+    // Update nav highlight
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.nav-btn[data-page="${page}"]`)?.classList.add('active');
+
+    // Load page content
+    switch (page) {
+      case 'market':
+        if (shouldRefresh('listings')) await loadMarketplace();
+        renderMarketplace();
+        break;
+
+      case 'create':
+        renderCreatePage();
+        break;
+
+      case 'stars':
+        if (shouldRefresh('transactions')) await loadTransactions();
+        if (shouldRefresh('referrals')) await loadReferrals();
+        renderStarsPage();
+        break;
+
+      case 'cart':
+        renderCartPage();
+        break;
+
+      case 'my-items':
+        if (shouldRefresh('myItems')) await loadMyItems();
+        renderMyItemsPage();
+        break;
+
+      case 'profile':
+        if (shouldRefresh('profile')) await loadProfile();
+        renderProfilePage();
+        break;
+    }
+  }
+
+  function renderMarketplace() {
+    const grid = document.getElementById('marketGrid');
+    const empty = document.getElementById('marketEmpty');
+    const listings = app.data.listings.items;
+
+    if (!listings.length) {
+      empty.style.display = 'flex';
+      grid.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+
+    listings.forEach(item => {
+      const card = createCollectibleCard(item, 'market');
+      card.addEventListener('click', () => showItemModal(item));
+      grid.appendChild(card);
+    });
+
+    if (app.ui.loading.has('market')) {
+      grid.innerHTML += '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;">Loading...</div>';
+    }
+  }
+
+  function renderCartPage() {
+    const grid = document.getElementById('cartGrid');
+    const empty = document.getElementById('cartEmpty');
+    const totalEl = document.getElementById('cartTotal');
+
+    if (!app.cart.items.length) {
+      empty.style.display = 'flex';
+      grid.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+
+    let total = 0;
+    app.cart.items.forEach(item => {
+      total += item.price || 0;
+      const card = document.createElement('div');
+      card.className = 'collectible-card';
+      card.innerHTML = `
+        <img src="${item.image_url}" alt="${item.name}" class="card-img">
+        <h3>${item.name}</h3>
+        <p class="price">${item.price} ⭐</p>
+        <button class="remove-btn" data-id="${item.id}">Remove</button>
+      `;
+      grid.appendChild(card);
+
+      card.querySelector('.remove-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        removeFromCart(item.id);
+      });
+    });
+
+    totalEl.textContent = total;
+  }
+
+  function removeFromCart(itemId) {
+    app.cart.items = app.cart.items.filter(i => i.id !== itemId);
+    renderCartPage();
+    showToast('Removed from cart', 'success');
+    window.haptic?.light();
+  }
+
+  function renderCreatePage() {
+    const formEl = document.getElementById('createForm');
+    if (!formEl) return;
+
+    formEl.addEventListener('submit', handleCreateSubmit);
+    document.getElementById('imageUpload')?.addEventListener('change', handleImageUpload);
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      app.creator.drafts.imageData = evt.target.result;
+      const preview = document.getElementById('imagePreview');
+      if (preview) preview.src = evt.target.result;
+      showToast('Image loaded', 'success');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleCreateSubmit(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('nftName')?.value?.trim();
+    const description = document.getElementById('nftDesc')?.value?.trim();
+    const imageData = app.creator.drafts.imageData;
+    const royaltyPercentage = parseInt(document.getElementById('royalty')?.value || 0);
+
+    if (!name || !description || !imageData) {
+      showToast('Please fill all fields', 'error');
+      return;
+    }
+
+    app.ui.loading.add('create');
+
+    try {
+      // Get primary wallet for minting
+      const wallet = app.user?.wallets?.[0];
+      if (!wallet) {
+        showToast('No wallet available. Create one first.', 'error');
+        return;
+      }
+
+      // Use real production mint flow
+      const nft = await window.prodApp.mintNFTFlow(
+        wallet.id,
+        name,
+        description,
+        imageData,
+        royaltyPercentage
+      );
+
+      showToast(`NFT minted successfully! ID: ${nft.id}`, 'success');
+      window.haptic?.notification?.('success');
       
-      const container = document.getElementById('profilePage');
-      if (!container) return;
-      
-      container.innerHTML = `
-        <div class="card">
-          <h3>Profile Information</h3>
-          <div style="margin-top:20px;">
-            <div class="profile-item">
-              <span>Name:</span>
-              <strong>${state.user.full_name || 'N/A'}</strong>
-            </div>
-            <div class="profile-item">
-              <span>Username:</span>
-              <strong>@${state.user.telegram_username || 'N/A'}</strong>
-            </div>
-            <div class="profile-item">
-              <span>Telegram ID:</span>
-              <code style="font-size:11px;">${state.user.telegram_id}</code>
-            </div>
-            <div class="profile-item">
-              <span>Email:</span>
-              <strong>${state.user.email || 'Not set'}</strong>
-            </div>
-            <div class="profile-item">
-              <span>Status:</span>
-              <strong>${state.user.is_verified ? 'Verified' : 'Unverified'}</strong>
-            </div>
-            <div class="profile-item">
-              <span>Role:</span>
-              <strong style="text-transform:capitalize;">${state.user.user_role || 'user'}</strong>
-            </div>
-            <div class="profile-item">
-              <span>Joined:</span>
-              <strong>${new Date(state.user.created_at).toLocaleDateString()}</strong>
-            </div>
-          </div>
+      // Reset form and reload inventory
+      app.creator.drafts = {};
+      document.getElementById('createForm')?.reset();
+      await loadMyItems();
+      router.navigate('my-items');
+    } catch (error) {
+      showToast(`Error: ${error.message}`, 'error');
+    } finally {
+      app.ui.loading.delete('create');
+    }
+  }
+
+  function renderStarsPage() {
+    const balanceEl = document.getElementById('starsBalance');
+    const refCodeEl = document.getElementById('refCode');
+    const copyBtnEl = document.getElementById('copyRefBtn');
+    const referralNetworkEl = document.getElementById('referralNetwork');
+
+    if (balanceEl && app.user?.stars_balance) {
+      balanceEl.textContent = app.user.stars_balance;
+    }
+
+    if (refCodeEl && app.data.referrals?.code) {
+      refCodeEl.textContent = app.data.referrals.code;
+      copyBtnEl?.addEventListener('click', copyReferralLink);
+    }
+
+    if (referralNetworkEl && app.data.referrals?.network?.length) {
+      referralNetworkEl.innerHTML = app.data.referrals.network
+        .map(
+          ref => `
+        <div class="referral-item">
+          <span>${ref.user_name || 'User'}</span>
+          <span class="earnings">+${ref.earnings || 0} ⭐</span>
         </div>
-        <div class="card" style="margin-top:20px;">
-          <h3>Stats</h3>
-          <div class="stats-grid" style="margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;">
-            <div class="stat-box">
-              <div class="stat-label">Wallets</div>
-              <div class="stat-value">${state.wallets.length}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-label">NFTs</div>
-              <div class="stat-value">${state.nfts.length}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-label">Listings</div>
-              <div class="stat-value">${state.listings.filter(l => l.active || l.status === 'ACTIVE').length}</div>
-            </div>
-          </div>
+      `
+        )
+        .join('');
+    }
+
+    const transHistoryEl = document.getElementById('transactionHistory');
+    if (transHistoryEl && app.data.transactions?.items?.length) {
+      transHistoryEl.innerHTML = app.data.transactions.items
+        .map(
+          tx => `
+        <div class="transaction-item">
+          <span>${tx.description || 'Transaction'}</span>
+          <span class="amount">${tx.type === 'earn' ? '+' : '-'}${tx.amount} ⭐</span>
+        </div>
+      `
+        )
+        .join('');
+    }
+  }
+
+  function renderMyItemsPage() {
+    const grid = document.getElementById('myItemsGrid');
+    const empty = document.getElementById('myitemsEmpty');
+    const items = app.data.myItems.items;
+
+    if (!items.length) {
+      empty.style.display = 'flex';
+      grid.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+
+    items.forEach(item => {
+      const card = createCollectibleCard(item, 'myItems');
+      card.addEventListener('click', () => showItemModal(item));
+      grid.appendChild(card);
+    });
+  }
+
+  function renderProfilePage() {
+    const nameEl = document.getElementById('userName');
+    const statsEl = document.getElementById('stats');
+    const logoutBtnEl = document.getElementById('logoutBtn');
+    const creatorToggleEl = document.getElementById('creatorToggle');
+
+    if (nameEl && app.user?.username) {
+      nameEl.textContent = app.user.username;
+    }
+
+    if (statsEl && app.data.profileStats) {
+      statsEl.innerHTML = `
+        <div class="stat-card">
+          <span class="stat-label">Items Owned</span>
+          <span class="stat-value">${app.data.profileStats.owned_items || 0}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Items Created</span>
+          <span class="stat-value">${app.data.profileStats.created_items || 0}</span>
         </div>
       `;
-    } catch (err) {
-      log(`Profile error: ${err.message}`, 'error');
+    }
+
+    if (logoutBtnEl) {
+      logoutBtnEl.addEventListener('click', logoutApp);
+    }
+
+    if (creatorToggleEl) {
+      creatorToggleEl.checked = app.creator.isCreator;
+      creatorToggleEl.addEventListener('change', toggleCreatorMode);
+    }
+
+    const creatorFormEl = document.getElementById('creatorForm');
+    if (creatorFormEl) {
+      creatorFormEl.style.display = app.creator.isCreator ? 'block' : 'none';
+      creatorFormEl.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveCreatorProfile();
+      });
     }
   }
 
-  //MODAL FUNCTIONS
-
-  window.showWalletDetails = function(walletId) {
-    const wallet = state.wallets.find(w => w.id === walletId);
-    if (!wallet) return;
-    
-    showModal(`${wallet.blockchain?.toUpperCase()} Wallet`, `
-      <div style="font-size:13px;">
-        <div class="profile-item">
-          <span>Address:</span>
-          <code style="word-break:break-all;font-size:11px;">${wallet.address}</code>
-        </div>
-        <div class="profile-item">
-          <span>Primary:</span>
-          <strong>${wallet.is_primary ? 'Yes' : 'No'}</strong>
-        </div>
-        <div class="profile-item">
-          <span>Created:</span>
-          <strong>${new Date(wallet.created_at).toLocaleString()}</strong>
-        </div>
-      </div>
-    `, [
-      { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  // Set a wallet as primary (used by wallet list actions)
-  window.setPrimary = async function(walletId) {
-    try {
-      if (!state.user) {
-        showStatus('User not authenticated', 'error');
-        return;
-      }
-
-      showStatus('Setting primary wallet...', 'loading');
-      const result = await API.setPrimaryWallet(walletId, state.user.id);
-
-      if (!result.success) throw new Error(result.error || 'Failed to set primary wallet');
-
-      showStatus('Primary wallet updated!', 'success');
-      closeModal();
-      await updateWalletsList();
-      await updateDashboard();
-    } catch (err) {
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  window.showNftDetails = function(nftId) {
-    const nft = state.nfts.find(n => n.id === nftId);
-    if (!nft) return;
-    
-    showModal(`${nft.name}`, `
-      <div class="modal-nft-image" style="width:100%;height:250px;border-radius:8px;margin-bottom:12px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-        ${nft.image_url ? `
-          <img src="${nft.image_url}" 
-               alt="${nft.name}" 
-               style="width:100%;height:100%;object-fit:cover;" 
-               onerror="this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);\\">Image failed to load</span>'">
-        ` : `<span style="color:rgba(255,255,255,0.5);">No image</span>`}
-      </div>
-      <div style="font-size:13px;">
-        <div class="profile-item">
-          <span>Blockchain:</span>
-          <strong>${nft.blockchain?.toUpperCase()}</strong>
-        </div>
-        <div class="profile-item">
-          <span>Status:</span>
-          <strong>${nft.status || 'UNLISTED'}</strong>
-        </div>
-        <div class="profile-item">
-          <span>Description:</span>
-          <p style="margin-top:4px;color:var(--text-secondary);">${nft.description || 'No description'}</p>
-        </div>
-      </div>
-    `, [
-      { label: nft.status !== 'LISTED' ? 'Sell NFT' : 'View Listing', action: `listNftModal('${nft.id}')`, class: 'btn-primary' },
-      { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  window.listNftModal = function(nftId) {
-    showModal('List NFT for Sale', `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div>
-          <label>Price (USD)</label>
-          <input type="number" id="listPrice" placeholder="Enter price" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Currency</label>
-          <select id="listCurrency" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-            <option>USD</option>
-            <option>EUR</option>
-            <option>GBP</option>
-            <option>ETH</option>
-            <option>USDT</option>
-          </select>
-        </div>
-      </div>
-    `, [
-      { label: 'List NFT', action: `submitListNft('${nftId}')`, class: 'btn-primary' },
-      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  window.submitListNft = async function(nftId) {
-    try {
-      const price = document.getElementById('listPrice')?.value;
-      const currency = document.getElementById('listCurrency')?.value || 'USDT';
-      
-      if (!price) throw new Error('Please enter a price');
-      if (!state.user?.id) throw new Error('User not authenticated');
-      
-      showStatus('Listing NFT...', 'loading');
-      const result = await API.listNft(state.user.id, nftId, price, currency);
-      
-      if (!result.success) throw new Error(result.error || 'Failed to list NFT');
-      
-      closeModal();
-      showStatus('NFT listed successfully!', 'success');
-      await updateNftList();
-    } catch (err) {
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  window.buyNftModal = function(listingId) {
-    showModal('Make Offer', `
-      <div>
-        <label>Offer Price (USD)</label>
-        <input type="number" id="offerPrice" placeholder="Enter your offer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;" min="0" step="0.01">
-      </div>
-    `, [
-      { label: 'Submit Offer', action: `submitOffer('${listingId}')`, class: 'btn-primary' },
-      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  window.submitOffer = async function(listingId) {
-    try {
-      const price = document.getElementById('offerPrice')?.value;
-      if (!price) throw new Error('Please enter an offer price');
-      if (!state.user?.id) throw new Error('User not authenticated');
-      
-      showStatus('Submitting offer...', 'loading');
-      const result = await API.makeOffer(state.user.id, listingId, price);
-      
-      if (!result.success) throw new Error(result.error || 'Failed to submit offer');
-      
-      closeModal();
-      showStatus('Offer submitted!', 'success');
-      await updateMarketplaceList();
-    } catch (err) {
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  // Direct buy / make offer helper
-  window.buyNow = async function(listingId, offerPrice) {
-    try {
-      if (!state.user || !state.user.id) return showStatus('User not authenticated', 'error');
-      if (!offerPrice) throw new Error('Offer price required');
-
-      showStatus('Processing purchase...', 'loading');
-      const result = await API.makeOffer(state.user.id, listingId, parseFloat(offerPrice));
-
-      if (!result.success) throw new Error(result.error || 'Purchase failed');
-
-      showStatus('Purchase submitted!', 'success');
-      await updateMarketplaceList();
-      await updateDashboard();
-    } catch (err) {
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  window.cancelListing = async function(listingId) {
-    try {
-      if (!state.user || !state.user.id) return showStatus('User not authenticated', 'error');
-      showStatus('Cancelling listing...', 'loading');
-      const res = await API.cancelListing(state.user.id, listingId);
-      if (!res.success) throw new Error(res.error || 'Cancel failed');
-      showStatus('Listing cancelled', 'success');
-      await updateMarketplaceList();
-      await updateDashboard();
-    } catch (err) {
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  // ========== DEPOSIT / WITHDRAWAL FUNCTIONS ==========
-  
-  window.depositModal = function(walletId) {
-    showModal(' Deposit USDT', `
-      <div style="display:flex;flex-direction:column;gap:12px;text-align:center;">
-        <p style="color:var(--text-secondary);font-size:13px;">Send USDT to your wallet to increase your balance</p>
-        <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
-          <label style="display:block;margin-bottom:8px;font-size:12px;color:var(--text-secondary);">Amount (USDT)</label>
-          <input type="number" id="depositAmount" placeholder="Enter amount" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;font-size:14px;" min="1" step="0.01">
-        </div>
-      </div>
-    `, [
-      { label: 'Initiate Deposit', action: `submitDeposit('${walletId}')`, class: 'btn-primary' },
-      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  window.submitDeposit = async function(walletId) {
-    try {
-      const amount = parseFloat(document.getElementById('depositAmount')?.value);
-      if (!amount || amount < 1) throw new Error('Minimum deposit is 1 USDT');
-      
-      showStatus('Initiating deposit...', 'loading');
-      
-      // Use web-app endpoint if available, otherwise fall back to direct endpoint
-      let depositPath = `/api/v1/payments/web-app/deposit`;
-      let requestBody = {
-        user_id: state.user?.id || '',
-        wallet_id: walletId,
-        amount: amount,
-        blockchain: 'ethereum', // default blockchain  
-        init_data: state.initData || '',
-      };
-      
-      const result = await API._fetch(depositPath, {
-        method: 'POST',
-        body: requestBody
+  // ========== EVENT BINDINGS ==========
+  function bindEvents() {
+    // Nav tabs
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const page = btn.dataset.page || btn.getAttribute('data-page');
+        router.navigate(page);
+        render();
+        window.haptic?.light();
       });
-      
-      if (!result.success && result.error) {
-        // Try alternative endpoint if first fails
-        depositPath = `/api/v1/payments/deposit/initiate`;
-        requestBody = {
-          wallet_id: walletId,
-          amount: amount,
-        };
-        
-        const altResult = await API._fetch(depositPath, {
-          method: 'POST',
-          body: requestBody
-        });
-        
-        if (altResult.success) {
-          result.success = altResult.success;
-          result.payment_id = altResult.payment_id;
-          result.deposit_address = altResult.deposit_address;
-          result.currency = altResult.currency || 'USDT';
-          result.blockchain = altResult.blockchain || 'ethereum';
-        } else {
-          throw new Error(altResult.error || result.error || 'Failed to initiate deposit');
-        }
-      }
-      
-      if (!result.success) throw new Error(result.error || 'Failed to initiate deposit');
-      
-      closeModal();
-      showModal('📋 Deposit Instructions', `
-        <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
-          <div style="background:rgba(76,175,80,0.1);padding:12px;border-radius:8px;border-left:4px solid #4CAF50;">
-            <p><strong>Deposit Address:</strong></p>
-            <code style="display:block;background:rgba(0,0,0,0.3);padding:8px;margin:8px 0;word-break:break-all;border-radius:4px;font-size:11px;">${result.deposit_address}</code>
-            <button onclick="navigator.clipboard.writeText('${result.deposit_address}');alert('Copied!')" class="btn btn-secondary" style="width:100%;margin-top:8px;font-size:12px;">📋 Copy Address</button>
-          </div>
-          <div style="background:rgba(33,150,243,0.1);padding:12px;border-radius:8px;border-left:4px solid #2196F3;">
-            <strong>Send this amount:</strong> ${result.amount} ${result.currency}
-          </div>
-          <div style="background:rgba(255,152,0,0.1);padding:12px;border-radius:8px;border-left:4px solid #FF9800;">
-            <strong>On blockchain:</strong> ${(result.blockchain || 'ethereum').toUpperCase()}
-          </div>
-          <p style="color:var(--text-secondary);margin-top:8px;">⏱ This deposit is valid for 24 hours. After sending, come back to confirm the transaction.</p>
-        </div>
-      `, [
-        { label: 'Confirmed Deposit', action: `confirmDepositModal('${result.payment_id}')`, class: 'btn-primary' },
-        { label: 'Close', action: 'closeModal()', class: 'btn-secondary' }
-      ]);
-    } catch (err) {
-      log(`Deposit error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  window.confirmDepositModal = function(paymentId) {
-    showModal('Confirm Deposit', `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <p style="color:var(--text-secondary);font-size:13px;">Paste your transaction hash to confirm the deposit</p>
-        <div>
-          <label style="display:block;margin-bottom:6px;font-size:12px;">Transaction Hash</label>
-          <input type="text" id="txHash" placeholder="0x..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;font-size:12px;font-family:monospace;">
-        </div>
-      </div>
-    `, [
-      { label: 'Confirm', action: `submitConfirmDeposit('${paymentId}')`, class: 'btn-primary' },
-      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  window.submitConfirmDeposit = async function(paymentId) {
-    try {
-      const txHash = document.getElementById('txHash')?.value?.trim();
-      if (!txHash || txHash.length < 10) throw new Error('Invalid transaction hash');
-      
-      showStatus('Confirming deposit...', 'loading');
-      
-      let confirmPath = `/api/v1/payments/deposit/confirm`;
-      const result = await API._fetch(confirmPath, {
-        method: 'POST',
-        body: {
-          payment_id: paymentId,
-          transaction_hash: txHash,
-        }
-      });
-      
-      if (!result.success) throw new Error(result.error || 'Failed to confirm deposit');
-      
-      closeModal();
-      showStatus('Deposit confirmed! Your balance will update once verified.', 'success');
-      log(`Deposit confirmed: ${paymentId}`, 'log');
-      await updateDashboard();
-    } catch (err) {
-      log(`Deposit confirmation error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  window.withdrawalModal = function(walletId) {
-    showModal(' Withdraw USDT', `
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div>
-          <label style="display:block;margin-bottom:6px;font-size:12px;">Amount to Withdraw (USDT)</label>
-          <input type="number" id="withdrawAmount" placeholder="Enter amount" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;" min="1" step="0.01">
-        </div>
-        <div>
-          <label style="display:block;margin-bottom:6px;font-size:12px;">Destination Address</label>
-          <input type="text" id="destAddress" placeholder="0x... or other address" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;font-size:12px;">
-        </div>
-        <div>
-          <label style="display:block;margin-bottom:6px;font-size:12px;">Blockchain (optional)</label>
-          <select id="destBlockchain" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-            <option value="">Same as source</option>
-            <option value="ethereum">Ethereum</option>
-            <option value="polygon">Polygon</option>
-            <option value="arbitrum">Arbitrum</option>
-            <option value="optimism">Optimism</option>
-            <option value="avalanche">Avalanche</option>
-            <option value="base">Base</option>
-          </select>
-        </div>
-      </div>
-    `, [
-      { label: 'Withdraw', action: `submitWithdrawal('${walletId}')`, class: 'btn-primary' },
-      { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-    ]);
-  };
-
-  window.submitWithdrawal = async function(walletId) {
-    try {
-      const amount = parseFloat(document.getElementById('withdrawAmount')?.value);
-      const destAddress = document.getElementById('destAddress')?.value?.trim();
-      const destBlockchain = document.getElementById('destBlockchain')?.value || undefined;
-      
-      if (!amount || amount < 1) throw new Error('Minimum withdrawal is 1 USDT');
-      if (!destAddress || destAddress.length < 20) throw new Error('Invalid destination address');
-      
-      showStatus('Processing withdrawal request...', 'loading');
-      
-      let withdrawPath = `/api/v1/payments/web-app/withdrawal`;
-      let requestBody = {
-        user_id: state.user?.id || '',
-        wallet_id: walletId,
-        amount: amount,
-        destination_address: destAddress,
-        blockchain: destBlockchain || 'ethereum',
-        init_data: state.initData || '',
-      };
-      
-      let result = await API._fetch(withdrawPath, {
-        method: 'POST',
-        body: requestBody
-      });
-      
-      if (!result.success && result.error) {
-        // Try alternative endpoint
-        withdrawPath = `/api/v1/payments/withdrawal/initiate`;
-        requestBody = {
-          wallet_id: walletId,
-          amount: amount,
-          destination_address: destAddress,
-          destination_blockchain: destBlockchain,
-        };
-        
-        const altResult = await API._fetch(withdrawPath, {
-          method: 'POST',
-          body: requestBody
-        });
-        
-        if (altResult.success) {
-          result.success = altResult.success;
-          result.payment_id = altResult.payment_id;
-          result.currency = altResult.currency || 'USDT';
-          result.platform_fee = altResult.platform_fee || '0';
-        } else {
-          throw new Error(altResult.error || result.error || 'Failed to initiate withdrawal');
-        }
-      }
-      
-      if (!result.success) throw new Error(result.error || 'Failed to initiate withdrawal');
-      
-      closeModal();
-      showModal('⏳ Withdrawal Pending', `
-        <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
-          <div style="background:rgba(76,175,80,0.1);padding:12px;border-radius:8px;">
-            <strong>Withdrawal Created</strong><br>
-            ${result.amount} ${result.currency} will be sent to your address.
-          </div>
-          <div style="background:rgba(255,152,0,0.1);padding:12px;border-radius:8px;border-left:4px solid #FF9800;">
-            <strong>Fee:</strong> ${result.platform_fee || '2%'}
-          </div>
-          <p style="color:var(--text-secondary);">Withdrawal will be processed within 5 minutes.</p>
-        </div>
-      `, [
-        { label: 'Done', action: 'closeModal()', class: 'btn-primary' }
-      ]);
-      
-      log(`Withdrawal initiated: ${result.payment_id}`, 'log');
-      await updateDashboard();
-    } catch (err) {
-      log(`Withdrawal error: ${err.message}`, 'error');
-      showStatus(`Error: ${err.message}`, 'error');
-    }
-  };
-
-  window.closeModal = closeModal;
-
-  //NAVIGATION
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      const pageName = item.dataset.page;
-      if (pageName) switchPage(pageName);
     });
-  });
 
-  //  PAGE ACTION
-  const pageActions = {
-    async createWallet() {
-      showModal('Create Wallet', `
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div>
-            <label>Blockchain</label>
-            <select id="blockchainSelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-              <option value="bitcoin">Bitcoin</option>
-              <option value="ethereum">Ethereum</option>
-              <option value="solana">Solana</option>
-              <option value="ton">TON</option>
-              <option value="polygon">Polygon</option>
-              <option value="avalanche">Avalanche</option>
-              <option value="arbitrum">Arbitrum</option>
-              <option value="optimism">Optimism</option>
-              <option value="base">Base</option>
-            </select>
+    // Filter buttons (marketplace)
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter;
+        if (app.ui.filters.has(filter)) {
+          app.ui.filters.delete(filter);
+        } else {
+          app.ui.filters.add(filter);
+        }
+        btn.classList.toggle('active');
+        renderMarketplace();
+        window.haptic?.selection();
+      });
+    });
+
+    // Checkout button
+    document.getElementById('checkoutBtn')?.addEventListener('click', () => {
+      if (!app.cart.items.length) {
+        showToast('Cart is empty', 'info');
+        return;
+      }
+
+      // Show payment breakdown and initiate Telegram Stars payment
+      const cartTotal = app.cart.items.reduce((sum, i) => sum + (i.price || 0), 0);
+      const hasReferrer = app.user?.referred_by_id ? true : false;
+      const commissions = calculateCommissions(cartTotal, hasReferrer);
+
+      const summary = `
+        <div style="font-size: 28px; font-weight: bold; text-align: center; margin: var(--spacing) 0;">
+          ${cartTotal} ⭐
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing); margin: var(--spacing) 0;">
+          <div style="background: rgba(0,136,204,0.1); padding: var(--spacing); border-radius: 8px; text-align: center;">
+            <div style="font-size: 11px; color: #888;">Platform Fee (2%)</div>
+            <div style="font-size: 16px; color: #ff6b6b; font-weight: bold; margin-top: 4px;">-${commissions.platformFee} ⭐</div>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <input type="checkbox" id="setPrimary" checked>
-            <label style="margin:0;">Set as Primary</label>
+          <div style="background: rgba(100,200,50,0.1); padding: var(--spacing); border-radius: 8px; text-align: center;">
+            <div style="font-size: 11px; color: #888;">You Receive</div>
+            <div style="font-size: 16px; color: #64c832; font-weight: bold; margin-top: 4px;">+${cartTotal} ⭐</div>
           </div>
         </div>
-      `, [
-        { label: 'Create', action: 'pageActions.submitCreateWallet()', class: 'btn-primary' },
-        { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
+        ${hasReferrer && commissions.referralCommission > 0 ? `
+          <div style="background: rgba(78,205,196,0.1); padding: var(--spacing); border-radius: 8px; text-align: center; margin-top: var(--spacing);">
+            <div style="font-size: 11px; color: #888;">Referral Bonus</div>
+            <div style="font-size: 14px; color: #4ecdc4; font-weight: bold; margin-top: 4px;">+${commissions.referralCommission} ⭐</div>
+          </div>
+        ` : ''}
+      `;
+
+      showModal('Complete Purchase', summary, [
+        { label: 'Pay with Stars ⭐', type: 'primary', handler: initiateTelegramStarsPayment },
+        { label: 'Cancel', type: 'secondary', handler: () => { document.getElementById('itemModal').style.display = 'none'; } }
       ]);
-    },
 
-    async importWallet() {
-      showModal('Import Wallet', `
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div>
-            <label>Blockchain</label>
-            <select id="importBlockchain" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-              <option value="bitcoin">Bitcoin</option>
-              <option value="ethereum">Ethereum</option>
-              <option value="solana">Solana</option>
-              <option value="ton">TON</option>
-              <option value="polygon">Polygon</option>
-              <option value="avalanche">Avalanche</option>
-            </select>
-          </div>
-          <div>
-            <label>Address</label>
-            <input type="text" id="importAddress" placeholder="0x..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <input type="checkbox" id="importSetPrimary">
-            <label style="margin:0;">Set as Primary</label>
-          </div>
-        </div>
-      `, [
-        { label: 'Import', action: 'pageActions.submitImportWallet()', class: 'btn-primary' },
-        { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-      ]);
-    },
+      window.haptic?.medium();
+    });
 
-    async submitImportWallet() {
-      try {
-        const blockchain = document.getElementById('importBlockchain')?.value;
-        const address = document.getElementById('importAddress')?.value;
-        const isPrimary = document.getElementById('importSetPrimary')?.checked === true;
-
-        if (!blockchain || !address) throw new Error('Please select blockchain and enter address');
-
-        showStatus('Importing wallet...', 'loading');
-        const result = await API.importWallet(blockchain, address, null, isPrimary);
-
-        if (!result.success) throw new Error(result.error || 'Failed to import wallet');
-
-        closeModal();
-        showStatus('Wallet imported!', 'success');
-        await updateWalletsList();
-        await updateDashboard();
-      } catch (err) {
-        showStatus(`Error: ${err.message}`, 'error');
-      }
-    },
-
-    async submitCreateWallet() {
-      try {
-        if (!state.user || !state.user.id) {
-          showStatus('User not authenticated', 'error');
-          log('Wallet creation failed: user not authenticated', 'error');
-          return;
-        }
-
-        const blockchain = document.getElementById('blockchainSelect')?.value?.toLowerCase();
-        const isPrimary = document.getElementById('setPrimary')?.checked === true;
-        
-        if (!blockchain) throw new Error('Please select a blockchain');
-        
-        log(`Creating wallet on ${blockchain} (primary=${isPrimary})`, 'log');
-        showStatus('Creating wallet...', 'loading');
-        
-        const result = await API.createWallet(blockchain, 'custodial', isPrimary);
-        
-        log(`Create wallet response: ${JSON.stringify(result)}`, 'log');
-        
-        if (!result || !result.success) {
-          const errorMsg = result?.error || result?.detail || result?.message || 'Failed to create wallet';
-          log(`Wallet creation error: ${errorMsg}`, 'error');
-          throw new Error(errorMsg);
-        }
-        
-        closeModal();
-        log(`Wallet created successfully: ${result.wallet?.id}`, 'log');
-        showStatus('Wallet created successfully! 🎉', 'success');
-        
-        // Reload wallet data
-        await updateWalletsList();
-        await updateDashboard();
-      } catch (err) {
-        log(`Wallet creation failed: ${err.message}`, 'error');
-        showStatus(`Error: ${err.message}`, 'error');
-      }
-    },
-
-    async mintNft() {
-      if (!state.user || !state.user.id) {
-        showStatus('User not authenticated', 'error');
-        return;
-      }
-
-      // Ensure wallets are loaded
-      if (!state.wallets || state.wallets.length === 0) {
-        try {
-          showStatus('Loading wallets...', 'loading');
-          const data = await API.getWallets(state.user.id);
-          if (data.success) {
-            state.wallets = data.wallets || [];
-          }
-        } catch (e) {
-          log(`Failed to load wallets: ${e.message}`, 'error');
-        }
-      }
-
-      if (!state.wallets || state.wallets.length === 0) {
-        showModal('No Wallets', `
-          <div style="text-align:center;">
-            <p>You need to create a wallet before minting NFTs.</p>
-            <p style="color:var(--text-secondary);font-size:12px;">A wallet holds your NFTs on a blockchain.</p>
-          </div>
-        `, [
-          { label: 'Create Wallet', action: 'pageActions.createWallet()', class: 'btn-primary' },
-          { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-        ]);
-        return;
-      }
-      
-      showModal('Create NFT', `
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div>
-            <label>Wallet</label>
-            <select id="mintWalletSelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-              ${state.wallets.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label>NFT Name</label>
-            <input type="text" id="mintName" placeholder="Enter NFT name" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;">
-          </div>
-          <div>
-            <label>Description</label>
-            <textarea id="mintDesc" placeholder="Enter description" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;resize:none;height:80px;"></textarea>
-          </div>
-          <div>
-            <label>Image URL (Optional)</label>
-            <input type="url" id="mintImage" placeholder="https://..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;background:rgba(0,0,0,0.2);color:#fff;" oninput="this._imagePreviewTimeout = setTimeout(() => { const img = document.getElementById('imagePreview'); const url = this.value; if (url && url.startsWith('http')) { img.src = url; img.style.display='block'; } else { img.style.display='none'; } }, 500)">
-          </div>
-          <div id="imagePreviewContainer" style="width:100%;height:150px;border-radius:8px;background:linear-gradient(135deg,#7c5cff,#4c6ef5);background-size:cover;overflow:hidden;margin-top:8px;display:flex;align-items:center;justify-content:center;">
-            <img id="imagePreview" src="" alt="Preview" style="display:none;width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=\\"color:rgba(255,255,255,0.5);\\">Image failed to load</span>'">
-          </div>
-        </div>
-      `, [
-        { label: 'Create NFT', action: 'pageActions.submitMintNft()', class: 'btn-primary' },
-        { label: 'Cancel', action: 'closeModal()', class: 'btn-secondary' }
-      ]);
-    },
-
-    async submitMintNft() {
-      try {
-        if (!state.user || !state.user.id) {
-          showStatus('User not authenticated', 'error');
-          return;
-        }
-
-        const walletId = document.getElementById('mintWalletSelect')?.value;
-        const name = document.getElementById('mintName')?.value;
-        const desc = document.getElementById('mintDesc')?.value;
-        const image = document.getElementById('mintImage')?.value;
-        
-        if (!walletId) throw new Error('Please select a wallet');
-        if (!name || name.trim().length === 0) throw new Error('Please enter an NFT name');
-        
-        showStatus('Minting NFT...', 'loading');
-        const result = await API.mintNft(state.user.id, walletId, name, desc, image || null);
-        
-        if (!result || !result.success) throw new Error(result?.error || result?.detail || 'Failed to mint NFT');
-        
-        closeModal();
-        showStatus('NFT minted successfully!', 'success');
-        await updateNftList();
-        await updateDashboard();
-      } catch (err) {
-        showStatus(`Error: ${err.message}`, 'error');
-      }
-    },
-
-    async viewBalance() {
-      switchPage('balance');
-      await pageActions.refreshBalance();
-    },
-
-    async refreshBalance() {
-      try {
-        showStatus('Loading balance...', 'loading');
-        
-        const response = await API.getBalance();
-        if (response.error || !response.success) throw new Error(response.error || response.detail || 'Failed to load balance');
-        
-        const balance = response || {};
-        const total = balance.total_balance_usdt || 0;
-        const pending = balance.pending_deposits_usdt || 0;
-        const available = balance.available_balance_usdt || 0;
-        
-        // Update balance display in dashboard
-        const dashDisplay = document.getElementById('balanceDisplay');
-        if (dashDisplay) dashDisplay.textContent = `$${total.toFixed(2)} USDT`;
-        
-        // Update balance display in balance page
-        const largeDisplay = document.getElementById('balanceDisplayLarge');
-        if (largeDisplay) largeDisplay.textContent = `$${total.toFixed(2)} USDT`;
-        
-        const confirmedEl = document.getElementById('confirmedBalance');
-        if (confirmedEl) confirmedEl.textContent = `$${total.toFixed(2)}`;
-        
-        const pendingEl = document.getElementById('pendingBalance');
-        if (pendingEl) pendingEl.textContent = `$${pending.toFixed(2)}`;
-        
-        const availEl = document.getElementById('availableBalance');
-        if (availEl) availEl.textContent = `$${available.toFixed(2)}`;
-        
-        // Update wallet balances
-        const walletBalancesList = document.getElementById('walletBalancesList');
-        if (walletBalancesList && balance.wallets) {
-          walletBalancesList.innerHTML = balance.wallets.map(w => `
-            <div class="card" style="padding:12px;margin-bottom:8px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <strong>${w.blockchain?.toUpperCase()}</strong>
-                  ${w.is_primary ? '<span class="blockchain-badge primary-badge">Primary</span>' : ''}
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:14px;font-weight:600;">$${w.balance?.toFixed(2)}</div>
-                  <div style="font-size:11px;color:var(--text-secondary);">${w.address.substring(0, 12)}...</div>
-                </div>
-              </div>
-            </div>
-          `).join('');
-        }
-        
-        // Update payment history
-        const historyResponse = await API.getPaymentHistory(5);
-        const paymentHistoryList = document.getElementById('paymentHistoryList');
-        if (paymentHistoryList && historyResponse.history) {
-          paymentHistoryList.innerHTML = historyResponse.history.length ? 
-            historyResponse.history.map(tx => `
-              <div class="card" style="padding:12px;margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <div>
-                    <div style="font-weight:600;">${tx.type === 'deposit' ? ' Deposit' : ' Withdrawal'}</div>
-                    <div style="font-size:11px;color:var(--text-secondary);">${new Date(tx.created_at).toLocaleString()}</div>
-                  </div>
-                  <div style="text-align:right;">
-                    <div style="font-weight:600;color:${tx.type === 'deposit' ? '#51cf66' : '#ff6b6b'}">${tx.type === 'deposit' ? '+' : '-'}$${tx.amount?.toFixed(2)}</div>
-                    <div style="font-size:11px;color:var(--text-secondary)">${tx.status}</div>
-                  </div>
-                </div>
-              </div>
-            `).join('') : '<div class="card"><p style="color:var(--text-secondary);">No transactions yet</p></div>';
-        }
-        
-        showStatus('Balance updated', 'success');
-      } catch (err) {
-        showStatus(`Error: ${err.message}`, 'error');
-      }
-    },
-
-    async depositQuick() {
-      if (!state.wallets.length) {
-        showStatus('Please create a wallet first', 'error');
-        return;
-      }
-      
-      const primaryWallet = state.wallets.find(w => w.is_primary) || state.wallets[0];
-      window.depositModal(primaryWallet.id);
-    },
-
-    async quickDeposit() {
-      if (!state.wallets.length) {
-        showStatus('Please create a wallet first', 'error');
-        return;
-      }
-      
-      const primaryWallet = state.wallets.find(w => w.is_primary) || state.wallets[0];
-      window.depositModal(primaryWallet.id);
-    },
-
-    async quickWithdraw() {
-      if (!state.wallets.length) {
-        showStatus('Please create a wallet first', 'error');
-        return;
-      }
-      
-      const primaryWallet = state.wallets.find(w => w.is_primary) || state.wallets[0];
-      window.withdrawalModal(primaryWallet.id);
-    },
-  };
-
-  window.pageActions = pageActions;
-
-  // ========== EXPOSE GLOBAL FUNCTIONS ==========
-  // These functions need to be accessible from onclick handlers in HTML
-  window.showModal = showModal;
-  window.closeModal = closeModal;
-  window.showStatus = showStatus;
-  window.log = log;
-  window.switchPage = switchPage;
-  window.loadPageData = loadPageData;
+    // Modal close button
+    document.getElementById('closeModal')?.addEventListener('click', () => {
+      app.ui.modals.active = null;
+      document.getElementById('itemModal').style.display = 'none';
+    });
+  }
 
   // ========== INITIALIZATION ==========
-  
-  async function initWithTelegram() {
-    /**
-     * Initialize WebApp with real Telegram initData
-     * initData MUST be present for all backend communications
-     */
-    if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
-      showStatus('This app must be opened from Telegram Bot', 'error');
-      log('Telegram WebApp SDK not available', 'error');
-      return null;
-    }
-
-    try {
-      // Ready WebApp UI
-      if (typeof window.Telegram.WebApp.ready === 'function') {
-        window.Telegram.WebApp.ready();
-      }
-      if (typeof window.Telegram.WebApp.expand === 'function') {
-        window.Telegram.WebApp.expand();
-      }
-
-      // Get initData - REQUIRED for Telegram signature verification
-      let initData = window.Telegram?.WebApp?.initData;
-      
-      // Fallback: try URL params
-      if (!initData) {
-        const urlParams = new URLSearchParams(window.location.search);
-        initData = urlParams.get('tgWebAppData') || urlParams.get('init_data');
-      }
-
-      // Validate initData is present and non-empty
-      if (!initData || typeof initData !== 'string' || initData.trim().length === 0) {
-        throw new Error(
-          'Unable to obtain Telegram authentication data. ' +
-          'Please ensure the app is opened from Telegram bot using /start command.'
-        );
-      }
-
-      log(`Telegram initData received: ${initData.substring(0, 50)}...`);
-      showStatus('Authenticating with Telegram...', 'loading');
-
-      // Send initData to backend for signature verification
-      const authResult = await API.initSession(initData);
-      
-      // Check for authentication success
-      if (!authResult || !authResult.success) {
-        const errorMsg = authResult?.detail || authResult?.error || 'Telegram authentication failed';
-        throw new Error(errorMsg);
-      }
-      
-      // Extract user data from response
-      const user = authResult?.user;
-      if (!user || !user.id) {
-        throw new Error('No user data in authentication response');
-      }
-
-      // Store user in state
-      state.user = user;
-      log(`✓ Authenticated: ${user.telegram_username || user.full_name}`);
-      return user;
-      
-    } catch (err) {
-      const errorMsg = err.message || 'Unknown authentication error';
-      log(`Telegram auth failed: ${errorMsg}`, 'error');
-      showStatus(`Authentication Error: ${errorMsg}`, 'error');
-      return null;
-    }
-  }
-
   async function init() {
-    try {
-      showStatus('Initializing NFT Platform...', 'loading');
-      log('=== App Initialization Starting ===');
+    log('Initializing app...', 'info');
 
-      // Initialize image protection system
-      applyImageProtectionStyles();
-      protectKeyboardShortcuts();
+    // Telegram SDK setup
+    if (window.Telegram?.WebApp) {
+      tg.ready();
+      tg.setHeaderColor('#0a0e27');
+      tg.setBackgroundColor('#0a0e27');
+      initTelegramIntegration();
 
-      // Authenticate with Telegram - MUST succeed before proceeding
-      const user = await initWithTelegram();
-      
-      if (!user || !user.id) {
-        throw new Error('Telegram authentication failed - cannot proceed without valid user session');
+      app.auth.isAuthenticated = !!tg.initDataUnsafe?.user?.id;
+      if (app.auth.isAuthenticated) {
+        app.user = tg.initDataUnsafe.user;
+        app.auth.token = localStorage.getItem('auth_token') || tg.initData;
       }
-
-      // CRITICAL: Verify state.initData was set by initWithTelegram
-      if (!state.initData) {
-        throw new Error('Authentication data not properly initialized');
-      }
-
-      log('✓ state.initData synchronized');
-
-      // User authenticated - update UI
-      if (dom.userInfo && state.user) {
-        const avatar = state.user.avatar_url 
-          ? `<img src="${state.user.avatar_url}" alt="Avatar" style="width:36px;height:36px;border-radius:50%;margin-right:10px;">`
-          : '';
-        const fullName = state.user.full_name || state.user.telegram_username || 'User';
-        dom.userInfo.innerHTML = `${avatar}<div><strong>${fullName}</strong><br><small>@${state.user.telegram_username || 'user'}</small></div>`;
-      }
-
-      // Load initial dashboard data
-      await loadPageData('dashboard');
-
-      // Apply final image protection
-      protectAllImages();
-
-      showStatus('Ready!', 'success');
-      log('=== App Initialization Complete ===');
-
-    } catch (err) {
-      const errorMsg = err.message || 'Initialization failed';
-      log(`Init failed: ${errorMsg}`, 'error');
-      showStatus(errorMsg, 'error');
-      // Prevent further execution - auth is mandatory
-      setTimeout(() => {
-        if (dom.app) dom.app.style.opacity = '0.5';
-      }, 2000);
     }
+
+    // Bind all event listeners
+    bindEvents();
+
+    // Handle deep link (referral code)
+    const startParam = tg.initDataUnsafe?.start_param;
+    if (startParam?.startsWith('ref_')) {
+      const refCode = startParam.replace('ref_', '');
+      await apiCall('/referrals/apply', {
+        method: 'POST',
+        body: { referral_code: refCode },
+      });
+      showToast('Referral code applied! 🎉', 'success');
+    }
+
+    // Load initial page
+    router.navigate('market');
+    await render();
+
+    log('App ready!', 'success');
   }
 
-  // Start app when DOM is ready
+  // Start app on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
