@@ -1,1392 +1,870 @@
-/**
- * GiftedForge - Telegram Mini App (Production Edition)
- * State-driven, cache-aware NFT marketplace
- * No external dependencies, Telegram-native first
- */
-
-(() => {
+(async function() {
   'use strict';
 
-  // ========== DOM REFERENCES ==========
-  const dom = {
-    app: document.getElementById('app'),
-    mainContent: document.getElementById('mainContent'),
-    pages: {},
-    navTabs: Array.from(document.querySelectorAll('.nav-tab')),
-    modalOverlay: document.getElementById('modalOverlay'),
-    toastContainer: null,
-  };
-
-  document.querySelectorAll('.page').forEach((el) => {
-    dom.pages[el.dataset.page] = el;
-  });
-
-  // ========== ENHANCED STATE SYSTEM ==========
-  const app = {
-    // UI State
-    ui: {
-      currentPage: 'market',
-      modals: {
-        item: null,        // { item, type }
-        referral: null,
-        profile: null,
-        settings: null,
-      },
-      filters: {
-        market: 'all',
-        sort: 'recent',
-        search: '',
-      },
-      loading: new Set(),         // granular loading
-      errors: new Map(),
-      navCollapsed: false,
-    },
-
-    // User State
+  // ========== STATE & CONFIG ==========
+  const state = {
     user: null,
-    auth: {
-      initData: null,
-      isAuthenticated: false,
-      sessionId: null,
-      lastAuthCheck: 0,
-    },
-
-    // Data State (with cache metadata)
-    data: {
-      listings: {
-        items: [],
-        total: 0,
-        page: 0,
-        lastFetch: 0,
-        ttl: 60000,        // 1 min
-      },
-      myItems: {
-        items: [],
-        total: 0,
-        lastFetch: 0,
-        ttl: 120000,       // 2 min
-      },
-      referrals: {
-        code: null,
-        earnings: 0,
-        referredCount: 0,
-        pendingRewards: 0,
-        history: [],
-        network: [],
-        lastFetch: 0,
-        ttl: 300000,       // 5 min
-      },
-      transactions: {
-        items: [],
-        total: 0,
-        lastFetch: 0,
-        ttl: 300000,
-      },
-      profile: null,
-      profileStats: null,
-    },
-
-    // Cart State
-    cart: {
-      items: [],
-      total: 0,
-      currency: 'STARS',
-      status: 'open',
-    },
-
-    // Creator State
-    creator: {
-      isCreator: false,
-      drafts: [],
-      published: [],
-      earnings: 0,
-      totalSold: 0,
-    },
+    wallets: [],
+    nfts: [],
+    listings: [],
+    myListings: [],
+    balance: 0,
+    referralInfo: null,
+    currentPage: 'dashboard',
+    loading: false
   };
 
-  // ========== CONFIG ==========
-  const CONFIG = {
-    API_BASE: '/api/v1',
-    TIMEOUT: 15000,
-    RETRY_ATTEMPTS: 2,
-    STAR_TO_USDT: 0.004,
-    CACHE_DURATION: 60000,
-  };
-
-  // ========== UTILITIES ==========
-  function log(msg, type = 'log') {
-    console.log(`[${type.toUpperCase()}] ${msg}`);
-  }
-
-  function showToast(msg, type = 'info', duration = 3000) {
-    if (!dom.toastContainer) {
-      dom.toastContainer = document.createElement('div');
-      dom.toastContainer.id = 'toastContainer';
-      dom.toastContainer.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 3000;
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        pointer-events: none;
-      `;
-      document.body.appendChild(dom.toastContainer);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast--${type}`;
-    toast.textContent = msg;
-    toast.style.cssText = `
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      animation: slideDown 0.3s ease;
-      pointer-events: auto;
-      cursor: pointer;
-      ${type === 'success' ? 'background: rgba(52, 211, 153, 0.1); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3);' : ''}
-      ${type === 'error' ? 'background: rgba(255, 59, 48, 0.1); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3);' : ''}
-      ${type === 'info' ? 'background: rgba(0, 136, 204, 0.1); color: #0088cc; border: 1px solid rgba(0, 136, 204, 0.3);' : ''}
-    `;
-
-    dom.toastContainer.appendChild(toast);
-    window.haptic?.light();
-
-    const timeout = setTimeout(() => {
-      toast.style.animation = 'slideUp 0.3s ease';
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
-
-    toast.addEventListener('click', () => {
-      clearTimeout(timeout);
-      toast.remove();
-    });
-  }
-
-  // ========== CACHE HELPERS ==========
-  const apiCache = new Map();
-
-  function shouldRefresh(dataKey) {
-    const data = app.data[dataKey];
-    if (!data) return true;
-    return Date.now() - data.lastFetch > data.ttl;
-  }
-
-  function cacheSet(key, data) {
-    apiCache.set(key, { data, timestamp: Date.now() });
-  }
-
-  function cacheGet(key) {
-    const cached = apiCache.get(key);
-    if (cached && Date.now() - cached.timestamp < CONFIG.CACHE_DURATION) {
-      return cached.data;
-    }
-    return null;
-  }
-
-  // ========== API LAYER ==========
-  async function apiCall(endpoint, options = {}) {
-    const { method = 'GET', body = null, cache = true } = options;
-    const cacheKey = `${endpoint}:${JSON.stringify(options)}`;
-
-    // Check cache for GET requests
-    if (method === 'GET' && cache) {
-      const cached = cacheGet(cacheKey);
-      if (cached) {
-        log(`Cache hit: ${endpoint}`, 'log');
-        return cached;
-      }
-    }
-
-    try {
-      const fetchOptions = {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(CONFIG.TIMEOUT),
-      };
-
-      if (body) fetchOptions.body = JSON.stringify(body);
-
-      const response = await fetch(`${CONFIG.API_BASE}${endpoint}`, fetchOptions);
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: response.statusText }));
-        throw new Error(error.detail || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Cache success
-      if (method === 'GET' && cache) {
-        cacheSet(cacheKey, data);
-      }
-
-      return data;
-    } catch (error) {
-      log(`API Error [${endpoint}]: ${error.message}`, 'error');
-      
-      // Try stale cache on error
-      const cached = apiCache.get(cacheKey);
-      if (cached) {
-        log(`Using stale cache for ${endpoint}`, 'warn');
-        return cached.data;
-      }
-
-      throw error;
-    }
-  }
-
-  // ========== TELEGRAM INTEGRATION ==========
-  function initTelegramWebApp() {
-    if (window.Telegram?.WebApp) {
-      const webApp = window.Telegram.WebApp;
-      webApp.ready();
-      webApp.setHeaderColor('#0a0e27');
-      webApp.setBackgroundColor('#0a0e27');
-
-      app.auth.initData = webApp.initData;
-      app.auth.isAuthenticated = !!webApp.initData;
-
-      window.haptic = {
-        light: () => webApp.HapticFeedback?.impactOccurred?.('light'),
-        medium: () => webApp.HapticFeedback?.impactOccurred?.('medium'),
-        heavy: () => webApp.HapticFeedback?.impactOccurred?.('heavy'),
-        selection: () => webApp.HapticFeedback?.selectionChanged?.(),
-        notification: (type = 'success') => webApp.HapticFeedback?.notificationOccurred?.(type),
-      };
-
-      log('Telegram WebApp initialized');
-    }
-  }
-
-  // ========== TELEGRAM STARS PAYMENT FLOW ==========
+  const API_BASE = '/api/v1';
   
-  /**
-   * Initialize Telegram Stars payment for cart items.
-   * Creates invoice, calculates commissions, initiates payment.
-   */
-  async function initiateTelegramStarsPayment() {
-    if (!app.cart.items.length) {
-      showToast('Cart is empty', 'error');
-      return;
-    }
+  // DOM Elements
+  const status = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const statusSpinner = document.getElementById('statusSpinner');
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modalContent') || document.getElementById('modalBody');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalSpinner = document.getElementById('modalSpinner');
+  const closeModalBtn = document.getElementById('closeModal');
+  const modalOverlay = document.getElementById('modalOverlay');
 
-    try {
-      app.ui.loading.add('checkout');
-
-      // Process each item in cart using real production purchase flow
-      const cartTotal = app.cart.items.reduce((sum, item) => sum + (item.price || 0), 0);
-      const invoiceId = generateInvoiceId();
-
-      // Process purchases via production system
-      const results = [];
-      for (const item of app.cart.items) {
-        try {
-          const result = await window.prodApp.purchaseFlow(
-            item.id,                    // listingId
-            item.nft_id,               // nftId
-            app.user.id,               // buyerId
-            item.price,                // offerPrice
-            'STARS'                    // currency
-          );
-          results.push(result);
-          log(`Purchase completed for ${item.name}`, 'success');
-        } catch (itemError) {
-          log(`Failed to purchase ${item.name}: ${itemError.message}`, 'error');
-        }
-      }
-
-      if (results.length > 0) {
-        showToast(`${results.length} purchase(s) successful! 🎉`, 'success');
-        window.haptic?.notification?.('success');
-        app.cart.items = [];
-        app.cart.total = 0;
-        
-        // Reload marketplace and inventory
-        await loadMarketplace();
-        await loadMyItems();
-        router.navigate('market');
-      } else {
-        showToast('No purchases completed', 'error');
-      }
-    } catch (error) {
-      showToast(`Checkout failed: ${error.message}`, 'error');
-      log(`Checkout error: ${error.message}`, 'error');
-    } finally {
-      app.ui.loading.delete('checkout');
-    }
-  }
-
-  /**
-   * Generate unique invoice ID.
-   */
-  function generateInvoiceId() {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 10);
-    return `inv_${timestamp}_${random}`;
-  }
-
-  /**
-   * Show payment breakdown modal with commission details.
-   */
-  function showPaymentBreakdown(invoiceData) {
-    const breakdown = `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing); margin: var(--spacing) 0;">
-        <div style="background: rgba(0,136,204,0.1); padding: var(--spacing); border-radius: 8px;">
-          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Total Amount</div>
-          <div style="font-size: 20px; font-weight: bold; color: #fff;">${invoiceData.total_stars} ⭐</div>
-        </div>
-        <div style="background: rgba(100,200,50,0.1); padding: var(--spacing); border-radius: 8px;">
-          <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Creator Gets</div>
-          <div style="font-size: 20px; font-weight: bold; color: #64c832;">${invoiceData.net_creator_payout} ⭐</div>
-        </div>
-      </div>
-      <div style="margin-top: var(--spacing); padding: var(--spacing); background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
-          <span>Platform Fee (2%)</span>
-          <span style="color: #ff6b6b;">-${invoiceData.platform_commission} ⭐</span>
-        </div>
-        ${invoiceData.referral_commission > 0 ? `
-          <div style="display: flex; justify-content: space-between; font-size: 13px; color: #888;">
-            <span>Your Referral Bonus</span>
-            <span style="color: #4ecdc4;">+${invoiceData.referral_commission} ⭐</span>
-          </div>
-        ` : ''}
-      </div>
-    `;
-
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <button class="modal-close" onclick="document.getElementById('itemModal').style.display='none'">✕</button>
-      <div style="margin-top: 24px;">
-        <div class="modal-title">Complete Purchase</div>
-        ${breakdown}
-      </div>
-      <button onclick="initiateTelegramStarsPayment()" style="width: 100%; margin-top: var(--spacing); padding: 12px; background: #0088cc; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-        Pay with Telegram Stars ⭐
-      </button>
-      <button onclick="document.getElementById('itemModal').style.display='none'" style="width: 100%; margin-top: 8px; padding: 12px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-        Cancel
-      </button>
-    `;
-
-    const modalEl = document.getElementById('itemModal');
-    const oldModal = modalEl.querySelector('.modal');
-    if (oldModal) oldModal.remove();
-    modalEl.appendChild(modal);
-    modalEl.style.display = 'flex';
-  }
-
-  /**
-   * Callback when Telegram payment dialog closes.
-   * Handles both success and cancellation.
-   */
-  function onTelegramPaymentClosed(isSuccessful) {
-    if (isSuccessful) {
-      showToast('Payment processing... ⏳', 'info');
-      // Payment handler will be called via webhook/callback
-      // For now, we poll for payment confirmation
-      pollPaymentStatus();
+  // ========== UTILITY FUNCTIONS ==========
+  function showStatus(message, type = 'info', showSpinner = false) {
+    if (!status || !statusText) return;
+    statusText.textContent = message;
+    status.className = `status status-${type}`;
+    if (showSpinner) {
+      if (statusSpinner) statusSpinner.classList.remove('hidden');
+      status.classList.remove('hidden');
     } else {
-      showToast('Payment cancelled', 'info');
+      if (statusSpinner) statusSpinner.classList.add('hidden');
+      status.classList.remove('hidden');
+      setTimeout(() => status.classList.add('hidden'), 3000);
     }
   }
 
-  /**
-   * Poll server for payment confirmation status.
-   * In production, use WebSocket or Server-Sent Events for real-time updates.
-   */
-  async function pollPaymentStatus(maxAttempts = 30) {
-    let attempts = 0;
-    const initialBalance = app.user?.stars_balance || 0;
-
-    const checkStatus = async () => {
-      if (attempts >= maxAttempts) {
-        showToast('Payment confirmation timeout. Please check your balance.', 'error');
-        return;
-      }
-
-      try {
-        // Check user's current balance to infer if payment succeeded
-        const user = await apiCall('/auth/me');
-        
-        if (user.stars_balance > initialBalance) {
-          // Stars increased = payment succeeded!
-          const earnedStars = user.stars_balance - initialBalance;
-          
-          app.user = user;
-          app.cart.items = [];
-          
-          showToast(`Payment confirmed! +${earnedStars} ⭐`, 'success');
-          window.haptic?.notification?.('success');
-          
-          // Reload data
-          renderCartPage();
-          await loadMyItems();
-          await loadTransactions();
-          
-          log(`Payment confirmed, balance: ${user.stars_balance}`, 'success');
-          return;
-        }
-      } catch (error) {
-        log(`Payment status check failed: ${error.message}`, 'warn');
-      }
-
-      attempts++;
-      // Wait before next attempt (exponential backoff)
-      setTimeout(checkStatus, Math.min(1000 * (attempts / 5), 5000));
-    };
-
-    checkStatus();
-  }
-
-  /**
-   * Calculate commission breakdown for transparency.
-   */
-  function calculateCommissions(totalStars, hasReferrer = true) {
-    const platformRate = 0.02; // 2%
-    const referralRate = 0.1; // 10% of platform fee
-
-    const platformFee = Math.floor(totalStars * platformRate);
-    const referralCommission = hasReferrer ? Math.floor(platformFee * referralRate) : 0;
-    const creatorPayout = totalStars - platformFee;
-
-    return {
-      total: totalStars,
-      platformFee,
-      referralCommission,
-      creatorPayout,
-    };
-  }
-
-  // ========== WALLET SIGN-IN FLOW ==========
-
-  /**
-   * Initialize wallet sign-in flow.
-   * Supports MetaMask, WalletConnect, and other EVM wallets.
-   */
-  async function initWalletSignIn() {
-    try {
-      // Check for Web3 provider (MetaMask, etc.)
-      if (!window.ethereum) {
-        showToast('Please install MetaMask or use a Web3 wallet', 'error');
-        return;
-      }
-
-      showToast('Requesting wallet connection...', 'info');
-
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const walletAddress = accounts[0].toLowerCase();
-
-      log(`Wallet connected: ${walletAddress}`, 'success');
-
-      // Get sign-in message from backend
-      const messageData = await apiCall('/stars/wallet/message', { cache: false });
-
-      // Sign the message with the wallet
-      const signature = await window.ethereum.request({
-        method: 'personal_sign',
-        params: [messageData.message, walletAddress],
-      });
-
-      log(`Message signed`, 'success');
-
-      // Send signature to backend for authentication
-      const authData = await apiCall('/stars/wallet/signin', {
-        method: 'POST',
-        body: {
-          wallet_address: walletAddress,
-          chain: 'ethereum',
-          message: messageData.message,
-          signature: signature,
-        },
-        cache: false,
-      });
-
-      // Store auth token
-      localStorage.setItem('auth_token', authData.access_token);
-      app.auth.token = authData.access_token;
-      app.auth.isAuthenticated = true;
-
-      // Load user data
-      app.user = {
-        id: authData.user_id,
-        username: authData.username,
-        telegram_id: walletAddress,
-      };
-
-      showToast(`Signed in as ${authData.is_new ? 'new user' : authData.username}! 🔐`, 'success');
-      window.haptic?.notification?.('success');
-
-      log(`Wallet authentication successful`, 'success');
-
-      // Redirect to marketplace
-      router.navigate('market');
-      await render();
-    } catch (error) {
-      if (error.code === 4001) {
-        showToast('Wallet connection cancelled', 'info');
-      } else {
-        showToast(`Wallet sign-in failed: ${error.message}`, 'error');
-      }
-      log(`Wallet sign-in error: ${error.message}`, 'error');
-    }
-  }
-  class Modal {
-    constructor(type, data = {}) {
-      this.type = type;
-      this.data = data;
-      this.errors = new Map();
-      this.loading = false;
-    }
-
-    static types = {
-      itemDetail: 'showItemDetailModal',
-      referralShare: 'showReferralModal',
-      profileEdit: 'showProfileModal',
-      checkout: 'showCheckoutModal',
-    };
-
-    close() {
-      app.ui.modals[this.type === 'itemDetail' ? 'item' : this.type] = null;
-      render();
-    }
-  }
-
-  function showModal(title, content, actions = []) {
-    const modal = dom.modalOverlay;
-    let existingModal = modal.querySelector('.modal');
-
-    if (existingModal) {
-      existingModal.remove();
-    }
-
-    const modalEl = document.createElement('div');
-    modalEl.className = 'modal';
-    modalEl.innerHTML = `
-      <button class="modal-close" onclick="window.__closeModal()">✕</button>
-      <div style="margin-top: 24px;">
-        ${title ? `<div class="modal-title">${title}</div>` : ''}
-        ${content}
-      </div>
-      ${
-        actions.length
-          ? `
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: var(--spacing);">
-          ${actions
-            .map(
-              (action) => `
-            <button 
-              class="modal-button ${action.type === 'primary' ? 'primary' : 'secondary'}"
-              onclick="window.__handleModalAction(${action.id})"
-            >
-              ${action.label}
-            </button>
-          `
-            )
-            .join('')}
-        </div>
-      `
-          : ''
-      }
-    `;
-
-    // Store actions globally for safe invocation
-    window.__modalActions = actions;
-
-    modal.appendChild(modalEl);
-    modal.classList.add('active');
-    window.haptic?.light();
-  }
-
-  window.__closeModal = function () {
-    dom.modalOverlay.classList.remove('active');
-    const modal = dom.modalOverlay.querySelector('.modal');
-    if (modal) modal.remove();
-    app.ui.modals = { item: null, referral: null, profile: null, settings: null };
-    window.__modalActions = [];
-  };
-
-  window.__handleModalAction = function (actionId) {
-    const action = window.__modalActions[actionId];
-    if (action && action.handler) action.handler();
-  };
-
-  // ========== ROUTER & NAVIGATION ==========
-  const router = {
-    pages: ['market', 'create', 'stars', 'cart', 'myitems', 'profile', 'creator'],
-    history: [],
-
-    navigate(page, params = {}) {
-      if (!this.pages.includes(page)) return;
-
-      app.ui.currentPage = page;
-      app.ui.modals = {};
-
-      loadPageContent(page, params);
-      render();
-    },
-
-    back() {
-      if (this.history.length === 0) return;
-      const { page } = this.history.pop();
-      app.ui.currentPage = page;
-      render();
-    },
-  };
-
-  function loadPageContent(page, params = {}) {
-    switch (page) {
-      case 'market':
-        if (shouldRefresh('listings')) loadMarketplace();
-        break;
-      case 'myitems':
-        if (shouldRefresh('myItems')) loadMyItems();
-        break;
-      case 'stars':
-        if (shouldRefresh('referrals')) loadReferrals();
-        loadTransactions();
-        break;
-      case 'profile':
-        loadProfile();
-        break;
-      case 'creator':
-        loadCreatorStats();
-        break;
-    }
-  }
-
-  // ========== MARKETPLACE PAGE ==========
-  async function loadMarketplace() {
-    app.ui.loading.add('market');
-    app.ui.errors.delete('market');
-
-    try {
-      // Load real marketplace data from database via ProductionInit
-      const listings = await window.prodApp.loadMarketplaceData(0, 50);
-      app.data.listings = {
-        items: listings || [],
-        total: listings?.length || 0,
-        page: 0,
-        lastFetch: Date.now(),
-        ttl: 60000,
-      };
-      app.ui.loading.delete('market');
-    } catch (error) {
-      app.ui.errors.set('market', error.message);
-      app.ui.loading.delete('market');
-      showToast(`Failed to load marketplace: ${error.message}`, 'error');
-    }
-  }
-
-  function createCollectibleCard(item, type = 'listing') {
-    const card = document.createElement('div');
-    card.className = 'collectible-card';
-
-    const status = item.status || 'minted';
-    const statusLabel = status === 'listed' ? 'Listed' : 'Minted';
-    const statusClass = status === 'listed' ? 'listed' : 'minted';
-
-    const imageUrl = item.image_url || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23142031" width="200" height="200"/%3E%3Ctext x="100" y="100" text-anchor="middle" dy=".3em" fill="%238892b0" font-size="14"%3ENo Image%3C/text%3E%3C/svg%3E';
-
-    card.innerHTML = `
-      <div class="collectible-image-container">
-        <img src="${imageUrl}" alt="${item.name || 'Collectible'}" class="collectible-image" loading="lazy" />
-        <div class="collectible-status ${statusClass}">${statusLabel}</div>
-      </div>
-      <div class="collectible-info">
-        <div class="collectible-name">${item.name || 'Unnamed'}</div>
-        ${item.price ? `<div class="collectible-price"><span class="collectible-price-stars">${item.price}</span> ⭐</div>` : ''}
-        ${item.rarity_tier ? `<div class="collectible-rarity">${item.rarity_tier}</div>` : ''}
-      </div>
-    `;
-
-    card.addEventListener('click', () => {
-      showItemModal(item, type);
-    });
-
-    return card;
-  }
-
-  function showItemModal(item, type = 'listing') {
-    const rarity = item.rarity_tier || item.rarity || 'Common';
-    const imageUrl = item.image_url || item.image || '';
-
-    const actions = [];
-    if (type === 'listing') {
-      actions.push({
-        id: 0,
-        label: `Buy Now - ${item.price} ⭐`,
-        type: 'primary',
-        handler: () => addToCart(item.id),
-      });
-      actions.push({
-        id: 1,
-        label: 'Make Offer...',
-        type: 'secondary',
-        handler: () => showToast('Make offer feature coming soon', 'info'),
-      });
-    } else if (type === 'myitem') {
-      const isListed = item.status === 'listed';
-      actions.push({
-        id: 0,
-        label: isListed ? 'Unlist' : 'List for Sale',
-        type: 'primary',
-        handler: () => toggleListing(item.id),
-      });
-      actions.push({
-        id: 1,
-        label: 'View Details',
-        type: 'secondary',
-        handler: () => showToast('View details coming soon', 'info'),
-      });
-    }
-
-    const content = `
-      <img src="${imageUrl}" alt="${item.name}" class="modal-image" />
-      <div class="modal-subtitle">${rarity.toUpperCase()}</div>
-      <div class="modal-section">
-        <div class="modal-section-label">Description</div>
-        <div class="modal-section-value">${item.description || 'No description'}</div>
-      </div>
-      ${item.price ? `
-        <div class="modal-section">
-          <div class="modal-section-label">Price</div>
-          <div class="modal-section-value">${item.price} ⭐</div>
-        </div>
-      ` : ''}
-      ${item.attributes && Object.keys(item.attributes).length ? `
-        <div class="modal-section">
-          <div class="modal-section-label">Attributes</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            ${Object.entries(item.attributes).map(([key, value]) => `
-              <div style="padding: 8px; background: var(--tg-bg); border-radius: 6px; text-align: center; font-size: 12px;">
-                <div style="color: var(--tg-text-secondary); margin-bottom: 2px;">${key}</div>
-                <div style="color: var(--tg-text); font-weight: 600;">${value}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
-    `;
-
-    showModal(item.name, content, actions);
-  }
-
-  function addToCart(itemId) {
-    const item = app.data.listings.items.find((l) => l.id === itemId);
-    if (!item) return;
-
-    const exists = app.cart.items.find((c) => c.id === itemId);
-    if (!exists) {
-      app.cart.items.push(item);
-      app.cart.total += item.price || 0;
-      window.haptic?.notification?.('success');
-      showToast('Added to cart!', 'success');
-      window.__closeModal();
-      render();
+  function showModal(title, htmlContent, showSpinner = false) {
+    if (!modal || !modalContent || !modalTitle) return;
+    modalTitle.textContent = title;
+    modalContent.innerHTML = htmlContent;
+    modal.classList.remove('hidden');
+    if (showSpinner) {
+      if (modalSpinner) modalSpinner.classList.remove('hidden');
     } else {
-      showToast('Already in cart', 'info');
+      if (modalSpinner) modalSpinner.classList.add('hidden');
     }
   }
 
-  function toggleListing(itemId) {
-    showToast('Toggle listing feature coming soon', 'info');
+  function closeModal() {
+    if (modal) modal.classList.add('hidden');
+    if (modalContent) modalContent.innerHTML = '';
+    if (modalSpinner) modalSpinner.classList.add('hidden');
   }
 
-  // ========== MY ITEMS PAGE ==========
-  async function loadMyItems() {
-    app.ui.loading.add('myItems');
-
-    try {
-      // Load real user NFT inventory from database
-      const nfts = await window.prodApp.loadUserInventory(0, 50);
-      app.data.myItems = {
-        items: nfts || [],
-        total: nfts?.length || 0,
-        lastFetch: Date.now(),
-        ttl: 120000,
-      };
-      app.ui.loading.delete('myItems');
-    } catch (error) {
-      app.ui.errors.set('myItems', error.message);
-      app.ui.loading.delete('myItems');
-      showToast(`Failed to load items: ${error.message}`, 'error');
-    }
+  function formatAddr(addr) {
+    if (!addr) return 'N/A';
+    return addr.length > 20 ? addr.slice(0, 10) + '...' + addr.slice(-8) : addr;
   }
 
-  // ========== REFERRALS PAGE ==========
-  async function loadReferrals() {
-    if (!app.user || !app.user.id) return;
-
-    try {
-      // Load real referral data from database
-      const referralData = await window.prodApp.data.fetchReferralData();
-      const referralStats = await window.prodApp.data.fetchReferralStats();
-
-      app.data.referrals = {
-        code: referralData?.code,
-        earnings: referralData?.lifetime_earnings || 0,
-        referredCount: referralData?.referred_count || 0,
-        pendingRewards: referralStats?.pending_commissions || 0,
-        network: referralData?.referred_users || [],
-        history: referralStats?.commission_history || [],
-        lastFetch: Date.now(),
-        ttl: 300000,
-      };
-    } catch (error) {
-      log(`Referral load failed: ${error.message}`, 'warn');
-    }
+  function truncate(str, len = 20) {
+    return str && str.length > len ? str.slice(0, len - 3) + '...' : str;
   }
 
-  async function loadTransactions() {
-    try {
-      // Load real payment history from database
-      const paymentHistory = await window.prodApp.data.fetchPaymentHistory();
-      app.data.transactions = {
-        items: paymentHistory || [],
-        total: paymentHistory?.length || 0,
-        lastFetch: Date.now(),
-        ttl: 300000,
-      };
-    } catch (error) {
-      log(`Transaction load failed: ${error.message}`, 'warn');
-    }
-  }
-
-  function copyReferralLink() {
-    const code = app.data.referrals.code;
-    if (!code) {
-      showToast('No referral code available', 'error');
-      return;
-    }
-
-    const link = `https://t.me/giftedforge_bot?start=ref_${code}`;
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(link);
-      showToast('Referral link copied! 📋', 'success');
-    } else {
-      const tmp = document.createElement('textarea');
-      tmp.value = link;
-      document.body.appendChild(tmp);
-      tmp.select();
-      document.execCommand('copy');
-      document.body.removeChild(tmp);
-      showToast('Link copied!', 'success');
-    }
-
-    window.haptic?.medium();
-  }
-
-  // ========== PROFILE PAGE ==========
-  async function loadProfile() {
-    try {
-      const [user, stats] = await Promise.all([
-        apiCall('/auth/me'),
-        apiCall('/users/me/stats'),
-      ]);
-
-      app.user = user;
-      app.creator.isCreator = user.is_creator || false;
-      app.data.profile = user;
-      app.data.profileStats = stats;
-    } catch (error) {
-      log(`Profile load failed: ${error.message}`, 'warn');
-      showToast('Failed to load profile', 'error');
-    }
-  }
-
-  async function loadCreatorStats() {
-    if (!app.creator.isCreator) return;
-
-    try {
-      const data = await apiCall('/creator/stats');
-      app.creator.earnings = data.total_earnings || 0;
-      app.creator.totalSold = data.total_sold || 0;
-      app.creator.published = data.published_items || [];
-    } catch (error) {
-      log(`Creator stats load failed: ${error.message}`, 'warn');
-    }
-  }
-
-  async function toggleCreatorMode() {
-    const isEnabling = !app.creator.isCreator;
-    app.ui.loading.add('creator');
+  function switchPage(pageName) {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('[data-nav]').forEach(n => n.classList.remove('active'));
     
-    try {
-      if (isEnabling) {
-        // Use production setup creator profile flow
-        const result = await window.prodApp.setupCreatorProfile(
-          app.user?.username || 'Creator',
-          'Emerging NFT creator',
-          app.user?.avatar_url || ''
-        );
-        app.user.is_creator = true;
-        app.creator.isCreator = true;
-        showToast('Creator mode enabled! 🎨', 'success');
-      } else {
-        app.creator.isCreator = false;
-        showToast('Creator mode disabled', 'info');
-      }
-      render();
-    } catch (error) {
-      showToast(`Failed to toggle creator mode: ${error.message}`, 'error');
-      app.creator.isCreator = !isEnabling;
-    } finally {
-      app.ui.loading.delete('creator');
-    }
-  }
-
-  async function saveCreatorProfile() {
-    const name = document.getElementById('creatorName')?.value?.trim();
-    const bio = document.getElementById('creatorBio')?.value?.trim();
-
-    if (!name || name.length < 3) {
-      showToast('Creator name must be at least 3 characters', 'error');
-      return;
+    const page = document.getElementById(`${pageName}-page`);
+    if (page) {
+      page.classList.remove('hidden');
+      document.querySelector(`[data-nav="${pageName}"]`)?.classList.add('active');
     }
 
-    try {
-      // Use real production creator profile setup
-      await window.prodApp.setupCreatorProfile(name, bio, app.user?.avatar_url || '');
-      showToast('Creator profile saved! 🎨', 'success');
-      app.user.creator_name = name;
-      app.user.creator_bio = bio;
-      app.user.is_creator = true;
-    } catch (error) {
-      showToast(`Error: ${error.message}`, 'error');
-    }
-  }
-
-  async function logoutApp() {
-    app.user = null;
-    app.auth.isAuthenticated = false;
-    app.data = { listings: { items: [], total: 0, lastFetch: 0, ttl: 60000 }, myItems: { items: [], total: 0, lastFetch: 0, ttl: 120000 }, referrals: { code: null, earnings: 0, referredCount: 0, pendingRewards: 0, history: [], network: [], lastFetch: 0, ttl: 300000 }, transactions: { items: [], total: 0, lastFetch: 0, ttl: 300000 }, profile: null, profileStats: null };
-    router.navigate('market');
-    showToast('Logged out', 'success');
-  }
-
-  // ========== PAGE RENDERING ==========
-  async function render() {
-    const page = router.currentPage || 'market';
-
-    // Hide all pages
-    document.querySelectorAll('[data-page]').forEach(p => p.style.display = 'none');
-
-    // Show current page
-    const currentPageEl = document.querySelector(`[data-page="${page}"]`);
-    if (currentPageEl) currentPageEl.style.display = 'block';
-
-    // Update nav highlight
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`.nav-btn[data-page="${page}"]`)?.classList.add('active');
-
-    // Load page content
-    switch (page) {
-      case 'market':
-        if (shouldRefresh('listings')) await loadMarketplace();
-        renderMarketplace();
-        break;
-
-      case 'create':
-        renderCreatePage();
-        break;
-
-      case 'stars':
-        if (shouldRefresh('transactions')) await loadTransactions();
-        if (shouldRefresh('referrals')) await loadReferrals();
-        renderStarsPage();
-        break;
-
-      case 'cart':
-        renderCartPage();
-        break;
-
-      case 'my-items':
-        if (shouldRefresh('myItems')) await loadMyItems();
-        renderMyItemsPage();
-        break;
-
-      case 'profile':
-        if (shouldRefresh('profile')) await loadProfile();
-        renderProfilePage();
-        break;
-    }
-  }
-
-  function renderMarketplace() {
-    const grid = document.getElementById('marketGrid');
-    const empty = document.getElementById('marketEmpty');
-    const listings = app.data.listings.items;
-
-    if (!listings.length) {
-      empty.style.display = 'flex';
-      grid.style.display = 'none';
-      return;
-    }
-
-    empty.style.display = 'none';
-    grid.style.display = 'grid';
-    grid.innerHTML = '';
-
-    listings.forEach(item => {
-      const card = createCollectibleCard(item, 'market');
-      card.addEventListener('click', () => showItemModal(item));
-      grid.appendChild(card);
-    });
-
-    if (app.ui.loading.has('market')) {
-      grid.innerHTML += '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;">Loading...</div>';
-    }
-  }
-
-  function renderCartPage() {
-    const grid = document.getElementById('cartGrid');
-    const empty = document.getElementById('cartEmpty');
-    const totalEl = document.getElementById('cartTotal');
-
-    if (!app.cart.items.length) {
-      empty.style.display = 'flex';
-      grid.style.display = 'none';
-      return;
-    }
-
-    empty.style.display = 'none';
-    grid.style.display = 'grid';
-    grid.innerHTML = '';
-
-    let total = 0;
-    app.cart.items.forEach(item => {
-      total += item.price || 0;
-      const card = document.createElement('div');
-      card.className = 'collectible-card';
-      card.innerHTML = `
-        <img src="${item.image_url}" alt="${item.name}" class="card-img">
-        <h3>${item.name}</h3>
-        <p class="price">${item.price} ⭐</p>
-        <button class="remove-btn" data-id="${item.id}">Remove</button>
-      `;
-      grid.appendChild(card);
-
-      card.querySelector('.remove-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        removeFromCart(item.id);
-      });
-    });
-
-    totalEl.textContent = total;
-  }
-
-  function removeFromCart(itemId) {
-    app.cart.items = app.cart.items.filter(i => i.id !== itemId);
-    renderCartPage();
-    showToast('Removed from cart', 'success');
-    window.haptic?.light();
-  }
-
-  function renderCreatePage() {
-    const formEl = document.getElementById('createForm');
-    if (!formEl) return;
-
-    formEl.addEventListener('submit', handleCreateSubmit);
-    document.getElementById('imageUpload')?.addEventListener('change', handleImageUpload);
-  }
-
-  async function handleImageUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      app.creator.drafts.imageData = evt.target.result;
-      const preview = document.getElementById('imagePreview');
-      if (preview) preview.src = evt.target.result;
-      showToast('Image loaded', 'success');
+    const titles = {
+      dashboard: 'Dashboard',
+      wallets: 'Wallets',
+      nfts: 'My NFTs',
+      mint: 'Mint NFT',
+      marketplace: 'Marketplace',
+      balance: 'Balance',
+      referral: 'Referrals',
+      profile: 'Profile'
     };
-    reader.readAsDataURL(file);
+    
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) pageTitle.textContent = titles[pageName] || 'NFT Platform';
+    state.currentPage = pageName;
   }
 
-  async function handleCreateSubmit(e) {
-    e.preventDefault();
-
-    const name = document.getElementById('nftName')?.value?.trim();
-    const description = document.getElementById('nftDesc')?.value?.trim();
-    const imageData = app.creator.drafts.imageData;
-    const royaltyPercentage = parseInt(document.getElementById('royalty')?.value || 0);
-
-    if (!name || !description || !imageData) {
-      showToast('Please fill all fields', 'error');
-      return;
-    }
-
-    app.ui.loading.add('create');
-
-    try {
-      // Get primary wallet for minting
-      const wallet = app.user?.wallets?.[0];
-      if (!wallet) {
-        showToast('No wallet available. Create one first.', 'error');
-        return;
-      }
-
-      // Use real production mint flow
-      const nft = await window.prodApp.mintNFTFlow(
-        wallet.id,
-        name,
-        description,
-        imageData,
-        royaltyPercentage
-      );
-
-      showToast(`NFT minted successfully! ID: ${nft.id}`, 'success');
-      window.haptic?.notification?.('success');
-      
-      // Reset form and reload inventory
-      app.creator.drafts = {};
-      document.getElementById('createForm')?.reset();
-      await loadMyItems();
-      router.navigate('my-items');
-    } catch (error) {
-      showToast(`Error: ${error.message}`, 'error');
-    } finally {
-      app.ui.loading.delete('create');
-    }
-  }
-
-  function renderStarsPage() {
-    const balanceEl = document.getElementById('starsBalance');
-    const refCodeEl = document.getElementById('refCode');
-    const copyBtnEl = document.getElementById('copyRefBtn');
-    const referralNetworkEl = document.getElementById('referralNetwork');
-
-    if (balanceEl && app.user?.stars_balance) {
-      balanceEl.textContent = app.user.stars_balance;
-    }
-
-    if (refCodeEl && app.data.referrals?.code) {
-      refCodeEl.textContent = app.data.referrals.code;
-      copyBtnEl?.addEventListener('click', copyReferralLink);
-    }
-
-    if (referralNetworkEl && app.data.referrals?.network?.length) {
-      referralNetworkEl.innerHTML = app.data.referrals.network
-        .map(
-          ref => `
-        <div class="referral-item">
-          <span>${ref.user_name || 'User'}</span>
-          <span class="earnings">+${ref.earnings || 0} ⭐</span>
-        </div>
-      `
-        )
-        .join('');
-    }
-
-    const transHistoryEl = document.getElementById('transactionHistory');
-    if (transHistoryEl && app.data.transactions?.items?.length) {
-      transHistoryEl.innerHTML = app.data.transactions.items
-        .map(
-          tx => `
-        <div class="transaction-item">
-          <span>${tx.description || 'Transaction'}</span>
-          <span class="amount">${tx.type === 'earn' ? '+' : '-'}${tx.amount} ⭐</span>
-        </div>
-      `
-        )
-        .join('');
-    }
-  }
-
-  function renderMyItemsPage() {
-    const grid = document.getElementById('myItemsGrid');
-    const empty = document.getElementById('myitemsEmpty');
-    const items = app.data.myItems.items;
-
-    if (!items.length) {
-      empty.style.display = 'flex';
-      grid.style.display = 'none';
-      return;
-    }
-
-    empty.style.display = 'none';
-    grid.style.display = 'grid';
-    grid.innerHTML = '';
-
-    items.forEach(item => {
-      const card = createCollectibleCard(item, 'myItems');
-      card.addEventListener('click', () => showItemModal(item));
-      grid.appendChild(card);
-    });
-  }
-
-  function renderProfilePage() {
-    const nameEl = document.getElementById('userName');
-    const statsEl = document.getElementById('stats');
-    const logoutBtnEl = document.getElementById('logoutBtn');
-    const creatorToggleEl = document.getElementById('creatorToggle');
-
-    if (nameEl && app.user?.username) {
-      nameEl.textContent = app.user.username;
-    }
-
-    if (statsEl && app.data.profileStats) {
-      statsEl.innerHTML = `
-        <div class="stat-card">
-          <span class="stat-label">Items Owned</span>
-          <span class="stat-value">${app.data.profileStats.owned_items || 0}</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Items Created</span>
-          <span class="stat-value">${app.data.profileStats.created_items || 0}</span>
-        </div>
-      `;
-    }
-
-    if (logoutBtnEl) {
-      logoutBtnEl.addEventListener('click', logoutApp);
-    }
-
-    if (creatorToggleEl) {
-      creatorToggleEl.checked = app.creator.isCreator;
-      creatorToggleEl.addEventListener('change', toggleCreatorMode);
-    }
-
-    const creatorFormEl = document.getElementById('creatorForm');
-    if (creatorFormEl) {
-      creatorFormEl.style.display = app.creator.isCreator ? 'block' : 'none';
-      creatorFormEl.addEventListener('submit', (e) => {
-        e.preventDefault();
-        saveCreatorProfile();
-      });
-    }
-  }
-
-  // ========== EVENT BINDINGS ==========
-  function bindEvents() {
-    // Nav tabs
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const page = btn.dataset.page || btn.getAttribute('data-page');
-        router.navigate(page);
-        render();
-        window.haptic?.light();
-      });
-    });
-
-    // Filter buttons (marketplace)
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const filter = btn.dataset.filter;
-        if (app.ui.filters.has(filter)) {
-          app.ui.filters.delete(filter);
-        } else {
-          app.ui.filters.add(filter);
+  // ========== API SERVICE ==========
+  const API = {
+    async callEndpoint(urlOrPath, options = {}) {
+      const url = urlOrPath.startsWith('http') ? urlOrPath : `${API_BASE}${urlOrPath}`;
+      try {
+        const response = await fetch(url, {
+          method: options.method || 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...options.headers 
+          },
+          body: options.body ? JSON.stringify(options.body) : undefined
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          const msg = response.status === 401 ? 'Unauthorized' : `HTTP ${response.status}`;
+          throw new Error(`${msg}: ${errorText.slice(0, 100)}`);
         }
-        btn.classList.toggle('active');
-        renderMarketplace();
-        window.haptic?.selection();
-      });
-    });
-
-    // Checkout button
-    document.getElementById('checkoutBtn')?.addEventListener('click', () => {
-      if (!app.cart.items.length) {
-        showToast('Cart is empty', 'info');
-        return;
+        return await response.json();
+      } catch (err) {
+        console.error(`API Error [${url}]:`, err);
+        throw err;
       }
+    },
 
-      // Show payment breakdown and initiate Telegram Stars payment
-      const cartTotal = app.cart.items.reduce((sum, i) => sum + (i.price || 0), 0);
-      const hasReferrer = app.user?.referred_by_id ? true : false;
-      const commissions = calculateCommissions(cartTotal, hasReferrer);
+    // AUTH
+    async initSession(initData) {
+      return this.callEndpoint(`/telegram/web-app/init?init_data=${encodeURIComponent(initData)}`);
+    },
 
-      const summary = `
-        <div style="font-size: 28px; font-weight: bold; text-align: center; margin: var(--spacing) 0;">
-          ${cartTotal} ⭐
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing); margin: var(--spacing) 0;">
-          <div style="background: rgba(0,136,204,0.1); padding: var(--spacing); border-radius: 8px; text-align: center;">
-            <div style="font-size: 11px; color: #888;">Platform Fee (2%)</div>
-            <div style="font-size: 16px; color: #ff6b6b; font-weight: bold; margin-top: 4px;">-${commissions.platformFee} ⭐</div>
-          </div>
-          <div style="background: rgba(100,200,50,0.1); padding: var(--spacing); border-radius: 8px; text-align: center;">
-            <div style="font-size: 11px; color: #888;">You Receive</div>
-            <div style="font-size: 16px; color: #64c832; font-weight: bold; margin-top: 4px;">+${cartTotal} ⭐</div>
-          </div>
-        </div>
-        ${hasReferrer && commissions.referralCommission > 0 ? `
-          <div style="background: rgba(78,205,196,0.1); padding: var(--spacing); border-radius: 8px; text-align: center; margin-top: var(--spacing);">
-            <div style="font-size: 11px; color: #888;">Referral Bonus</div>
-            <div style="font-size: 14px; color: #4ecdc4; font-weight: bold; margin-top: 4px;">+${commissions.referralCommission} ⭐</div>
-          </div>
-        ` : ''}
-      `;
+    // USER
+    async getUser(userId) {
+      return this.callEndpoint(`/telegram/web-app/user?user_id=${userId}`);
+    },
 
-      showModal('Complete Purchase', summary, [
-        { label: 'Pay with Stars ⭐', type: 'primary', handler: initiateTelegramStarsPayment },
-        { label: 'Cancel', type: 'secondary', handler: () => { document.getElementById('itemModal').style.display = 'none'; } }
-      ]);
+    async getDashboardData(userId) {
+      return this.callEndpoint(`/telegram/web-app/dashboard-data?user_id=${userId}`);
+    },
 
-      window.haptic?.medium();
-    });
+    // WALLETS
+    async getWallets(userId) {
+      return this.callEndpoint(`/telegram/web-app/wallets?user_id=${userId}`);
+    },
 
-    // Modal close button
-    document.getElementById('closeModal')?.addEventListener('click', () => {
-      app.ui.modals.active = null;
-      document.getElementById('itemModal').style.display = 'none';
-    });
-  }
+    async createWallet(userId, blockchain) {
+      return this.callEndpoint('/telegram/web-app/create-wallet', {
+        method: 'POST',
+        body: { user_id: userId, blockchain }
+      });
+    },
+
+    async importWallet(userId, address, blockchain) {
+      return this.callEndpoint('/telegram/web-app/import-wallet', {
+        method: 'POST',
+        body: { user_id: userId, address, blockchain }
+      });
+    },
+
+    async setPrimaryWallet(userId, walletId, blockchain) {
+      return this.callEndpoint('/telegram/web-app/set-primary', {
+        method: 'POST',
+        body: { user_id: userId, wallet_id: walletId, blockchain }
+      });
+    },
+
+    // NFTs
+    async getNFTs(userId) {
+      return this.callEndpoint(`/telegram/web-app/nfts?user_id=${userId}`);
+    },
+
+    async mintNFT(userId, walletId, name, description) {
+      return this.callEndpoint('/telegram/web-app/mint', {
+        method: 'POST',
+        body: { user_id: userId, wallet_id: walletId, nft_name: name, nft_description: description }
+      });
+    },
+
+    async transferNFT(userId, nftId, toAddress) {
+      return this.callEndpoint('/telegram/web-app/transfer', {
+        method: 'POST',
+        body: { user_id: userId, nft_id: nftId, to_address: toAddress }
+      });
+    },
+
+    async burnNFT(userId, nftId) {
+      return this.callEndpoint('/telegram/web-app/burn', {
+        method: 'POST',
+        body: { user_id: userId, nft_id: nftId }
+      });
+    },
+
+    // MARKETPLACE
+    async listNFT(userId, nftId, price, currency = 'ETH') {
+      return this.callEndpoint('/telegram/web-app/list-nft', {
+        method: 'POST',
+        body: { user_id: userId, nft_id: nftId, price: parseFloat(price), currency }
+      });
+    },
+
+    async getMarketplaceListings(limit = 100) {
+      return this.callEndpoint(`/telegram/web-app/marketplace/listings?limit=${limit}`);
+    },
+
+    async getMyListings(userId) {
+      return this.callEndpoint(`/telegram/web-app/marketplace/mylistings?user_id=${userId}`);
+    },
+
+    async makeOffer(userId, listingId, offerPrice) {
+      return this.callEndpoint('/telegram/web-app/make-offer', {
+        method: 'POST',
+        body: { user_id: userId, listing_id: listingId, offer_price: parseFloat(offerPrice) }
+      });
+    },
+
+    async cancelListing(userId, listingId) {
+      return this.callEndpoint('/telegram/web-app/cancel-listing', {
+        method: 'POST',
+        body: { user_id: userId, listing_id: listingId }
+      });
+    },
+
+    // BALANCE & PAYMENTS
+    async getBalance(userId) {
+      return this.callEndpoint(`/payments/balance?user_id=${userId}`);
+    },
+
+    async getPaymentHistory(userId, limit = 50) {
+      return this.callEndpoint(`/payments/history?user_id=${userId}&limit=${limit}`);
+    },
+
+    async initiateDeposit(userId, amount, blockchain) {
+      return this.callEndpoint('/payments/deposit/initiate', {
+        method: 'POST',
+        body: { user_id: userId, amount, blockchain }
+      });
+    },
+
+    async confirmDeposit(userId, txHash) {
+      return this.callEndpoint('/payments/deposit/confirm', {
+        method: 'POST',
+        body: { user_id: userId, tx_hash: txHash }
+      });
+    },
+
+    async initiateWithdrawal(userId, amount, destination) {
+      return this.callEndpoint('/payments/withdrawal/initiate', {
+        method: 'POST',
+        body: { user_id: userId, amount, destination }
+      });
+    },
+
+    // REFERRALS
+    async getReferralInfo(userId) {
+      return this.callEndpoint(`/referrals/me?user_id=${userId}`);
+    },
+
+    async applyReferralCode(userId, code) {
+      return this.callEndpoint('/referrals/apply', {
+        method: 'POST',
+        body: { user_id: userId, referral_code: code }
+      });
+    },
+
+    async getReferralStats(userId) {
+      return this.callEndpoint(`/referrals/stats?user_id=${userId}`);
+    }
+  };
 
   // ========== INITIALIZATION ==========
-  async function init() {
-    log('Initializing app...', 'info');
+  async function initApp() {
+    try {
+      const initData = window.Telegram?.WebApp?.initData;
+      
+      if (!initData) {
+        throw new Error('Telegram context required - WebApp must be opened from Telegram');
+      }
 
-    // Telegram SDK setup
-    if (window.Telegram?.WebApp) {
-      tg.ready();
-      tg.setHeaderColor('#0a0e27');
-      tg.setBackgroundColor('#0a0e27');
-      initTelegramIntegration();
+      if (window.Telegram?.WebApp?.ready) {
+        window.Telegram.WebApp.ready();
+      }
+      
+      showStatus('Authenticating...', 'info', true);
+      
+      const authResponse = await API.initSession(initData);
+      
+      if (!authResponse.success && !authResponse.user) {
+        throw new Error(authResponse.error || 'Authentication failed');
+      }
 
-      app.auth.isAuthenticated = !!tg.initDataUnsafe?.user?.id;
-      if (app.auth.isAuthenticated) {
-        app.user = tg.initDataUnsafe.user;
-        app.auth.token = localStorage.getItem('auth_token') || tg.initData;
+      state.user = authResponse.user;
+      
+      showStatus('Loading dashboard...', 'info', true);
+      updateUserDisplay();
+      setupEventListeners();
+      
+      await loadAllData();
+      
+      showStatus('Connected!', 'success', false);
+      switchPage('dashboard');
+      
+    } catch (err) {
+      console.error('Init error:', err);
+      showStatus(`Error: ${err.message}`, 'error', false);
+    }
+  }
+
+  async function loadAllData() {
+    try {
+      showStatus('Syncing data...', 'info', true);
+      
+      const dashboardData = await API.getDashboardData(state.user.id);
+      
+      state.wallets = Array.isArray(dashboardData.wallets) ? dashboardData.wallets : [];
+      state.nfts = Array.isArray(dashboardData.nfts) ? dashboardData.nfts : [];
+      state.listings = Array.isArray(dashboardData.listings) ? dashboardData.listings : [];
+      
+      // Load marketplace listings
+      try {
+        const marketplaceData = await API.getMarketplaceListings(50);
+        state.listings = Array.isArray(marketplaceData.listings) ? marketplaceData.listings : state.listings;
+      } catch (e) {
+        console.warn('Failed to load marketplace:', e);
+      }
+
+      // Load my listings
+      try {
+        const myListingsData = await API.getMyListings(state.user.id);
+        state.myListings = Array.isArray(myListingsData.listings) ? myListingsData.listings : [];
+      } catch (e) {
+        console.warn('Failed to load my listings:', e);
+      }
+
+      // Load balance
+      try {
+        const balanceData = await API.getBalance(state.user.id);
+        state.balance = balanceData.balance || 0;
+      } catch (e) {
+        console.warn('Failed to load balance:', e);
+      }
+
+      // Load referral info
+      try {
+        const refData = await API.getReferralInfo(state.user.id);
+        state.referralInfo = refData;
+      } catch (e) {
+        console.warn('Failed to load referral info:', e);
+      }
+
+      updateDashboard();
+      updateWalletsList();
+      updateNFTsList();
+      updateMarketplace();
+      updateBalance();
+      updateReferralInfo();
+      
+      showStatus('Data loaded', 'success', false);
+    } catch (err) {
+      console.error('Load data error:', err);
+      showStatus(`Error loading data: ${err.message}`, 'error', false);
+    }
+  }
+
+  // ========== UI UPDATES ==========
+  function updateUserDisplay() {
+    const name = state.user?.first_name || state.user?.telegram_username || 'User';
+    const userInfo = document.getElementById('userInfo');
+    if (userInfo) {
+      userInfo.innerHTML = `
+        <strong>${truncate(name, 15)}</strong>
+        <small>@${truncate(state.user?.telegram_username || 'user', 12)}</small>
+      `;
+    }
+  }
+
+  function updateDashboard() {
+    const portfolioValue = state.listings.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0);
+    
+    const elements = {
+      portfolioValue: '$' + portfolioValue.toFixed(2),
+      totalNfts: state.nfts.length,
+      totalWallets: state.wallets.length,
+      totalListings: state.listings.filter(l => l.active || l.status === 'active').length,
+      userBalance: '$' + (state.balance || 0).toFixed(2)
+    };
+
+    Object.entries(elements).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    });
+
+    // Profile info
+    const profileInfo = document.getElementById('profileInfo');
+    if (profileInfo) {
+      profileInfo.innerHTML = `
+        <div class="profile-item">
+          <span>User:</span>
+          <strong>@${state.user?.telegram_username || 'user'}</strong>
+        </div>
+        <div class="profile-item">
+          <span>Wallets:</span>
+          <strong>${state.wallets.length}</strong>
+        </div>
+        <div class="profile-item">
+          <span>NFTs:</span>
+          <strong>${state.nfts.length}</strong>
+        </div>
+      `;
+    }
+
+    // Stats
+    const stats = document.getElementById('profileStats');
+    if (stats) {
+      stats.innerHTML = `
+        <div class="stat-item">
+          <div class="stat-value">${state.nfts.length}</div>
+          <div class="stat-label">NFTs</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${state.wallets.length}</div>
+          <div class="stat-label">Wallets</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${state.listings.filter(l => l.active || l.status === 'active').length}</div>
+          <div class="stat-label">Listed</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">$${portfolioValue.toFixed(0)}</div>
+          <div class="stat-label">Value</div>
+        </div>
+      `;
+    }
+  }
+
+  function updateWalletsList() {
+    const container = document.getElementById('walletsList');
+    if (!container) return;
+
+    if (state.wallets.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No wallets yet</p>
+          <button class="btn btn-primary" onclick="window.showCreateWalletModal()">Create Wallet</button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = state.wallets.map((w, idx) => `
+      <div class="card wallet-card">
+        <div class="wallet-blockchain">
+          <strong>${w.blockchain?.toUpperCase() || 'Wallet'}</strong>
+          ${w.is_primary ? '<span class="badge-primary">Primary</span>' : ''}
+        </div>
+        <div class="wallet-address" title="${w.address}">${formatAddr(w.address)}</div>
+        <div class="wallet-actions">
+          <button class="btn btn-sm btn-secondary" onclick="window.showWalletDetails(${idx})">Details</button>
+          ${!w.is_primary ? `<button class="btn btn-sm btn-secondary" onclick="window.setPrimary(${idx})">Set Primary</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateNFTsList() {
+    const container = document.getElementById('nftList');
+    if (!container) return;
+
+    if (state.nfts.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No NFTs yet</p>
+          <button class="btn btn-primary" onclick="window.switchPage('mint')">Mint NFT</button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = state.nfts.map((nft, idx) => `
+      <div class="card nft-card">
+        <div class="nft-image">
+          ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" loading="lazy">` : '<div class="nft-placeholder">No Image</div>'}
+        </div>
+        <div class="nft-content">
+          <div class="nft-name">${truncate(nft.name, 20)}</div>
+          <div class="nft-collection">${nft.collection?.name || 'Collection'}</div>
+          <div class="nft-actions">
+            <button class="btn btn-sm btn-primary" onclick="window.listNFTModal(${idx})">List</button>
+            <button class="btn btn-sm btn-secondary" onclick="window.nftDetails(${idx})">View</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateMarketplace() {
+    const container = document.getElementById('marketplaceListings');
+    if (!container) return;
+
+    if (state.listings.length === 0) {
+      container.innerHTML = '<p class="empty-state">No listings available</p>';
+      return;
+    }
+
+    container.innerHTML = state.listings.map((listing, idx) => `
+      <div class="card nft-card">
+        <div class="nft-image">
+          ${listing.nft?.image_url ? `<img src="${listing.nft.image_url}" alt="NFT" loading="lazy">` : '<div class="nft-placeholder">Listing</div>'}
+        </div>
+        <div class="nft-content">
+          <div class="nft-name">${truncate(listing.nft?.name || 'NFT', 20)}</div>
+          <div class="nft-collection">${listing.nft?.collection?.name || 'Unknown'}</div>
+          <div class="nft-price">$${parseFloat(listing.price || 0).toFixed(2)}</div>
+          <button class="btn btn-primary btn-block" onclick="window.viewMarketplaceListing(${idx})">Make Offer</button>
+        </div>
+      </div>
+    `).join('');
+
+    // My listings tab
+    const myListingsContainer = document.getElementById('myListings');
+    if (myListingsContainer) {
+      if (state.myListings.length === 0) {
+        myListingsContainer.innerHTML = '<p class="empty-state">No active listings</p>';
+      } else {
+        myListingsContainer.innerHTML = state.myListings.map((listing, idx) => `
+          <div class="card nft-card">
+            <div class="nft-image">
+              ${listing.nft?.image_url ? `<img src="${listing.nft.image_url}" alt="NFT" loading="lazy">` : '<div class="nft-placeholder">Listing</div>'}
+            </div>
+            <div class="nft-content">
+              <div class="nft-name">${truncate(listing.nft?.name || 'NFT', 20)}</div>
+              <div class="nft-price">Listed at $${parseFloat(listing.price || 0).toFixed(2)}</div>
+              <button class="btn btn-danger btn-block" onclick="window.cancelMyListing(${idx})">Cancel</button>
+            </div>
+          </div>
+        `).join('');
       }
     }
+  }
 
-    // Bind all event listeners
-    bindEvents();
-
-    // Handle deep link (referral code)
-    const startParam = tg.initDataUnsafe?.start_param;
-    if (startParam?.startsWith('ref_')) {
-      const refCode = startParam.replace('ref_', '');
-      await apiCall('/referrals/apply', {
-        method: 'POST',
-        body: { referral_code: refCode },
-      });
-      showToast('Referral code applied! 🎉', 'success');
+  function updateBalance() {
+    const container = document.getElementById('balanceInfo');
+    if (container) {
+      container.innerHTML = `
+        <div class="balance-card">
+          <div class="balance-amount">$${(state.balance || 0).toFixed(2)}</div>
+          <div class="balance-actions">
+            <button class="btn btn-primary" onclick="window.showDepositModal()">Deposit</button>
+            <button class="btn btn-secondary" onclick="window.showWithdrawModal()">Withdraw</button>
+          </div>
+        </div>
+      `;
     }
-
-    // Load initial page
-    router.navigate('market');
-    await render();
-
-    log('App ready!', 'success');
   }
 
-  // Start app on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  function updateReferralInfo() {
+    const container = document.getElementById('referralInfo');
+    if (!container || !state.referralInfo) return;
+
+    container.innerHTML = `
+      <div class="referral-card">
+        <div class="referral-code">
+          <strong>Your Code:</strong>
+          <code>${state.referralInfo.referral_code || 'N/A'}</code>
+          <button class="btn btn-sm btn-secondary" onclick="window.copyReferralCode('${state.referralInfo.referral_code}')">Copy</button>
+        </div>
+        <div class="referral-stats">
+          <div class="stat">
+            <span>Referrals:</span>
+            <strong>${state.referralInfo.referral_count || 0}</strong>
+          </div>
+          <div class="stat">
+            <span>Earnings:</span>
+            <strong>$${(state.referralInfo.total_earnings || 0).toFixed(2)}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="referral-input">
+        <label>Apply Referral Code</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="referralCodeInput" placeholder="Enter code" class="input-text" style="flex:1;">
+          <button class="btn btn-primary" onclick="window.applyReferralCode()">Apply</button>
+        </div>
+      </div>
+    `;
   }
+
+  // ========== MODAL FUNCTIONS & EVENT HANDLERS ==========
+  window.showCreateWalletModal = function() {
+    const chains = ['ethereum', 'polygon', 'solana', 'ton', 'bitcoin'];
+    showModal('Create Wallet', `
+      <div class="form-group"><label>Blockchain</label><select id="chainSelect" class="input-select">${chains.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('')}</select></div>
+      <button class="btn btn-primary btn-block" onclick="window.createWallet()">Create</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.showImportWalletModal()">Import</button>
+    `);
+  };
+
+  window.showImportWalletModal = function() {
+    const chains = ['ethereum', 'polygon', 'solana', 'ton', 'bitcoin'];
+    showModal('Import Wallet', `
+      <div class="form-group"><label>Address</label><input type="text" id="importAddr" placeholder="Address" class="input-text"></div>
+      <div class="form-group"><label>Blockchain</label><select id="importChain" class="input-select">${chains.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('')}</select></div>
+      <button class="btn btn-primary btn-block" onclick="window.importWallet()">Import</button>
+    `);
+  };
+
+  window.createWallet = async function() {
+    const chain = document.getElementById('chainSelect')?.value;
+    if (!chain) { showStatus('Select blockchain', 'error', false); return; }
+    showStatus('Creating wallet...', 'info', true);
+    try {
+      const res = await API.createWallet(state.user.id, chain);
+      if (res.success || res.wallet) { showStatus('Wallet created!', 'success', false); closeModal(); await loadAllData(); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.importWallet = async function() {
+    const addr = document.getElementById('importAddr')?.value?.trim();
+    const chain = document.getElementById('importChain')?.value;
+    if (!addr || !chain) { showStatus('Fill all fields', 'error', false); return; }
+    showStatus('Importing...', 'info', true);
+    try {
+      const res = await API.importWallet(state.user.id, addr, chain);
+      if (res.success || res.wallet) { showStatus('Imported!', 'success', false); closeModal(); await loadAllData(); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.showWalletDetails = function(idx) {
+    const w = state.wallets[idx];
+    if (!w) return;
+    showModal('Wallet Details', `
+      <div><strong>${w.blockchain?.toUpperCase()}</strong><br><code style="font-size:11px;word-break:break-all;">${w.address}</code></div>
+      <div style="margin-top:12px;"><strong>Primary:</strong> ${w.is_primary ? 'Yes' : 'No'}</div>
+      <button class="btn btn-secondary btn-block" style="margin-top:12px;" onclick="window.closeModal()">Close</button>
+    `);
+  };
+
+  window.setPrimary = async function(idx) {
+    const w = state.wallets[idx];
+    if (!w || w.is_primary) return;
+    showStatus('Setting primary...', 'info', true);
+    try {
+      const res = await API.setPrimaryWallet(state.user.id, w.id, w.blockchain);
+      if (res.success) { showStatus('Updated!', 'success', false); await loadAllData(); closeModal(); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.showMintModal = function() {
+    if (state.wallets.length === 0) { showStatus('Create wallet first', 'error', false); return; }
+    showModal('Mint NFT', `
+      <div class="form-group"><label>Wallet</label><select id="mintWallet" class="input-select">${state.wallets.map((w, i) => `<option value="${w.id}">${w.blockchain?.toUpperCase()}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Name</label><input type="text" id="mintName" placeholder="NFT name" class="input-text"></div>
+      <div class="form-group"><label>Description</label><textarea id="mintDesc" placeholder="Description" class="input-text" rows="2"></textarea></div>
+      <button class="btn btn-primary btn-block" onclick="window.submitMint()">Mint</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Cancel</button>
+    `);
+  };
+
+  window.submitMint = async function() {
+    const walletId = document.getElementById('mintWallet')?.value;
+    const name = document.getElementById('mintName')?.value?.trim();
+    const desc = document.getElementById('mintDesc')?.value?.trim();
+    if (!name || !desc || !walletId) { showStatus('Fill all fields', 'error', false); return; }
+    showStatus('Creating...', 'info', true);
+    try {
+      const res = await API.mintNFT(state.user.id, walletId, name, desc);
+      if (res.success || res.nft) { showStatus('Created!', 'success', false); closeModal(); await loadAllData(); switchPage('nfts'); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.nftDetails = function(idx) {
+    const nft = state.nfts[idx];
+    if (!nft) return;
+    showModal('NFT Details', `
+      <div><strong>${nft.name}</strong><br><small>${nft.collection?.name || 'Collection'}</small></div>
+      <p style="font-size:12px;margin-top:8px;color:var(--color-text-secondary);">${nft.description || 'N/A'}</p>
+      <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="window.listNFTModal(${idx})">List for Sale</button>
+      <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="window.burnNFTConfirm(${idx})">Burn</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Close</button>
+    `);
+  };
+
+  window.listNFTModal = function(idx) {
+    const nft = state.nfts[idx];
+    if (!nft) return;
+    showModal('List NFT', `
+      <div class="form-group"><label>NFT: ${nft.name}</label></div>
+      <div class="form-group"><label>Price</label><input type="number" id="listPrice" placeholder="0.00" min="0" step="0.01" class="input-text"></div>
+      <div class="form-group"><label>Currency</label><select id="listCurrency" class="input-select"><option>ETH</option><option>USDT</option><option>USD</option></select></div>
+      <button class="btn btn-primary btn-block" onclick="window.confirmListNFT(${idx})">List</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Cancel</button>
+    `);
+  };
+
+  window.confirmListNFT = async function(idx) {
+    const nft = state.nfts[idx];
+    const price = document.getElementById('listPrice')?.value;
+    const currency = document.getElementById('listCurrency')?.value || 'ETH';
+    if (!price || parseFloat(price) <= 0) { showStatus('Invalid price', 'error', false); return; }
+    showStatus('Listing...', 'info', true);
+    try {
+      const res = await API.listNFT(state.user.id, nft.id, price, currency);
+      if (res.success || res.listing) { showStatus('Listed!', 'success', false); closeModal(); await loadAllData(); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.burnNFTConfirm = function(idx) {
+    const nft = state.nfts[idx];
+    showModal('Burn NFT', `
+      <p style="color:var(--color-status-error);">Are you sure? This cannot be undone.</p>
+      <p style="font-size:12px;margin-top:8px;">Burning ${nft.name}</p>
+      <button class="btn btn-danger btn-block" style="margin-top:12px;" onclick="window.burnNFT(${idx})">Confirm</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Cancel</button>
+    `);
+  };
+
+  window.burnNFT = async function(idx) {
+    const nft = state.nfts[idx];
+    showStatus('Burning...', 'info', true);
+    try {
+      const res = await API.burnNFT(state.user.id, nft.id);
+      if (res.success || res.nft) { showStatus('Burned!', 'success', false); closeModal(); await loadAllData(); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.viewMarketplaceListing = function(idx) {
+    const l = state.listings[idx];
+    if (!l) return;
+    showModal('Make Offer', `
+      <div><strong>${l.nft?.name || 'NFT'}</strong><br><small>$${parseFloat(l.price || 0).toFixed(2)}</small></div>
+      <div class="form-group" style="margin-top:12px;"><label>Your Offer</label><input type="number" id="offerPrice" placeholder="0.00" min="0" step="0.01" class="input-text"></div>
+      <button class="btn btn-primary btn-block" onclick="window.submitOffer(${idx})">Submit</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Cancel</button>
+    `);
+  };
+
+  window.submitOffer = async function(idx) {
+    const listing = state.listings[idx];
+    const offerPrice = document.getElementById('offerPrice')?.value;
+    if (!offerPrice || parseFloat(offerPrice) <= 0) { showStatus('Invalid offer', 'error', false); return; }
+    showStatus('Sending offer...', 'info', true);
+    try {
+      const res = await API.makeOffer(state.user.id, listing.id, offerPrice);
+      if (res.success || res.offer) { showStatus('Offer sent!', 'success', false); closeModal(); await loadAllData(); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.cancelMyListing = async function(idx) {
+    const listing = state.myListings[idx];
+    if (!listing) return;
+    showStatus('Canceling...', 'info', true);
+    try {
+      const res = await API.cancelListing(state.user.id, listing.id);
+      if (res.success) { showStatus('Canceled!', 'success', false); await loadAllData(); switchPage('marketplace'); }
+      else throw new Error(res.error || 'Failed');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.showDepositModal = function() {
+    const chains = ['ethereum', 'polygon', 'solana', 'ton', 'bitcoin'];
+    showModal('Deposit', `
+      <div class="form-group"><label>Amount (USD)</label><input type="number" id="depositAmount" placeholder="0.00" min="0" step="0.01" class="input-text"></div>
+      <div class="form-group"><label>Blockchain</label><select id="depositChain" class="input-select">${chains.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('')}</select></div>
+      <button class="btn btn-primary btn-block" onclick="window.initDeposit()">Continue</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Cancel</button>
+    `);
+  };
+
+  window.initDeposit = async function() {
+    const amount = document.getElementById('depositAmount')?.value;
+    const chain = document.getElementById('depositChain')?.value;
+    if (!amount || parseFloat(amount) <= 0 || !chain) { showStatus('Invalid input', 'error', false); return; }
+    showStatus('Initiating...', 'info', true);
+    try {
+      await API.initiateDeposit(state.user.id, parseFloat(amount), chain);
+      showStatus('Initiated!', 'success', false);
+      closeModal();
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.showWithdrawModal = function() {
+    showModal('Withdraw', `
+      <div class="form-group"><label>Amount (USD)</label><input type="number" id="withdrawAmount" placeholder="0.00" min="0" step="0.01" class="input-text"></div>
+      <div class="form-group"><label>Address</label><input type="text" id="withdrawAddr" placeholder="Wallet address" class="input-text"></div>
+      <button class="btn btn-primary btn-block" onclick="window.initWithdraw()">Request</button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="window.closeModal()">Cancel</button>
+    `);
+  };
+
+  window.initWithdraw = async function() {
+    const amount = document.getElementById('withdrawAmount')?.value;
+    const addr = document.getElementById('withdrawAddr')?.value;
+    if (!amount || parseFloat(amount) <= 0 || !addr) { showStatus('Fill all fields', 'error', false); return; }
+    showStatus('Processing...', 'info', true);
+    try {
+      await API.initiateWithdrawal(state.user.id, parseFloat(amount), addr);
+      showStatus('Submitted!', 'success', false);
+      closeModal();
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.applyReferralCode = async function() {
+    const code = document.getElementById('referralCodeInput')?.value?.trim();
+    if (!code) { showStatus('Enter code', 'error', false); return; }
+    showStatus('Applying...', 'info', true);
+    try {
+      const res = await API.applyReferralCode(state.user.id, code);
+      if (res.success) { showStatus('Applied!', 'success', false); await loadAllData(); }
+      else throw new Error(res.error || 'Invalid');
+    } catch (err) { showStatus(`Error: ${err.message}`, 'error', false); }
+  };
+
+  window.copyReferralCode = function(code) {
+    navigator.clipboard.writeText(code);
+    showStatus('Copied!', 'success', false);
+  };
+
+  window.switchPage = switchPage;
+  window.closeModal = closeModal;
+
+  // ========== EVENT LISTENERS ==========
+  function setupEventListeners() {
+    document.querySelectorAll('[data-nav]').forEach(item => {
+      item.addEventListener('click', (e) => { e.preventDefault(); switchPage(item.dataset.nav); });
+    });
+
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if (modalOverlay) modalOverlay.addEventListener('click', closeModal);
+
+    const createWalletBtn = document.getElementById('createWalletBtn');
+    const importWalletBtn = document.getElementById('importWalletBtn');
+    const mintBtn = document.getElementById('mintBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    if (createWalletBtn) createWalletBtn.addEventListener('click', window.showCreateWalletModal);
+    if (importWalletBtn) importWalletBtn.addEventListener('click', window.showImportWalletModal);
+    if (mintBtn) mintBtn.addEventListener('click', window.showMintModal);
+    if (refreshBtn) refreshBtn.addEventListener('click', async () => { showStatus('Refreshing...', 'info', true); await loadAllData(); });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const marketplace = document.getElementById('marketplaceListings');
+        const myListings = document.getElementById('myListings');
+        if (btn.dataset.tab === 'marketplace' && marketplace && myListings) {
+          marketplace.style.display = 'grid';
+          myListings.style.display = 'none';
+        } else if (btn.dataset.tab === 'mylistings' && marketplace && myListings) {
+          marketplace.style.display = 'none';
+          myListings.style.display = 'grid';
+        }
+      });
+    });
+  }
+
+  // ========== INIT ==========
+  if (window.Telegram?.WebApp) window.Telegram.WebApp.ready();
+  window.addEventListener('load', initApp);
+  setInterval(async () => {
+    if (state.user && state.currentPage === 'dashboard') {
+      try { await loadAllData(); } catch (e) {}
+    }
+  }, 30000);
+
 })();
+
