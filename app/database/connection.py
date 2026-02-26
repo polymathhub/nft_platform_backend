@@ -83,3 +83,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise e
         finally:
             await session.close()
+
+
+# Alias for backwards compatibility with routers that use get_db
+get_db = get_db_session
