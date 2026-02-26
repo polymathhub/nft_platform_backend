@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models import (
     User, Referral, ReferralStatus, ReferralCommission, CommissionStatus, Payment
 )
-from app.schemas.auth import UserResponse
+from app.schemas.user import UserResponse
 from app.security.auth import get_current_user
 from app.utils.logger import logger
 
