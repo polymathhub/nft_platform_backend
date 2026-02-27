@@ -41,9 +41,9 @@ print(f"Expected endpoints: {len(expected_endpoints)}")
 failed = []
 for endpoint, request_model in expected_endpoints.items():
     if endpoint in routes_dict:
-        print(f"✓ {endpoint} - OK")
+        print(f"[PASS] {endpoint} - OK")
     else:
-        print(f"✗ {endpoint} - NOT FOUND")
+        print(f"[FAIL] {endpoint} - NOT FOUND")
         failed.append(endpoint)
 
 # Check that request models are importable
@@ -61,11 +61,11 @@ print("\nChecking Pydantic request models...")
 for name, model_class in models_to_check:
     # Check if the model has the expected fields
     fields = list(model_class.__fields__.keys())
-    print(f"✓ {name} - Fields: {fields}")
+    print(f"[PASS] {name} - Fields: {fields}")
 
 if failed:
-    print(f"\n❌ Missing endpoints: {failed}")
+    print(f"\n[FAIL] Missing endpoints: {failed}")
     sys.exit(1)
 else:
-    print("\n✅ All endpoints converted successfully!")
+    print("\n[PASS] All endpoints converted successfully!")
     sys.exit(0)

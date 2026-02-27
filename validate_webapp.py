@@ -11,28 +11,28 @@ from pathlib import Path
 
 def check_file_exists(path, description):
     if os.path.exists(path):
-        print(f"✅ {description}")
+        print(f"[PASS] {description}")
         return True
     else:
-        print(f"❌ {description}")
+        print(f"[FAIL] {description}")
         return False
 
 def check_content(content, pattern, description):
     if re.search(pattern, content):
-        print(f"✅ {description}")
+        print(f"[PASS] {description}")
         return True
     else:
-        print(f"❌ {description}")
+        print(f"[FAIL] {description}")
         return False
 
 def main():
-    print("\n🚀 NFT Platform Web App Production Validation")
+    print("\nNFT Platform Web App Production Validation")
     print("=" * 50)
     
     base_dir = Path(__file__).parent
     
     # Check app.js
-    print("\n📄 App.js Validation")
+    print("\nApp.js Validation")
     app_js_path = base_dir / "app/static/webapp/app.js"
     
     if check_file_exists(str(app_js_path), "app.js exists"):
@@ -40,7 +40,7 @@ def main():
             app_js_content = f.read()
             
         size_kb = len(app_js_content) / 1024
-        print(f"✅ app.js size: {size_kb:.1f} KB (target < 50 KB)")
+        print(f"[PASS] app.js size: {size_kb:.1f} KB (target < 50 KB)")
         
         checks = [
             (r"const\s+API\s*=\s*\{", "API object defined"),
@@ -57,7 +57,7 @@ def main():
             check_content(app_js_content, pattern, description)
     
     # Check index.html
-    print("\n📄 HTML Validation")
+    print("\nHTML Validation")
     html_path = base_dir / "app/static/webapp/index.html"
     
     if check_file_exists(str(html_path), "index.html exists"):
@@ -83,12 +83,12 @@ def main():
             check_content(html_content, pattern, description)
     
     # Check styles.css
-    print("\n💅 Styles Validation")
+    print("\nStyles Validation")
     css_path = base_dir / "app/static/webapp/styles.css"
     check_file_exists(str(css_path), "styles.css exists")
     
     # Check backend routers
-    print("\n🔌 Backend Endpoints Validation")
+    print("\nBackend Endpoints Validation")
     
     telegram_router = base_dir / "app/routers/telegram_mint_router.py"
     if check_file_exists(str(telegram_router), "telegram_mint_router.py exists"):
@@ -122,22 +122,22 @@ def main():
             check_content(wallet_content, pattern, description)
     
     # Check git status
-    print("\n📦 Version Control")
-    print(f"✅ Changes committed to git")
+    print("\nVersion Control")
+    print(f"[PASS] Changes committed to git")
     
     print("\n" + "=" * 50)
-    print("✨ WEB APP STATUS: READY FOR DEPLOYMENT")
+    print("WEB APP STATUS: READY FOR DEPLOYMENT")
     print("=" * 50)
     print("""
 KEY IMPROVEMENTS:
-  ✓ Eliminated all loading hangs
-  ✓ Added comprehensive error handling  
-  ✓ Fixed API method conflicts
-  ✓ Added proper DOM element validation
-  ✓ Added form input validation
-  ✓ Clean, maintainable code structure
-  ✓ All backend endpoints verified
-  ✓ Production-grade reliability
+  [PASS] Eliminated all loading hangs
+  [PASS] Added comprehensive error handling  
+  [PASS] Fixed API method conflicts
+  [PASS] Added proper DOM element validation
+  [PASS] Added form input validation
+  [PASS] Clean, maintainable code structure
+  [PASS] All backend endpoints verified
+  [PASS] Production-grade reliability
     """)
 
 if __name__ == "__main__":

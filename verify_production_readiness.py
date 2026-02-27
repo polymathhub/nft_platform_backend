@@ -58,11 +58,11 @@ class VerificationReport:
             total_passed += passed_count
             
             status_color = GREEN if passed_count == len(tests) else YELLOW if passed_count > 0 else RED
-            status_icon = "✓" if passed_count == len(tests) else "⚠" if passed_count > 0 else "✗"
+            status_icon = "[PASS]" if passed_count == len(tests) else "[WARN]" if passed_count > 0 else "[FAIL]"
             
             print(f"{status_color}{BOLD}{status_icon} {category}{RESET} ({passed_count}/{len(tests)})")
             for test in tests:
-                icon = f"{GREEN}✓{RESET}" if test["passed"] else f"{RED}✗{RESET}"
+                icon = f"{GREEN}[PASS]{RESET}" if test["passed"] else f"{RED}[FAIL]{RESET}"
                 print(f"  {icon} {test['name']}")
                 if test["message"]:
                     print(f"      {BLUE}→{RESET} {test['message']}")
@@ -72,10 +72,10 @@ class VerificationReport:
         print(f"TOTAL: {total_passed}/{total_tests} tests passed")
         
         if total_passed == total_tests:
-            print(f"{GREEN}{BOLD}✓ ALL SYSTEMS READY FOR PRODUCTION{RESET}")
+            print(f"{GREEN}{BOLD}[PASS] ALL SYSTEMS READY FOR PRODUCTION{RESET}")
             return 0
         else:
-            print(f"{RED}{BOLD}✗ SOME SYSTEMS REQUIRE FIXES{RESET}")
+            print(f"{RED}{BOLD}[FAIL] SOME SYSTEMS REQUIRE FIXES{RESET}")
             return 1
 
 report = VerificationReport()

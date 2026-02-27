@@ -59,13 +59,13 @@ def create_wallet_message(wallet: Any) -> str:
 
 def create_nft_message(nft: Any) -> str:
     status_emoji = {
-        "pending": "⏳",
-        "minted": "✅",
-        "transferred": "↔️",
-        "locked": "🔒",
-        "burned": "🔥",
+        "pending": "[Pending]",
+        "minted": "[Minted]",
+        "transferred": "[Transferred]",
+        "locked": "[Locked]",
+        "burned": "[Burned]",
     }
-    emoji = status_emoji.get(getattr(nft, "status", "pending"), "❓")
+    emoji = status_emoji.get(getattr(nft, "status", "pending"), "[Unknown]")
 
     message = (
         f"{emoji} {bold(getattr(nft, 'name', 'NFT'))}\n"
@@ -103,7 +103,7 @@ def build_wallet_selector(wallets: List[Dict[str, str]]) -> Dict[str, Any]:
         }])
     
     if keyboard:
-        keyboard.append([{"text": "❌ Cancel", "callback_data": "cancel"}])
+        keyboard.append([{"text": "Cancel", "callback_data": "cancel"}])
     
     return {"inline_keyboard": keyboard}
 
@@ -116,7 +116,7 @@ def build_blockchain_selector(blockchains: Optional[List[str]] = None) -> Dict[s
     row = []
     for blockchain in blockchains:
         row.append({
-            "text": f"🔗 {blockchain.capitalize()}",
+            "text": f"{blockchain.capitalize()}",
             "callback_data": f"select_blockchain:{blockchain}"
         })
         if len(row) == 2:
@@ -126,7 +126,7 @@ def build_blockchain_selector(blockchains: Optional[List[str]] = None) -> Dict[s
     if row:
         keyboard.append(row)
     
-    keyboard.append([{"text": "❌ Cancel", "callback_data": "cancel"}])
+    keyboard.append([{"text": "Cancel", "callback_data": "cancel"}])
     
     return {"inline_keyboard": keyboard}
 
@@ -135,15 +135,15 @@ def build_nft_actions_menu() -> Dict[str, Any]:
     return {
         "inline_keyboard": [
             [
-                {"text": "📤 Transfer", "callback_data": "nft_transfer"},
-                {"text": "🔥 Burn", "callback_data": "nft_burn"}
+                {"text": "Transfer", "callback_data": "nft_transfer"},
+                {"text": "Burn", "callback_data": "nft_burn"}
             ],
             [
-                {"text": "🔒 Lock", "callback_data": "nft_lock"},
-                {"text": "🔓 Unlock", "callback_data": "nft_unlock"}
+                {"text": "Lock", "callback_data": "nft_lock"},
+                {"text": "Unlock", "callback_data": "nft_unlock"}
             ],
-            [{"text": "📢 List for Sale", "callback_data": "nft_list"}],
-            [{"text": "❌ Cancel", "callback_data": "cancel"}]
+            [{"text": "List for Sale", "callback_data": "nft_list"}],
+            [{"text": "Cancel", "callback_data": "cancel"}]
         ]
     }
 
@@ -151,11 +151,11 @@ def build_nft_actions_menu() -> Dict[str, Any]:
 def build_marketplace_menu() -> Dict[str, Any]:
     return {
         "inline_keyboard": [
-            [{"text": "📋 Browse Listings", "callback_data": "marketplace_browse"}],
-            [{"text": "📢 List My NFT", "callback_data": "marketplace_list"}],
-            [{"text": "💰 Make Offer", "callback_data": "marketplace_offer"}],
-            [{"text": "📊 My Listings", "callback_data": "marketplace_mylistings"}],
-            [{"text": "❌ Cancel", "callback_data": "cancel"}]
+            [{"text": "Browse Listings", "callback_data": "marketplace_browse"}],
+            [{"text": "List My NFT", "callback_data": "marketplace_list"}],
+            [{"text": "Make Offer", "callback_data": "marketplace_offer"}],
+            [{"text": "My Listings", "callback_data": "marketplace_mylistings"}],
+            [{"text": "Cancel", "callback_data": "cancel"}]
         ]
     }
 
@@ -165,8 +165,8 @@ def build_confirmation_keyboard(action: str) -> Dict[str, Any]:
     return {
         "inline_keyboard": [
             [
-                {"text": "✅ Confirm", "callback_data": f"confirm:{action}"},
-                {"text": "❌ Cancel", "callback_data": "cancel"}
+                {"text": "Confirm", "callback_data": f"confirm:{action}"},
+                {"text": "Cancel", "callback_data": "cancel"}
             ]
         ]
     }
@@ -175,11 +175,11 @@ def build_confirmation_keyboard(action: str) -> Dict[str, Any]:
 def build_main_menu() -> Dict[str, Any]:
     return {
         "inline_keyboard": [
-            [{"text": "🖼️ Mint NFT", "callback_data": "main_mint"}],
-            [{"text": "👛 Wallets", "callback_data": "main_wallets"}],
-            [{"text": "📋 My NFTs", "callback_data": "main_mynfts"}],
-            [{"text": "🛍️ Marketplace", "callback_data": "main_marketplace"}],
-            [{"text": "📚 Help", "callback_data": "main_help"}]
+            [{"text": "Mint NFT", "callback_data": "main_mint"}],
+            [{"text": "Wallets", "callback_data": "main_wallets"}],
+            [{"text": "My NFTs", "callback_data": "main_mynfts"}],
+            [{"text": "Marketplace", "callback_data": "main_marketplace"}],
+            [{"text": "Help", "callback_data": "main_help"}]
         ]
     }
 
@@ -187,7 +187,7 @@ def build_main_menu() -> Dict[str, Any]:
 def build_cancel_button() -> Dict[str, Any]:
     return {
         "inline_keyboard": [
-            [{"text": "❌ Cancel", "callback_data": "cancel"}]
+            [{"text": "Cancel", "callback_data": "cancel"}]
         ]
     }
 
@@ -201,17 +201,17 @@ def build_pagination_keyboard(
     nav_buttons = []
     
     if page > 1:
-        nav_buttons.append({"text": "⬅️ Previous", "callback_data": f"page:{page-1}:{item_id}"})
+        nav_buttons.append({"text": "Previous", "callback_data": f"page:{page-1}:{item_id}"})
     
     nav_buttons.append({"text": f"{page}/{total_pages}", "callback_data": "page_info"})
     
     if page < total_pages:
-        nav_buttons.append({"text": "Next ➡️", "callback_data": f"page:{page+1}:{item_id}"})
+        nav_buttons.append({"text": "Next", "callback_data": f"page:{page+1}:{item_id}"})
     
     if nav_buttons:
         keyboard.append(nav_buttons)
     
-    keyboard.append([{"text": "❌ Done", "callback_data": "cancel"}])
+    keyboard.append([{"text": "Done", "callback_data": "cancel"}])
     
     return {"inline_keyboard": keyboard}
 
@@ -220,8 +220,8 @@ def build_yes_no_keyboard() -> Dict[str, Any]:
     return {
         "inline_keyboard": [
             [
-                {"text": "✅ Yes", "callback_data": "confirm:yes"},
-                {"text": "❌ No", "callback_data": "confirm:no"}
+                {"text": "Yes", "callback_data": "confirm:yes"},
+                {"text": "No", "callback_data": "confirm:no"}
             ]
         ]
     }

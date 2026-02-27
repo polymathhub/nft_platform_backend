@@ -172,7 +172,7 @@ class TelegramBotService:
             )
             wallet = wallet_result.scalar_one_or_none()
             if not wallet:
-                message = "❌ Wallet not found or not owned by you."
+                message = "Wallet not found or not owned by you."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
@@ -189,13 +189,13 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Minting failed: {error}"
+                message = f"Minting failed: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             # Success notification
             success_message = (
-                f"✅ <b>NFT Minted Successfully!</b>\n\n"
+                f"<b>NFT Minted Successfully</b>\n\n"
                 f"<b>Name:</b> {nft.name}\n"
                 f"<b>ID:</b> <code>{nft.global_nft_id}</code>\n"
                 f"<b>Blockchain:</b> {nft.blockchain}\n"
@@ -206,12 +206,12 @@ class TelegramBotService:
             return nft, "Minting successful"
 
         except ValueError as e:
-            message = f"❌ Invalid wallet ID: {e}"
+            message = f"Invalid wallet ID: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_mint_command: {e}")
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -233,14 +233,14 @@ class TelegramBotService:
         if not wallets:
             return await self.send_message(
                 chat_id,
-                "❌ You don't have any wallets yet. Create one using /wallet-create &lt;blockchain&gt;.",
+                "You don't have any wallets yet. Create one using /wallet-create &lt;blockchain&gt;.",
             )
 
-        message = "<b>👛 Your Wallets:</b>\n\n"
+        message = "<b>Your Wallets</b>\n\n"
         
         wallet_data = []
         for i, wallet in enumerate(wallets, 1):
-            primary_badge = "⭐" if wallet.is_primary else "  "
+            primary_badge = "[Primary]" if wallet.is_primary else ""
             message += (
                 f"{primary_badge} {i}. <b>{wallet.name or f'Wallet {i}'}</b>\n"
                 f"   Blockchain: <code>{wallet.blockchain.value.upper()}</code>\n"
@@ -276,17 +276,17 @@ class TelegramBotService:
     async def send_start_message(self, chat_id: int, username: str) -> bool:
         """Send welcome message with available commands."""
         message = (
-            f"<b>Welcome to NFT Minting Bot, {username}! 🚀</b>\n\n"
+            f"<b>Welcome to NFT Minting Bot, {username}!</b>\n\n"
             f"Available commands:\n"
             f"<code>/start</code> - Show this message\n"
             f"<code>/wallet</code> - List your wallets\n"
             f"<code>/mint &lt;wallet_id&gt; &lt;name&gt;</code> - Mint an NFT\n"
             f"<code>/status &lt;nft_id&gt;</code> - Check NFT status\n"
             f"<code>/help</code> - Show help\n\n"
-            f"<b>Quick Start:</b>\n"
-            f"1️⃣ View your wallets with /wallet\n"
-            f"2️⃣ Use a wallet ID to mint NFTs\n"
-            f"3️⃣ Track minting status with /status\n"
+            f"<b>Quick Start</b>\n"
+            f"1. View your wallets with /wallet\n"
+            f"2. Use a wallet ID to mint NFTs\n"
+            f"3. Track minting status with /status\n"
         )
         # Use inline CTA main actions to present beautiful CTAs
         return await self.send_message(chat_id, message, reply_markup=build_main_actions_inline())
@@ -298,20 +298,20 @@ class TelegramBotService:
         try:
             nft = await NFTService.get_nft_by_id(db, UUID(nft_id))
             if not nft:
-                return await self.send_message(chat_id, "❌ NFT not found")
+                return await self.send_message(chat_id, "NFT not found")
 
             status_emoji = {
-                "pending": "⏳",
-                "minted": "✅",
-                "transferred": "↔️",
-                "locked": "🔒",
-                "burned": "🔥",
+                "pending": "[Pending]",
+                "minted": "[Minted]",
+                "transferred": "[Transferred]",
+                "locked": "[Locked]",
+                "burned": "[Burned]",
             }
 
-            emoji = status_emoji.get(nft.status, "❓")
+            emoji = status_emoji.get(nft.status, "[Unknown]")
 
             message = (
-                f"{emoji} <b>NFT Status</b>\n\n"
+                f"<b>NFT Status</b>\n\n"
                 f"<b>Name:</b> {nft.name}\n"
                 f"<b>ID:</b> <code>{nft.global_nft_id}</code>\n"
                 f"<b>Status:</b> <code>{nft.status}</code>\n"
@@ -327,11 +327,11 @@ class TelegramBotService:
 
             return await self.send_message(chat_id, message)
         except ValueError:
-            return await self.send_message(chat_id, "❌ Invalid NFT ID format")
+            return await self.send_message(chat_id, "Invalid NFT ID format")
         except Exception as e:
             logger.error(f"Error sending NFT status: {e}")
             return await self.send_message(
-                chat_id, f"❌ Error retrieving status: {str(e)}"
+                chat_id, f"Error retrieving status: {str(e)}"
             )
 
     async def set_webhook(self, webhook_url: str, secret_token: Optional[str] = None) -> bool:
@@ -421,10 +421,10 @@ class TelegramBotService:
         if not nfts:
             return await self.send_message(
                 chat_id,
-                "❌ You don't have any unminted NFTs available for selling.\n\nMint an NFT first with /mint command.",
+                "You don't have any unminted NFTs available for selling.\n\nMint an NFT first with /mint command.",
             )
 
-        message = "<b>📜 Your Available NFTs</b>\n\n"
+        message = "<b>Your Available NFTs</b>\n\n"
         for i, nft in enumerate(nfts[:10], 1):
             message += (
                 f"{i}. <b>{nft.name}</b>\n"
@@ -455,10 +455,10 @@ class TelegramBotService:
         if not listings:
             return await self.send_message(
                 chat_id,
-                "❌ No active listings in marketplace.",
+                "No active listings in marketplace.",
             )
 
-        message = "<b>🛍️ Active Marketplace Listings</b>\n\n"
+        message = "<b>Active Marketplace Listings</b>\n\n"
         inline_keyboard = []
         for i, (listing, nft) in enumerate(listings, 1):
             message += (
@@ -497,14 +497,14 @@ class TelegramBotService:
         if not listings:
             return await self.send_message(
                 chat_id,
-                "❌ You have no active listings.",
+                "You have no active listings.",
             )
 
-        message = "<b>📊 Your Listings</b>\n\n"
+        message = "<b>Your Listings</b>\n\n"
         for i, (listing, nft) in enumerate(listings, 1):
-            status_emoji = "🟢" if listing.status == ListingStatus.ACTIVE else "🔴"
+            status_text = "Active" if listing.status == ListingStatus.ACTIVE else "Inactive"
             message += (
-                f"{status_emoji} {i}. <b>{nft.name}</b>\n"
+                f"[{status_text}] {i}. <b>{nft.name}</b>\n"
                 f"   Price: <code>{listing.price} {listing.currency}</code>\n"
                 f"   Status: {listing.status}\n"
                 f"   Listing ID: <code>{listing.id}</code>\n\n"
@@ -537,14 +537,14 @@ class TelegramBotService:
             nft = result.scalar_one_or_none()
             
             if not nft:
-                message = "❌ NFT not found, not owned by you, or already locked."
+                message = "NFT not found, not owned by you, or already locked."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             # Get primary wallet
             wallet = await WalletService.get_primary_wallet(db, user.id, nft.blockchain)
             if not wallet:
-                message = f"❌ No primary wallet for {nft.blockchain}."
+                message = f"No primary wallet for {nft.blockchain}."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
@@ -560,13 +560,13 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Listing failed: {error}"
+                message = f"Listing failed: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             # Success notification
             success_message = (
-                f"✅ <b>NFT Listed Successfully!</b>\n\n"
+                f"<b>NFT Listed Successfully</b>\n\n"
                 f"<b>NFT:</b> {nft.name}\n"
                 f"<b>Price:</b> <code>{listing.price} {listing.currency}</code>\n"
                 f"<b>Listing ID:</b> <code>{listing.id}</code>\n"
@@ -576,12 +576,12 @@ class TelegramBotService:
             return listing, "Listing successful"
 
         except ValueError as e:
-            message = f"❌ Invalid input: {e}"
+            message = f"Invalid input: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_list_nft: {e}")
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -603,19 +603,19 @@ class TelegramBotService:
             listing = result.scalar_one_or_none()
 
             if not listing:
-                message = "❌ Listing not found."
+                message = "Listing not found."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             if listing.seller_id == user.id:
-                message = "❌ You cannot make offer on your own listing."
+                message = "You cannot make offer on your own listing."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             # Get user wallet
             wallet = await WalletService.get_primary_wallet(db, user.id, listing.blockchain)
             if not wallet:
-                message = f"❌ No primary wallet for {listing.blockchain}."
+                message = f"No primary wallet for {listing.blockchain}."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
@@ -630,13 +630,13 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Offer failed: {error}"
+                message = f"Offer failed: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             # Success notification
             success_message = (
-                f"✅ <b>Offer Made Successfully!</b>\n\n"
+                f"<b>Offer Made Successfully!</b>\n\n"
                 f"<b>Offer Price:</b> <code>{offer.offer_price} {offer.currency}</code>\n"
                 f"<b>Listing Price:</b> <code>{listing.price} {listing.currency}</code>\n"
                 f"<b>Offer ID:</b> <code>{offer.id}</code>\n"
@@ -650,7 +650,7 @@ class TelegramBotService:
                     contract = USDTHelper.get_usdt_contract(listing.blockchain, settings)
                     if platform_addr:
                         instr = (
-                            f"💳 To complete your offer, send {offer.offer_price} {offer.currency} from your external wallet to {platform_addr} (token contract: {contract}).\n"
+                            f"To complete your offer, send {offer.offer_price} {offer.currency} from your external wallet to {platform_addr} (token contract: {contract}).\n"
                             f"After sending, confirm the deposit with: /deposit-confirm {offer.id} <tx_hash>"
                         )
                         await self.send_message(int(chat_id), instr)
@@ -660,12 +660,12 @@ class TelegramBotService:
             return offer, "Offer successful"
 
         except ValueError as e:
-            message = f"❌ Invalid input: {e}"
+            message = f"Invalid input: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_make_offer: {e}")
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -688,13 +688,13 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Cancel failed: {error}"
+                message = f"Cancel failed: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             # Success notification
             success_message = (
-                f"✅ <b>Listing Cancelled!</b>\n\n"
+                f"<b>Listing Cancelled!</b>\n\n"
                 f"<b>NFT:</b> Unlocked for other operations\n"
                 f"<b>Listing ID:</b> <code>{listing.id}</code>"
             )
@@ -702,12 +702,12 @@ class TelegramBotService:
             return listing, "Cancellation successful"
 
         except ValueError as e:
-            message = f"❌ Invalid listing ID: {e}"
+            message = f"Invalid listing ID: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_cancel_listing: {e}")
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -743,7 +743,7 @@ class TelegramBotService:
                 blockchain_type = BlockchainType(blockchain_lower)
                 logger.info(f"[WALLET_CREATE] Blockchain type recognized: {blockchain_type}")
             except ValueError as e:
-                message = f"❌ Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
+                message = f"Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
                 logger.error(f"[WALLET_CREATE] Invalid blockchain: {e}")
                 await self.send_message(chat_id, message)
                 return None, message
@@ -776,7 +776,7 @@ class TelegramBotService:
             logger.info(f"[WALLET_CREATE] Generation returned: wallet={wallet is not None}, error={error}")
             
             if error or not wallet:
-                message = f"❌ Wallet creation failed: {error or 'Unknown error'}"
+                message = f"Wallet creation failed: {error or 'Unknown error'}"
                 logger.error(f"[WALLET_CREATE] FAILED: {message}")
                 await self.send_message(chat_id, message)
                 return None, error
@@ -795,12 +795,12 @@ class TelegramBotService:
             logger.info(f"[WALLET_CREATE] SUCCESS: wallet_id={wallet.id}, address={wallet.address[:20]}...")
             
             success_message = (
-                f"✅ <b>Wallet Created Successfully!</b>\n\n"
-                f"<b>🔗 Blockchain:</b> <code>{blockchain.upper()}</code>\n"
-                f"<b>📍 Address:</b> <code>{wallet.address}</code>\n"
-                f"<b>📋 Type:</b> Custodial (Secure)\n"
-                f"<b>🆔 Wallet ID:</b> <code>{str(wallet.id)}</code>\n"
-                f"<b>⭐ Primary:</b> Yes\n\n"
+                f"<b>Wallet Created Successfully!</b>\n\n"
+                f"<b>Blockchain:</b> <code>{blockchain.upper()}</code>\n"
+                f"<b>Address:</b> <code>{wallet.address}</code>\n"
+                f"<b>Type:</b> Custodial (Secure)\n"
+                f"<b>Wallet ID:</b> <code>{str(wallet.id)}</code>\n"
+                f"<b>Primary:</b> Yes\n\n"
                 f"<i>Your wallet is ready! Use it to mint NFTs.</i>"
             )
             await self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard())
@@ -808,7 +808,7 @@ class TelegramBotService:
             
         except Exception as e:
             logger.error(f"[WALLET_CREATE] EXCEPTION: {type(e).__name__}: {e}", exc_info=True)
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(chat_id, message)
             return None, str(e)
     
@@ -828,7 +828,7 @@ class TelegramBotService:
             try:
                 blockchain_type = BlockchainType(blockchain_lower)
             except ValueError:
-                message = f"❌ Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
+                message = f"Unsupported blockchain: {blockchain}\n\nSupported: ethereum, solana, polygon, ton, bitcoin, arbitrum, optimism, base, avalanche"
                 await self.send_message(chat_id, message)
                 return None, message
             
@@ -847,7 +847,7 @@ class TelegramBotService:
             )
             
             if error:
-                message = f"❌ Wallet import failed: {error}"
+                message = f"Wallet import failed: {error}"
                 await self.send_message(chat_id, message)
                 return None, message
             
@@ -856,12 +856,12 @@ class TelegramBotService:
             await db.refresh(wallet)
             
             success_message = (
-                f"✅ <b>Wallet Imported Successfully!</b>\n\n"
-                f"<b>🔗 Blockchain:</b> <code>{blockchain.upper()}</code>\n"
-                f"<b>📍 Address:</b> <code>{address}</code>\n"
-                f"<b>📋 Type:</b> Self-Custody (Imported)\n"
-                f"<b>🆔 Wallet ID:</b> <code>{str(wallet.id)}</code>\n"
-                f"<b>⭐ Primary:</b> Yes\n\n"
+                f"<b>Wallet Imported Successfully!</b>\n\n"
+                f"<b>Blockchain:</b> <code>{blockchain.upper()}</code>\n"
+                f"<b>Address:</b> <code>{address}</code>\n"
+                f"<b>Type:</b> Self-Custody (Imported)\n"
+                f"<b>Wallet ID:</b> <code>{str(wallet.id)}</code>\n"
+                f"<b>Primary:</b> Yes\n\n"
                 f"<i>Your wallet has been added to your account.</i>"
             )
             await self.send_message(chat_id, success_message, reply_markup=build_wallet_keyboard())
@@ -869,7 +869,7 @@ class TelegramBotService:
             
         except Exception as e:
             logger.error(f"Error in handle_wallet_import: {e}", exc_info=True)
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(chat_id, message)
             return None, str(e)
 
@@ -891,7 +891,7 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Failed to set primary wallet: {error}"
+                message = f"Failed to set primary wallet: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
@@ -899,24 +899,24 @@ class TelegramBotService:
             wallet_type_label = wallet.wallet_type.value.replace('_', ' ').title()
             
             success_message = (
-                f"✅ <b>Primary Wallet Updated!</b>\n\n"
-                f"<b>💼 Wallet:</b> {wallet_name}\n"
-                f"<b>🔗 Blockchain:</b> <code>{wallet.blockchain.value.upper()}</code>\n"
-                f"<b>📍 Address:</b> <code>{wallet.address}</code>\n"
-                f"<b>📋 Type:</b> {wallet_type_label}\n"
-                f"<b>⭐ Status:</b> Now Primary\n"
-                f"<b>🆔 ID:</b> <code>{str(wallet.id)}</code>"
+                f"<b>Primary Wallet Updated!</b>\n\n"
+                f"<b>Wallet:</b> {wallet_name}\n"
+                f"<b>Blockchain:</b> <code>{wallet.blockchain.value.upper()}</code>\n"
+                f"<b>Address:</b> <code>{wallet.address}</code>\n"
+                f"<b>Type:</b> {wallet_type_label}\n"
+                f"<b>Status:</b> Now Primary\n"
+                f"<b>ID:</b> <code>{str(wallet.id)}</code>"
             )
             await self.send_message(int(chat_id), success_message)
             return wallet, "Primary wallet set"
 
         except ValueError as e:
-            message = f"❌ Invalid wallet ID: {e}"
+            message = f"Invalid wallet ID: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_set_primary_wallet: {e}", exc_info=True)
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -941,12 +941,12 @@ class TelegramBotService:
             nft = result.scalar_one_or_none()
 
             if not nft:
-                message = "❌ NFT not found or not owned by you."
+                message = "NFT not found or not owned by you."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             if nft.is_locked:
-                message = "❌ NFT is locked and cannot be transferred."
+                message = "NFT is locked and cannot be transferred."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
@@ -959,12 +959,12 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Transfer failed: {error}"
+                message = f"Transfer failed: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             success_message = (
-                f"✅ <b>Transfer Initiated!</b>\n\n"
+                f"<b>Transfer Initiated!</b>\n\n"
                 f"<b>NFT:</b> {nft.name}\n"
                 f"<b>To Address:</b> <code>{to_address[:20]}...</code>\n"
                 f"<b>Status:</b> {transferred_nft.status}"
@@ -973,12 +973,12 @@ class TelegramBotService:
             return transferred_nft, "Transfer initiated"
 
         except ValueError as e:
-            message = f"❌ Invalid input: {e}"
+            message = f"Invalid input: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_transfer_nft: {e}")
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -1000,12 +1000,12 @@ class TelegramBotService:
             nft = result.scalar_one_or_none()
 
             if not nft:
-                message = "❌ NFT not found or not owned by you."
+                message = "NFT not found or not owned by you."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             if nft.is_locked:
-                message = "❌ NFT is locked and cannot be burned."
+                message = "NFT is locked and cannot be burned."
                 await self.send_message(int(chat_id), message)
                 return None, message
 
@@ -1017,12 +1017,12 @@ class TelegramBotService:
             )
 
             if error:
-                message = f"❌ Burn failed: {error}"
+                message = f"Burn failed: {error}"
                 await self.send_message(int(chat_id), message)
                 return None, message
 
             success_message = (
-                f"✅ <b>NFT Burn Initiated!</b>\n\n"
+                f"<b>NFT Burn Initiated!</b>\n\n"
                 f"<b>NFT:</b> {nft.name}\n"
                 f"<b>Status:</b> {burned_nft.status}"
             )
@@ -1030,12 +1030,12 @@ class TelegramBotService:
             return burned_nft, "Burn initiated"
 
         except ValueError as e:
-            message = f"❌ Invalid NFT ID: {e}"
+            message = f"Invalid NFT ID: {e}"
             await self.send_message(int(chat_id), message)
             return None, message
         except Exception as e:
             logger.error(f"Error in handle_burn_nft: {e}")
-            message = f"❌ An error occurred: {str(e)}"
+            message = f"An error occurred: {str(e)}"
             await self.send_message(int(chat_id), message)
             return None, message
 
@@ -1049,7 +1049,7 @@ class TelegramBotService:
         """Send NFT minted notification."""
         return await self.send_notification(
             user=user,
-            title="🎉 NFT Minted!",
+            title="NFT Minted!",
             message=f"Your NFT '{nft.name}' has been successfully minted.",
             data={
                 "nft_id": str(nft.id),
@@ -1068,7 +1068,7 @@ class TelegramBotService:
         """Send listing created notification."""
         return await self.send_notification(
             user=user,
-            title="📢 Listing Created!",
+            title="Listing Created!",
             message=f"Your NFT '{nft_name}' is now listed on marketplace.",
             data={
                 "listing_id": str(listing.id),
@@ -1086,7 +1086,7 @@ class TelegramBotService:
         """Send offer received notification."""
         return await self.send_notification(
             user=user,
-            title="💰 New Offer!",
+            title="New Offer!",
             message=f"You received an offer for '{nft_name}'.",
             data={
                 "offer_id": str(offer.id),
@@ -1105,7 +1105,7 @@ class TelegramBotService:
         """Send transaction confirmation notification."""
         return await self.send_notification(
             user=user,
-            title="✅ Transaction Confirmed!",
+            title="Transaction Confirmed!",
             message=f"Your {tx_type} transaction has been confirmed on blockchain.",
             data={
                 "transaction_hash": tx_hash,

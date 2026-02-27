@@ -35,10 +35,10 @@ def check_env_variables():
             missing.append(var)
     
     if missing:
-        print(f"❌ Missing environment variables: {', '.join(missing)}")
+        print(f"[FAIL] Missing environment variables: {', '.join(missing)}")
         return False
     
-    print("✅ All required environment variables set")
+    print("[PASS] All required environment variables set")
     return True
 
 
@@ -48,16 +48,16 @@ def check_webhook_url_format():
     
     # Must be HTTPS in production, HTTP allowed in local dev
     if not webhook_url.startswith(("http://", "https://")):
-        print(f"❌ Invalid webhook URL format: {webhook_url}")
+        print(f"[FAIL] Invalid webhook URL format: {webhook_url}")
         return False
     
     # Must include the correct path
     if "/api/v1/telegram/webhook" not in webhook_url:
-        print(f"❌ Webhook URL must end with /api/v1/telegram/webhook")
+        print(f"[FAIL] Webhook URL must end with /api/v1/telegram/webhook")
         print(f"   Current: {webhook_url}")
         return False
     
-    print(f"✅ Webhook URL format correct: {webhook_url}")
+    print(f"[PASS] Webhook URL format correct: {webhook_url}")
     return True
 
 
@@ -66,7 +66,7 @@ def verify_hmac_implementation():
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
     
     if not bot_token:
-        print("❌ Bot token not configured")
+        print("[FAIL] Bot token not configured")
         return False
     
     # Create test init_data
@@ -90,7 +90,7 @@ def verify_hmac_implementation():
         hashlib.sha256
     ).hexdigest()
     
-    print(f"✅ HMAC-SHA256 implementation verified")
+    print(f"[PASS] HMAC-SHA256 implementation verified")
     print(f"   Test hash computed: {computed_hash[:16]}...")
     return True
 
@@ -113,7 +113,7 @@ def check_response_format():
         }
     }
     
-    print("✅ Expected response format defined")
+    print("[PASS] Expected response format defined")
     print("   Response must include:")
     print("   - success: boolean")
     print("   - user.id: UUID string")
@@ -150,12 +150,12 @@ def check_routing_configuration():
         issues.append(f"Error reading files: {e}")
     
     if issues:
-        print(f"❌ Routing configuration issues:")
+        print(f"[FAIL] Routing configuration issues:")
         for issue in issues:
             print(f"   - {issue}")
         return False
     
-    print("✅ Routing configuration correct")
+    print("[PASS] Routing configuration correct")
     print("   - telegram_mint_router imported and mounted at /api/v1/telegram")
     print("   - POST /webhook endpoint exists")
     print("   - GET /web-app/init endpoint exists")
@@ -164,7 +164,7 @@ def check_routing_configuration():
 
 def main():
     """Run all verification checks"""
-    print("\n🔍 Telegram Webhook Setup Verification\n")
+    print("\nTelegram Webhook Setup Verification\n")
     
     checks = [
         ("Environment Variables", check_env_variables),
@@ -181,24 +181,24 @@ def main():
             result = check_fn()
             results.append((name, result))
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[FAIL] Error: {e}")
             results.append((name, False))
     
     # Summary
     print("\n" + "="*60)
-    print("📋 VERIFICATION SUMMARY\n")
+    print("VERIFICATION SUMMARY\n")
     
     passed = sum(1 for _, result in results if result)
     total = len(results)
     
     for name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = "[PASS]" if result else "[FAIL]"
         print(f"{status}: {name}")
     
     print(f"\nTotal: {passed}/{total} checks passed")
     
     if passed == total:
-        print("\n✅ All checks passed! Your Telegram webhook setup is ready.")
+        print("\n[PASS] All checks passed! Your Telegram webhook setup is ready.")
         print("\nNext steps:")
         print("1. Start the backend: python -m uvicorn app.main:app --reload")
         print("2. Backend will NOT auto-setup webhook in development mode (ENVIRONMENT=development)")
@@ -207,7 +207,7 @@ def main():
         print("5. Verify init endpoint: GET /api/v1/telegram/web-app/init?init_data=...")
         return 0
     else:
-        print("\n❌ Some checks failed. Please fix the issues above.")
+        print("\n[FAIL] Some checks failed. Please fix the issues above.")
         return 1
 
 

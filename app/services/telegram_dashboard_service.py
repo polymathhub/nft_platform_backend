@@ -82,13 +82,13 @@ class TelegramDashboardService:
     def format_dashboard_message(username: str, stats: Dict[str, Any]) -> str:
         """Format dashboard message with stats."""
         return (
-            f"<b>📊 Your Dashboard</b>\n\n"
-            f"<b>Welcome back, {username}! 👋</b>\n\n"
+            f"<b>Your Dashboard</b>\n\n"
+            f"<b>Welcome back, {username}!</b>\n\n"
             f"<b>Your Stats:</b>\n"
-            f"👛 <b>Wallets:</b> <code>{stats['wallets']}</code>\n"
-            f"🖼️  <b>NFTs:</b> <code>{stats['nfts']}</code>\n"
-            f"✅ <b>Minted:</b> <code>{stats['minted']}</code>\n"
-            f"📈 <b>Listings:</b> <code>{stats['active_listings']}</code>\n\n"
+            f"<b>Wallets:</b> <code>{stats['wallets']}</code>\n"
+            f"<b>NFTs:</b> <code>{stats['nfts']}</code>\n"
+            f"<b>Minted:</b> <code>{stats['minted']}</code>\n"
+            f"<b>Listings:</b> <code>{stats['active_listings']}</code>\n\n"
             f"<b>Quick Actions:</b>\n"
             f"Use the buttons below to mint, trade, or manage your wallets."
         )
@@ -122,9 +122,9 @@ class TelegramDashboardService:
     def format_quick_mint_message(wallet: Dict[str, Any]) -> str:
         """Format quick mint message."""
         return (
-            f"<b>⚡ Quick Mint</b>\n\n"
+            f"<b>Quick Mint</b>\n\n"
             f"Your primary wallet is ready:\n\n"
-            f"<b>💰 {wallet['wallet_name']}</b>\n"
+            f"<b>{wallet['wallet_name']}</b>\n"
             f"Chain: <code>{wallet['blockchain'].upper()}</code>\n"
             f"Address: <code>{wallet['address']}</code>\n\n"
             f"<b>Tap the button below to mint your first NFT!</b>"

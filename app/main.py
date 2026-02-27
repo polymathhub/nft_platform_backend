@@ -1,247 +1,94 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
-from fastapi.exceptions import HTTPException
-from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
+import logging.config
+import sys
 
-from app.config import get_settings
-from app.database import init_db, close_db
-from app.utils.startup import setup_telegram_webhook, auto_migrate
+# ✅ CRITICAL: Create logger IMMEDIATELY without dependencies
+# This ensures the module can always be imported, even if settings fail
+logger = logging.getLogger("app")
 
-from app.routers import (
-    auth_router,
-    wallet_router,
-    nft_router,
-    notification_router,
-    marketplace_router,
-    attestation_router,
-    admin_router,
-    payment_router,
-    referrals_router,
-    stars_payment_router,
+# Minimal bootstrap handler to stdout - used until configure_logging() is called
+_bootstrap_handler = logging.StreamHandler(sys.stdout)
+_bootstrap_handler.setLevel(logging.DEBUG)
+_bootstrap_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-from app.routers.telegram_mint_router import router as telegram_mint_router
-from app.routers.walletconnect_router import router as walletconnect_router
-from app.routers.image_router import router as image_router
-
-"""Middleware"""
-
-from app.security_middleware import (
-    RequestBodyCachingMiddleware,
-    SecurityHeadersMiddleware,
-)
-
-logger = logging.getLogger(__name__)
-settings = get_settings()
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()
-    await auto_migrate()
-    await setup_telegram_webhook()
-
-    yield
-
-    await close_db()
+_bootstrap_handler.setFormatter(_bootstrap_formatter)
+logger.addHandler(_bootstrap_handler)
+logger.setLevel(logging.DEBUG)
 
 
-app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    lifespan=lifespan,
-)
-
-# ==================== Global Exception Handlers ====================
-
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """HTTP exception handler."""
-    path = request.url.path
-    method = request.method
+def get_logger(name: str) -> logging.Logger:
+    """Get a logger instance by name.
     
-    if exc.status_code == 404:
-        logger.debug(f"404 Not Found: {method} {path}")
+    Safe to call at any time, even before configure_logging().
+    """
+    return logging.getLogger(name)
+
+
+def configure_logging():
+    """Configure detailed logging when settings are available.
     
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "detail": exc.detail,
-            "status_code": exc.status_code,
-            "path": path,
-        }
-    )
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    """Global catch-all for unexpected errors."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "Internal server error",
-            "status_code": 500,
-        }
-    )
-
-"""
-Security & request middleware
-"""
-# RequestBodyCachingMiddleware MUST be added first to cache bodies early
-app.add_middleware(RequestBodyCachingMiddleware)
-app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
-app.add_middleware(SecurityHeadersMiddleware)  # Security headers with Telegram support
-
-"""Serve Telegram Web App static files at /web-app
-Note: static mount moved after router registration so API endpoints under
-`/web-app/*` (POST create/import/etc.) are matched first. If the static
-directory is missing we log a warning and API paths remain available.
-"""
-import os
-webapp_path = os.path.join(os.path.dirname(__file__), "static", "webapp")
-
-"""CORS"""
-""" Build allowed origins - include same-origin for web app"""
-cors_origins = settings.allowed_origins.copy() if settings.allowed_origins else []
-
-"""Always allow same-origin requests (important for internal web app)"""
-
-if "http://localhost" not in ",".join(cors_origins):
-    cors_origins.extend([
-        "http://localhost",
-        "http://localhost:8000",
-        "http://127.0.0.1",
-        "http://127.0.0.1:8000",
-        "https://nftplatformbackend-production-b67d.up.railway.app",
-    ])
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=settings.cors_allow_headers,
-)
-
-
-"""Root endpoints"""
-
-@app.get("/")
-async def root_get():
-    # If the web app static directory is available, redirect root to the SPA
+    This is called AFTER app.config is successfully loaded.
+    Uses Railway-safe stdout/stderr handlers for container environments.
+    """
     try:
-        if os.path.isdir(webapp_path):
-            return RedirectResponse(url="/web-app/")
-    except Exception:
-        pass
+        from app.config import get_settings
+        settings = get_settings()
+    except Exception as e:
+        logger.warning(
+            f"Could not load settings for detailed logging config: {e}. "
+            "Using bootstrap configuration."
+        )
+        return
 
-    return {"message": "Server is running", "status": "ok"}
-
-
-@app.get("/app.js", include_in_schema=False)
-async def redirect_app_js():
-    """Redirect legacy /app.js requests to the correct path"""
-    return RedirectResponse(url="/web-app/static/app.js", status_code=301)
-
-
-@app.post("/")
-async def root_post(data: dict):
-    return {"message": "POST received", "data": data}
-
-""" Health check endpoint"""
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "telegram_bot_token": bool(settings.telegram_bot_token),
-        "database_url": "configured" if settings.database_url else "not configured",
+    # Build dynamic config with loaded settings
+    config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            },
+            "detailed": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
+            },
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "level": getattr(settings, "log_level", "INFO"),
+                "formatter": "default",
+                "stream": "ext://sys.stdout",
+            },
+        },
+        "root": {
+            "level": getattr(settings, "log_level", "INFO"),
+            "handlers": ["console"],
+        },
+        "loggers": {
+            "app": {
+                "level": getattr(settings, "log_level", "INFO"),
+                "handlers": ["console"],
+                "propagate": False,
+            },
+        },
     }
 
-"""Include routers"""
+    # Only add file handler if not running in production/container environment
+    environment = getattr(settings, "environment", "development")
+    if environment != "production":
+        config["handlers"]["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": getattr(settings, "log_level", "INFO"),
+            "formatter": "detailed",
+            "filename": "app.log",
+            "maxBytes": 10485760,
+            "backupCount": 5,
+        }
+        config["root"]["handlers"].append("file")
+        config["loggers"]["app"]["handlers"].append("file")
 
-app.include_router(
-    telegram_mint_router,
-    prefix="/api/v1/telegram",
-    tags=["telegram"]
-)
-
-# Also expose the web-app endpoints at the root so the frontend can call
-# `/web-app/*` (the web app expects API paths under the same prefix).
-# These routes are duplicated intentionally as compatibility endpoints.
-app.include_router(
-    telegram_mint_router,
-    prefix="",
-    tags=["telegram-root-compat"]
-)
-
-# Additional compatibility prefixes Telegram deployments sometimes use
-# (e.g., webhook configured to https://host/telegram/webhook)
-app.include_router(
-    telegram_mint_router,
-    prefix="/telegram",
-    tags=["telegram-compat"]
-)
-
-# Also support /api/telegram as some setups omit the v1 segment
-app.include_router(
-    telegram_mint_router,
-    prefix="/api/telegram",
-    tags=["telegram-compat-2"]
-)
-
-"""routers"""
-
-app.include_router(auth_router, prefix="/api/v1")
-app.include_router(wallet_router, prefix="/api/v1")
-app.include_router(nft_router, prefix="/api/v1")
-app.include_router(notification_router, prefix="/api/v1")
-app.include_router(marketplace_router, prefix="/api/v1")
-app.include_router(attestation_router, prefix="/api/v1")
-app.include_router(admin_router, prefix="/api/v1")
-app.include_router(walletconnect_router, prefix="/api/v1")
-app.include_router(image_router, prefix="/api/v1")
-
-# Payment router already has /api/v1/payments prefix in its definition
-# DO NOT add another prefix to avoid double-prefixing
-app.include_router(payment_router)
-
-# Referral router already has /api/v1/referrals prefix in its definition
-# DO NOT add another prefix to avoid double-prefixing
-app.include_router(referrals_router)
-
-# Telegram Stars payment router already has /api/v1/stars prefix in its definition
-# DO NOT add another prefix to avoid double-prefixing
-app.include_router(stars_payment_router)
- 
-# Mount web app static files under /web-app/static so we can serve a custom
-# production index at /web-app/ while keeping POST API endpoints under /web-app/*
-if os.path.isdir(webapp_path):
-    app.mount("/web-app/static", StaticFiles(directory=webapp_path, html=True), name="webapp_static")
-else:
-    logger.warning(f"Web app static directory not found at {webapp_path} - /web-app static will not be available")
-
-
-# Serve production index file explicitly so we can keep index-production.html
-@app.get("/web-app", include_in_schema=False)
-@app.get("/web-app/", include_in_schema=False)
-async def serve_webapp_index():
-    # Serve index.html (new Telegram-native version)
-    index_html = os.path.join(webapp_path, "index.html")
-    if os.path.isfile(index_html):
-        return FileResponse(index_html, media_type="text/html")
-    # Fallback to index-production.html
-    index_prod = os.path.join(webapp_path, "index-production.html")
-    if os.path.isfile(index_prod):
-        return FileResponse(index_prod, media_type="text/html")
-    # Fallback to index-fixed.html for legacy
-    index_fixed = os.path.join(webapp_path, "index-fixed.html")
-    if os.path.isfile(index_fixed):
-        return FileResponse(index_fixed, media_type="text/html")
-    raise StarletteHTTPException(status_code=404, detail="Web app index not found")
+    logging.config.dictConfig(config)
 
 
 
