@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0F172A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>GiftedForge - NFT Platform</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0F172A;
+            color: #FFFFFF;
+            overflow: hidden;
+        }
+
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #0F172A 0%, #1A1F31 100%);
+            position: relative;
+        }
+
+        /* Scrollable content area */
+        .content-scroll {
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        /* Remove scrollbar */
+        .content-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .content-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-size: 14px;
+            gap: 8px;
+        }
+
+        .loading::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            border-top-color: #8B5CF6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error state */
+        .error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .error-icon {
+            font-size: 48px;
+        }
+
+        .error-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        .error-message {
+            font-size: 12px;
+            color: #A0AEC0;
+        }
+
+        .error-retry {
+            margin-top: 16px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #6B5B95 0%, #8B5CF6 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .error-retry:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="loading">Loading...</div>
+
+    <!-- Scripts -->
+    <script type="module">
+        // Import modules
+        import DESIGN_TOKENS from './design-tokens.js';
+        import { HomePage } from './pages-home.js';
+        
+        // Simple API service mock
+        class APIService {
+            async get(endpoint) {
+                try {
+                    const response = await fetch(endpoint, {
+                        headers: {
+                            'Authorization': `Bearer ${this.getUserToken()}`
+                        }
+                    });
+                    
+                    if (response.status === 401) {
+                        this.handleUnauthorized();
+                        throw new Error('Unauthorized');
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.status}`);
+                    }
+
+                    return await response.json();
+                } catch (error) {
+                    console.error(`API request failed: ${endpoint}`, error);
+                    throw error;
+                }
+            }
+
+            getUserToken() {
+                // Get token from Telegram WebApp or localStorage
+                const token = localStorage.getItem('auth_token');
+                if (!token && window.Telegram?.WebApp?.initData) {
+                    return window.Telegram.WebApp.initData;
+                }
+                return token || '';
+            }
+
+            handleUnauthorized() {
+                localStorage.removeItem('auth_token');
+                // Redirect to login
+                window.location.href = '/web-app/';
+            }
+        }
+
+        // Initialize app
+        async function initApp() {
+            const app = document.getElementById('app');
+            const apiService = new APIService();
+
+            try {
+                // Initialize Telegram WebApp
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.setHeaderColor('#0F172A');
+                    window.Telegram.WebApp.setBackgroundColor('#0F172A');
+                }
+
+                // Clear loading state
+                app.innerHTML = '';
+
+                // Create and render home page
+                const homePage = new HomePage(apiService);
+                await homePage.loadData();
+                homePage.render('app');
+
+                // Setup navigation
+                setupNavigation(apiService);
+
+            } catch (error) {
+                console.error('App initialization failed:', error);
+                showError(app, 'Failed to load application', error.message);
+            }
+        }
+
+        function setupNavigation(apiService) {
+            const app = document.getElementById('app');
+            
+            app.addEventListener('click', (e) => {
+                const navItem = e.target.closest('.nav-item');
+                if (navItem) {
+                    const page = navItem.dataset.page;
+                    console.log('Navigate to:', page);
+                    // Handle navigation
+                    // In a real app, this would load different pages
+                }
+            });
+        }
+
+        function showError(container, title, message) {
+            container.innerHTML = `
+                <div class="error">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-title">${title}</div>
+                    <div class="error-message">${message}</div>
+                    <button class="error-retry" onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+
+        // Start application
+        initApp();
+    </script>
+</body>
+</html>

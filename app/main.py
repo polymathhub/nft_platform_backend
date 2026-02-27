@@ -24,6 +24,7 @@ from app.routers import (
     payment_router,
     referrals_router,
     stars_payment_router,
+    dashboard_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -209,6 +210,7 @@ app.include_router(attestation_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(walletconnect_router, prefix="/api/v1")
 app.include_router(image_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
 
 # Payment router already has /api/v1/payments prefix in its definition
 app.include_router(payment_router)
