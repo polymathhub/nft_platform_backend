@@ -187,8 +187,8 @@
       z-index: 100;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      align-items: flex-start;
+      justify-content: flex-start;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       flex-shrink: 0;
       gap: 12px;
@@ -214,6 +214,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      width: 100%;
     }
 
     .header-logo {
@@ -236,6 +237,7 @@
       gap: 12px;
       position: relative;
       z-index: 10;
+      align-self: flex-end;
     }
     
     .header-icon {

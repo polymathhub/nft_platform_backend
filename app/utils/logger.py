@@ -2,8 +2,7 @@ import logging
 import logging.config
 import sys
 
-#  CRITICAL: Create logger IMMEDIATELY without dependencies
-# This ensures the module can always be imported, even if settings fail
+#  CRITICAL: Create logger IMMEDIATELY without dependencies 
 logger = logging.getLogger("app")
 
 # Minimal bootstrap handler to stdout - used until configure_logging() is called
