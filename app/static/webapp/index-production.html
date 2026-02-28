@@ -2981,24 +2981,26 @@
       modal.innerHTML = `
         <div class="wallet-connect-modal" style="
           position: relative;
-          background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+          background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
           border-radius: 28px;
           padding: 0;
           max-width: 540px;
           width: 100%;
           max-height: 92vh;
           overflow-y: auto;
-          box-shadow: 0 30px 90px rgba(0,0,0,0.2), 0 0 1px rgba(0,0,0,0.05);
+          box-shadow: 0 30px 90px rgba(0,0,0,0.4), 0 0 1px rgba(91,75,219,0.3);
           animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          border: 1px solid rgba(91,75,219,0.2);
         ">
-          <!-- Header with Gradient & Animation -->
+          <!-- Header with Dark Gradient & Animated Wallet GIF -->
           <div style="
-            background: linear-gradient(135deg, #5b4bdb 0%, #7c6ff9 50%, #a78bfa 100%);
+            background: linear-gradient(135deg, #1a1a3e 0%, #2d2d5f 50%, #3d3d7f 100%);
             position: relative;
-            padding: 48px 40px 40px;
+            padding: 40px 40px 45px;
             text-align: center;
             color: white;
             overflow: hidden;
+            border-bottom: 1px solid rgba(91,75,219,0.15);
           ">
             <!-- Animated Background Shapes -->
             <div style="
@@ -3007,7 +3009,7 @@
               right: -10%;
               width: 200px;
               height: 200px;
-              background: rgba(255,255,255,0.1);
+              background: rgba(91,75,219,0.05);
               border-radius: 50%;
               animation: float 8s ease-in-out infinite;
             "></div>
@@ -3017,12 +3019,12 @@
               left: -5%;
               width: 150px;
               height: 150px;
-              background: rgba(255,255,255,0.08);
+              background: rgba(91,75,219,0.03);
               border-radius: 50%;
               animation: float 10s ease-in-out infinite reverse;
             "></div>
 
-            <!-- Animated Wallet Icon -->
+            <!-- Animated Wallet GIF Simulation -->
             <div style="
               position: relative;
               z-index: 1;
@@ -3031,36 +3033,38 @@
               justify-content: center;
             ">
               <div style="
-                width: 80px;
-                height: 80px;
-                background: rgba(255,255,255,0.2);
-                border: 2px solid rgba(255,255,255,0.4);
-                border-radius: 20px;
+                width: 100px;
+                height: 100px;
+                background: linear-gradient(135deg, rgba(91,75,219,0.3), rgba(217,70,166,0.2));
+                border: 2px solid rgba(91,75,219,0.4);
+                border-radius: 24px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                animation: pulse 2s ease-in-out infinite, slideDown 0.6s ease-out;
+                animation: walletFloat 3s ease-in-out infinite, slideDown 0.6s ease-out;
+                position: relative;
               ">
-                <svg style="width: 40px; height: 40px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <!-- Animated Wallet Icon -->
+                <svg style="width: 50px; height: 50px; color: #7c6ff9; animation: walletBounce 2s ease-in-out infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
                   <path d="M1 10h22"/>
+                  <circle cx="18" cy="16" r="1.5" fill="currentColor"/>
                 </svg>
               </div>
             </div>
 
-            <!-- Loading Animation -->
             <style>
               @keyframes walletBounce {
                 0%, 100% { transform: translateY(0px); }
                 50% { transform: translateY(-8px); }
               }
+              @keyframes walletFloat {
+                0%, 100% { transform: translateY(0px); filter: drop-shadow(0 0 20px rgba(91,75,219,0.3)); }
+                50% { transform: translateY(-10px); filter: drop-shadow(0 0 30px rgba(217,70,166,0.4)); }
+              }
               @keyframes float {
                 0%, 100% { transform: translateY(0px) translateX(0px); }
                 50% { transform: translateY(-20px) translateX(10px); }
-              }
-              @keyframes pulse {
-                0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
-                50% { box-shadow: 0 0 0 15px rgba(255,255,255,0.1); }
               }
               @keyframes slideDown {
                 from { transform: translateY(-20px); opacity: 0; }
@@ -3079,15 +3083,17 @@
               position: relative;
               z-index: 1;
               letter-spacing: -0.5px;
+              color: white;
             ">Connect Wallet</h2>
             <p style="
               margin: 0;
               font-size: 15px;
-              opacity: 0.95;
+              opacity: 0.85;
               position: relative;
               z-index: 1;
               line-height: 1.6;
               font-weight: 500;
+              color: rgba(255,255,255,0.7);
             ">to trade NFTs securely</p>
 
             <!-- Close Button -->
@@ -3095,8 +3101,8 @@
               position: absolute;
               top: 16px;
               right: 16px;
-              background: rgba(255,255,255,0.2);
-              border: 1px solid rgba(255,255,255,0.3);
+              background: rgba(91,75,219,0.2);
+              border: 1px solid rgba(91,75,219,0.3);
               width: 40px;
               height: 40px;
               border-radius: 12px;
@@ -3108,13 +3114,34 @@
               justify-content: center;
               transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
               z-index: 10;
-            " onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='scale(1)'">×</button>
+            " onmouseover="this.style.background='rgba(91,75,219,0.3)'; this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(91,75,219,0.2)'; this.style.transform='scale(1)'">×</button>
           </div>
 
           <!-- Content Section -->
           <div style="padding: 40px; position: relative; z-index: 1;">
             <!-- Wallet Options with Animations -->
-            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; animation: fadeInUp 0.6s ease-out 0.2s both;">
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; animation: fadeInUp 0.6s ease-out 0.2s both;">
+              <button onclick="initiateWalletConnection('solana')" style="
+                width: 100%;
+                padding: 16px 18px;
+                background: linear-gradient(135deg, #14F195 0%, #00D9FF 100%);
+                color: #0a0a0a;
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 14px;
+                font-weight: 700;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 8px 24px rgba(20,241,149,0.25);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+              " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(20,241,149,0.4)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 24px rgba(20,241,149,0.25)'">
+                <svg style="width: 22px; height: 22px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                <span>Connect Solana</span>
+              </button>
+
               <button onclick="initiateWalletConnection('ton')" style="
                 width: 100%;
                 padding: 16px 18px;
@@ -3122,183 +3149,71 @@
                 color: white;
                 border: 1px solid rgba(255,255,255,0.15);
                 border-radius: 14px;
-                font-weight: 600;
-                font-size: 16px;
-              cursor: pointer;
-              transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-              box-shadow: 0 8px 20px rgba(0,152,234,0.2);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 12px;
-            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 28px rgba(0,152,234,0.35)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 20px rgba(0,152,234,0.2)'">
-              <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-              <span>Connect TON Wallet</span>
-            </button>
-
-            <button onclick="initiateWalletConnection('ethereum')" style="
-              width: 100%;
-              padding: 16px 18px;
-              background: linear-gradient(135deg, #627EEA 0%, #764BA2 100%);
-              color: white;
-              border: 1px solid rgba(255,255,255,0.15);
-              border-radius: 14px;
-              font-weight: 600;
-              font-size: 16px;
-              cursor: pointer;
-              transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-              box-shadow: 0 8px 20px rgba(98,126,234,0.2);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 12px;
-            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 28px rgba(98,126,234,0.35)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 20px rgba(98,126,234,0.2)'">
-              <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-              <span>Connect Ethereum Wallet</span>
-            </button>
-
-            <button onclick="initiateWalletConnection('solana')" style="
-              width: 100%;
-              padding: 16px 18px;
-              background: linear-gradient(135deg, #14F195 0%, #00D9FF 100%);
-              color: #0a0a0a;
-              border: 1px solid rgba(0,0,0,0.08);
-              border-radius: 14px;
-              font-weight: 600;
-              font-size: 16px;
-              cursor: pointer;
-              transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-              box-shadow: 0 8px 20px rgba(20,241,149,0.2);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 12px;
-            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 28px rgba(20,241,149,0.35)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 20px rgba(20,241,149,0.2)'">
-              <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-              <span>Connect Solana Wallet</span>
-            </button>
-            </div>
-
-            <!-- Important Notes Section - Professional Design -->
-            <div style="
-              background: linear-gradient(135deg, rgba(91,75,219,0.08) 0%, rgba(217,70,166,0.05) 100%);
-              border: 1px solid rgba(91,75,219,0.15);
-              border-radius: 14px;
-              padding: 18px;
-              margin-bottom: 24px;
-              animation: fadeInUp 0.6s ease-out 0.4s both;
-            ">
-              <h4 style="
-                margin: 0 0 12px 0;
-                font-size: 13px;
                 font-weight: 700;
-                color: var(--text);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 8px 24px rgba(0,152,234,0.25);
                 display: flex;
                 align-items: center;
-                gap: 8px;
-              ">
-                <svg style="width: 16px; height: 16px; color: #5b4bdb; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                Important Notes
-              </h4>
-              <ul style="
-                margin: 0;
-                padding-left: 20px;
-                list-style: none;
-              ">
-                <li style="
-                  margin-bottom: 8px;
-                  font-size: 12px;
-                  color: var(--text-secondary);
-                  line-height: 1.5;
-                  position: relative;
-                  padding-left: 8px;
-                ">
-                  <span style="position: absolute; left: -20px; color: #5b4bdb; font-weight: 700;">•</span>
-                  Never share your seed phrase or private keys with anyone
-                </li>
-                <li style="
-                  margin-bottom: 8px;
-                  font-size: 12px;
-                  color: var(--text-secondary);
-                  line-height: 1.5;
-                  position: relative;
-                  padding-left: 8px;
-                ">
-                  <span style="position: absolute; left: -20px; color: #5b4bdb; font-weight: 700;">•</span>
-                  We never have access to your wallet credentials
-                </li>
-                <li style="
-                  margin-bottom: 8px;
-                  font-size: 12px;
-                  color: var(--text-secondary);
-                  line-height: 1.5;
-                  position: relative;
-                  padding-left: 8px;
-                ">
-                  <span style="position: absolute; left: -20px; color: #5b4bdb; font-weight: 700;">•</span>
-                  Verify wallet connection before making transactions
-                </li>
-                <li style="
-                  margin-bottom: 0;
-                  font-size: 12px;
-                  color: var(--text-secondary);
-                  line-height: 1.5;
-                  position: relative;
-                  padding-left: 8px;
-                ">
-                  <span style="position: absolute; left: -20px; color: #5b4bdb; font-weight: 700;">•</span>
-                  All transactions are verified for security
-                </li>
-              </ul>
+                justify-content: center;
+                gap: 12px;
+              " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(0,152,234,0.4)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 24px rgba(0,152,234,0.25)'">
+                <svg style="width: 22px; height: 22px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                <span>Connect TON</span>
+              </button>
+
+              <button onclick="initiateWalletConnection('ethereum')" style="
+                width: 100%;
+                padding: 16px 18px;
+                background: linear-gradient(135deg, #627EEA 0%, #764BA2 100%);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.15);
+                border-radius: 14px;
+                font-weight: 700;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 8px 24px rgba(98,126,234,0.25);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+              " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(98,126,234,0.4)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 24px rgba(98,126,234,0.25)'">
+                <svg style="width: 22px; height: 22px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                <span>Connect Ethereum</span>
+              </button>
             </div>
 
-            <!-- Security Badge -->
+            <!-- Security Badge with Logo -->
             <div style="
-              background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06));
-              border: 1px solid rgba(16,185,129,0.25);
-              border-radius: 12px;
-              padding: 16px;
+              background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.07));
+              border: 1px solid rgba(16,185,129,0.3);
+              border-radius: 14px;
+              padding: 18px;
               display: flex;
               align-items: center;
-              gap: 12px;
-              margin-bottom: 20px;
-              animation: fadeInUp 0.6s ease-out 0.5s both;
+              gap: 14px;
+              animation: fadeInUp 0.6s ease-out 0.4s both;
             ">
               <div style="
-                width: 36px;
-                height: 36px;
-                background: rgba(16,185,129,0.2);
-                border-radius: 8px;
+                width: 44px;
+                height: 44px;
+                background: linear-gradient(135deg, #5b4bdb, #7c6ff9);
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(91,75,219,0.3);
               ">
-                <svg style="width: 20px; height: 20px; color: #10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <polyline points="9 12 12 15 15 9"/>
-                </svg>
+                <img src="https://image2url.com/r2/default/images/1772274843334-476c23d2-7506-49ee-9c33-577dece9caf2.jpg" alt="GiftedForge" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
               </div>
               <div>
-                <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: #10b981;">Secured by GiftedForge</p>
-                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Enterprise-grade encryption & security</p>
+                <p style="margin: 0 0 3px 0; font-size: 14px; font-weight: 800; color: #10b981;">Secured by GiftedForge</p>
+                <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);">Enterprise-grade security</p>
               </div>
             </div>
-
-            <p style="
-              margin: 0;
-              text-align: center;
-              color: var(--text-tertiary);
-              font-size: 11px;
-              line-height: 1.6;
-              animation: fadeInUp 0.6s ease-out 0.6s both;
-            ">By connecting your wallet, you agree to our Terms of Service and Privacy Policy. Your private keys are never stored or transmitted.</p>
           </div>
         </div>
       `;
