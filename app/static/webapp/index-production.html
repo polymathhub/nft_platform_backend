@@ -316,7 +316,9 @@
       left: 16px;
       right: 16px;
       height: auto;
-      display: flex;
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
       align-items: center;
       justify-content: center;
       gap: 8px;
@@ -2653,23 +2655,23 @@
     <!-- BOTTOM NAVIGATION -->
     <nav class="nav-bottom">
       <button class="nav-item active" data-view="home" onclick="window.switchPage('home')" aria-label="Home">
-        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-home"></use></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span class="nav-label">Home</span>
       </button>
       <button class="nav-item" data-view="wallet" onclick="window.switchPage('wallet')" aria-label="Wallet">
-        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-wallet"></use></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><path d="M1 10h22"/></svg>
         <span class="nav-label">Wallet</span>
       </button>
       <button class="nav-item" data-view="mint" onclick="window.switchPage('mint')" aria-label="Mint">
-        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-plus"></use></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span class="nav-label">Mint</span>
       </button>
       <button class="nav-item" data-view="market" onclick="window.switchPage('market')" aria-label="Market">
-        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-grid"></use></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
         <span class="nav-label">Market</span>
       </button>
       <button class="nav-item" data-view="profile" onclick="window.switchPage('profile')" aria-label="Profile">
-        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-profile"></use></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span class="nav-label">Profile</span>
       </button>
     </nav>
@@ -2685,15 +2687,38 @@
   <script src="svg-icons.js"></script>
   <script>
     // ============================================================
-    // TELEGRAM CONFIGURATION
+    // TELEGRAM CONFIGURATION - FIX INITIALIZATION ORDER
     // ============================================================
-    if (window.Telegram && window.Telegram.WebApp) {
-      console.log('[Telegram Init] WebApp detected, configuring...');
-      window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.enableClosingConfirmation();
-    } else {
-      console.warn('[Telegram Init] Running in non-Telegram environment (localhost)');
-    }
+    console.log('[Init] Starting application initialization...');
+    
+    // Wait for Telegram WebApp to be available
+    let telegramReady = false;
+    let retries = 0;
+    const maxRetries = 20; // 2 seconds with 100ms checks
+
+    const waitForTelegram = setInterval(() => {
+      if (window.Telegram?.WebApp) {
+        clearInterval(waitForTelegram);
+        telegramReady = true;
+        console.log('[Telegram Init] WebApp detected');
+        try {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+          window.Telegram.WebApp.enableClosingConfirmation();
+          document.documentElement.style.overflow = 'hidden';
+          document.body.style.overflow = 'hidden';
+        } catch (e) {
+          console.warn('[Telegram Init] Error configuring:', e.message);
+        }
+      } else {
+        retries++;
+        if (retries >= maxRetries) {
+          clearInterval(waitForTelegram);
+          console.log('[Telegram Init] Not in Telegram environment, running in dev mode');
+          telegramReady = false;
+        }
+      }
+    }, 100);
 
     // ============================================================
     // GLOBAL STATE & UTILITIES
@@ -5394,20 +5419,54 @@
     const appInit = new AppInitializer();
     window.appInitializer = appInit;
     
-    // Start initialization
-    appInit.initialize().catch(err => {
-      console.error('[App Init] Initialization error:', err);
-      showStatus('Failed to initialize app', 'error');
-    });
-    
     // Make switchPage available globally for onclick handlers
     window.switchPage = (view) => appInit.switchPage(view);
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => appInit.initialize());
-    } else {
-      appInit.initialize();
+    // Enhanced initialization with better error handling and Telegram support
+    function startAppInitialization() {
+      console.log('[App] DOM ready, starting initialization...');
+      
+      // Ensure navbar is visible
+      const navbar = document.querySelector('.nav-bottom');
+      if (navbar) {
+        navbar.style.display = 'flex';
+        navbar.style.visibility = 'visible';
+        navbar.style.opacity = '1';
+      }
+
+      // Start app initialization
+      appInit.initialize().catch(err => {
+        console.error('[App Init] Initialization error:', err);
+        showStatus('Failed to initialize app', 'error');
+      });
+
+      // Also retry initialization after a short delay to handle Telegram delays
+      setTimeout(() => {
+        if (!user) {
+          console.log('[App] Retrying initialization after delay...');
+          appInit.initialize().catch(err => {
+            console.error('[App Init] Retry failed:', err);
+          });
+        }
+      }, 1500);
     }
+
+    // Start initialization when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startAppInitialization);
+    } else {
+      startAppInitialization();
+    }
+
+    // Also ensure initialization on window load for maximum compatibility
+    window.addEventListener('load', () => {
+      console.log('[App] Window loaded');
+      // Ensure navbar is still visible
+      const navbar = document.querySelector('.nav-bottom');
+      if (navbar) {
+        navbar.style.display = 'flex';
+      }
+    });
   </script>
 </body>
 </html>
