@@ -186,11 +186,12 @@
       top: 0;
       z-index: 100;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       flex-shrink: 0;
-      position: relative;
+      gap: 12px;
     }
     
     .header-menu {
@@ -233,8 +234,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      position: absolute;
-      right: 16px;
+      position: relative;
       z-index: 10;
     }
     
@@ -3136,108 +3136,139 @@
           if (primaryWallet) {
             WalletManager.setConnected(primaryWallet);
             console.log('[Wallets] Primary wallet set:', primaryWallet.address);
+            showNavigationContent();
             return true;
           } else if (r.data.wallets.length > 0) {
             // Fallback to first wallet
             WalletManager.setConnected(r.data.wallets[0]);
             console.log('[Wallets] First wallet set:', r.data.wallets[0].address);
+            showNavigationContent();
             return true;
           }
         }
+        // No wallets found, show wallet connect page
+        showWalletConnectModal();
         return false;
       } catch (err) {
         console.error('[Wallets] Error loading wallets:', err);
+        // On error, show wallet connect page
+        showWalletConnectModal();
         return false;
       }
     }
 
-    function showWalletConnectModal() {
-      const modalOverlay = document.getElementById('modalOverlay');
-      const modal = document.getElementById('modal');
-      
-      if (!modal || !modalOverlay) return;
+    // Hide nav and content until wallet is connected
+    function hideNavigationContent() {
+      const navbar = document.querySelector('.nav-bottom');
+      const content = document.querySelector('.content');
+      if (navbar) navbar.style.display = 'none';
+      if (content) content.style.display = 'none';
+    }
 
-      modal.innerHTML = `
-        <div class="wallet-connect-modal" style="
-          position: relative;
-          background: white;
-          border-radius: 16px;
-          padding: 0;
-          max-width: 440px;
-          width: 100%;
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
-          border: 1px solid #e2e8f0;
+    // Show nav and content after wallet is connected
+    function showNavigationContent() {
+      const navbar = document.querySelector('.nav-bottom');
+      const content = document.querySelector('.content');
+      if (navbar) navbar.style.display = 'flex';
+      if (content) content.style.display = 'flex';
+      
+      // Remove wallet connect page if it exists
+      const walletPage = document.getElementById('walletConnectPage');
+      if (walletPage) walletPage.remove();
+    }
+      }
+    }
+
+    function showWalletConnectModal() {
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      // Create wallet connect page overlay
+      const walletPage = document.createElement('div');
+      walletPage.id = 'walletConnectPage';
+      walletPage.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: white;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+      `;
+
+      walletPage.innerHTML = `
+        <!-- Header -->
+        <header style="
+          padding: 16px;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-shrink: 0;
         ">
-          <!-- Clean Header -->
-          <div style="
-            padding: 32px 28px;
-            border-bottom: 1px solid #e2e8f0;
+          <button onclick="document.getElementById('walletConnectPage')?.remove()" style="
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">←</button>
+          
+          <h1 style="
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0a0a0a;
+            flex: 1;
             text-align: center;
-          ">
-            <div style="
-              width: 56px;
-              height: 56px;
-              background: #f5f5f7;
-              border-radius: 12px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin: 0 auto 16px;
-            ">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#5b4bdb" stroke-width="2" style="width: 32px; height: 32px;">
-                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                <path d="M1 10h22"/>
-                <circle cx="18" cy="16" r="1.5" fill="#5b4bdb"/>
-              </svg>
-            </div>
-            
+          ">Connect Wallet</h1>
+          
+          <div style="width: 32px;"></div>
+        </header>
+
+        <!-- Content -->
+        <div style="
+          flex: 1;
+          overflow-y: auto;
+          padding: 28px 20px;
+          display: flex;
+          flex-direction: column;
+        ">
+          <!-- Title -->
+          <div style="text-align: center; margin-bottom: 28px;">
             <h2 style="
               margin: 0 0 8px 0;
               font-size: 24px;
               font-weight: 700;
               color: #0a0a0a;
-              letter-spacing: -0.5px;
-            ">Connect Wallet</h2>
+            ">Select Your Wallet</h2>
             <p style="
               margin: 0;
               font-size: 14px;
               color: #64748b;
               line-height: 1.5;
-            ">Select which blockchain you want to use</p>
-
-            <!-- Close Button -->
-            <button onclick="document.getElementById('modalOverlay').style.display='none'" style="
-              position: absolute;
-              top: 12px;
-              right: 12px;
-              background: none;
-              border: none;
-              width: 32px;
-              height: 32px;
-              border-radius: 8px;
-              cursor: pointer;
-              color: #64748b;
-              font-size: 20px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              transition: all 0.2s;
-              z-index: 10;
-            " onmouseover="this.style.background='#f0f2f5'; this.style.color='#0a0a0a'" onmouseout="this.style.background='none'; this.style.color='#64748b'">×</button>
+            ">Choose a blockchain to connect your wallet</p>
           </div>
 
           <!-- Wallet Options -->
-          <div style="padding: 28px; display: flex; flex-direction: column; gap: 12px;">
-            <!-- Solana Button -->
-            <button onclick="initiateWalletConnection('solana')" style="
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+            <!-- Telegram Wallet Button -->
+            <button onclick="initiateWalletConnection('telegram')" style="
               width: 100%;
-              padding: 14px 16px;
+              padding: 18px 16px;
               background: #ffffff;
               color: #0a0a0a;
               border: 1px solid #e2e8f0;
-              border-radius: 10px;
+              border-radius: 12px;
               font-weight: 600;
               font-size: 15px;
               cursor: pointer;
@@ -3245,23 +3276,63 @@
               display: flex;
               align-items: center;
               justify-content: flex-start;
-              gap: 12px;
+              gap: 14px;
             " onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#5b4bdb'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
               <div style="
-                width: 40px;
-                height: 40px;
+                width: 44px;
+                height: 44px;
+                background: #0088cc;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                font-size: 24px;
+              ">📱</div>
+              <div style="text-align: left; flex: 1;">
+                <div style="font-weight: 600; color: #0a0a0a;">Telegram Wallet</div>
+                <div style="font-size: 12px; color: #94a3b8;">Built-in secure wallet</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #cbd5e1;">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+
+            <!-- Solana Button -->
+            <button onclick="initiateWalletConnection('solana')" style="
+              width: 100%;
+              padding: 18px 16px;
+              background: #ffffff;
+              color: #0a0a0a;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 15px;
+              cursor: pointer;
+              transition: all 0.2s;
+              display: flex;
+              align-items: center;
+              justify-content: flex-start;
+              gap: 14px;
+            " onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#5b4bdb'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
+              <div style="
+                width: 44px;
+                height: 44px;
                 background: #f0ebff;
-                border-radius: 8px;
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
               ">
-                <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 24px; height: 24px;">
+                <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 26px; height: 26px;">
                   <circle cx="12" cy="12" r="10"/>
                 </svg>
               </div>
-              <span style="flex: 1; text-align: left;">Solana</span>
+              <div style="text-align: left; flex: 1;">
+                <div style="font-weight: 600; color: #0a0a0a;">Solana</div>
+                <div style="font-size: 12px; color: #94a3b8;">Fast and low-cost</div>
+              </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #cbd5e1;">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -3270,11 +3341,11 @@
             <!-- TON Button -->
             <button onclick="initiateWalletConnection('ton')" style="
               width: 100%;
-              padding: 14px 16px;
+              padding: 18px 16px;
               background: #ffffff;
               color: #0a0a0a;
               border: 1px solid #e2e8f0;
-              border-radius: 10px;
+              border-radius: 12px;
               font-weight: 600;
               font-size: 15px;
               cursor: pointer;
@@ -3282,23 +3353,26 @@
               display: flex;
               align-items: center;
               justify-content: flex-start;
-              gap: 12px;
+              gap: 14px;
             " onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#5b4bdb'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
               <div style="
-                width: 40px;
-                height: 40px;
+                width: 44px;
+                height: 44px;
                 background: #f0ebff;
-                border-radius: 8px;
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
               ">
-                <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 24px; height: 24px;">
+                <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 26px; height: 26px;">
                   <circle cx="12" cy="12" r="10"/>
                 </svg>
               </div>
-              <span style="flex: 1; text-align: left;">TON Blockchain</span>
+              <div style="text-align: left; flex: 1;">
+                <div style="font-weight: 600; color: #0a0a0a;">TON Blockchain</div>
+                <div style="font-size: 12px; color: #94a3b8;">Telegram native blockchain</div>
+              </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #cbd5e1;">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
@@ -3307,11 +3381,11 @@
             <!-- Ethereum Button -->
             <button onclick="initiateWalletConnection('ethereum')" style="
               width: 100%;
-              padding: 14px 16px;
+              padding: 18px 16px;
               background: #ffffff;
               color: #0a0a0a;
               border: 1px solid #e2e8f0;
-              border-radius: 10px;
+              border-radius: 12px;
               font-weight: 600;
               font-size: 15px;
               cursor: pointer;
@@ -3319,72 +3393,52 @@
               display: flex;
               align-items: center;
               justify-content: flex-start;
-              gap: 12px;
+              gap: 14px;
             " onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#5b4bdb'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
               <div style="
-                width: 40px;
-                height: 40px;
+                width: 44px;
+                height: 44px;
                 background: #f0ebff;
-                border-radius: 8px;
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
               ">
-                <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 24px; height: 24px;">
+                <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 26px; height: 26px;">
                   <circle cx="12" cy="12" r="10"/>
                 </svg>
               </div>
-              <span style="flex: 1; text-align: left;">Ethereum</span>
+              <div style="text-align: left; flex: 1;">
+                <div style="font-weight: 600; color: #0a0a0a;">Ethereum</div>
+                <div style="font-size: 12px; color: #94a3b8;">Popular and established</div>
+              </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #cbd5e1;">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </button>
           </div>
 
-          <!-- Footer Info -->
+          <!-- Security Note -->
           <div style="
-            padding: 20px 28px;
-            border-top: 1px solid #e2e8f0;
+            margin-top: auto;
+            padding: 16px;
             background: #f9fafb;
-            border-bottom-left-radius: 16px;
-            border-bottom-right-radius: 16px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
           ">
-            <div style="
-              display: flex;
-              align-items: center;
-              gap: 10px;
+            <p style="
+              margin: 0;
               font-size: 12px;
               color: #64748b;
-              line-height: 1.5;
-            ">
-              <svg viewBox="0 0 24 24" fill="#5b4bdb" style="width: 16px; height: 16px; flex-shrink: 0;">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-              </svg>
-              Your wallet remains secure and is never stored on our servers
-            </div>
+              line-height: 1.6;
+            ">🔒 Your wallet is never stored on our servers. You control your assets.</p>
           </div>
         </div>
       `;
 
-      modalOverlay.style.display = 'flex';
-      modalOverlay.style.position = 'fixed';
-      modalOverlay.style.top = '0';
-      modalOverlay.style.left = '0';
-      modalOverlay.style.right = '0';
-      modalOverlay.style.bottom = '0';
-      modalOverlay.style.background = 'rgba(0, 0, 0, 0.4)';
-      modalOverlay.style.alignItems = 'center';
-      modalOverlay.style.justifyContent = 'center';
-      modalOverlay.style.zIndex = '9999';
-      modalOverlay.style.padding = '16px';
-
-      // Close on overlay click
-      modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-          modalOverlay.style.display = 'none';
-        }
-      });
+      app.parentElement.insertBefore(walletPage, app);
     }
 
     async function initiateWalletConnection(blockchain) {
@@ -3624,6 +3678,9 @@
         try {
           console.log('[App Init] Starting application initialization...');
           
+          // Hide navigation and content initially
+          hideNavigationContent();
+          
           // Store reference to this for global access
           window.appInitializer = this;
           
@@ -3645,9 +3702,12 @@
           console.log('[App Init] Step 1: Authenticating with Telegram...');
           await initApp();
           
-          // If user is authenticated, show main app
+          // If user is authenticated, load wallets
           if (user && user.id) {
-            console.log('[App Init] User authenticated, preparing app...');
+            console.log('[App Init] User authenticated, loading wallets...');
+            
+            // Load wallet connections - this will show app or wallet modal
+            await loadConnectedWallets();
             
             // Load dashboard data
             await this.loadDashboardData();
