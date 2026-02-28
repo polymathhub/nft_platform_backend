@@ -140,14 +140,8 @@ app.add_middleware(
 
 @app.get("/")
 async def root_get():
-    # If the web app static directory is available, redirect root to the SPA
-    try:
-        if os.path.isdir(webapp_path):
-            return RedirectResponse(url="/web-app/")
-    except Exception:
-        pass
-
-    return {"message": "Server is running", "status": "ok"}
+    # Redirect root to web-app for now
+    return RedirectResponse(url="/web-app/", status_code=301)
 
 
 @app.get("/app.js", include_in_schema=False)

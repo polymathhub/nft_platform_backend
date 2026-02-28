@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#ffffff">
-  <title>GiftedForge - NFT Marketplace</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="svg-icons.css">
-  <script src="svg-icons.js"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="white">
+  <title>GiftedForge - NFT Platform</title>
+  <link rel="stylesheet" href="/web-app/static/styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
   <style>
     /* DESIGN SYSTEM - PREMIUM CLASSICAL THEME */
     :root {
@@ -164,16 +165,17 @@
     
     .header {
       padding: 14px 16px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+      border-bottom: 1px solid var(--color-border);
+      background: white;
       position: sticky;
       top: 0;
       z-index: 100;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      backdrop-filter: blur(20px);
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      flex-shrink: 0;
+      position: relative;
     }
     
     .header-menu {
@@ -190,37 +192,74 @@
       height: 20px;
       color: var(--color-text-primary);
     }
+
+    .header-brand-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .header-logo {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    .header-brand-text {
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--color-text-primary);
+      letter-spacing: -0.5px;
+    }
     
     .header-actions {
       display: flex;
       align-items: center;
       gap: 12px;
+      position: absolute;
+      right: 16px;
+      z-index: 10;
     }
     
     .header-icon {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      color: var(--color-text-secondary);
       cursor: pointer;
+      transition: all 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+    
+    .header-icon:hover {
+      background: var(--color-bg-tertiary);
+      color: var(--primary);
+      border-color: var(--primary-light);
     }
     
     .header-icon svg {
       width: 20px;
       height: 20px;
-      color: var(--color-text-secondary);
+      color: currentColor;
+      stroke: currentColor;
     }
     
     .notification-badge {
       position: absolute;
-      top: -2px;
-      right: -2px;
-      width: 6px;
-      height: 6px;
-      background: #ef4444;
+      top: 4px;
+      right: 4px;
+      width: 8px;
+      height: 8px;
+      background: var(--color-status-error);
       border-radius: 50%;
+      border: 2px solid white;
     }
     
     .header-avatar {
@@ -2000,7 +2039,7 @@
       width: 80px;
       height: 80px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #5b4bdb, #d946a6);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2238,15 +2277,21 @@
   <div id="app">
     <!-- HEADER -->
     <header class="header">
-      <button class="header-menu" id="menuBtn" aria-label="Menu">
-        <svg aria-hidden="true"><use xlink:href="icons.svg#icon-menu"></use></svg>
-      </button>
+      <div class="header-brand-center">
+        <img class="header-logo" src="https://image2url.com/r2/default/images/1772274843334-476c23d2-7506-49ee-9c33-577dece9caf2.jpg" alt="GiftedForge Logo" style="width: 28px; height: 28px; object-fit: contain;">
+        <span class="header-brand-text">GiftedForge</span>
+      </div>
       <div class="header-actions">
-        <button class="header-icon" id="notificationBell" aria-label="Notifications">
-          <svg aria-hidden="true"><use xlink:href="icons.svg#icon-bell"></use></svg>
-          <span class="notification-badge" data-notification-badge></span>
+        <button class="header-icon" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge"></span>
         </button>
-        <div class="header-avatar" id="userAvatar">JD</div>
+        <button class="header-avatar" id="profileBtn" aria-label="Profile">
+          <span id="avatarInitial">J</span>
+        </button>
       </div>
     </header>
 
@@ -2261,14 +2306,14 @@
             font-size: 18px;
             font-weight: 600;
             color: var(--text);
-          ">Welcome back, <span id="userName">User</span> 👋</p>
+          ">Welcome back, <span id="userName">User</span></p>
         </section>
 
         <!-- Primary Balance Card - Real Data -->
         <section style="
           padding: 20px;
           margin: 0 20px 24px;
-          background: linear-gradient(135deg, var(--primary) 0%, #d946a6 100%);
+          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
           border-radius: 16px;
           color: white;
           box-shadow: 0 8px 32px rgba(91, 75, 219, 0.2);
@@ -2322,7 +2367,7 @@
             opacity: 0.85;
           ">
             <div style="display: flex; align-items: center; gap: 4px;">
-              <span>💼</span>
+              <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><path d="M1 10h22" stroke="currentColor" stroke-width="2" fill="none"/></svg>
               <span id="dashboardWalletStatus">No wallet</span>
             </div>
           </div>
@@ -2453,7 +2498,7 @@
               transition: all 0.3s;
               color: var(--text);
             " onmouseover="this.style.border='1px solid var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.15)'" onmouseout="this.style.border='1px solid var(--border-color)'; this.style.boxShadow=''">
-              <span style="font-size: 18px;">✨</span>
+              <svg style="font-size: 18px; width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20M6 6h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>
               <span style="font-size: 12px; font-weight: 600;">Mint NFT</span>
             </button>
 
@@ -2470,8 +2515,8 @@
               transition: all 0.3s;
               color: var(--text);
             " onmouseover="this.style.border='1px solid var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.15)'" onmouseout="this.style.border='1px solid var(--border-color)'; this.style.boxShadow=''">
-              <span style="font-size: 18px;">💼</span>
-              <span style="font-size: 12px; font-weight: 600;">My Wallets</span>
+              <svg style="font-size: 18px; width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><path d="M1 10h22"/></svg>
+              <span style="font-size: 12px; font-weight: 600;">Wallets</span>
             </button>
 
             <button onclick="window.switchPage('market')" style="
@@ -2487,7 +2532,7 @@
               transition: all 0.3s;
               color: var(--text);
             " onmouseover="this.style.border='1px solid var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.15)'" onmouseout="this.style.border='1px solid var(--border-color)'; this.style.boxShadow=''">
-              <span style="font-size: 18px;">🛒</span>
+              <svg style="font-size: 18px; width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
               <span style="font-size: 12px; font-weight: 600;">Browse</span>
             </button>
           </div>
@@ -2635,8 +2680,7 @@
     </div>
   </div>
 
-  <!-- Load Telegram WebApp FIRST - MUST be before app code -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Telegram WebApp loaded in HEAD with defer -->
   
   <script src="svg-icons.js"></script>
   <script>
@@ -2867,7 +2911,7 @@
 
     function displayUserBadge(userObj) {
       // Update user avatar with initials
-      const avatar = document.querySelector('[data-user-avatar]');
+      const avatar = document.querySelector('[data-user-avatar]') || document.getElementById('profileBtn');
       const userName = document.querySelector('[data-user-name]');
       const userId = document.querySelector('[data-user-id]');
       const greetingEl = document.querySelector('[data-greeting]');
@@ -2877,7 +2921,8 @@
         const displayName = userObj.telegram_username || userObj.first_name || 'User';
         
         if (avatar) {
-          avatar.textContent = initial;
+          const avatarInitial = avatar.querySelector('#avatarInitial') || avatar;
+          avatarInitial.textContent = initial;
           avatar.style.background = 'linear-gradient(135deg, #5b4bdb, #a78bfa)';
           avatar.style.color = 'white';
         }
@@ -2936,96 +2981,153 @@
       modal.innerHTML = `
         <div class="wallet-connect-modal" style="
           position: relative;
-          background: white;
-          border-radius: 20px;
-          padding: 40px 30px;
-          max-width: 420px;
+          background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+          border-radius: 24px;
+          padding: 48px 40px;
+          max-width: 480px;
           width: 100%;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-          animation: slideUp 0.3s ease-out;
+          box-shadow: 0 25px 75px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.05);
+          animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         ">
           <!-- Close Button -->
           <button onclick="document.getElementById('modalOverlay').style.display='none'" style="
             position: absolute;
-            top: 16px;
-            right: 16px;
-            background: none;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.05);
             border: none;
-            font-size: 28px;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
             cursor: pointer;
-            color: #999;
-          ">×</button>
-
-          <h2 style="
-            margin: 0 0 16px 0;
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text);
-            text-align: center;
-          ">Connect Your Wallet</h2>
-
-          <p style="
-            margin: 0 0 32px 0;
-            text-align: center;
             color: var(--text-secondary);
-            font-size: 14px;
-            line-height: 1.6;
-          ">To access all features and manage your NFTs, please connect a wallet using WalletConnect or TON Connect.</p>
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+          " onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.05)'">×</button>
+
+          <!-- Header -->
+          <div style="text-align: center; margin-bottom: 32px;">
+            <div style="
+              width: 56px;
+              height: 56px;
+              background: linear-gradient(135deg, var(--primary), var(--primary-light));
+              border-radius: 16px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto 20px;
+              box-shadow: 0 8px 24px rgba(91,75,219,0.25);
+            ">
+              <svg style="width: 28px; height: 28px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><path d="M1 10h22"/></svg>
+            </div>
+            <h2 style="
+              margin: 0 0 12px 0;
+              font-size: 28px;
+              font-weight: 700;
+              color: var(--text);
+            ">Connect Your Wallet</h2>
+            <p style="
+              margin: 0;
+              color: var(--text-secondary);
+              font-size: 15px;
+              line-height: 1.6;
+            ">Choose your preferred blockchain network to get started</p>
+          </div>
 
           <!-- Wallet Options -->
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px;">
             <button onclick="initiateWalletConnection('ton')" style="
               width: 100%;
-              padding: 14px 16px;
+              padding: 16px 18px;
               background: linear-gradient(135deg, #0098EA 0%, #0077B6 100%);
               color: white;
-              border: none;
-              border-radius: 12px;
+              border: 1px solid rgba(255,255,255,0.15);
+              border-radius: 14px;
               font-weight: 600;
-              font-size: 15px;
+              font-size: 16px;
               cursor: pointer;
-              transition: all 0.3s;
-            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(0,152,234,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
-              🔷 Connect TON Wallet
+              transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+              box-shadow: 0 8px 20px rgba(0,152,234,0.2);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 12px;
+            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 28px rgba(0,152,234,0.35)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 20px rgba(0,152,234,0.2)'">
+              <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+              Connect TON Wallet
             </button>
 
             <button onclick="initiateWalletConnection('ethereum')" style="
               width: 100%;
-              padding: 14px 16px;
+              padding: 16px 18px;
               background: linear-gradient(135deg, #627EEA 0%, #764BA2 100%);
               color: white;
-              border: none;
-              border-radius: 12px;
+              border: 1px solid rgba(255,255,255,0.15);
+              border-radius: 14px;
               font-weight: 600;
-              font-size: 15px;
+              font-size: 16px;
               cursor: pointer;
-              transition: all 0.3s;
-            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(98,126,234,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
-              ◆ Connect Ethereum Wallet
+              transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+              box-shadow: 0 8px 20px rgba(98,126,234,0.2);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 12px;
+            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 28px rgba(98,126,234,0.35)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 20px rgba(98,126,234,0.2)'">
+              <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+              Connect Ethereum Wallet
             </button>
 
             <button onclick="initiateWalletConnection('solana')" style="
               width: 100%;
-              padding: 14px 16px;
+              padding: 16px 18px;
               background: linear-gradient(135deg, #14F195 0%, #00D9FF 100%);
-              color: #000;
-              border: none;
-              border-radius: 12px;
+              color: #0a0a0a;
+              border: 1px solid rgba(0,0,0,0.08);
+              border-radius: 14px;
               font-weight: 600;
-              font-size: 15px;
+              font-size: 16px;
               cursor: pointer;
-              transition: all 0.3s;
-            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(20,241,149,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
-              ◎ Connect Solana Wallet
+              transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+              box-shadow: 0 8px 20px rgba(20,241,149,0.2);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 12px;
+            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 28px rgba(20,241,149,0.35)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 20px rgba(20,241,149,0.2)'">
+              <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+              Connect Solana Wallet
             </button>
           </div>
 
+          <!-- Security Badge -->
+          <div style="
+            background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.04));
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+          ">
+            <svg style="width: 18px; height: 18px; color: var(--color-status-success); flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 15 9"/></svg>
+            <div>
+              <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 700; color: var(--color-status-success); text-transform: uppercase; letter-spacing: 0.4px;">Secured by GiftedForge</p>
+              <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Enterprise-grade security for all transactions</p>
+            </div>
+          </div>
+
           <p style="
-            margin: 32px 0 0 0;
+            margin: 0;
             text-align: center;
-            color: var(--text-muted);
+            color: var(--text-tertiary);
             font-size: 12px;
-          ">Your wallet is secure and only used for NFT transactions.</p>
+            line-height: 1.5;
+          ">Your wallet credentials remain private and secure. We never store your private keys or seed phrases.</p>
         </div>
       `;
 
@@ -3419,7 +3521,7 @@
               walletStatusEl.innerHTML = `
                 <button onclick="showWalletConnectModal()" style="
                   padding: 8px 12px;
-                  background: linear-gradient(135deg, var(--primary), #d946a6);
+                  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                   color: white;
                   border: none;
                   border-radius: 8px;
@@ -3454,11 +3556,14 @@
         }
 
         // Update user avatar with real initials
-        const userAvatar = document.getElementById('userAvatar');
+        const userAvatar = document.getElementById('profileBtn');
         if (userAvatar && user) {
           const initials =
             ((user.first_name?.[0] || '') + (user.last_name?.[0] || '')).toUpperCase() || 'User';
-          userAvatar.textContent = initials;
+          const avatarInitial = userAvatar.querySelector('#avatarInitial');
+          if (avatarInitial) {
+            avatarInitial.textContent = initials;
+          }
         }
 
         // Update balance card with real USDT balance
@@ -3545,7 +3650,7 @@
               flex-direction: column;
             " onmouseover="this.style.boxShadow='0 2px 8px rgba(91,75,219,0.2)'; this.style.transform='scale(1.05)'" onmouseout="this.style.boxShadow=''; this.style.transform='scale(1)'">
               <div style="
-                background: linear-gradient(135deg, #5b4bdb, #d946a6);
+                background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                 height: 90px;
                 display: flex;
                 align-items: center;
@@ -3609,7 +3714,7 @@
               const ref = refRes.data;
               html += `
                 <div style="
-                  background: linear-gradient(135deg, #5b4bdb 0%, #d946a6 100%);
+                  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
                   border-radius: 12px;
                   padding: 16px;
                   color: white;
@@ -3618,7 +3723,7 @@
                   <div style="display: flex; gap: 16px;">
                     <div style="flex: 1;">
                       <p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referral Earnings</p>
-                      <p style="margin: 0; font-size: 18px; font-weight: 700;">⭐ ${(ref.lifetime_earnings || 0).toFixed(2)}</p>
+                      <p style="margin: 0; font-size: 18px; font-weight: 700;">${(ref.lifetime_earnings || 0).toFixed(2)}</p>
                     </div>
                     <div style="flex: 1; text-align: right;">
                       <p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referred Users</p>
@@ -3754,7 +3859,7 @@
 
           const offerBtn = event.target;
           offerBtn.disabled = true;
-          offerBtn.innerHTML = '⏳ Submitting...';
+          offerBtn.innerHTML = ' Submitting...';
 
           try {
             const response = await API.call('POST', '/marketplace/offer', {
@@ -4448,7 +4553,7 @@
 
                 <!-- REFERRAL PROGRAM SECTION -->
                 ${referralData ? `
-                <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 700;">🎁 Referral Program</h2>
+                <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 700;">Referral Program</h2>
                 
                 <!-- REFERRAL STATS -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
@@ -4458,12 +4563,12 @@
                   </div>
                   <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
                     <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Earnings</p>
-                    <p style="margin: 0; font-size: 28px; font-weight: 700; color: var(--primary);">⭐ ${(referralData.lifetime_earnings || 0).toFixed(2)}</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: 700; color: var(--primary);">${(referralData.lifetime_earnings || 0).toFixed(2)}</p>
                   </div>
                 </div>
 
                 <!-- REFERRAL CODE SECTION -->
-                <div style="background: linear-gradient(135deg, var(--primary), #d946a6); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;">
                   <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; opacity: 0.9; font-weight: 600;">Your Referral Code</p>
                   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
                     <code style="
@@ -4510,7 +4615,7 @@
                         <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Referred ${new Date(u.referred_at).toLocaleDateString()}</p>
                       </div>
                       <div style="text-align: right;">
-                        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: var(--primary);">⭐ ${(u.earnings || 0).toFixed(2)}</p>
+                        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: var(--primary);">${(u.earnings || 0).toFixed(2)}</p>
                         <p style="margin: 0; font-size: 11px; color: var(--text-muted);">${u.purchase_count} purchases</p>
                       </div>
                     </div>
@@ -4526,7 +4631,7 @@
                 ${referralData.pending_commissions > 0 ? `
                 <div style="background: linear-gradient(135deg, #f59e0b, #f97316); border-radius: 12px; padding: 20px; margin-top: 24px; color: white;">
                   <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; opacity: 0.9; font-weight: 600;">Pending Commissions</p>
-                  <p style="margin: 0; font-size: 24px; font-weight: 700;">⭐ ${(referralData.pending_commissions || 0).toFixed(2)}</p>
+                  <p style="margin: 0; font-size: 24px; font-weight: 700;">${(referralData.pending_commissions || 0).toFixed(2)}</p>
                 </div>
                 ` : ''}
                 ` : `
@@ -4563,7 +4668,7 @@
             if (mintSection) {
               mintSection.innerHTML = `
                 <div style="padding: 24px; max-width: 600px;">
-                  <h2 style="margin: 0 0 24px 0; font-size: 28px; font-weight: 700;">✨ Mint NFT</h2>
+                  <h2 style="margin: 0 0 24px 0; font-size: 28px; font-weight: 700;">Mint New NFT</h2>
                   
                   ${!WalletManager.isConnected() ? `
                     <div style="
@@ -4574,10 +4679,10 @@
                       text-align: center;
                       margin-bottom: 24px;
                     ">
-                      <p style="margin: 0 0 16px 0; color: var(--text-muted);">⚠️ Wallet connection required to mint NFTs</p>
+                      <p style="margin: 0 0 16px 0; color: var(--text-muted);">Wallet connection required to mint NFTs</p>
                       <button onclick="window.showWalletConnectModal()" style="
                         padding: 12px 24px;
-                        background: linear-gradient(135deg, var(--primary), #d946a6);
+                        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                         color: white;
                         border: none;
                         border-radius: 10px;
@@ -4656,7 +4761,7 @@
                       <button onclick="if(window.appInitializer) window.appInitializer.submitMintNFT()" style="
                         width: 100%;
                         padding: 14px 24px;
-                        background: linear-gradient(135deg, var(--primary), #d946a6);
+                        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                         color: white;
                         border: none;
                         border-radius: 10px;
@@ -4665,7 +4770,7 @@
                         cursor: pointer;
                         transition: all 0.3s;
                       " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(91,75,219,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
-                        ✨ Mint NFT
+                        Mint NFT
                       </button>
                     </div>
                   `}
@@ -4709,7 +4814,7 @@
           });
 
           if (r.ok) {
-            showStatus('NFT minted successfully! 🎉', 'success');
+            showStatus('NFT minted successfully!', 'success');
             // Clear form
             document.getElementById('mintName').value = '';
             document.getElementById('mintDesc').value = '';
@@ -4741,7 +4846,7 @@
         // Get user data
         const tgUser = tg.initDataUnsafe?.user;
         if (tgUser) {
-          console.log('📱 Telegram user:', tgUser.first_name);
+          console.log('[Telegram] User:', tgUser.first_name);
         }
       }
 
@@ -4873,7 +4978,7 @@
         }
 
         // Notification Bell Click
-        const notificationBell = document.getElementById('notificationBell');
+        const notificationBell = document.getElementById('notificationBtn');
         if (notificationBell) {
           notificationBell.addEventListener('click', () => {
             window.modalManager.show('notifications');
@@ -4881,7 +4986,7 @@
         }
 
         // User Avatar Click - open profile modal
-        const userAvatar = document.getElementById('userAvatar');
+        const userAvatar = document.getElementById('profileBtn');
         if (userAvatar) {
           userAvatar.addEventListener('click', () => {
             window.modalManager.show('user-profile');
@@ -4926,7 +5031,7 @@
               text-align: center;
               border: 1px dashed var(--border-color);
             ">
-              <div style="font-size: 48px; margin-bottom: 16px;">🛒</div>
+              <svg style="width: 48px; height: 48px; color: var(--text-secondary); margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
               <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700;">No Listings Available</h3>
               <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Check back soon for new amazing NFTs</p>
             </div>
@@ -4952,26 +5057,26 @@
                 animation-delay: ${idx * 0.05}s;
               " onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.15)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'; this.style.transform='none'">
                 <div class="listing-image" style="
-                  background: linear-gradient(135deg, #5b4bdb, #d946a6);
+                  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                   height: 200px;
                   display: flex;
                   align-items: center;
                   justify-content: center;
                   overflow: hidden;
                 ">
-                  <img src="${imageUrl}" alt="${listing.nft?.name || 'NFT'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='🖼️'">
+                  <img src="${imageUrl}" alt="${listing.nft?.name || 'NFT'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg style=\"width:40px;height:40px;color:rgba(255,255,255,0.6);\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" ry=\"2\"/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\"/><polyline points=\"21 15 16 10 5 21\"/></svg>'">
                 </div>
                 <div class="listing-content" style="padding: 16px;">
                   <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     ${listing.nft?.name || 'Untitled NFT'}
                   </h3>
                   <p class="listing-price" style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--primary);">
-                    ⭐ ${priceStars} Stars
+                    ${priceStars} Stars
                   </p>
                   <button class="btn-primary btn-small" data-listing-id="${listing.id}" data-listing-price="${priceStars}" style="
                     width: 100%;
                     padding: 10px 12px;
-                    background: linear-gradient(135deg, var(--primary), #d946a6);
+                    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                     color: white;
                     border: none;
                     border-radius: 8px;
@@ -4980,7 +5085,7 @@
                     cursor: pointer;
                     transition: all 0.3s;
                   " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(91,75,219,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
-                    🌟 Buy with Stars
+                     Buy with Stars
                   </button>
                 </div>
               </div>
@@ -5081,7 +5186,7 @@
                   justify-content: center;
                 ">
                   <img 
-                    src="https://image2url.com/r2/default/images/1772038574061-2f19bf29-4d1f-4476-bcd4-87ef52e809e2.jpg"
+                    src="https://image2url.com/r2/default/images/1772274843334-476c23d2-7506-49ee-9c33-577dece9caf2.jpg"
                     alt="GiftedForge Logo"
                     style="
                       width: 100%;
@@ -5178,7 +5283,7 @@
 
         // Subscribe to notifications
         appState.subscribe('notifications', (notifications) => {
-          const badge = document.querySelector('[data-notification-badge]');
+          const badge = document.querySelector('[class*="notification-badge"]') || document.querySelector('.notification-badge');
           if (badge) {
             badge.textContent = this.state.unreadCount;
             badge.style.display = this.state.unreadCount > 0 ? 'flex' : 'none';
@@ -5201,6 +5306,12 @@
     // Initialize the app
     const appInit = new AppInitializer();
     window.appInitializer = appInit;
+    
+    // Start initialization
+    appInit.initialize().catch(err => {
+      console.error('[App Init] Initialization error:', err);
+      showStatus('Failed to initialize app', 'error');
+    });
     
     // Make switchPage available globally for onclick handlers
     window.switchPage = (view) => appInit.switchPage(view);

@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="white">
+  <title>GiftedForge - NFT Platform</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Header with branding (Centered Logo + Text) -->
+    <header class="header">
+      <div class="header-brand-center">
+        <!-- GiftedForge SVG Logo -->
+        <svg class="header-logo" viewBox="0 0 48 48" width="28" height="28">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#5b4bdb;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#7c6ff9;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect x="8" y="8" width="32" height="32" rx="8" fill="url(#logoGrad)" />
+          <path d="M24 14c5.5 0 10 4.5 10 10s-4.5 10-10 10-10-4.5-10-10 4.5-10 10-10z" fill="white" opacity="0.9" />
+          <circle cx="24" cy="24" r="3" fill="url(#logoGrad)" />
+        </svg>
+        <span class="header-brand-text">GiftedForge</span>
+      </div>
+      <div class="header-actions">
+        <button class="header-icon" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge"></span>
+        </button>
+        <button class="header-avatar" id="profileBtn" aria-label="Profile">
+          <span id="avatarInitial">J</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="content" id="content">
+      <!-- Dashboard Section -->
+      <div id="dashboardSection" class="section-container active">
+        <!-- Welcome section -->
+        <section class="welcome-section">
+          <h1 class="welcome-greeting">Welcome back, <span id="userName">John</span></h1>
+        </section>
+
+        <!-- Balance card -->
+        <section class="balance-card">
+          <div class="balance-header">
+            <div>
+              <p class="balance-label">Total Balance</p>
+              <div class="balance-display">
+                <span class="balance-currency">$</span>
+                <span class="balance-amount" id="totalBalance">12,450.5</span>
+              </div>
+              <p class="balance-fiat">USD</p>
+            </div>
+            <button class="balance-action" id="depositBtn">
+              <span>+</span>
+              <span>Deposit</span>
+            </button>
+          </div>
+          <div class="balance-footer">
+            <span class="balance-status" id="walletStatus">No wallet connected</span>
+          </div>
+        </section>
+
+        <!-- Stats grid -->
+        <section class="stats-grid">
+          <div class="stat-card">
+            <p class="stat-label">NFTs Owned</p>
+            <p class="stat-value" id="nftCount">16</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Active Listings</p>
+            <p class="stat-value" id="listingCount">03</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Wallet Balance</p>
+            <p class="stat-value" id="walletBalance">1.24</p>
+            <p class="stat-unit">ETH</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Total Profit</p>
+            <p class="stat-value profit" id="totalProfit">$450</p>
+          </div>
+        </section>
+
+        <!-- Quick actions -->
+        <section class="quick-actions">
+          <h2 class="section-title">Quick Actions</h2>
+          <div class="actions-grid">
+            <button class="action-button" id="createWalletBtn">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 12v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4m4-4V8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"></path>
+                <rect x="2" y="10" width="20" height="12" rx="2"></rect>
+              </svg>
+              <span class="action-label">Create Wallet</span>
+            </button>
+            <button class="action-button" id="mintNftBtn">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 8v8m-4-4h8"></path>
+              </svg>
+              <span class="action-label">Mint NFT</span>
+            </button>
+            <button class="action-button" id="browseBtn">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+              <span class="action-label">Browse Market</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Collections -->
+        <section class="collections-section">
+          <div class="section-header">
+            <h2 class="section-title">Your Collection</h2>
+            <button class="view-all-link">View All</button>
+          </div>
+          <div class="collections-grid" id="collectionsGrid">
+            <div class="collection-card">
+              <div class="collection-image">
+                <span>LQ</span>
+              </div>
+              <div class="collection-info">
+                <h3 class="collection-name">Liquid Oil</h3>
+                <p class="collection-status">Owner</p>
+                <p class="collection-price">2.5 ETH</p>
+                <button class="collection-button">View Item</button>
+              </div>
+            </div>
+            <div class="collection-card">
+              <div class="collection-image">
+                <span>ND</span>
+              </div>
+              <div class="collection-info">
+                <h3 class="collection-name">Neon Dreams</h3>
+                <p class="collection-status">Owner</p>
+                <p class="collection-price">1.8 ETH</p>
+                <button class="collection-button">View Item</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recent activity -->
+        <section class="activity-section">
+          <h2 class="section-title">Recent Activity</h2>
+          <div class="activity-list" id="activityList">
+            <div class="activity-item">
+              <div class="activity-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="12 1 22 5 22 19 12 23 2 19 2 5 12 1"></polyline>
+                  <polyline points="12 12 22 8 12 4 2 8 12 12 22 16 12 20 2 16"></polyline>
+                </svg>
+              </div>
+              <div class="activity-content">
+                <p class="activity-title">Minted Genesis Cube</p>
+                <p class="activity-time">3 hours ago</p>
+              </div>
+              <p class="activity-amount positive">+450 USD</p>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <path d="M12 1v6m0 6v6"></path>
+                  <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24"></path>
+                  <path d="M1 12h6m6 0h6"></path>
+                </svg>
+              </div>
+              <div class="activity-content">
+                <p class="activity-title">Sale Aborted #22</p>
+                <p class="activity-time">2 days ago</p>
+              </div>
+              <p class="activity-amount negative">-250 USD</p>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6"></path>
+                  <path d="M3 13.5a9 9 0 0 1 15-6.5"></path>
+                </svg>
+              </div>
+              <div class="activity-content">
+                <p class="activity-title">Bought Fresh Flash</p>
+                <p class="activity-time">Pending</p>
+              </div>
+              <p class="activity-amount pending">-250 USD</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Marketplace Section -->
+      <div id="marketplaceSection" class="section-container" style="display: none;">
+        <section class="marketplace-header">
+          <h2 class="section-title">Marketplace</h2>
+          <div class="marketplace-controls">
+            <!-- Sort Control -->
+            <button class="control-button" id="sortBtn" title="Sort" aria-label="Sort">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="12 5 12 19"></polyline>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+
+            <!-- Filter Control -->
+            <button class="control-button" id="filterBtn" title="Filter" aria-label="Filter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+            </button>
+
+            <!-- Grid/List Toggle -->
+            <div class="control-button-group">
+              <button class="control-button active" id="gridViewBtn" title="Grid view" aria-label="Grid view">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </button>
+              <button class="control-button" id="listViewBtn" title="List view" aria-label="List view">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Marketplace Grid -->
+        <div class="marketplace-grid" id="marketplaceGrid"></div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="9" stroke-width="1.5"></circle>
+            <line x1="12" y1="8" x2="12" y2="12" stroke-width="1.5" stroke-linecap="round"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke-width="1.5" stroke-linecap="round"></line>
+          </svg>
+          <p class="empty-state-text">No items match your filters</p>
+        </div>
+      </div>
+
+      <!-- Filter Panel (Modal) -->
+      <div class="filter-overlay" id="filterOverlay">
+        <div class="filter-panel">
+          <div class="filter-header">
+            <h2 class="filter-title">Filters</h2>
+            <button class="filter-close-btn" id="filterCloseBtn" aria-label="Close">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="filter-content">
+            <!-- Price Range -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">Price Range (Stars)</h3>
+              <div class="filter-range-group">
+                <div class="filter-range-input">
+                  <label class="filter-range-label">Min</label>
+                  <input type="number" id="priceMin" placeholder="0" min="0" step="1">
+                </div>
+                <div class="filter-range-input">
+                  <label class="filter-range-label">Max</label>
+                  <input type="number" id="priceMax" placeholder="Unlimited" min="0" step="1">
+                </div>
+              </div>
+            </div>
+
+            <!-- Availability -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">Availability</h3>
+              <div class="filter-checkbox-list">
+                <label class="filter-checkbox-item">
+                  <input type="checkbox" class="filter-checkbox" value="available" id="filterAvailable">
+                  <span class="filter-checkbox-label">Available</span>
+                </label>
+                <label class="filter-checkbox-item">
+                  <input type="checkbox" class="filter-checkbox" value="sold" id="filterSold">
+                  <span class="filter-checkbox-label">Sold Out</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Creator Filter -->
+            <div class="filter-section" id="creatorFilterSection">
+              <h3 class="filter-section-title">Creator</h3>
+              <div class="filter-checkbox-list" id="creatorList"></div>
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button class="filter-btn filter-btn-reset" id="filterReset">Reset</button>
+            <button class="filter-btn filter-btn-apply" id="filterApply">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort Menu -->
+      <div class="sort-menu" id="sortMenu">
+        <div class="sort-menu-content">
+          <button class="sort-option" data-sort="newest">
+            <span>Newest</span>
+            <span class="sort-check" id="check-newest">✓</span>
+          </button>
+          <button class="sort-option" data-sort="price_asc">
+            <span>Price Low–High</span>
+            <span class="sort-check" id="check-price_asc"></span>
+          </button>
+          <button class="sort-option" data-sort="price_desc">
+            <span>Price High–Low</span>
+            <span class="sort-check" id="check-price_desc"></span>
+          </button>
+          <button class="sort-option" data-sort="popular">
+            <span>Popular</span>
+            <span class="sort-check" id="check-popular"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Spacing for bottom nav -->
+      <div style="height: 100px;"></div>
+    </main>
+
+    <!-- Floating Dark Bottom Navigation -->
+    <nav class="bottom-nav-floating">
+      <button class="nav-item active" data-page="dashboard" title="Home">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" data-page="wallet" title="Wallet">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+          <path d="M1 10h22"></path>
+        </svg>
+        <span class="nav-label">Wallet</span>
+      </button>
+      <button class="nav-item" data-page="mint" title="Mint">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.5" stroke-linecap="round"></path>
+        </svg>
+        <span class="nav-label">Mint</span>
+      </button>
+      <button class="nav-item" data-page="market" title="Market">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <span class="nav-label">Market</span>
+      </button>
+      <button class="nav-item" data-page="profile" title="Profile">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span class="nav-label">Profile</span>
+      </button>
+    </nav>
+
+    <!-- Modal overlay -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">Details</h2>
+          <button class="modal-close" id="modalClose" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comprehensive Backend-Integrated State Management & App Logic -->
+  <script>
+    /**
+     * GIFTED FORGE - PRODUCTION BACKEND-INTEGRATED APPLICATION
+     * Full state management with backend API integration
+     */
+    const AppManager = (() => {
+      const state = {
+        // User & Auth
+        currentUser: null,
+        isAuthenticated: false,
+        authToken: localStorage.getItem('auth_token'),
+        
+        // Navigation
+        currentPage: 'dashboard',
+        
+        // Marketplace
+        viewMode: 'grid',
+        sortMode: 'newest',
+        marketplace: {
+          items: [],
+          filtered: [],
+          creators: new Map(),
+          filters: { priceMin: null, priceMax: null, creators: [], availability: [] },
+          loading: false
+        },
+        
+        // Dashboard
+        dashboard: {
+          balance: 0,
+          nftCount: 0,
+          listingCount: 0,
+          walletBalance: '0',
+          totalProfit: 0,
+          activity: [],
+          collections: [],
+          loading: false
+        },
+        
+        // Wallet
+        wallet: {
+          address: null,
+          stars: 0,
+          balance: 0,
+          connected: false,
+          loading: false
+        },
+        
+        // Profile
+        profile: {
+          username: '',
+          email: '',
+          avatar: '',
+          totalSales: 0,
+          totalEarnings: 0,
+          loading: false
+        },
+        
+        UI: { sortMenuOpen: false, filterPanelOpen: false }
+      };
+
+      // ==================== API UTILITIES ====================
+      const api = {
+        baseURL: '/api',
+        
+        async request(endpoint, options = {}) {
+          const headers = { 'Content-Type': 'application/json' };
+          if (state.authToken) {
+            headers['Authorization'] = `Bearer ${state.authToken}`;
+          }
+          
+          try {
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
+              ...options,
+              headers: { ...headers, ...options.headers }
+            });
+            
+            if (response.status === 401) {
+              state.isAuthenticated = false;
+              localStorage.removeItem('auth_token');
+              AppManager.showError('Please log in again');
+              return null;
+            }
+            
+            if (!response.ok) {
+              const error = await response.json().catch(() => ({}));
+              throw new Error(error.message || `HTTP ${response.status}`);
+            }
+            
+            return await response.json();
+          } catch (error) {
+            console.error(`API Error [${endpoint}]:`, error);
+            AppManager.showError(error.message);
+            return null;
+          }
+        },
+
+        // User endpoints
+        async getProfile() {
+          return this.request('/auth/me');
+        },
+
+        async updateProfile(data) {
+          return this.request('/auth/profile', {
+            method: 'PUT',
+            body: JSON.stringify(data)
+          });
+        },
+
+        // Dashboard endpoints
+        async getDashboardData() {
+          return this.request('/dashboard');
+        },
+
+        async getActivity() {
+          return this.request('/dashboard/activity');
+        },
+
+        // Marketplace endpoints
+        async getMarketplaceItems(filters = {}) {
+          const params = new URLSearchParams();
+          Object.entries(filters).forEach(([key, value]) => {
+            if (value) params.append(key, value);
+          });
+          return this.request(`/marketplace/items?${params}`);
+        },
+
+        async getItemDetails(itemId) {
+          return this.request(`/marketplace/items/${itemId}`);
+        },
+
+        async purchaseItem(itemId, paymentMethod = 'stars') {
+          return this.request(`/marketplace/purchase/${itemId}`, {
+            method: 'POST',
+            body: JSON.stringify({ payment_method: paymentMethod })
+          });
+        },
+
+        // Wallet endpoints
+        async getWallet() {
+          return this.request('/wallet');
+        },
+
+        async connectWallet(address) {
+          return this.request('/wallet/connect', {
+            method: 'POST',
+            body: JSON.stringify({ address })
+          });
+        },
+
+        async createWallet() {
+          return this.request('/wallet/create', { method: 'POST' });
+        },
+
+        async getWalletBalance() {
+          return this.request('/wallet/balance');
+        },
+
+        // NFT endpoints
+        async getNFTs() {
+          return this.request('/nft/my-nfts');
+        },
+
+        async mintNFT(data) {
+          return this.request('/nft/mint', {
+            method: 'POST',
+            body: JSON.stringify(data)
+          });
+        },
+
+        // Collection endpoints
+        async getCollections() {
+          return this.request('/collections');
+        },
+
+        // Transaction endpoints
+        async getTransactionHistory() {
+          return this.request('/transactions');
+        }
+      };
+
+      // ==================== DATA LOADING ====================
+      const loadUserData = async () => {
+        const user = await api.getProfile();
+        if (user) {
+          state.currentUser = user;
+          state.isAuthenticated = true;
+          document.getElementById('userName').textContent = user.username || 'User';
+          document.getElementById('avatarInitial').textContent = 
+            (user.username || 'J').substring(0, 1).toUpperCase();
+          return true;
+        }
+        return false;
+      };
+
+      const loadDashboardData = async () => {
+        state.dashboard.loading = true;
+        const data = await api.getDashboardData();
+        if (data) {
+          state.dashboard.balance = data.total_balance || 0;
+          state.dashboard.nftCount = data.nft_count || 0;
+          state.dashboard.listingCount = data.listing_count || 0;
+          state.dashboard.walletBalance = (data.wallet_balance || 0).toFixed(2);
+          state.dashboard.totalProfit = data.total_profit || 0;
+          updateDashboardUI();
+        }
+        
+        const activity = await api.getActivity();
+        if (activity?.activities) {
+          state.dashboard.activity = activity.activities;
+          updateActivityUI();
+        }
+        
+        state.dashboard.loading = false;
+      };
+
+      const loadMarketplaceData = async () => {
+        state.marketplace.loading = true;
+        const data = await api.getMarketplaceItems();
+        if (data?.items) {
+          state.marketplace.items = data.items;
+          state.marketplace.filtered = [...data.items];
+          
+          data.items.forEach(item => {
+            if (!state.marketplace.creators.has(item.creator_id)) {
+              state.marketplace.creators.set(
+                item.creator_id,
+                item.creator_name || `Creator ${item.creator_id.substring(0, 8)}`
+              );
+            }
+          });
+          
+          populateCreatorFilter();
+          renderMarketplace();
+        }
+        state.marketplace.loading = false;
+      };
+
+      const loadWalletData = async () => {
+        state.wallet.loading = true;
+        const wallet = await api.getWallet();
+        if (wallet) {
+          state.wallet.address = wallet.address;
+          state.wallet.stars = wallet.stars || 0;
+          state.wallet.balance = wallet.balance || 0;
+          state.wallet.connected = !!wallet.address;
+          updateWalletUI();
+        }
+        state.wallet.loading = false;
+      };
+
+      const loadProfileData = async () => {
+        state.profile.loading = true;
+        const profile = await api.getProfile();
+        if (profile) {
+          state.profile.username = profile.username || '';
+          state.profile.email = profile.email || '';
+          state.profile.avatar = profile.avatar_url || '';
+          state.profile.totalSales = profile.total_sales || 0;
+          state.profile.totalEarnings = profile.total_earnings || 0;
+          updateProfileUI();
+        }
+        state.profile.loading = false;
+      };
+
+      // ==================== UI UPDATE FUNCTIONS ====================
+      const updateDashboardUI = () => {
+        document.getElementById('totalBalance').textContent = 
+          state.dashboard.balance.toLocaleString('en-US', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          });
+        document.getElementById('nftCount').textContent = state.dashboard.nftCount;
+        document.getElementById('listingCount').textContent = 
+          String(state.dashboard.listingCount).padStart(2, '0');
+        document.getElementById('walletBalance').textContent = state.dashboard.walletBalance;
+        document.getElementById('totalProfit').textContent = 
+          `$${state.dashboard.totalProfit.toLocaleString()}`;
+      };
+
+      const updateWalletUI = () => {
+        const status = document.getElementById('walletStatus');
+        if (state.wallet.connected) {
+          status.textContent = `${state.wallet.address.substring(0, 6)}...${state.wallet.address.substring(-4)}`;
+          status.style.background = '#10b98133';
+          status.style.color = '#10b981';
+        } else {
+          status.textContent = 'No wallet connected';
+          status.style.background = 'rgba(255, 255, 255, 0.1)';
+          status.style.color = 'inherit';
+        }
+      };
+
+      const updateActivityUI = () => {
+        const list = document.getElementById('activityList');
+        if (!state.dashboard.activity || state.dashboard.activity.length === 0) return;
+        
+        list.innerHTML = state.dashboard.activity.map(activity => `
+          <div class="activity-item">
+            <div class="activity-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+              </svg>
+            </div>
+            <div class="activity-content">
+              <p class="activity-title">${activity.title || 'Transaction'}</p>
+              <p class="activity-time">${activity.timestamp || 'Recently'}</p>
+            </div>
+            <p class="activity-amount ${activity.type === 'income' ? 'positive' : 'negative'}">
+              ${activity.type === 'income' ? '+' : '-'}${activity.amount || '0'}
+            </p>
+          </div>
+        `).join('');
+      };
+
+      const updateProfileUI = () => {
+        document.getElementById('userName').textContent = state.profile.username || 'User';
+        document.getElementById('avatarInitial').textContent = 
+          (state.profile.username || 'U').substring(0, 1).toUpperCase();
+      };
+
+      // ==================== MARKETPLACE OPERATIONS ====================
+      const sortOperations = {
+        newest: (items) => items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+        price_asc: (items) => items.sort((a, b) => a.price_stars - b.price_stars),
+        price_desc: (items) => items.sort((a, b) => b.price_stars - a.price_stars),
+        popular: (items) => items.sort((a, b) => b.sales_count - a.sales_count)
+      };
+
+      const applyFilters = () => {
+        state.marketplace.filtered = state.marketplace.items.filter(item => {
+          if (state.marketplace.filters.priceMin !== null && item.price_stars < state.marketplace.filters.priceMin) return false;
+          if (state.marketplace.filters.priceMax !== null && item.price_stars > state.marketplace.filters.priceMax) return false;
+          if (state.marketplace.filters.creators.length > 0 && !state.marketplace.filters.creators.includes(item.creator_id)) return false;
+          if (state.marketplace.filters.availability.length > 0 && !state.marketplace.filters.availability.includes(item.availability)) return false;
+          return true;
+        });
+        return applySorting();
+      };
+
+      const applySorting = () => {
+        const sorted = [...state.marketplace.filtered];
+        const sorter = sortOperations[state.sortMode];
+        return sorter ? sorter(sorted) : sorted;
+      };
+
+      const renderMarketplace = () => {
+        const grid = document.getElementById('marketplaceGrid');
+        const emptyState = document.getElementById('emptyState');
+        const sorted = applySorting();
+
+        if (sorted.length === 0) {
+          grid.innerHTML = '';
+          emptyState.style.display = 'flex';
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        grid.innerHTML = sorted.map(item => `
+          <div class="marketplace-card" data-id="${item.id}" onclick="AppManager.showItemDetails('${item.id}')">
+            <div class="card-image-container">
+              <img src="${item.image_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22%3E%3Crect fill=%22%235b4bdb%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2224%22 fill=%22white%22%3E${item.title.substring(0, 2).toUpperCase()}%3C/text%3E%3C/svg%3E'}" alt="${item.title}" class="card-image">
+              <span class="card-badge">${item.rarity || 'NEW'}</span>
+            </div>
+            <div class="card-content">
+              <h3 class="card-title">${item.title}</h3>
+              <p class="card-creator">${item.creator_name || 'Creator'}</p>
+              <div class="card-stats">
+                <div class="card-stat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"></circle></svg><span>${item.views || 0}</span></div>
+                <div class="card-stat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg><span>${item.sales_count || 0}</span></div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="card-price"><p class="card-price-label">Price</p><p class="card-price-value">${item.price_stars} ⭐</p></div>
+              <button class="card-action" onclick="event.stopPropagation(); AppManager.purchaseItem('${item.id}')">Buy</button>
+            </div>
+          </div>
+        `).join('');
+      };
+
+      const populateCreatorFilter = () => {
+        const creatorList = document.getElementById('creatorList');
+        creatorList.innerHTML = Array.from(state.marketplace.creators.entries()).map(([id, name]) => 
+          `<label class="filter-checkbox-item">
+            <input type="checkbox" class="filter-checkbox creator-filter" value="${id}">
+            <span class="filter-checkbox-label">${name}</span>
+          </label>`
+        ).join('');
+      };
+
+      const showItemDetails = (itemId) => {
+        const item = state.marketplace.items.find(i => i.id === itemId);
+        if (!item) return;
+
+        const modal = document.getElementById('modalOverlay');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+
+        title.textContent = item.title;
+        body.innerHTML = `
+          <div style="background: white; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+            <img src="${item.image_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22%3E%3Crect fill=%22%235b4bdb%22 width=%22200%22 height=%22200%22/%3E%3C/svg%3E'}" alt="${item.title}" style="width: 100%; border-radius: 6px; aspect-ratio: 1; object-fit: cover;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <p style="color: #64748b; font-size: 12px; font-weight: 600; letter-spacing: 0.3px;">DETAILS</p>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="color: #64748b; font-size: 13px;">Price</span>
+                <span style="color: #5b4bdb; font-weight: 600;">${item.price_stars} ⭐</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                <span style="color: #64748b; font-size: 13px;">Views</span>
+                <span style="color: #1a1a1a; font-weight: 600;">${item.views || 0}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-bottom: 12px;">
+                <span style="color: #64748b; font-size: 13px;">Sales</span>
+                <span style="color: #1a1a1a; font-weight: 600;">${item.sales_count || 0}</span>
+              </div>
+              <button onclick="AppManager.purchaseItem('${itemId}')" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #5b4bdb 0%, #3d2f91 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 8px;">
+                Purchase Now
+              </button>
+            </div>
+          </div>
+        `;
+        modal.classList.add('active');
+      };
+
+      const purchaseItem = async (itemId) => {
+        const item = state.marketplace.items.find(i => i.id === itemId);
+        if (!item) return;
+
+        const result = await api.purchaseItem(itemId);
+        if (result) {
+          AppManager.showSuccess(`Successfully purchased ${item.title}`);
+          document.getElementById('modalOverlay').classList.remove('active');
+          await loadMarketplaceData();
+          await loadDashboardData();
+        }
+      };
+
+      // ==================== WALLET & NFT OPERATIONS ====================
+      const handleCreateWallet = async () => {
+        const result = await api.createWallet();
+        if (result) {
+          AppManager.showSuccess('Wallet created successfully');
+          await loadWalletData();
+        }
+      };
+
+      const handleMintNFT = async () => {
+        const title = prompt('NFT Title:');
+        if (!title) return;
+        
+        const description = prompt('Description:');
+        const result = await api.mintNFT({ title, description, collection_id: null });
+        if (result) {
+          AppManager.showSuccess('NFT minted successfully');
+          await loadDashboardData();
+        }
+      };
+
+      // ==================== NAVIGATION ====================
+      const navigateTo = (page) => {
+        state.currentPage = page;
+        document.querySelectorAll('.section-container').forEach(el => {
+          el.style.display = el.id === `${page}Section` ? 'block' : 'none';
+        });
+        document.querySelectorAll('.nav-item').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.page === page);
+        });
+
+        // Load page-specific data
+        if (page === 'dashboard' && !state.dashboard.balance) {
+          loadDashboardData();
+        } else if (page === 'market' && state.marketplace.items.length === 0) {
+          loadMarketplaceData();
+        } else if (page === 'wallet' && !state.wallet.address) {
+          loadWalletData();
+        } else if (page === 'profile' && !state.profile.username) {
+          loadProfileData();
+        }
+      };
+
+      // ==================== UI UTILITIES ====================
+      const showError = (message) => {
+        console.error(message);
+        alert(`Error: ${message}`);
+      };
+
+      const showSuccess = (message) => {
+        console.log(message);
+        alert(message);
+      };
+
+      // ==================== EVENT LISTENERS ====================
+      const initEventListeners = () => {
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(btn => {
+          btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+        });
+
+        // Marketplace controls
+        document.getElementById('sortBtn')?.addEventListener('click', (e) => {
+          const menu = document.getElementById('sortMenu');
+          menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+          state.UI.sortMenuOpen = !state.UI.sortMenuOpen;
+        });
+
+        document.getElementById('filterBtn')?.addEventListener('click', () => {
+          document.getElementById('filterOverlay').classList.toggle('open');
+          state.UI.filterPanelOpen = !state.UI.filterPanelOpen;
+        });
+
+        document.querySelectorAll('.sort-option').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            state.sortMode = e.currentTarget.dataset.sort;
+            document.getElementById('sortMenu').style.display = 'none';
+            document.querySelectorAll('.sort-check').forEach(c => c.textContent = '');
+            document.getElementById(`check-${state.sortMode}`).textContent = '✓';
+            renderMarketplace();
+          });
+        });
+
+        document.getElementById('gridViewBtn')?.addEventListener('click', () => {
+          state.viewMode = 'grid';
+          document.getElementById('gridViewBtn').classList.add('active');
+          document.getElementById('listViewBtn').classList.remove('active');
+          renderMarketplace();
+        });
+
+        document.getElementById('listViewBtn')?.addEventListener('click', () => {
+          state.viewMode = 'list';
+          document.getElementById('listViewBtn').classList.add('active');
+          document.getElementById('gridViewBtn').classList.remove('active');
+          renderMarketplace();
+        });
+
+        // Filters
+        document.getElementById('filterApply')?.addEventListener('click', () => {
+          state.marketplace.filters.priceMin = document.getElementById('priceMin').value ? parseInt(document.getElementById('priceMin').value) : null;
+          state.marketplace.filters.priceMax = document.getElementById('priceMax').value ? parseInt(document.getElementById('priceMax').value) : null;
+          state.marketplace.filters.creators = Array.from(document.querySelectorAll('.creator-filter:checked')).map(el => el.value);
+          state.marketplace.filters.availability = Array.from(document.querySelectorAll('.filter-checkbox:checked')).map(el => el.value);
+          applyFilters();
+          renderMarketplace();
+          document.getElementById('filterOverlay').classList.remove('open');
+        });
+
+        document.getElementById('filterReset')?.addEventListener('click', () => {
+          document.getElementById('priceMin').value = '';
+          document.getElementById('priceMax').value = '';
+          document.querySelectorAll('.filter-checkbox').forEach(el => el.checked = false);
+          state.marketplace.filters = { priceMin: null, priceMax: null, creators: [], availability: [] };
+          applyFilters();
+          renderMarketplace();
+        });
+
+        document.getElementById('filterCloseBtn')?.addEventListener('click', () => {
+          document.getElementById('filterOverlay').classList.remove('open');
+        });
+
+        document.getElementById('modalClose')?.addEventListener('click', () => {
+          document.getElementById('modalOverlay').classList.remove('active');
+        });
+
+        // Quick actions
+        document.getElementById('browseBtn')?.addEventListener('click', () => navigateTo('market'));
+        document.getElementById('createWalletBtn')?.addEventListener('click', handleCreateWallet);
+        document.getElementById('mintNftBtn')?.addEventListener('click', handleMintNFT);
+        document.getElementById('depositBtn')?.addEventListener('click', () => {
+          alert('Deposit functionality - redirect to payment gateway');
+        });
+        document.getElementById('profileBtn')?.addEventListener('click', () => navigateTo('profile'));
+      };
+
+      // ==================== PUBLIC API ====================
+      return {
+        init: async () => {
+          await loadUserData();
+          await loadDashboardData();
+          initEventListeners();
+        },
+        navigateTo,
+        showItemDetails,
+        purchaseItem,
+        showError,
+        showSuccess,
+        getState: () => ({ ...state })
+      };
+    })();
+
+    // Initialize app on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      AppManager.init();
+    });
+
+    // Telegram WebApp initialization
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+      tg.enableClosingConfirmation();
+    }
+  </script>
+</body>
+</html>

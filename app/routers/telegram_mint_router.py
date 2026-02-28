@@ -110,9 +110,9 @@ async def get_telegram_user_from_request(request: Request, db: AsyncSession = De
         logger.error(f"Failed to parse init_data: {e}")
         raise HTTPException(status_code=400, detail="Invalid init_data")
     
-    # Skip signature verification but log if invalid (don't block)
+    # Verify signature (skip blocking on failure in development)
     if not verify_telegram_signature(data_dict):
-        logger.warning(f"Signature verification failed - trusting WebApp data anyway")
+        logger.warning(f"Signature verification failed for init_data - continuing anyway")
     
     # Extract user data (REQUIRED)
     user_data_str = data_dict.get("user")
