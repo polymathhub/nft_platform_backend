@@ -312,24 +312,25 @@
     /* NAVIGATION - PREMIUM ROUNDED */
     .nav-bottom {
       position: fixed;
-      bottom: 16px;
-      left: 16px;
-      right: 16px;
+      bottom: 0;
+      left: 0;
+      right: 0;
       height: auto;
       display: flex !important;
       visibility: visible !important;
       opacity: 1 !important;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: linear-gradient(180deg, #0f1622 0%, #1a1f3a 100%);
-      z-index: 1000;
-      padding: 16px;
-      padding-bottom: max(20px, calc(16px + env(safe-area-inset-bottom)));
-      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 48px;
-      margin: 0 auto;
+      justify-content: space-around;
+      gap: 0;
+      background: #1a1f3a;
+      z-index: 10000;
+      padding: 8px 0;
+      padding-bottom: max(8px, calc(env(safe-area-inset-bottom)));
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0;
+      margin: 0;
+      width: 100%;
     }
     
     .nav-item {
@@ -2687,38 +2688,55 @@
   <script src="svg-icons.js"></script>
   <script>
     // ============================================================
-    // TELEGRAM CONFIGURATION - FIX INITIALIZATION ORDER
+    // TELEGRAM CONFIGURATION - IMPROVED INITIALIZATION
     // ============================================================
     console.log('[Init] Starting application initialization...');
     
-    // Wait for Telegram WebApp to be available
+    // Global initialization state
     let telegramReady = false;
-    let retries = 0;
-    const maxRetries = 20; // 2 seconds with 100ms checks
+    let appInitialized = false;
+    let telegramDetectionComplete = false;
 
-    const waitForTelegram = setInterval(() => {
-      if (window.Telegram?.WebApp) {
-        clearInterval(waitForTelegram);
-        telegramReady = true;
-        console.log('[Telegram Init] WebApp detected');
-        try {
-          window.Telegram.WebApp.ready();
-          window.Telegram.WebApp.expand();
-          window.Telegram.WebApp.enableClosingConfirmation();
-          document.documentElement.style.overflow = 'hidden';
-          document.body.style.overflow = 'hidden';
-        } catch (e) {
-          console.warn('[Telegram Init] Error configuring:', e.message);
-        }
-      } else {
-        retries++;
-        if (retries >= maxRetries) {
-          clearInterval(waitForTelegram);
-          console.log('[Telegram Init] Not in Telegram environment, running in dev mode');
-          telegramReady = false;
-        }
-      }
-    }, 100);
+    // Wait for Telegram WebApp to be available (async, non-blocking)
+    function waitForTelegram() {
+      return new Promise((resolve) => {
+        let retries = 0;
+        const maxRetries = 30; // 3 seconds with 100ms checks
+        
+        const checkTelegram = setInterval(() => {
+          if (window.Telegram?.WebApp) {
+            clearInterval(checkTelegram);
+            telegramReady = true;
+            telegramDetectionComplete = true;
+            console.log('[Telegram] WebApp SDK detected');
+            try {
+              window.Telegram.WebApp.ready();
+              console.log('[Telegram] ready() called');
+              window.Telegram.WebApp.expand();
+              console.log('[Telegram] expand() called');
+              window.Telegram.WebApp.enableClosingConfirmation();
+              console.log('[Telegram] enableClosingConfirmation() called');
+            } catch (e) {
+              console.warn('[Telegram] Configuration error:', e.message);
+            }
+            resolve(true);
+          } else {
+            retries++;
+            if (retries >= maxRetries) {
+              clearInterval(checkTelegram);
+              telegramDetectionComplete = true;
+              console.log('[Telegram] Not in Telegram environment - dev mode');
+              resolve(false);
+            }
+          }
+        }, 100);
+      });
+    }
+    
+    // Start Telegram detection immediately (fire and forget)
+    waitForTelegram().then(ready => {
+      console.log('[Telegram] Detection complete:', ready);
+    });
 
     // ============================================================
     // GLOBAL STATE & UTILITIES
@@ -2760,55 +2778,84 @@
     function getTelegramInitData() {
       let data = null;
       
+      // Priority 1: Telegram WebApp SDK
       if (window.Telegram?.WebApp?.initData) {
         data = window.Telegram.WebApp.initData;
-        console.log('[Auth] Using Telegram.WebApp.initData');
-      } else {
+        console.log('[Auth] Using Telegram.WebApp.initData (', data.length, 'chars)');
+      } 
+      // Priority 2: localStorage cache
+      else if (typeof localStorage !== 'undefined') {
         data = localStorage.getItem('telegram_init_data');
         if (data) {
           console.log('[Auth] Using initData from localStorage');
         } else {
-          // Generate test init_data with proper structure for development
-          const testUserId = Math.random().toString(36).substr(2, 9);
+          // Priority 3: Generate test data for development
+          const testUserId = Math.floor(Math.random() * 99999);
           const testUser = {
-            id: Math.floor(Math.random() * 1000000000),
+            id: 100000000 + testUserId,
             is_bot: false,
             first_name: 'TestUser',
             username: 'testuser_' + testUserId
           };
           data = 'query_id=test&user=' + encodeURIComponent(JSON.stringify(testUser)) + '&auth_date=' + Math.floor(Date.now() / 1000) + '&hash=test';
-          console.log('[Auth] Using generated test initData (dev mode)');
-          localStorage.setItem('telegram_init_data', data);
+          console.log('[Auth] Generated test initData for dev mode');
+          try {
+            localStorage.setItem('telegram_init_data', data);
+          } catch (e) {
+            console.warn('[Auth] Could not save to localStorage:', e.message);
+          }
         }
+      }
+      // Fallback
+      else if (!data) {
+        console.error('[Auth] No secure storage available, using minimal test data');
+        data = 'query_id=test&user={"id":12345,"first_name":"User"}&auth_date=' + Math.floor(Date.now() / 1000) + '&hash=test';
       }
       
       return data || 'test_init_data';
     }
 
-    // API HTTP Client
+    // API HTTP Client with retry logic
     const API = {
-      call: async function(method, path, body = null) {
-        try {
-          const fullPath = '/web-app' + path;
-          console.log(`[API] ${method} ${fullPath}`, body || '');
-          
-          const res = await fetch(fullPath, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            ...(body && { body: JSON.stringify(body) })
-          });
-          
-          console.log(`[API Response] ${method} ${fullPath} - Status: ${res.status}`);
-          const text = await res.text();
-          
+      call: async function(method, path, body = null, retries = 2) {
+        const fullPath = '/web-app' + path;
+        
+        for (let attempt = 0; attempt <= retries; attempt++) {
           try {
-            return { ok: res.ok, status: res.status, data: JSON.parse(text) };
-          } catch(e) {
-            return { ok: res.ok, status: res.status, data: text };
+            console.log(`[API] ${method} ${fullPath} (attempt ${attempt + 1}/${retries + 1})`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+            
+            const res = await fetch(fullPath, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              ...(body && { body: JSON.stringify(body) }),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            console.log(`[API Response] ${method} ${fullPath} - Status: ${res.status}`);
+            
+            const text = await res.text();
+            
+            try {
+              const data = JSON.parse(text);
+              return { ok: res.ok, status: res.status, data };
+            } catch(e) {
+              return { ok: res.ok, status: res.status, data: { text } };
+            }
+          } catch (err) {
+            console.error(`[API Error] ${method} ${path} (attempt ${attempt + 1}):`, err.message);
+            
+            // If it's the last attempt, throw
+            if (attempt === retries) {
+              return { ok: false, status: 0, data: { error: err.message } };
+            }
+            
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 500));
           }
-        } catch (err) {
-          console.error(`[API Error] ${method} ${path}:`, err);
-          return { ok: false, status: 0, data: { error: err.message } };
         }
       }
     };
@@ -2888,49 +2935,75 @@
     // Application Initialization
     async function initApp() {
       try {
-        console.log('[App] Initializing...');
+        console.log('[App] Initializing Telegram Web App...');
+        
+        // Wait for Telegram detection to complete
+        let attempts = 0;
+        while (!telegramDetectionComplete && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        console.log('[App] Telegram detection complete, proceeding with auth');
+        
+        // Get init data
         initData = getTelegramInitData();
+        if (!initData) {
+          throw new Error('Failed to obtain init_data');
+        }
         console.log('[App] initData obtained:', initData.substring(0, 50) + '...');
         
+        // Call API with retry
         try {
-          const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData));
-          console.log('[App] Init response:', r);
+          const r = await API.call('GET', '/init?init_data=' + encodeURIComponent(initData), null, 3);
+          console.log('[App] Init response:', { ok: r.ok, status: r.status });
           
           if (r.ok && r.data && r.data.user) {
             user = r.data.user;
-            console.log('[App] User authenticated:', user);
+            console.log('[App] User authenticated:', { id: user.id, username: user.telegram_username });
             
-            // Display user info with real telegram username
+            // Display user info
             displayUserBadge(user);
             
-            // Load connected wallets
+            // Load wallets
             console.log('[App] Loading connected wallets...');
             const hasWallet = await loadConnectedWallets();
-            
             if (!hasWallet) {
-              console.log('[App] No wallet connected - user will need to connect one');
-              // Will show wallet connection prompt when accessing wallet-dependent features
-            } else {
-              console.log('[App] Wallet connected, loading dashboard...');
+              console.log('[App] No wallet connected - user needs to connect');
             }
             
-            showStatus('Welcome back ' + (user.telegram_username || user.first_name), 'success');
+            showStatus('Welcome ' + (user.telegram_username || user.first_name || 'User'), 'success');
             
-            // Hide auth prompt if visible
+            // Hide auth prompt
             const app = document.getElementById('app');
-            if (app && app.classList.contains('auth-prompt')) {
+            if (app?.classList.contains('auth-prompt')) {
               app.classList.remove('auth-prompt');
             }
           } else {
-            throw new Error(r.data?.detail || 'Authentication failed');
+            const detail = r.data?.detail || 'Unknown error';
+            throw new Error(detail);
           }
         } catch (apiError) {
-          console.error('[App] API Error:', apiError.message);
-          showStatus('Auth Error: ' + apiError.message, 'error');
+          console.error('[App] API error:', apiError.message);
+          // Show error but allow app to continue (might be dev mode)
+          showStatus('Auth error: ' + apiError.message, 'error');
+          
+          // In dev mode, create a test user
+          if (!user) {
+            console.log('[App] Creating test user for dev mode');
+            user = {
+              id: 'dev-user-' + Date.now(),
+              telegram_id: '123456789',
+              telegram_username: 'developer',
+              first_name: 'Test',
+              email: 'dev@test.com',
+              is_verified: true,
+              user_role: 'user'
+            };
+          }
         }
       } catch (err) {
-        console.error('[App] Fatal Error:', err);
-        showStatus('Fatal Error: ' + err.message, 'error');
+        console.error('[App] Fatal initialization error:', err);
+        showStatus('Fatal error: ' + err.message, 'error');
       }
     }
 
@@ -5426,29 +5499,39 @@
     function startAppInitialization() {
       console.log('[App] DOM ready, starting initialization...');
       
+      // Prevent double initialization
+      if (appInitialized) {
+        console.log('[App] Already initialized, skipping...');
+        return;
+      }
+      appInitialized = true;
+      
       // Ensure navbar is visible
       const navbar = document.querySelector('.nav-bottom');
       if (navbar) {
         navbar.style.display = 'flex';
         navbar.style.visibility = 'visible';
         navbar.style.opacity = '1';
+        navbar.style.position = 'fixed';
+        navbar.style.bottom = '0';
+        navbar.style.left = '0';
+        navbar.style.right = '0';
+        navbar.style.zIndex = '10000';
       }
+
+      // Adjust main content for navbar space
+      setTimeout(() => {
+        const main = document.querySelector('main');
+        if (main) {
+          main.style.paddingBottom = '80px';
+        }
+      }, 100);
 
       // Start app initialization
       appInit.initialize().catch(err => {
         console.error('[App Init] Initialization error:', err);
-        showStatus('Failed to initialize app', 'error');
+        showStatus('Failed to initialize app: ' + err.message, 'error');
       });
-
-      // Also retry initialization after a short delay to handle Telegram delays
-      setTimeout(() => {
-        if (!user) {
-          console.log('[App] Retrying initialization after delay...');
-          appInit.initialize().catch(err => {
-            console.error('[App Init] Retry failed:', err);
-          });
-        }
-      }, 1500);
     }
 
     // Start initialization when DOM is ready
@@ -5462,9 +5545,13 @@
     window.addEventListener('load', () => {
       console.log('[App] Window loaded');
       // Ensure navbar is still visible
+      if (appInitialized) return; // Don't re-run if already initialized
+      
       const navbar = document.querySelector('.nav-bottom');
       if (navbar) {
         navbar.style.display = 'flex';
+        navbar.style.visibility = 'visible';
+        navbar.style.opacity = '1';
       }
     });
   </script>
