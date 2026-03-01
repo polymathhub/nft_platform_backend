@@ -1,0 +1,18 @@
+/* design-overrides.css — subtle, professional polish */
+:root{
+  --ff-sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  --muted: #9aa4b2;
+  --card: rgba(255,255,255,0.02);
+}
+body{ font-family: var(--ff-sans); -webkit-font-smoothing:antialiased; }
+#app { background: linear-gradient(180deg, #0f1419 0%, #0b0f14 100%); }
+.header { background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom: 1px solid rgba(255,255,255,0.03); }
+.card, .balance-card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.04); }
+.btn-primary { box-shadow: 0 8px 24px rgba(124,111,249,0.12); }
+.nav-bottom { backdrop-filter: blur(8px); }
+.collection-card, .nft-card { transition: transform .18s ease, box-shadow .18s ease; }
+.collection-card:hover, .nft-card:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(11,12,20,0.6); }
+.header-brand-text { font-family: var(--ff-sans); letter-spacing: -0.2px; }
+
+/* better focus states */
+a:focus, button:focus, input:focus { outline: 3px solid rgba(124,111,249,0.14); outline-offset: 2px; }
