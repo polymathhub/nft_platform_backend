@@ -14,35 +14,73 @@ from app.schemas.wallet import (
     SetPrimaryWalletRequest,
 )
 from app.services.wallet_service import WalletService
+from app.services.auth_service import AuthService
 from app.models.wallet import BlockchainType
+from app.models import User
 from app.utils.security import verify_token
+from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/wallets", tags=["wallets"])
 
 
-async def get_current_user_id(authorization: str = None) -> UUID:
+async def get_current_user_id_from_header(authorization: str = None) -> UUID:
     """
-    Extract user ID from authorization header.
+    ✅ FIXED: Properly extract and verify user ID from JWT token.
     
-    Note: Full token verification should be implemented.
-    Currently accepts user_id via header for development.
+    This function:
+    1. Extracts JWT from Authorization header (Bearer scheme)
+    2. Decodes JWT using AuthService.verify_token()
+    3. Returns verified user_id UUID
+    4. Raises 401 if token is invalid or expired
+    
+    Note: This is for endpoints that don't use FastAPI dependency injection.
+    Prefer using Depends(get_current_user) for better type safety.
     """
     if not authorization or not authorization.startswith("Bearer "):
+        logger.warning("[Wallet Auth] Missing or invalid authorization header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid authorization header",
         )
-    token = authorization.replace("Bearer ", "")
-    try:
-        # TODO: Implement proper JWT token verification
-        # For now, accept token as user_id for development
-        return UUID(token)
-    except (ValueError, AttributeError) as e:
-        logger.warning(f"Invalid token format: {e}")
+    
+    token = authorization.replace("Bearer ", "").strip()
+    
+    if not token:
+        logger.warning("[Wallet Auth] Empty token provided")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Empty token",
+        )
+    
+    try:
+        # ✅ FIXED: Use proper JWT verification from AuthService
+        user_id = AuthService.verify_token(token)
+        
+        if not user_id:
+            logger.warning("[Wallet Auth] Token verification returned None")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token",
+            )
+        
+        # Convert to UUID
+        try:
+            return UUID(str(user_id))
+        except (ValueError, TypeError) as e:
+            logger.error(f"[Wallet Auth] Invalid user_id format: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Wallet Auth] Token verification error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token verification failed",
         )
 
 

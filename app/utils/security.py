@@ -85,14 +85,31 @@ def decode_token(
     secret_key: str,
     algorithm: str = "HS256",
 ) -> Optional[Dict[str, Any]]:
-    """Decode JWT - return None if invalid."""
+    """Decode JWT - return None if invalid or expired."""
     try:
-        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        # 🔴 SECURITY FIX: Explicitly verify expiration
+        # jwt.decode() validates exp by default, but be explicit for security
+        payload = jwt.decode(
+            token, 
+            secret_key, 
+            algorithms=[algorithm],
+            options={"verify_exp": True}  # Verify expiration claim
+        )
+        
         if not payload.get("sub"):
             return None
+        
+        # Additional safety: manually check expiration
+        exp = payload.get("exp")
+        if exp:
+            from datetime import datetime, timezone
+            if datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+                logger.debug("Token expired")
+                return None
+        
         return payload
-    except JWTError:
-        logger.debug("Invalid token")
+    except JWTError as e:
+        logger.debug(f"Invalid token: {e}")
         return None
 
 

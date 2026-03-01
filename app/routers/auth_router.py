@@ -85,7 +85,12 @@ async def telegram_login(
 ) -> dict:
     telegram_data = request.model_dump()
     if not verify_telegram_data(telegram_data):
-        logger.warning(f"Invalid Telegram login attempt - signature verification failed")
+        logger.warning(
+            f"[AUTH] Telegram login failed - signature verification failed | "
+            f"telegram_id={telegram_data.get('telegram_id')} | "
+            f"hash_present={bool(telegram_data.get('hash'))} | "
+            f"auth_date={telegram_data.get('auth_date')}"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Telegram data verification failed",

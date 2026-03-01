@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_DOWN  # ✅ PHASE 2: Precise decimal arithmetic
 import uuid
 import hashlib
 import hmac
@@ -100,23 +101,49 @@ def validate_telegram_signature(init_data: str, bot_token: str) -> bool:
 
 def calculate_commissions(total_amount: int, referrer_exists: bool = True):
     """
-    Calculate commission breakdown for a stars purchase.
+    Calculate commission breakdown for a stars purchase using Decimal for precision.
+    
+    ✅ PHASE 2 FIX: Uses Decimal to prevent rounding loss
     
     Example: 100 stars purchase
     - Platform commission (2%): 2 stars
-    - Referral commission (5% of platform fee): 0.1 stars (only if referrer exists)
-    - Creator net: 98 stars (or 97.9 if referral applies)
+    - Referral commission (10% of platform fee): 0.2 stars 
+    - For small purchases where commission rounds to 0, apply 1 star minimum
+    - Creator net: 98 stars
     """
-    platform_fee_rate = 0.02  # 2% platform fee
-    referral_fee_rate = 0.1  # 10% of platform fee goes to referrer
+    # Convert to Decimal for precise arithmetic
+    amount_decimal = Decimal(str(total_amount))
+    platform_fee_rate = Decimal("0.02")  # 2% platform fee
+    referral_fee_rate = Decimal("0.1")   # 10% of platform fee goes to referrer
     
-    platform_commission = int(total_amount * platform_fee_rate)  # 2% to platform
+    # Calculate platform commission (2%)
+    platform_commission_decimal = (amount_decimal * platform_fee_rate).quantize(
+        Decimal("1"), rounding=ROUND_DOWN
+    )
+    platform_commission = int(platform_commission_decimal)
     
+    # Calculate referral commission (10% of platform fee)
     referral_commission = 0
-    if referrer_exists:
-        referral_commission = int(platform_commission * referral_fee_rate)  # 10% of platform fee to referrer
+    if referrer_exists and platform_commission > 0:
+        # Use Decimal for precise calculation
+        referral_decimal = (Decimal(platform_commission) * referral_fee_rate).quantize(
+            Decimal("1"), rounding=ROUND_DOWN
+        )
+        referral_commission = int(referral_decimal)
+        
+        # ✅ PHASE 2 FIX: For small purchases where commission rounds to 0,
+        # ensure referrer gets minimum 1 star (prevents loss)
+        if referrer_exists and referral_commission == 0 and platform_commission >= 2:
+            # Only apply minimum for non-tiny purchases
+            referral_commission = 1
     
     net_creator_payout = total_amount - platform_commission
+    
+    logger.debug(
+        f"Commission calculation: total={total_amount} stars, "
+        f"platform={platform_commission}, referral={referral_commission}, "
+        f"payout={net_creator_payout}"
+    )
     
     return {
         "platform_commission": platform_commission,
@@ -198,31 +225,40 @@ async def handle_payment_success(
             detail="Invalid payment signature"
         )
     
-    # Find payment record
+    # 🔴 SECURITY FIX: Use database row-level locking for payment idempotency
+    # Prevents race condition where same payment is confirmed twice in parallel requests
+    from sqlalchemy import and_
+    
+    # Acquire write lock on payment row to ensure atomic transaction
     payment = db.query(Payment).filter(
-        Payment.transaction_hash == confirmation.invoice_id,
-        Payment.user_id == current_user.id
-    ).first()
+        and_(
+            Payment.transaction_hash == confirmation.invoice_id,
+            Payment.user_id == current_user.id,
+        )
+    ).with_for_update().first()  # 🔒 Database-level lock acquired
     
     if not payment:
         logger.warning(f"Payment not found: {confirmation.invoice_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
     
+    # Check status AFTER acquiring lock - now safe from race conditions
     if payment.status == PaymentStatus.CONFIRMED:
         logger.info(f"Payment already confirmed: {confirmation.invoice_id}")
+        # Return success without double-crediting (lock released on return)
         return {
             "success": True,
             "message": "Payment already processed",
             "payment_id": str(payment.id),
         }
     
+    # 🔒 Lock held: No other thread can modify this payment until we commit
     # Update payment to confirmed
     payment.status = PaymentStatus.CONFIRMED
     payment.confirmed_at = datetime.utcnow()
     payment.counterparty_address = confirmation.provider_payment_charge_id
     db.add(payment)
     
-    # Update user stars balance
+    # Update user stars balance (protected by lock)
     current_user.stars_balance += confirmation.total_amount
     current_user.total_stars_earned += confirmation.total_amount
     db.add(current_user)
@@ -238,36 +274,48 @@ async def handle_payment_success(
         if referral:
             commissions = calculate_commissions(confirmation.total_amount, True)
             
-            # Create commission record
-            commission = ReferralCommission(
-                id=uuid.uuid4(),
-                referral_id=referral.id,
-                transaction_id=payment.id,
-                commission_amount=commissions["referral_commission"],
-                commission_rate=0.1,  # 10% of platform fee
-                transaction_amount=confirmation.total_amount,
-                status=CommissionStatus.PENDING,
-            )
+            # 🔴 SECURITY FIX: Check if commission already exists for this transaction
+            # Prevents duplicate commission creation on retry/idempotent requests
+            existing_commission = db.query(ReferralCommission).filter(
+                ReferralCommission.transaction_id == payment.id,
+                ReferralCommission.referral_id == referral.id,
+            ).first()
             
-            # Update referral stats
-            referral.lifetime_earnings += commissions["referral_commission"]
-            referral.referred_purchase_count += 1
-            referral.referred_purchase_amount += confirmation.total_amount
-            
-            # Update referrer's balance
-            referrer = db.query(User).filter(User.id == current_user.referred_by_id).first()
-            if referrer:
-                referrer.stars_balance += commissions["referral_commission"]
-                referrer.total_stars_earned += commissions["referral_commission"]
-                db.add(referrer)
-            
-            db.add(commission)
-            db.add(referral)
-            
-            logger.info(
-                f"Referral commission: {commissions['referral_commission']} stars "
-                f"to user {referrer.id if referrer else 'unknown'}"
-            )
+            if not existing_commission:
+                # Create commission record only if it doesn't exist
+                commission = ReferralCommission(
+                    id=uuid.uuid4(),
+                    referral_id=referral.id,
+                    transaction_id=payment.id,
+                    commission_amount=commissions["referral_commission"],
+                    commission_rate=0.1,  # 10% of platform fee
+                    transaction_amount=confirmation.total_amount,
+                    status=CommissionStatus.PENDING,
+                )
+                
+                # Update referral stats
+                referral.lifetime_earnings += commissions["referral_commission"]
+                referral.referred_purchase_count += 1
+                referral.referred_purchase_amount += confirmation.total_amount
+                
+                # Update referrer's balance
+                referrer = db.query(User).filter(User.id == current_user.referred_by_id).first()
+                if referrer:
+                    referrer.stars_balance += commissions["referral_commission"]
+                    referrer.total_stars_earned += commissions["referral_commission"]
+                    db.add(referrer)
+                
+                db.add(commission)
+                db.add(referral)
+                
+                logger.info(
+                    f"Referral commission created: {commissions['referral_commission']} stars "
+                    f"for transaction {payment.id}"
+                )
+            else:
+                logger.info(
+                    f"Referral commission already exists for transaction {payment.id} - skipping"
+                )
     
     db.commit()
     

@@ -63,7 +63,7 @@ async def transfer_nft(
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
 
-    if str(nft.user_id) != str(current_user.id):
+    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
 
     transferred, error = await NFTService.transfer_nft(
@@ -86,7 +86,7 @@ async def burn_nft(
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-    if str(nft.user_id) != str(current_user.id):
+    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
 
     burned, error = await NFTService.burn_nft(db=db, nft_id=nft_id, transaction_hash="")
@@ -106,7 +106,7 @@ async def lock_nft(
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-    if str(nft.user_id) != str(current_user.id):
+    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
 
     locked, error = await NFTService.lock_nft(
@@ -131,7 +131,7 @@ async def unlock_nft(
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-    if str(nft.user_id) != str(current_user.id):
+    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
 
     unlocked, error = await NFTService.unlock_nft(db=db, nft_id=nft_id)

@@ -329,53 +329,56 @@
       border-radius: 2px;
     }
     
-    /* NAVIGATION - PREMIUM ROUNDED */
+    /* NAVIGATION - MOBILE-FIRST PILL SHAPE */
     .nav-bottom {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
       height: auto;
       display: flex !important;
       visibility: visible !important;
       opacity: 1 !important;
       align-items: center;
-      justify-content: space-around;
-      gap: 0;
-      background: #1a1f3a;
+      justify-content: space-between;
+      gap: 6px;
+      background: rgba(26, 31, 58, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       z-index: 10000;
-      padding: 6px 8px;
-      padding-bottom: max(6px, calc(env(safe-area-inset-bottom)));
-      box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.2);
-      border-top: 1px solid rgba(255, 255, 255, 0.04);
-      border-radius: 0;
+      padding: 10px 12px;
+      padding-bottom: max(10px, calc(env(safe-area-inset-bottom) + 8px));
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border-radius: 20px;
       margin: 0;
-      width: 100%;
-      min-height: 48px;
+      width: auto;
+      min-height: 56px;
+      max-width: calc(100% - 16px);
     }
     
     .nav-item {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      padding: 8px 12px;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 10px;
+      gap: 5px;
+      padding: 8px 14px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
       font-weight: 600;
       text-align: center;
-      transition: color 150ms ease;
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       background: transparent;
       border: none;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.4px;
       white-space: nowrap;
-      flex-shrink: 0;
+      flex-shrink: 1;
       position: relative;
       text-transform: uppercase;
-      border-radius: 6px;
-      flex: 1;
-      max-width: 80px;
+      border-radius: 12px;
+      flex: 0 1 auto;
+      min-width: 48px;
+      min-height: 40px;
     }
 
     .nav-item::before {
@@ -423,13 +426,14 @@
     }
     
     .nav-item.active {
-      background: rgba(255, 255, 255, 0.08);
-      color: rgba(255, 255, 255, 0.95);
-      border-radius: 6px;
-      padding: 8px 12px;
-      box-shadow: none;
-      font-weight: 600;
-      letter-spacing: 0.3px;
+      background: rgba(124, 111, 249, 0.2);
+      color: rgba(255, 255, 255, 0.98);
+      border-radius: 12px;
+      padding: 8px 14px;
+      box-shadow: 0 0 12px rgba(124, 111, 249, 0.15);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      border: 1px solid rgba(124, 111, 249, 0.3);
     }
 
     .nav-item.active::after {
@@ -447,11 +451,13 @@
     }
 
     .nav-label {
-      display: none;
+      display: inline;
+      font-size: 10px;
     }
 
     .nav-item.active .nav-label {
       display: inline;
+      font-size: 11px;
     }
     
     /* WELCOME SECTION */
@@ -1788,9 +1794,7 @@
     }
   </style>
   <!-- Production Integration Layer -->
-  <script src="api-service.js"></script>
-  <script src="app-state.js"></script>
-  <script src="ui-utils.js"></script>
+  <script src="app.js"></script>
   <script src="modal-forms.js"></script>
   <style>
     /* MODAL & FORM STYLING */
@@ -2622,7 +2626,7 @@
               overflow: hidden;
               cursor: pointer;
               transition: all 0.2s;
-            " onclick="window.viewCollectionDetails('art', 'Art & Design', 1240, 'rgba(91,75,219,0.1)', 'var(--primary)')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
+            " onclick="window.app.viewCollectionDetails(window.homeCollections && window.homeCollections[0] ? window.homeCollections[0].id : 'art')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
               <div style="
                 height: 100px;
                 background: linear-gradient(135deg, rgba(91,75,219,0.1), rgba(217,70,166,0.1));
@@ -2669,7 +2673,7 @@
               overflow: hidden;
               cursor: pointer;
               transition: all 0.2s;
-            " onclick="window.viewCollectionDetails('gaming', 'Gaming Items', 856, 'rgba(16,185,129,0.1)', 'rgba(16,185,129)')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
+            " onclick="window.app.viewCollectionDetails(window.homeCollections && window.homeCollections[1] ? window.homeCollections[1].id : 'gaming')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
               <div style="
                 height: 100px;
                 background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1));
@@ -2716,7 +2720,7 @@
               overflow: hidden;
               cursor: pointer;
               transition: all 0.2s;
-            " onclick="window.viewCollectionDetails('music', 'Music & Audio', 523, 'rgba(245,158,11,0.1)', 'rgba(245,158,11)')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
+            " onclick="window.app.viewCollectionDetails(window.homeCollections && window.homeCollections[2] ? window.homeCollections[2].id : 'music')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
               <div style="
                 height: 100px;
                 background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,70,166,0.1));
@@ -2763,7 +2767,7 @@
               overflow: hidden;
               cursor: pointer;
               transition: all 0.2s;
-            " onclick="window.viewCollectionDetails('collectibles', 'Collectibles', 2105, 'rgba(239,68,68,0.1)', 'rgba(239,68,68)')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
+            " onclick="window.app.viewCollectionDetails(window.homeCollections && window.homeCollections[3] ? window.homeCollections[3].id : 'collectibles')" onmouseover="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.1)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.boxShadow=''">
               <div style="
                 height: 100px;
                 background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(91,75,219,0.1));
@@ -3103,6 +3107,8 @@
   
   <script src="svg-icons.js"></script>
   <script>
+    /* eslint-disable */
+    /* jshint ignore: start */
     // ============================================================
     // TELEGRAM CONFIGURATION - IMPROVED INITIALIZATION
     // ============================================================
@@ -3194,17 +3200,24 @@
     // Parse and extract Telegram credentials from initData
     function parseTelegramInitData() {
       let initDataStr = null;
+      let isProduction = true; // Track if we have real Telegram data
       
-      // Priority 1: Telegram WebApp SDK
+      // Priority 1: Telegram WebApp SDK (REAL DATA)
       if (window.Telegram?.WebApp?.initData) {
         initDataStr = window.Telegram.WebApp.initData;
-        console.log('[Auth] Using Telegram.WebApp.initData (', initDataStr.length, 'chars)');
+        if (initDataStr.trim().length > 0) {
+          isProduction = true;
+          console.log('[Auth] ✓ Using REAL Telegram.WebApp.initData');
+        } else {
+          console.warn('[Auth] ⚠ Telegram SDK present but initData is empty');
+          initDataStr = null;
+        }
       } 
-      // Priority 2: localStorage cache
+      // Priority 2: localStorage cache (from previous session)
       else if (typeof localStorage !== 'undefined') {
         initDataStr = localStorage.getItem('telegram_init_data');
         if (initDataStr) {
-          console.log('[Auth] Using initData from localStorage');
+          console.log('[Auth] Using cached initData from localStorage');
         }
       }
       
@@ -3215,17 +3228,24 @@
         first_name: null,
         last_name: null,
         auth_date: null,
-        hash: null
+        hash: null,
+        is_production: isProduction
       };
       
       if (initDataStr) {
         try {
           const params = new URLSearchParams(initDataStr);
           
-          // Get string params
+          // Get string params - ONLY from Telegram, never defaults
           telegramData.query_id = params.get('query_id');
           telegramData.auth_date = parseInt(params.get('auth_date')) || Math.floor(Date.now() / 1000);
-          telegramData.hash = params.get('hash') || 'test_hash';
+          telegramData.hash = params.get('hash');
+          
+          // CRITICAL: hash MUST exist for Telegram verification
+          if (!telegramData.hash) {
+            console.error('[Auth] ❌ SECURITY: Telegram hash is missing!');  
+            throw new Error('Missing Telegram hash - potential security issue');
+          }
           
           // Parse user JSON
           const userStr = params.get('user');
@@ -3249,27 +3269,15 @@
         }
       }
       
-      // Development/test fallback
-      if (!telegramData.telegram_id) {
-        console.log('[Auth] Using dev test data');
-        const testUserId = Math.floor(Math.random() * 99999);
-        telegramData = {
-          telegram_id: 100000000 + testUserId,
-          telegram_username: `testuser_${testUserId}`,
-          first_name: 'Test',
-          last_name: 'User',
-          auth_date: Math.floor(Date.now() / 1000),
-          hash: 'test_hash',
-          query_id: 'test'
-        };
-        
-        // Try to cache it
-        try {
-          const initDataStr = new URLSearchParams(telegramData).toString();
-          localStorage.setItem('telegram_init_data', initDataStr);
-        } catch (e) {
-          console.warn('[Auth] Could not cache test data:', e.message);
-        }
+      // NO TEST FALLBACK IN PRODUCTION
+      // Telegram authentication MUST have valid data AND hash signature
+      if (!telegramData.telegram_id || !telegramData.hash) {
+        console.error('[Auth] SECURITY: Invalid Telegram authentication attempt');
+        console.error('[Auth] Missing required fields:', {
+          has_telegram_id: !!telegramData.telegram_id,
+          has_hash: !!telegramData.hash
+        });
+        telegramData.auth_failed = true;
       }
       
       return telegramData;
@@ -3299,7 +3307,11 @@
       },
       
       call: async function(method, path, body = null, retries = 2) {
-        const fullPath = '/web-app' + path;
+        // Determine if this is an API call or static resource
+        // API routes: /api/v1*, /payments*, /referrals*, /wallets*
+        // Static: everything else (js, css, images, etc.)
+        const isApiCall = /^\/api\/v1\/|^\/payments|^\/referrals|^\/wallets/.test(path);
+        const fullPath = isApiCall ? path : '/web-app' + path;
         
         for (let attempt = 0; attempt <= retries; attempt++) {
           try {
@@ -3710,8 +3722,7 @@
               gap: 12px;
             " onmouseover="this.style.background='#2d3544'; this.style.borderColor='#7c6ff9'; this.style.boxShadow='0 4px 12px rgba(124,111,249,0.2)'" onmouseout="this.style.background='#232d3a'; this.style.borderColor='#2d3544'; this.style.boxShadow='none'">
               <svg viewBox="0 0 24 24" style="width: 32px; height: 32px; flex-shrink: 0;" fill="#0088cc">
-                <circle cx="12" cy="12" r="10"/>
-                <text x="12" y="14" text-anchor="middle" font-size="16" fill="white" font-weight="bold">✈</text>
+                <path d="M20.898 2.009L2.341 10.519c-1.271.557-.126 1.294.686 1.62l4.383 1.437 1.823 5.783c.201.563.654.85 1.28.85.478 0 .968-.24 1.231-.692l2.743-4.265 4.368 2.971c.798.524 1.499.047 1.717-.783l3.12-14.697c.242-.896-.37-1.488-1.253-1.226zm-3.387 11.841l-5.368-3.91 7.589-5.047-2.221 8.957z"/>
               </svg>
               <div style="text-align: left; flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #f5f7fa; font-size: 13px;">Telegram</div>
@@ -3739,9 +3750,7 @@
               justify-content: flex-start;
               gap: 12px;
             " onmouseover="this.style.background='#2d3544'; this.style.borderColor='#7c6ff9'; this.style.boxShadow='0 4px 12px rgba(124,111,249,0.2)'" onmouseout="this.style.background='#232d3a'; this.style.borderColor='#2d3544'; this.style.boxShadow='none'">
-              <svg viewBox="0 0 24 24" style="width: 32px; height: 32px; flex-shrink: 0;" fill="#9945FF">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.5 9.5l6-3v5.5l-6 3v-5.5zm6 7v-5.5l6-3v5.5l-6 3z"/>
-              </svg>
+              <img src="https://image2url.com/r2/default/images/1772351339281-58f80090-73d1-49bb-baff-11997789f302.png" alt="Solana" style="width: 32px; height: 32px; flex-shrink: 0; object-fit: contain;">
               <div style="text-align: left; flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #f5f7fa; font-size: 13px;">Solana</div>
                 <div style="font-size: 11px; color: #a0aec0;">Fast & low cost</div>
@@ -3768,9 +3777,7 @@
               justify-content: flex-start;
               gap: 12px;
             " onmouseover="this.style.background='#2d3544'; this.style.borderColor='#7c6ff9'; this.style.boxShadow='0 4px 12px rgba(124,111,249,0.2)'" onmouseout="this.style.background='#232d3a'; this.style.borderColor='#2d3544'; this.style.boxShadow='none'">
-              <svg viewBox="0 0 24 24" style="width: 32px; height: 32px; flex-shrink: 0;" fill="#0098ea">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-              </svg>
+              <img src="https://image2url.com/r2/default/images/1772351267000-0e208fc3-de2b-476d-8b52-9f9920fef7f3.png" alt="TON" style="width: 32px; height: 32px; flex-shrink: 0; object-fit: contain;">
               <div style="text-align: left; flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #f5f7fa; font-size: 13px;">TON</div>
                 <div style="font-size: 11px; color: #a0aec0;">Telegram blockchain</div>
@@ -3797,10 +3804,7 @@
               justify-content: flex-start;
               gap: 12px;
             " onmouseover="this.style.background='#2d3544'; this.style.borderColor='#7c6ff9'; this.style.boxShadow='0 4px 12px rgba(124,111,249,0.2)'" onmouseout="this.style.background='#232d3a'; this.style.borderColor='#2d3544'; this.style.boxShadow='none'">
-              <svg viewBox="0 0 24 24" style="width: 32px; height: 32px; flex-shrink: 0;" fill="#627eea">
-                <path d="M12 2L3 7v10c0 7 9 11 9 11s9-4 9-11V7l-9-5z"/>
-                <text x="12" y="15" text-anchor="middle" font-size="8" fill="white" font-weight="bold">Ξ</text>
-              </svg>
+              <img src="https://image2url.com/r2/default/images/1772351397363-8292de98-28df-465f-90fc-ded19ef40993.png" alt="Ethereum" style="width: 32px; height: 32px; flex-shrink: 0; object-fit: contain;">
               <div style="text-align: left; flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #f5f7fa; font-size: 13px;">Ethereum</div>
                 <div style="font-size: 11px; color: #a0aec0;">Most popular</div>
@@ -3820,15 +3824,7 @@
             border: 1px solid #e2e8f0;
             text-align: center;
           ">
-            <p style="
-              margin: 0;
-              font-size: 12px;
-              color: #64748b;
-              line-height: 1.6;
-            ">🔒 Your wallet is never stored on our servers. You control your assets.</p>
-          </div>
-        </div>
-      `;
+        
 
       app.parentElement.insertBefore(walletPage, app);
     }
@@ -3840,7 +3836,7 @@
       }
 
       try {
-        showStatus(`Initiating ${blockchain} wallet connection...`, 'info');
+        showStatus('Initiating ' + blockchain + ' wallet connection...', 'info');
         console.log('[WalletConnect] Initiating connection for blockchain:', blockchain);
 
         // Call backend to initiate WalletConnect
@@ -3867,80 +3863,8 @@
 
     function showWalletConnectQR(uri, blockchain, sessionId) {
       const modal = document.getElementById('modal');
-      
       if (!modal) return;
-
-      modal.innerHTML = `
-        <div class="wallet-qr-modal" style="
-          position: relative;
-          background: #232d3a;
-          border-radius: 20px;
-          padding: 40px 30px;
-          max-width: 420px;
-          width: 100%;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-          text-align: center;
-          animation: slideUp 0.3s ease-out;
-        ">
-          <h3 style="
-            margin: 0 0 24px 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text);
-          ">Scan QR Code</h3>
-
-          <div style="
-            background: #1a2332;
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 280px;
-          ">
-            <div style="
-              width: 256px;
-              height: 256px;
-              background: #f5f7fa;
-              border-radius: 12px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 12px;
-              color: #999;
-              text-align: center;
-              padding: 12px;
-            ">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(uri)}" alt="WalletConnect QR" style="max-width: 100%; max-height: 100%;">
-            </div>
-          </div>
-
-          <p style="
-            margin: 0 0 24px 0;
-            color: var(--text-secondary);
-            font-size: 14px;
-          ">Scan this QR code with your ${blockchain} wallet app to complete the connection</p>
-
-          <button onclick="document.getElementById('modalOverlay').style.display='none'" style="
-            width: 100%;
-            padding: 12px 16px;
-            background: #1a2332;
-            color: var(--text);
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-          ">Close</button>
-
-          <p style="
-            margin: 20px 0 0 0;
-            font-size: 12px;
-            color: var(--text-muted);
-          ">Session ID: ${sessionId.substring(0, 8)}...</p>
-        </div>
-      `;
+      modal.innerHTML = '<div class="wallet-qr-modal" style="position: relative; background: #232d3a; border-radius: 20px; padding: 40px 30px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.15); text-align: center; animation: slideUp 0.3s ease-out;"><h3 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 700; color: var(--text);">Scan QR Code</h3><div style="background: #1a2332; padding: 24px; border-radius: 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; min-height: 280px;"><div style="width: 256px; height: 256px; background: #f5f7fa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #999; text-align: center; padding: 12px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(uri) + '" alt="WalletConnect QR" style="max-width: 100%; max-height: 100%;"></div></div><p style="margin: 0 0 24px 0; color: var(--text-secondary); font-size: 14px;">Scan this QR code with your ' + blockchain + ' wallet app to complete the connection</p><button onclick="document.getElementById(\'modalOverlay\').style.display=\'none\'" style="width: 100%; padding: 12px 16px; background: #1a2332; color: var(--text); border: none; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer;">Close</button><p style="margin: 20px 0 0 0; font-size: 12px; color: var(--text-muted);">Session ID: ' + sessionId.substring(0, 8) + '...</p></div>';
     }
 
     // Check if user requires wallet connection for page access
@@ -4197,39 +4121,9 @@
           if (walletStatusEl) {
             if (WalletManager.isConnected()) {
               const connectedWallet = WalletManager.getConnected();
-              walletStatusEl.innerHTML = `
-                <div style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  padding: 8px 12px;
-                  background: linear-gradient(135deg, rgba(52,211,153,0.1), rgba(52,211,153,0.05));
-                  border: 1px solid rgba(52,211,153,0.2);
-                  border-radius: 8px;
-                  font-size: 12px;
-                  color: var(--success);
-                  font-weight: 600;
-                ">
-                  <span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span>
-                  ${connectedWallet.blockchain ? connectedWallet.blockchain.toUpperCase() : 'Wallet'} Connected
-                </div>
-              `;
+              walletStatusEl.innerHTML = '<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: linear-gradient(135deg, rgba(52,211,153,0.1), rgba(52,211,153,0.05)); border: 1px solid rgba(52,211,153,0.2); border-radius: 8px; font-size: 12px; color: var(--success); font-weight: 600;"><span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span>' + (connectedWallet.blockchain ? connectedWallet.blockchain.toUpperCase() : 'Wallet') + ' Connected</div>';
             } else {
-              walletStatusEl.innerHTML = `
-                <button onclick="showWalletConnectModal()" style="
-                  padding: 8px 12px;
-                  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-                  color: white;
-                  border: none;
-                  border-radius: 8px;
-                  font-size: 12px;
-                  font-weight: 600;
-                  cursor: pointer;
-                  transition: all 0.3s;
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(91,75,219,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow=''">
-                  🔗 Connect Wallet
-                </button>
-              `;
+              walletStatusEl.innerHTML = '<button onclick="showWalletConnectModal()" style="padding: 8px 12px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 12px rgba(91,75,219,0.3)\'" onmouseout="this.style.transform=\'none\'; this.style.boxShadow=\'\'">🔗 Connect Wallet</button>';
             }
           }
 
@@ -4273,7 +4167,7 @@
         if (walletStatus) {
           if (WalletManager.isConnected()) {
             const wallet = WalletManager.getConnected();
-            walletStatus.textContent = `${wallet.blockchain ? wallet.blockchain.toUpperCase() : 'Wallet'} Connected`;
+            walletStatus.textContent = (wallet.blockchain ? wallet.blockchain.toUpperCase() : 'Wallet') + ' Connected';
           } else {
             walletStatus.textContent = 'No wallet connected';
           }
@@ -4311,69 +4205,12 @@
       updateCollectionsUI() {
         const nfts = this.state.userNFTs || [];
         const collectionGrid = document.getElementById('collectionGrid');
-
         if (!collectionGrid) return;
-
         if (nfts.length === 0) {
-          collectionGrid.innerHTML = `
-            <div style="
-              text-align: center;
-              padding: 40px 20px;
-              background: var(--bg-card);
-              border: 1px dashed var(--border-color);
-              border-radius: 12px;
-              color: var(--text-muted);
-              grid-column: 1 / -1;
-            ">
-              <p style="margin: 0; font-size: 12px;">No NFTs yet</p>
-            </div>
-          `;
+          collectionGrid.innerHTML = '<div style="text-align: center; padding: 40px 20px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-muted); grid-column: 1 / -1;"><p style="margin: 0; font-size: 12px;">No NFTs yet</p></div>';
           return;
         }
-
-        // Show all NFTs in a compact grid layout
-        collectionGrid.innerHTML = nfts
-          .slice(0, 20)
-          .map((nft) => `
-            <div style="
-              background: var(--bg-card);
-              border: 1px solid var(--border-color);
-              border-radius: 8px;
-              overflow: hidden;
-              transition: all 0.2s;
-              display: flex;
-              flex-direction: column;
-            " onmouseover="this.style.boxShadow='0 2px 8px rgba(91,75,219,0.2)'; this.style.transform='scale(1.05)'" onmouseout="this.style.boxShadow=''; this.style.transform='scale(1)'">
-              <div style="
-                background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-                height: 90px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-                flex-shrink: 0;
-              ">
-                ${nft.image_url ? `<img src="${nft.image_url}" alt="${nft.name}" style="width: 100%; height: 100%; object-fit: cover;">` : '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%; background: linear-gradient(135deg, #2d3544, #1a2332);"><rect x="20" y="20" width="60" height="60" fill="none" stroke="#7c6ff9" stroke-width="2"/><circle cx="50" cy="35" r="8" fill="#7c6ff9" opacity="0.6"/><path d="M20 70 L40 50 L60 65 L80 45 L80 80 L20 80" fill="#7c6ff9" opacity="0.4"/><text x="50" y="90" font-size="8" text-anchor="middle" fill="#a0aec0">NFT</text></svg>'}
-              </div>
-              <div style="padding: 6px 8px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                <p style="margin: 0; font-size: 10px; font-weight: 700; color: var(--text); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${nft.name || 'NFT'}</p>
-                <button onclick="if(window.appInitializer) window.appInitializer.viewNFTDetail('${nft.id || ''}')" style="
-                  width: 100%;
-                  margin-top: 4px;
-                  padding: 4px 6px;
-                  background: var(--primary);
-                  color: white;
-                  border: none;
-                  border-radius: 4px;
-                  font-size: 9px;
-                  font-weight: 600;
-                  cursor: pointer;
-                  transition: all 0.2s;
-                " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">View</button>
-              </div>
-            </div>
-          `)
-          .join('');
+        collectionGrid.innerHTML = nfts.slice(0, 20).map((nft) => '<div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; transition: all 0.2s; display: flex; flex-direction: column;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(91,75,219,0.2)\'; this.style.transform=\'scale(1.05)\'" onmouseout="this.style.boxShadow=\'\'; this.style.transform=\'scale(1)\'"><div style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); height: 90px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">' + (nft.image_url ? '<img src="' + nft.image_url + '" alt="' + nft.name + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%; background: linear-gradient(135deg, #2d3544, #1a2332);"><rect x="20" y="20" width="60" height="60" fill="none" stroke="#7c6ff9" stroke-width="2"/><circle cx="50" cy="35" r="8" fill="#7c6ff9" opacity="0.6"/><path d="M20 70 L40 50 L60 65 L80 45 L80 80 L20 80" fill="#7c6ff9" opacity="0.4"/><text x="50" y="90" font-size="8" text-anchor="middle" fill="#a0aec0">NFT</text></svg>') + '</div><div style="padding: 6px 8px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;"><p style="margin: 0; font-size: 10px; font-weight: 700; color: var(--text); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">' + (nft.name || 'NFT') + '</p><button onclick="if(window.appInitializer) window.appInitializer.viewNFTDetail(\'' + (nft.id || '') + '\')" style="width: 100%; margin-top: 4px; padding: 4px 6px; background: var(--primary); color: white; border: none; border-radius: 4px; font-size: 9px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">View</button></div></div>').join('');
       }
 
       updateActivityFeed() {
@@ -4381,25 +4218,14 @@
         if (!activityContainer) return;
 
         if (!user || !user.id) {
-          activityContainer.innerHTML = `
-            <div style="
-              text-align: center;
-              padding: 40px 20px;
-              background: var(--bg-card);
-              border: 1px dashed var(--border-color);
-              border-radius: 12px;
-              color: var(--text-muted);
-            ">
-              <p style="margin: 0; font-size: 12px;">Loading activity...</p>
-            </div>
-          `;
+          activityContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-muted);"><p style="margin: 0; font-size: 12px;">Loading activity...</p></div>';
           return;
         }
 
         // Fetch real transaction activity data
         Promise.all([
-          API.call('GET', '/dashboard-data?user_id=' + encodeURIComponent(user.id) + '&init_data=' + encodeURIComponent(initData)),
-          API.call('GET', '/referrals/me?init_data=' + encodeURIComponent(initData))
+          API.call('GET', '/api/v1/dashboard/stats'),
+          API.call('GET', '/api/v1/referrals/me')
         ])
           .then(([dashRes, refRes]) => {
             let html = '';
@@ -4407,26 +4233,7 @@
             // Add referral earnings widget
             if (refRes.ok && refRes.data) {
               const ref = refRes.data;
-              html += `
-                <div style="
-                  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-                  border-radius: 12px;
-                  padding: 16px;
-                  color: white;
-                  margin-bottom: 16px;
-                ">
-                  <div style="display: flex; gap: 16px;">
-                    <div style="flex: 1;">
-                      <p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referral Earnings</p>
-                      <p style="margin: 0; font-size: 18px; font-weight: 700;">${(ref.lifetime_earnings || 0).toFixed(2)}</p>
-                    </div>
-                    <div style="flex: 1; text-align: right;">
-                      <p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referred Users</p>
-                      <p style="margin: 0; font-size: 18px; font-weight: 700;">${ref.total_referrals || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              `;
+              html += '<div style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 12px; padding: 16px; color: white; margin-bottom: 16px;"><div style="display: flex; gap: 16px;"><div style="flex: 1;"><p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referral Earnings</p><p style="margin: 0; font-size: 18px; font-weight: 700;">' + (ref.lifetime_earnings || 0).toFixed(2) + '</p></div><div style="flex: 1; text-align: right;"><p style="margin: 0 0 4px 0; font-size: 10px; opacity: 0.85; font-weight: 600; text-transform: uppercase;">Referred Users</p><p style="margin: 0; font-size: 18px; font-weight: 700;">' + (ref.total_referrals || 0) + '</p></div></div></div>';
             }
 
             // Add recent transactions
@@ -4442,62 +4249,18 @@
                     return '📋';
                   };
                   
-                  return `
-                    <div style="
-                      display: flex;
-                      gap: 12px;
-                      padding: 12px;
-                      background: var(--bg-card);
-                      border: 1px solid var(--border-color);
-                      border-radius: 8px;
-                      margin-bottom: 8px;
-                    ">
-                      <div style="
-                        font-size: 20px;
-                        flex-shrink: 0;
-                      ">${getIcon(tx.type)}</div>
-                      <div style="flex: 1; min-width: 0;">
-                        <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: var(--text);">${tx.title || 'Transaction'}</p>
-                        <p style="margin: 0; font-size: 11px; color: var(--text-muted);">${tx.time_ago || 'Recently'}</p>
-                      </div>
-                      <div style="text-align: right; flex-shrink: 0;">
-                        <p style="margin: 0; font-size: 12px; font-weight: 600; color: ${tx.amount && tx.amount.includes('-') ? '#ef4444' : '#10b981'};">${tx.amount || ''}</p>
-                      </div>
-                    </div>
-                  `;
+                  return '<div style="display: flex; gap: 12px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px;"><div style="font-size: 20px; flex-shrink: 0;">' + getIcon(tx.type) + '</div><div style="flex: 1; min-width: 0;"><p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: var(--text);">' + (tx.title || 'Transaction') + '</p><p style="margin: 0; font-size: 11px; color: var(--text-muted);">' + (tx.time_ago || 'Recently') + '</p></div><div style="text-align: right; flex-shrink: 0;"><p style="margin: 0; font-size: 12px; font-weight: 600; color: ' + (tx.amount && tx.amount.includes('-') ? '#ef4444' : '#10b981') + ';">' + (tx.amount || '') + '</p></div></div>';
                 })
                 .join('');
             } else {
-              html += `
-                <div style="
-                  text-align: center;
-                  padding: 40px 20px;
-                  background: var(--bg-card);
-                  border: 1px dashed var(--border-color);
-                  border-radius: 12px;
-                  color: var(--text-muted);
-                ">
-                  <p style="margin: 0; font-size: 12px;">No activity yet</p>
-                </div>
-              `;
+              html += '<div style="text-align: center; padding: 40px 20px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-muted);"><p style="margin: 0; font-size: 12px;">No activity yet</p></div>';
             }
 
             activityContainer.innerHTML = html;
           })
           .catch(err => {
             console.error('[Activity] Error loading activity:', err);
-            activityContainer.innerHTML = `
-              <div style="
-                text-align: center;
-                padding: 40px 20px;
-                background: var(--bg-card);
-                border: 1px dashed var(--border-color);
-                border-radius: 12px;
-                color: var(--text-muted);
-              ">
-                <p style="margin: 0; font-size: 12px;">Failed to load activity</p>
-              </div>
-            `;
+            activityContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-muted);"><p style="margin: 0; font-size: 12px;">Failed to load activity</p></div>';
           });
       }
 
@@ -4520,12 +4283,9 @@
           buyBtn.innerHTML = '⏳ Processing...';
           
           try {
-            const response = await API.call('POST', '/marketplace/purchase', {
-              nft_id: nft.id,
-              user_id: user.id,
+            const response = await API.call('POST', `/api/v1/marketplace/listings/${nft.listing_id}/buy`, {
               amount: price,
-              blockchain: nft.blockchain,
-              init_data: initData
+              blockchain: nft.blockchain
             });
 
             if (response.ok) {
@@ -4557,11 +4317,9 @@
           offerBtn.innerHTML = ' Submitting...';
 
           try {
-            const response = await API.call('POST', '/marketplace/offer', {
-              nft_id: nft.id,
-              user_id: user.id,
-              offer_amount: parseFloat(offerAmount),
-              init_data: initData
+            const response = await API.call('POST', '/api/v1/marketplace/offers', {
+              listing_id: nft.listing_id,
+              offer_amount: parseFloat(offerAmount)
             });
 
             if (response.ok) {
@@ -4580,275 +4338,10 @@
           }
         };
 
-        const detailHTML = `
-          <div style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            padding: 20px;
-            animation: fadeIn 0.3s ease-out;
-          " onclick="if(event.target === this) this.remove()">
-            <div style="
-              background: var(--bg);
-              border-radius: 16px;
-              max-width: 600px;
-              width: 100%;
-              max-height: 90vh;
-              overflow-y: auto;
-              animation: slideUp 0.3s ease-out;
-              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            ">
-              <!-- Close Button -->
-              <button onclick="this.closest('[style*=position: fixed]').remove()" style="
-                position: fixed;
-                top: 32px;
-                right: 32px;
-                background: var(--bg-card);
-                border: 1px solid var(--border-color);
-                color: var(--text);
-                width: 36px;
-                height: 36px;
-                border-radius: 8px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 20px;
-                z-index: 10000;
-                transition: all 0.2s;
-              " onmouseover="this.style.background='#DAD8FF'; this.style.color='#6B6AFD'" onmouseout="this.style.background='var(--bg-card)'; this.style.color='var(--text)'">✕</button>
-
-              <!-- Image Section -->
-              <div style="
-                width: 100%;
-                height: 320px;
-                background: linear-gradient(135deg, #6B6AFD 0%, #8b70de 50%, #0E0636 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-                position: relative;
-              ">
-                ${nft.image_url ? `<img src="${nft.image_url}" style="width: 100%; height: 100%; object-fit: cover;">` : '<svg viewBox="0 0 200 200" style="width: 100%; height: 100%; background: linear-gradient(135deg, #2d3544, #1a2332);"><rect x="40" y="40" width="120" height="120" fill="none" stroke="#7c6ff9" stroke-width="3"/><circle cx="100" cy="70" r="15" fill="#7c6ff9" opacity="0.7"/><path d="M40 140 L80 100 L120 130 L160 80 L160 160 L40 160" fill="#7c6ff9" opacity="0.5"/><text x="100" y="190" font-size="14" text-anchor="middle" fill="#a0aec0" font-weight="bold">NFT ARTWORK</text></svg>'}
-              </div>
-
-              <!-- Content Section -->
-              <div style="padding: 28px;">
-                <!-- Title & Collection -->
-                <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #2C2C2C;">${nft.name || 'Untitled NFT'}</h1>
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
-                  <span style="font-size: 13px; color: #6B6AFD; font-weight: 600;">From ${nft.collection || 'Collection'}</span>
-                  ${nft.verified ? '<span style="color: #6B6AFD; font-weight: 700;">✓ Verified</span>' : ''}
-                </div>
-
-                <!-- Status Badges -->
-                <div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;">
-                  <span style="
-                    background: #DAD8FF;
-                    color: #6B6AFD;
-                    padding: 6px 14px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 700;
-                  ">${status}</span>
-                  <span style="
-                    background: rgba(107, 106, 253, 0.1);
-                    color: #6B6AFD;
-                    padding: 6px 14px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 700;
-                  ">${blockchain}</span>
-                </div>
-
-                <!-- Price Card -->
-                <div style="
-                  background: linear-gradient(135deg, #F5F7FB 0%, #DAD8FF 100%);
-                  border: 1px solid rgba(107, 106, 253, 0.2);
-                  border-radius: 12px;
-                  padding: 20px;
-                  margin-bottom: 24px;
-                ">
-                  <p style="margin: 0 0 8px 0; font-size: 11px; color: #6B6AFD; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Current Price</p>
-                  <div style="display: flex; gap: 8px; align-items: baseline;">
-                    <span style="font-size: 36px; font-weight: 700; color: #0E0636;">${price.toFixed(2)}</span>
-                    <span style="color: #6B6AFD; font-size: 14px; font-weight: 600;">≈ $${usdValue} USD</span>
-                  </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div style="
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 12px;
-                  margin-bottom: 28px;
-                ">
-                  <button id="buyNowBtn" style="
-                    padding: 14px 20px;
-                    background: linear-gradient(135deg, #6B6AFD 0%, #8b70de 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    box-shadow: 0 4px 12px rgba(107, 106, 253, 0.3);
-                  " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(107, 106, 253, 0.4)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(107, 106, 253, 0.3)'">
-                    💳 Buy Now
-                  </button>
-                  <button id="makeOfferBtn" style="
-                    padding: 14px 20px;
-                    background: #232d3a;
-                    color: #9b92ff;
-                    border: 2px solid #7c6ff9;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                  " onmouseover="this.style.background='#DAD8FF'" onmouseout="this.style.background='white'">
-                    ✏️ Make Offer
-                  </button>
-                </div>
-
-                <!-- Tabs Navigation -->
-                <div style="
-                  display: flex;
-                  gap: 28px;
-                  border-bottom: 1px solid #DAD8FF;
-                  margin-bottom: 24px;
-                  overflow-x: auto;
-                " id="nftDetailTabs">
-                  <button onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=details]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'" style="
-                    border: none;
-                    background: none;
-                    color: #6B6AFD;
-                    font-weight: 700;
-                    font-size: 13px;
-                    padding-bottom: 12px;
-                    cursor: pointer;
-                    border-bottom: 2px solid #6B6AFD;
-                    white-space: nowrap;
-                  ">Details</button>
-                  <button style="
-                    border: none;
-                    background: none;
-                    color: #6B6AFD;
-                    font-weight: 700;
-                    font-size: 13px;
-                    padding-bottom: 12px;
-                    cursor: pointer;
-                    border-bottom: 2px solid transparent;
-                    white-space: nowrap;
-                  " onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=offers]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'">Offers</button>
-                  <button style="
-                    border: none;
-                    background: none;
-                    color: #6B6AFD;
-                    font-weight: 700;
-                    font-size: 13px;
-                    padding-bottom: 12px;
-                    cursor: pointer;
-                    border-bottom: 2px solid transparent;
-                    white-space: nowrap;
-                  " onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=stats]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'">Stats</button>
-                  <button style="
-                    border: none;
-                    background: none;
-                    color: #6B6AFD;
-                    font-weight: 700;
-                    font-size: 13px;
-                    padding-bottom: 12px;
-                    cursor: pointer;
-                    border-bottom: 2px solid transparent;
-                    white-space: nowrap;
-                  " onclick="document.querySelectorAll('[data-nft-tab]').forEach(el => el.style.display='none'); document.querySelector('[data-nft-tab=history]').style.display='block'; document.querySelectorAll('#nftDetailTabs button').forEach(b => {b.style.color='#6B6AFD'; b.style.borderBottomColor='transparent'}); this.style.color='#6B6AFD'; this.style.borderBottomColor='#6B6AFD'">History</button>
-                </div>
-
-                <!-- Details Tab -->
-                <div data-nft-tab="details">
-                  <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0E0636;">Rarity & Attributes</h3>
-                  <div style="
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 12px;
-                    margin-bottom: 20px;
-                  ">
-                    ${nft.attributes && nft.attributes.length > 0 ? nft.attributes.slice(0, 4).map(attr => `
-                      <div style="
-                        background: #2d3544;
-                        border: 1px solid #DAD8FF;
-                        border-radius: 10px;
-                        padding: 14px;
-                      ">
-                        <p style="margin: 0 0 6px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">${attr.trait_type || 'Attribute'}</p>
-                        <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #0E0636;">${attr.value || 'Unknown'}</p>
-                        <p style="margin: 0; font-size: 9px; color: #6B6AFD;">${attr.rarity && attr.rarity.percentage ? attr.rarity.percentage + ' rarity' : 'Unranked'}</p>
-                      </div>
-                    `).join('') : `
-                      <p style="color: #6B6AFD; font-size: 12px; grid-column: 1/-1;">No attributes available</p>
-                    `}
-                  </div>
-                  ${nft.description ? `
-                    <div style="
-                      background: #F5F7FB;
-                      border: 1px solid #DAD8FF;
-                      border-radius: 10px;
-                      padding: 14px;
-                    ">
-                      <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #0E0636;">Description</h4>
-                      <p style="margin: 0; font-size: 12px; color: #2C2C2C; line-height: 1.6;">${nft.description}</p>
-                    </div>
-                  ` : ''}
-                </div>
-
-                <!-- Offers Tab -->
-                <div data-nft-tab="offers" style="display: none;">
-                  <p style="color: #9b92ff; font-size: 12px; text-align: center; padding: 20px; background: #232d3a; border-radius: 10px;">No offers yet. Be the first to make one!</p>
-                </div>
-
-                <!-- Stats Tab -->
-                <div data-nft-tab="stats" style="display: none;">
-                  <div style="
-                    background: #F5F7FB;
-                    border: 1px solid #DAD8FF;
-                    border-radius: 10px;
-                    padding: 16px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                  ">
-                    <div>
-                      <p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Blockchain</p>
-                      <p style="margin: 0; font-size: 13px; color: #0E0636; font-weight: 600;">${blockchain}</p>
-                    </div>
-                    <div>
-                      <p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Token ID</p>
-                      <p style="margin: 0; font-size: 12px; color: #0E0636; font-family: monospace; word-break: break-all; font-weight: 600;">${nft.token_id || nft.id || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Contract Address</p>
-                      <p style="margin: 0; font-size: 11px; color: #0E0636; font-family: monospace; word-break: break-all; font-weight: 600;">${nft.contract_address ? nft.contract_address.substring(0, 20) + '...' : 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- History Tab -->
-                <div data-nft-tab="history" style="display: none;">
-                  <p style="color: #9b92ff; font-size: 12px; text-align: center; padding: 20px; background: #232d3a; border-radius: 10px;">No transaction history</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
+        const attributesHTML = nft.attributes && nft.attributes.length > 0 ? nft.attributes.slice(0, 4).map(attr => '<div style="background: #2d3544; border: 1px solid #DAD8FF; border-radius: 10px; padding: 14px;"><p style="margin: 0 0 6px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">' + (attr.trait_type || 'Attribute') + '</p><p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #0E0636;">' + (attr.value || 'Unknown') + '</p><p style="margin: 0; font-size: 9px; color: #6B6AFD;">' + (attr.rarity && attr.rarity.percentage ? attr.rarity.percentage + ' rarity' : 'Unranked') + '</p></div>').join('') : '<p style="color: #6B6AFD; font-size: 12px; grid-column: 1/-1;">No attributes available</p>';
+        const descriptionHTML = nft.description ? '<div style="background: #F5F7FB; border: 1px solid #DAD8FF; border-radius: 10px; padding: 14px;"><h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #0E0636;">Description</h4><p style="margin: 0; font-size: 12px; color: #2C2C2C; line-height: 1.6;">' + nft.description + '</p></div>' : '';
+        const nftImageHTML = nft.image_url ? '<img src="' + nft.image_url + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<svg viewBox="0 0 200 200" style="width: 100%; height: 100%; background: linear-gradient(135deg, #2d3544, #1a2332);"><rect x="40" y="40" width="120" height="120" fill="none" stroke="#7c6ff9" stroke-width="3"/><circle cx="100" cy="70" r="15" fill="#7c6ff9" opacity="0.7"/><path d="M40 140 L80 100 L120 130 L160 80 L160 160 L40 160" fill="#7c6ff9" opacity="0.5"/><text x="100" y="190" font-size="14" text-anchor="middle" fill="#a0aec0" font-weight="bold">NFT ARTWORK</text></svg>';
+        const detailHTML = '<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; animation: fadeIn 0.3s ease-out;" onclick="if(event.target === this) this.remove()"><div style="background: var(--bg); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease-out; box-shadow: 0 20px 60px rgba(0,0,0,0.3);"><button onclick="this.closest(\'[style*=position: fixed]\').remove()" style="position: fixed; top: 32px; right: 32px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 10000; transition: all 0.2s;" onmouseover="this.style.background=\'#DAD8FF\'; this.style.color=\'#6B6AFD\'" onmouseout="this.style.background=\'var(--bg-card)\'; this.style.color=\'var(--text)\'">✕</button><div style="width: 100%; height: 320px; background: linear-gradient(135deg, #6B6AFD 0%, #8b70de 50%, #0E0636 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">' + nftImageHTML + '</div><div style="padding: 28px;"><h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #2C2C2C;">' + (nft.name || 'Untitled NFT') + '</h1><div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;"><span style="font-size: 13px; color: #6B6AFD; font-weight: 600;">From ' + (nft.collection || 'Collection') + '</span>' + (nft.verified ? '<span style="color: #6B6AFD; font-weight: 700;">✓ Verified</span>' : '') + '</div><div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;"><span style="background: #DAD8FF; color: #6B6AFD; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;">' + status + '</span><span style="background: rgba(107, 106, 253, 0.1); color: #6B6AFD; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;">' + blockchain + '</span></div><div style="background: linear-gradient(135deg, #F5F7FB 0%, #DAD8FF 100%); border: 1px solid rgba(107, 106, 253, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 24px;"><p style="margin: 0 0 8px 0; font-size: 11px; color: #6B6AFD; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Current Price</p><div style="display: flex; gap: 8px; align-items: baseline;"><span style="font-size: 36px; font-weight: 700; color: #0E0636;">' + price.toFixed(2) + '</span><span style="color: #6B6AFD; font-size: 14px; font-weight: 600;">≈ $' + usdValue + ' USD</span></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px;"><button id="buyNowBtn" style="padding: 14px 20px; background: linear-gradient(135deg, #6B6AFD 0%, #8b70de 100%); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(107, 106, 253, 0.3);" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 6px 20px rgba(107, 106, 253, 0.4)\'" onmouseout="this.style.transform=\'none\'; this.style.boxShadow=\'0 4px 12px rgba(107, 106, 253, 0.3)\'">💳 Buy Now</button><button id="makeOfferBtn" style="padding: 14px 20px; background: #232d3a; color: #9b92ff; border: 2px solid #7c6ff9; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background=\'#DAD8FF\'" onmouseout="this.style.background=\'white\'">✏️ Make Offer</button></div><div style="display: flex; gap: 28px; border-bottom: 1px solid #DAD8FF; margin-bottom: 24px; overflow-x: auto;" id="nftDetailTabs"><button onclick="document.querySelectorAll(\'[data-nft-tab]\').forEach(el => el.style.display=\'none\'); document.querySelector(\'[data-nft-tab=details]\').style.display=\'block\'; document.querySelectorAll(\'#nftDetailTabs button\').forEach(b => {b.style.color=\'#6B6AFD\'; b.style.borderBottomColor=\'transparent\'}); this.style.color=\'#6B6AFD\'; this.style.borderBottomColor=\'#6B6AFD\'" style="border: none; background: none; color: #6B6AFD; font-weight: 700; font-size: 13px; padding-bottom: 12px; cursor: pointer; border-bottom: 2px solid #6B6AFD; white-space: nowrap;">Details</button><button style="border: none; background: none; color: #6B6AFD; font-weight: 700; font-size: 13px; padding-bottom: 12px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;" onclick="document.querySelectorAll(\'[data-nft-tab]\').forEach(el => el.style.display=\'none\'); document.querySelector(\'[data-nft-tab=offers]\').style.display=\'block\'; document.querySelectorAll(\'#nftDetailTabs button\').forEach(b => {b.style.color=\'#6B6AFD\'; b.style.borderBottomColor=\'transparent\'}); this.style.color=\'#6B6AFD\'; this.style.borderBottomColor=\'#6B6AFD\'">Offers</button><button style="border: none; background: none; color: #6B6AFD; font-weight: 700; font-size: 13px; padding-bottom: 12px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;" onclick="document.querySelectorAll(\'[data-nft-tab]\').forEach(el => el.style.display=\'none\'); document.querySelector(\'[data-nft-tab=stats]\').style.display=\'block\'; document.querySelectorAll(\'#nftDetailTabs button\').forEach(b => {b.style.color=\'#6B6AFD\'; b.style.borderBottomColor=\'transparent\'}); this.style.color=\'#6B6AFD\'; this.style.borderBottomColor=\'#6B6AFD\'">Stats</button><button style="border: none; background: none; color: #6B6AFD; font-weight: 700; font-size: 13px; padding-bottom: 12px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;" onclick="document.querySelectorAll(\'[data-nft-tab]\').forEach(el => el.style.display=\'none\'); document.querySelector(\'[data-nft-tab=history]\').style.display=\'block\'; document.querySelectorAll(\'#nftDetailTabs button\').forEach(b => {b.style.color=\'#6B6AFD\'; b.style.borderBottomColor=\'transparent\'}); this.style.color=\'#6B6AFD\'; this.style.borderBottomColor=\'#6B6AFD\'">History</button></div><div data-nft-tab="details"><h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0E0636;">Rarity & Attributes</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">' + attributesHTML + '</div>' + descriptionHTML + '</div><div data-nft-tab="offers" style="display: none;"><p style="color: #9b92ff; font-size: 12px; text-align: center; padding: 20px; background: #232d3a; border-radius: 10px;">No offers yet. Be the first to make one!</p></div><div data-nft-tab="stats" style="display: none;"><div style="background: #F5F7FB; border: 1px solid #DAD8FF; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px;"><div><p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Blockchain</p><p style="margin: 0; font-size: 13px; color: #0E0636; font-weight: 600;">' + blockchain + '</p></div><div><p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Token ID</p><p style="margin: 0; font-size: 12px; color: #0E0636; font-family: monospace; word-break: break-all; font-weight: 600;">' + (nft.token_id || nft.id || 'N/A') + '</p></div><div><p style="margin: 0 0 4px 0; font-size: 10px; color: #6B6AFD; font-weight: 700; text-transform: uppercase;">Contract Address</p><p style="margin: 0; font-size: 11px; color: #0E0636; font-family: monospace; word-break: break-all; font-weight: 600;">' + (nft.contract_address ? nft.contract_address.substring(0, 20) + '...' : 'N/A') + '</p></div></div></div><div data-nft-tab="history" style="display: none;"><p style="color: #9b92ff; font-size: 12px; text-align: center; padding: 20px; background: #232d3a; border-radius: 10px;">No transaction history</p></div></div></div></div>';
 
         document.body.insertAdjacentHTML('beforeend', detailHTML);
 
@@ -4884,52 +4377,7 @@
           if (walletsList) {
             if (connectedWallet) {
               // Connected wallet display
-              walletsList.innerHTML = `
-                <div class="wallet-card" style="
-                  padding: 20px;
-                  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-                  border-radius: 12px;
-                  border: 2px solid var(--primary);
-                  margin-bottom: 16px;
-                  color: white;
-                ">
-                  <p style="margin: 0 0 8px 0; font-size: 12px; color: rgba(255,255,255,0.8); text-transform: uppercase;">Connected Wallet</p>
-                  <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: white; font-family: monospace; word-break: break-all;">
-                    ${connectedWallet.substring(0, 20)}...${connectedWallet.substring(connectedWallet.length - 8)}
-                  </p>
-                  <div style="display: flex; gap: 12px;">
-                    <button onclick="navigator.clipboard.writeText('${connectedWallet}').then(() => showStatus('Address copied', 'success')).catch(() => showStatus('Copy failed', 'error'))" style="
-                      flex: 1;
-                      padding: 10px 14px;
-                      background: rgba(255,255,255,0.2);
-                      color: white;
-                      border: 1px solid rgba(255,255,255,0.3);
-                      border-radius: 8px;
-                      font-size: 12px;
-                      font-weight: 600;
-                      cursor: pointer;
-                      transition: all 0.2s;
-                    " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                      📋 Copy Address
-                    </button>
-                    <button onclick="WalletManager.setConnected(null); showStatus('Wallet disconnected', 'success'); setTimeout(() => window.switchPage('home'), 500);" style="
-                      flex: 1;
-                      padding: 10px 14px;
-                      background: rgba(255,255,255,0.2);
-                      color: white;
-                      border: 1px solid rgba(255,255,255,0.3);
-                      border-radius: 8px;
-                      font-size: 12px;
-                      font-weight: 600;
-                      cursor: pointer;
-                      transition: all 0.2s;
-                    " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                      ✕ Disconnect
-                    </button>
-                  </div>
-                  <p style="margin: 16px 0 0 0; font-size: 11px; color: rgba(255,255,255,0.7);">Status: Connected and Active</p>
-                </div>
-              `;
+              walletsList.innerHTML = '<div class="wallet-card" style="padding: 20px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 12px; border: 2px solid var(--primary); margin-bottom: 16px; color: white;"><p style="margin: 0 0 8px 0; font-size: 12px; color: rgba(255,255,255,0.8); text-transform: uppercase;">Connected Wallet</p><p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: white; font-family: monospace; word-break: break-all;">' + connectedWallet.substring(0, 20) + '...' + connectedWallet.substring(connectedWallet.length - 8) + '</p><div style="display: flex; gap: 12px;"><button onclick="navigator.clipboard.writeText(\'' + connectedWallet + '\').then(() => showStatus(\'Address copied\', \'success\')).catch(() => showStatus(\'Copy failed\', \'error\'))" style="flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.3)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.2)\'">📋 Copy Address</button><button onclick="WalletManager.setConnected(null); showStatus(\'Wallet disconnected\', \'success\'); setTimeout(() => window.switchPage(\'home\'), 500);" style="flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.3)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.2)\'">✕ Disconnect</button></div><p style="margin: 16px 0 0 0; font-size: 11px; color: rgba(255,255,255,0.7);">Status: Connected and Active</p></div>';
 
               // Try to load wallet details from backend for additional info
               try {
@@ -4942,21 +4390,7 @@
               }
             } else {
               // No wallet connected
-              walletsList.innerHTML = `
-                <div style="padding: 40px 20px; text-align: center;">
-                  <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No wallet connected</p>
-                  <button onclick="showWalletConnectModal();" style="
-                    padding: 12px 24px;
-                    background: var(--primary);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    font-size: 14px;
-                  ">Connect Wallet</button>
-                </div>
-              `;
+              walletsList.innerHTML = '<div style="padding: 40px 20px; text-align: center;"><p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No wallet connected</p><button onclick="showWalletConnectModal();" style="padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Connect Wallet</button></div>';
             }
           }
 
@@ -5213,14 +4647,14 @@
           if (type === 'deposit' && ws.length > 0) {
             const sel = document.getElementById('depositWalletSelect');
             if (sel) {
-              sel.innerHTML = '<option value="">Auto-detect or create new</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()} - ${w.address.slice(0, 10)}...</option>`).join('');
+              sel.innerHTML = '<option value="">Auto-detect or create new</option>' + ws.map(w => '<option value="' + w.id + '">' + (w.blockchain?.toUpperCase() || 'Unknown') + ' - ' + w.address.slice(0, 10) + '...</option>').join('');
             }
           }
           
           if (type === 'withdraw' && ws.length > 0) {
             const sel = document.getElementById('withdrawWalletSelect');
             if (sel) {
-              sel.innerHTML = '<option value="">Select wallet...</option>' + ws.map(w => `<option value="${w.id}">${w.blockchain?.toUpperCase()} - ${w.address.slice(0, 10)}...</option>`).join('');
+              sel.innerHTML = '<option value="">Select wallet...</option>' + ws.map(w => '<option value="' + w.id + '">' + (w.blockchain?.toUpperCase() || 'Unknown') + ' - ' + w.address.slice(0, 10) + '...</option>').join('');
             }
           }
         } catch (err) {
@@ -5470,7 +4904,7 @@
             const collections = [...new Set(listings.map(l => l.collection_id).filter(Boolean))];
             const collectionOptions = collections.map(cid => {
               const collection = listings.find(l => l.collection_id === cid);
-              return `<option value="${cid}">${collection.collection_name || 'Collection ' + cid.substring(0, 8)}</option>`;
+              return '<option value="' + cid + '">' + (collection.collection_name || 'Collection ' + cid.substring(0, 8)) + '</option>';
             });
             if (collectionOptions.length > 0) {
               collectionSelect.innerHTML = '<option value="">All Collections</option>' + collectionOptions.join('');
@@ -5480,7 +4914,7 @@
           // Render marketplace grid using the new method
           this.renderMarketplaceGrid(listings);
           
-          showStatus(`Loaded ${listings.length} marketplace listings`, 'success');
+          showStatus('Loaded ' + listings.length + ' marketplace listings', 'success');
         } catch (err) {
           console.error('[Marketplace] Error loading listings:', err.message);
           
@@ -5542,11 +4976,8 @@
             headerGradient.style.background = collection.gradient;
           }
           if (title) title.textContent = collection.name;
-          if (stats) stats.textContent = `${collection.itemCount.toLocaleString()} items in collection`;
-          if (floorPrice) floorPrice.innerHTML = `<div style="display: flex; align-items: center; gap: 2px; font-weight: 700; color: var(--primary);">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="min-width: 14px;"><path d="M12 2L2 7L2 17C2 20.59 7.05 23 12 23C16.95 23 22 20.59 22 17V7L12 2Z"/></svg>
-            <span>${collection.floorPrice} TON</span>
-          </div>`;
+          if (stats) stats.textContent = collection.itemCount.toLocaleString() + ' items in collection';
+          if (floorPrice) floorPrice.innerHTML = '<div style="display: flex; align-items: center; gap: 2px; font-weight: 700; color: var(--primary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="min-width: 14px;"><path d="M12 2L2 7L2 17C2 20.59 7.05 23 12 23C16.95 23 22 20.59 22 17V7L12 2Z"/></svg><span>' + collection.floorPrice + ' TON</span></div>';
 
           // Render collection items
           const itemsGrid = document.getElementById('collectionItemsGrid');
@@ -5567,7 +4998,7 @@
                   align-items: center;
                   justify-content: center;
                   font-size: 40px;
-                \">
+                ">
                   ${item.image}
                 </div>
                 <div style="padding: 12px;">
@@ -5582,11 +5013,11 @@
                     align-items: center;
                     justify-content: space-between;
                     padding-top: 8px;
-                    border-top: 1px solid var(--border-color);\
-                  \">
-                    <span style=\"font-size: 10px; color: var(--text-muted);\">Price</span>
-                    <div style=\"display: flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 700; color: ${collection.color};\">
-                      <svg width=\"11\" height=\"11\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" style=\"min-width: 11px;\"><path d=\"M12 2L2 7L2 17C2 20.59 7.05 23 12 23C16.95 23 22 20.59 22 17V7L12 2Z\"/></svg>
+                    border-top: 1px solid var(--border-color);
+                  ">
+                    <span style="font-size: 10px; color: var(--text-muted);">Price</span>
+                    <div style="display: flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 700; color: ${collection.color};">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="min-width: 11px;"><path d="M12 2L2 7L2 17C2 20.59 7.05 23 12 23C16.95 23 22 20.59 22 17V7L12 2Z"/></svg>
                       <span>${item.price} TON</span>
                     </div>
                   </div>
@@ -5601,9 +5032,106 @@
         }
       }
 
+      async applyReferralCode() {
+        try {
+          const codeInput = document.getElementById('referralCodeInput');
+          if (!codeInput || !codeInput.value.trim()) {
+            showStatus('Please enter a referral code', 'error');
+            return;
+          }
 
+          const code = codeInput.value.trim();
+          showStatus('Applying referral code...', 'info');
 
-      async loadMintInterface() {
+          const response = await API.call('POST', '/api/v1/referrals/apply', {
+            code: code
+          });
+
+          if (response.ok) {
+            showStatus('Referral code applied successfully!', 'success');
+            codeInput.value = '';
+            // Reload referral data
+            this.loadDashboardData();
+          } else {
+            throw new Error(response.data?.detail || 'Invalid referral code');
+          }
+        } catch (err) {
+          console.error('[Referral] Error applying code:', err);
+          showStatus('Error: ' + err.message, 'error');
+        }
+      }
+
+      async loadHomeCollections() {
+        try {
+          const response = await API.call('GET', '/api/v1/collections?limit=4');
+          
+          if (!response.ok || !response.data.collections) {
+            console.log('[Home] No collections from API');
+            return;
+          }
+          
+          const collections = response.data.collections;
+          console.log('[Home] Loaded', collections.length, 'collections');
+          
+          // Store for use in viewCollectionDetails
+          window.homeCollections = collections;
+        } catch (err) {
+          console.error('[Home] Error loading collections:', err);
+        }
+      }
+
+      async viewCollectionDetails(collectionId) {
+        try {
+          console.log('[Collection] Loading collection details:', collectionId);
+          showStatus('Loading collection...', 'info');
+          
+          const response = await API.call('GET', `/api/v1/collections/${collectionId}`);
+          
+          if (!response.ok) {
+            throw new Error(response.data?.detail || 'Failed to load collection');
+          }
+          
+          const collection = response.data;
+          console.log('[Collection] Loaded:', collection);
+          
+          // Store current collection for use in collection view
+          window.currentCollection = collection.id;
+          window.currentCollectionData = collection;
+          
+          // Switch to collection details view
+          this.switchPage('collectionDetails');
+          
+          // Load collection items
+          const itemsRes = await API.call('GET', `/api/v1/collections/${collectionId}/items`);
+          
+          const itemsContainer = document.getElementById('collectionItemsGrid');
+          if (itemsContainer && itemsRes.ok && itemsRes.data.items) {
+            itemsContainer.innerHTML = itemsRes.data.items.map(item => `
+              <div style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; cursor: pointer; transition: all 0.2s;" onclick="window.app.viewNFTDetail('${item.id}')">
+                <div style="height: 150px; background: linear-gradient(135deg, ${collection.color || '#7c6ff9'}, ${collection.color || '#7c6ff9'}33); display: flex; align-items: center; justify-content: center; font-size: 48px;">
+                  ${item.image || '🎨'}
+                </div>
+                <div style="padding: 12px;">
+                  <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: var(--text);">${item.name}</p>
+                  <p style="margin: 0 0 8px 0; font-size: 11px; color: var(--text-muted);">${item.creator || 'Unknown'}</p>
+                  <p style="margin: 0; font-size: 12px; font-weight: 700; color: ${collection.color || '#7c6ff9'};">${item.price || '0'} TON</p>
+                </div>
+              </div>
+            `).join('');
+          }
+          
+          showStatus('Collection loaded!', 'success');
+        } catch (err) {
+          console.error('[Collection] Error:', err);
+          showStatus('Error loading collection: ' + err.message, 'error');
+          this.switchPage('home');
+        }
+      }
+          console.error('[Collection] Error viewing collection:', err);
+          showStatus('Failed to load collection details', 'error');
+          this.switchPage('market');
+        }
+      }      async loadMintInterface() {
         try {
           console.log('[Mint] Loading mint interface...');
           
@@ -6692,6 +6220,8 @@
         navbar.style.opacity = '1';
       }
     });
+    /* eslint-enable */
+    /* jshint ignore: end */
   </script>
 </body>
 </html>
