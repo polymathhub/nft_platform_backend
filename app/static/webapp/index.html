@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, minimal-ui">
   <meta name="theme-color" content="#0f1419">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Telegram Bot specific meta tags -->
+  <meta name="telegram" content="true">
+  <meta name="application-name" content="GiftedForge">
   <title>GiftedForge - NFT Platform</title>
   <link rel="stylesheet" href="/web-app/static/styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
@@ -169,6 +172,9 @@
       width: 100%;
       height: 100vh;
       height: 100dvh;
+      /* Telegram safe fallback */
+      max-height: 100vh;
+      min-height: 100%;
       overflow: hidden;
       position: fixed;
       top: 0;
@@ -176,6 +182,13 @@
       right: 0;
       bottom: 0;
       z-index: 1;
+    }
+    
+    /* Telegram WebApp specific fixes */
+    @supports (height: 100dvh) {
+      #app {
+        height: 100dvh;
+      }
     }
     
     .header {
@@ -1793,9 +1806,7 @@
       }
     }
   </style>
-  <!-- Production Integration Layer -->
-  <script src="app.js"></script>
-  <script src="modal-forms.js"></script>
+  <!-- REMOVED: app.js and modal-forms.js (duplicate code already embedded in this file) -->
   <style>
     /* MODAL & FORM STYLING */
     #modalOverlay {
@@ -3138,10 +3149,42 @@
               console.log('[Telegram] expand() called');
               window.Telegram.WebApp.enableClosingConfirmation();
               console.log('[Telegram] enableClosingConfirmation() called');
+              
+              // FIX: Telegram responsive layout handling
+              const fixTelegramLayout = () => {
+                const app = document.getElementById('app');
+                if (app && window.Telegram?.WebApp) {
+                  // Get Telegram's safe area
+                  const safeArea = window.Telegram.WebApp.safeAreaInset;
+                  console.log('[Telegram] Safe area inset:', safeArea);
+                  
+                  // Apply safe area padding
+                  if (safeArea) {
+                    app.style.paddingTop = (safeArea.top || 0) + 'px';
+                    app.style.paddingBottom = (safeArea.bottom || 0) + 'px';
+                    app.style.paddingLeft = (safeArea.left || 0) + 'px';
+                    app.style.paddingRight = (safeArea.right || 0) + 'px';
+                  }
+                }
+              };
+              
+              // Apply layout fix when app is ready
+              if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                fixTelegramLayout();
+              } else {
+                document.addEventListener('DOMContentLoaded', fixTelegramLayout);
+              }
+              
+              // Listen for viewport changes (Telegram might change safe area)
+              if (window.Telegram.WebApp.onViewportChanged) {
+                window.Telegram.WebApp.onViewportChanged.subscribe(fixTelegramLayout);
+              }
+              
+              resolve(true);
             } catch (e) {
               console.warn('[Telegram] Configuration error:', e.message);
+              resolve(true);
             }
-            resolve(true);
           } else {
             retries++;
             if (retries >= maxRetries) {
@@ -3196,13 +3239,10 @@
       }
     };
 
-    // ✅ PHASE 3: Telegram Authentication with JWT Tokens
-    // Parse and extract Telegram credentials from initData
     function parseTelegramInitData() {
       let initDataStr = null;
-      let isProduction = true; // Track if we have real Telegram data
-      
-      // Priority 1: Telegram WebApp SDK (REAL DATA)
+      let isProduction = true; 
+    
       if (window.Telegram?.WebApp?.initData) {
         initDataStr = window.Telegram.WebApp.initData;
         if (initDataStr.trim().length > 0) {
@@ -3213,7 +3253,7 @@
           initDataStr = null;
         }
       } 
-      // Priority 2: localStorage cache (from previous session)
+      
       else if (typeof localStorage !== 'undefined') {
         initDataStr = localStorage.getItem('telegram_init_data');
         if (initDataStr) {
@@ -3221,7 +3261,7 @@
         }
       }
       
-      // Parse initData string
+  
       let telegramData = {
         telegram_id: null,
         telegram_username: null,
@@ -3236,18 +3276,18 @@
         try {
           const params = new URLSearchParams(initDataStr);
           
-          // Get string params - ONLY from Telegram, never defaults
+        
           telegramData.query_id = params.get('query_id');
           telegramData.auth_date = parseInt(params.get('auth_date')) || Math.floor(Date.now() / 1000);
           telegramData.hash = params.get('hash');
           
-          // CRITICAL: hash MUST exist for Telegram verification
+        
           if (!telegramData.hash) {
-            console.error('[Auth] ❌ SECURITY: Telegram hash is missing!');  
+            console.error('[Auth]  SECURITY: Telegram hash is missing!');  
             throw new Error('Missing Telegram hash - potential security issue');
           }
           
-          // Parse user JSON
+      
           const userStr = params.get('user');
           if (userStr) {
             const userData = JSON.parse(decodeURIComponent(userStr));
@@ -3269,8 +3309,7 @@
         }
       }
       
-      // NO TEST FALLBACK IN PRODUCTION
-      // Telegram authentication MUST have valid data AND hash signature
+
       if (!telegramData.telegram_id || !telegramData.hash) {
         console.error('[Auth] SECURITY: Invalid Telegram authentication attempt');
         console.error('[Auth] Missing required fields:', {
@@ -3283,7 +3322,6 @@
       return telegramData;
     }
 
-    // API HTTP Client with JWT auth and retry logic
     const API = {
       getToken: () => {
         try {
@@ -3307,11 +3345,18 @@
       },
       
       call: async function(method, path, body = null, retries = 2) {
-        // Determine if this is an API call or static resource
-        // API routes: /api/v1*, /payments*, /referrals*, /wallets*
-        // Static: everything else (js, css, images, etc.)
-        const isApiCall = /^\/api\/v1\/|^\/payments|^\/referrals|^\/wallets/.test(path);
-        const fullPath = isApiCall ? path : '/web-app' + path;
+      
+        // All paths in this app are API calls to /api/v1/
+        // Properly construct the full URL for fetch
+        let fullPath = path;
+        
+        // Ensure path starts with /
+        if (!fullPath.startsWith('/')) {
+          fullPath = '/' + fullPath;
+        }
+        
+        // Debug logging for path construction
+        console.log(`[API] Constructed path: ${fullPath}`);
         
         for (let attempt = 0; attempt <= retries; attempt++) {
           try {
@@ -3320,7 +3365,7 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
             
-            // Build headers with JWT token if available
+    
             const headers = {
               'Content-Type': 'application/json'
             };
@@ -3347,7 +3392,7 @@
               this.setToken(null);
               user = null;
               showStatus('Authentication expired, please refresh', 'error');
-              // Could redirect to login here if needed
+            
             }
             
             const text = await res.text();
@@ -3360,22 +3405,20 @@
             }
           } catch (err) {
             console.error(`[API Error] ${method} ${path} (attempt ${attempt + 1}):`, err.message);
-            
-            // If it's the last attempt, throw
+        
             if (attempt === retries) {
               return { ok: false, status: 0, data: { error: err.message } };
             }
             
-            // Wait before retrying (exponential backoff)
+          
             await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 500));
           }
         }
       }
     };
 
-    // Status/Toast Notification
     function showStatus(msg, type = 'info') {
-      // Create toast if it doesn't exist
+      // Create toast if it doesn't exist before 
       let toast = document.getElementById('appToast');
       if (!toast) {
         toast = document.createElement('div');
@@ -3422,30 +3465,21 @@
         if (toast) toast.style.display = 'none';
       }, type === 'error' ? 4000 : 3000);
 
-      // Add animation styles if not present
+  
       if (!document.querySelector('style[data-toast-animation]')) {
         const style = document.createElement('style');
         style.setAttribute('data-toast-animation', 'true');
-        style.textContent = `
-          @keyframes slideUp {
-            from {
-              transform: translateY(100px);
-              opacity: 0;
-            }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-            }
+        style.textContent = `@keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
           }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `;
+          @keyframes spin { to { transform: rotate(360deg); } }`;
         document.head.appendChild(style);
       }
     }
 
-    // Application Initialization
+      //initiate telegram webapp
+
     async function initApp() {
       try {
         console.log('[App] Initializing Telegram Web App...');
@@ -3458,21 +3492,22 @@
         }
         console.log('[App] Telegram detection complete, proceeding with auth');
         
-        // ✅ PHASE 3: Parse Telegram credentials
+        //telegram data retrieval
         const telegramData = parseTelegramInitData();
         console.log('[App] Telegram data parsed:', {
           telegram_id: telegramData.telegram_id,
           telegram_username: telegramData.telegram_username
         });
         
-        // ✅ PHASE 3: Call /api/v1/auth/telegram/login endpoint
+        // last phase of confirmatio for security
+
         try {
           console.log('[Auth] Calling /api/v1/auth/telegram/login...');
           const r = await API.call('POST', '/api/v1/auth/telegram/login', telegramData, 2);
           console.log('[Auth] Login response:', { ok: r.ok, status: r.status });
           
           if (r.ok && r.data && r.data.user && r.data.tokens) {
-            // ✅ Store JWT token
+            // this is place whwre 
             const token = r.data.tokens.access_token;
             API.setToken(token);
             console.log('[Auth] JWT token stored');
@@ -3507,25 +3542,28 @@
         } catch (apiError) {
           console.error('[App] Authentication error:', apiError.message);
           
-          // Show error but allow app to continue (might be dev mode)
-          showStatus('Auth error: ' + apiError.message, 'error');
+          // Critical: Show error to user - do NOT create test user
+          // This prevents masking real backend integration failures
+          showStatus('Backend authentication failed: ' + apiError.message, 'error');
           
-          // In dev mode, create a test user and token
-          if (!user) {
-            console.log('[App] Creating test user and token for dev mode');
-            user = {
-              id: 'dev-user-' + Date.now(),
-              telegram_id: '123456789',
-              telegram_username: 'developer',
-              full_name: 'Test User',
-              email: 'dev@test.com',
-              is_verified: true,
-              user_role: 'user'
-            };
-            
-            // Set a test token for dev mode
-            API.setToken('test_jwt_token_dev_mode');
+          // Disable app functionality until proper authentication succeeds
+          const app = document.getElementById('app');
+          if (app) {
+            app.classList.add('auth-error');
+            app.style.pointerEvents = 'none';
+            app.style.opacity = '0.5';
           }
+          
+          console.error('[App] Backend authentication failed - app is disabled');
+          console.error('[App] Please verify:');
+          console.error('[App]   1. Backend server is running');
+          console.error('[App]   2. /api/v1/auth/telegram/login endpoint exists');
+          console.error('[App]   3. Telegram WebApp initData is valid');
+          
+          // Allow retry after 5 seconds
+          setTimeout(() => {
+            location.reload();
+          }, 5000);
         }
       } catch (err) {
         console.error('[App] Fatal initialization error:', err);
@@ -3868,6 +3906,7 @@
     }
 
     // Check if user requires wallet connection for page access
+    
     function requireWalletConnection() {
       if (!WalletManager.isConnected()) {
         showStatus('Please connect a wallet to access this feature', 'warning');
@@ -3877,9 +3916,7 @@
       return true;
     }
 
-    // ============================================================
-    // TELEGRAM STARS PAYMENT INTEGRATION
-    // ============================================================
+    // TELEGRAM STARS PAYMENT INTEGRATION 
 
     const TelegramStars = {
       async createInvoice(itemIds, totalStars) {
