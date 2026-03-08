@@ -3,6 +3,7 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -57,12 +58,34 @@ class Settings(BaseSettings):
     @field_validator("allowed_origins", mode="before")
     @classmethod
     def parse_allowed_origins(cls, v):
-        """Parse CSV string from environment into list."""
-        if isinstance(v, str):
-            # Handle CSV or space-separated strings
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        """
+        Parse allowed origins from environment variable.
+        Supports:
+        - JSON array: ["http://localhost:3000","https://myfrontend.com"]
+        - Comma-separated string: http://localhost:3000,https://myfrontend.com
+        - Python list: ["http://localhost:3000"]
+        """
         if isinstance(v, list):
+            # Already a list, return as-is
             return v
+        
+        if isinstance(v, str):
+            v = v.strip()
+            
+            # Try to parse as JSON array first
+            if v.startswith('[') and v.endswith(']'):
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if item]
+                except (json.JSONDecodeError, ValueError):
+                    pass  # Fall through to comma-separated parsing
+            
+            # Parse as comma-separated string
+            if v:
+                return [origin.strip() for origin in v.split(",") if origin.strip()]
+        
+        # Default fallback
         return ["http://localhost:3000"]
     
     require_https: bool = Field(default=True)
