@@ -2,6 +2,7 @@ from typing import Optional
 from functools import lru_cache
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
+import os
 
 
 class Settings(BaseSettings):
@@ -9,11 +10,12 @@ class Settings(BaseSettings):
     app_version: str = Field(default="1.0.0")
     debug: bool = Field(default=False)
     log_level: str = Field(default="INFO")
+    environment: str = Field(default="development")  # development, staging, production
 
     database_url: str = Field(...)
     database_echo: bool = Field(default=False)
 
-    redis_url: str = Field(...)
+    redis_url: str = Field(default="redis://localhost:6379/0")
 
     jwt_secret_key: str = Field(...)
     jwt_algorithm: str = Field(default="HS256")
@@ -26,7 +28,7 @@ class Settings(BaseSettings):
     telegram_webhook_url: Optional[str] = Field(default=None)  # Ngrok or public URL
     telegram_auto_setup_webhook: bool = Field(default=False)  # Auto-setup webhook on startup
     telegram_webhook_secret: Optional[str] = Field(default=None)  # Secret token for webhook validation
-    telegram_webapp_url: str = Field(default="https://nftplatformbackend-production-b67d.up.railway.app/web-app/")  # Telegram Web App URL
+    telegram_webapp_url: str = Field(default="https://nftplatformbackend-production-b67d.up.railway.app/webapp/")  # Telegram Web App URL
     banner_image_url: str = Field(default="https://image2url.com/r2/default/images/1771155009572-149f055b-78f0-4595-bfc2-fdd990329354.png")  # /start banner image (1200x600 for mobile responsiveness)
 
     ipfs_api_url: str = Field(default="http://localhost:5001")
@@ -51,6 +53,17 @@ class Settings(BaseSettings):
     login_block_minutes: int = Field(default=15, ge=1)
 
     allowed_origins: list[str] = Field(default=["http://localhost:3000"])
+    
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """Parse CSV string from environment into list."""
+        if isinstance(v, str):
+            # Handle CSV or space-separated strings
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        if isinstance(v, list):
+            return v
+        return ["http://localhost:3000"]
     
     require_https: bool = Field(default=True)
     max_request_size: int = Field(default=10485760)
@@ -89,6 +102,8 @@ class Settings(BaseSettings):
         "Accept",
         "Origin",
         "X-Requested-With",
+        "X-Telegram-Web-App-Data",
+        "X-Telegram-Init-Data",
     ])
 
     host: str = Field(default="127.0.0.1")
@@ -108,12 +123,42 @@ class Settings(BaseSettings):
         if not isinstance(v, str) or len(v) != 44:
             raise ValueError("mnemonic_encryption_key must be a 44-char Fernet key")
         return v
+    
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        if not v or len(v.strip()) == 0:
+            raise ValueError("DATABASE_URL is required and cannot be empty")
+        return v
+    
+    @field_validator("redis_url")
+    @classmethod
+    def validate_redis_url(cls, v: str) -> str:
+        # Redis is optional for development, defaults to localhost:6379
+        if v and len(v.strip()) == 0:
+            return "redis://localhost:6379/0"
+        return v
+    
+    @field_validator("telegram_bot_token")
+    @classmethod
+    def validate_telegram_bot_token(cls, v: Optional[str]) -> Optional[str]:
+        # Warning if not configured (optional but recommended)
+        if not v or len(v.strip()) == 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("TELEGRAM_BOT_TOKEN not configured - Telegram features will not work")
+            return None
+        if not v.startswith(('3', '4', '5', '6', '7', '8', '9')):
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("TELEGRAM_BOT_TOKEN format may be invalid")
+        return v
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"
-        case_sensitive = False
+        case_sensitive = False  # Allow TELEGRAM_BOT_TOKEN, telegram_bot_token, etc.
 
 
 @lru_cache(maxsize=1)

@@ -1,5 +1,6 @@
 from app.models.user import User, UserRole
 from app.models.wallet import Wallet, BlockchainType, WalletType
+from app.models.ton_wallet import TONWallet, TONWalletStatus, StarTransaction
 from app.models.nft import NFT, NFTStatus, NFTLockReason, RarityTier
 from app.models.transaction import Transaction, TransactionType, TransactionStatus
 from app.models.marketplace import Listing, Offer, Order, ListingStatus, OfferStatus, OrderStatus
@@ -10,6 +11,7 @@ from app.models.payment import Payment, PaymentType, PaymentStatus
 from app.models.admin import AdminLog, AdminLogAction, AdminSettings
 from app.models.activity import ActivityLog, ActivityType
 from app.models.referral import Referral, ReferralStatus, ReferralCommission, CommissionStatus
+from app.models.notification import Notification, NotificationType
 
 __all__ = [
     "User",
@@ -17,6 +19,9 @@ __all__ = [
     "Wallet",
     "BlockchainType",
     "WalletType",
+    "TONWallet",
+    "TONWalletStatus",
+    "StarTransaction",
     "NFT",
     "NFTStatus",
     "NFTLockReason",
@@ -28,6 +33,8 @@ __all__ = [
     "Offer",
     "Order",
     "ListingStatus",
+    "Notification",
+    "NotificationType",
     "OfferStatus",
     "OrderStatus",
     "Attestation",

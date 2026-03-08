@@ -18,21 +18,23 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Verify enum exists with correct values - no-op if already correct
-    op.execute(
-        """
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
-                -- Verify lowercase values exist (user, admin)
-                IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text IN ('user', 'admin')) THEN
-                    -- Already correct
-                    NULL;
+    # Verify enum exists with correct values - only relevant for Postgres
+    bind = op.get_bind()
+    if bind.dialect.name == 'postgresql':
+        op.execute(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
+                    -- Verify lowercase values exist (user, admin)
+                    IF EXISTS (SELECT 1 FROM unnest(enum_range(NULL::userrole)) as v WHERE v::text IN ('user', 'admin')) THEN
+                        -- Already correct
+                        NULL;
+                    END IF;
                 END IF;
-            END IF;
-        END$$;
-        """
-    )
+            END$$;
+            """
+        )
 
 
 def downgrade() -> None:

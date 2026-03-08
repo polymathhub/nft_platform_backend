@@ -25,6 +25,9 @@ from app.routers import (
     referrals_router,
     stars_payment_router,
     dashboard_router,
+    user_router,
+    ton_wallet_router,
+    stars_marketplace_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -35,6 +38,7 @@ from app.routers.image_router import router as image_router
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
     SecurityHeadersMiddleware,
+    DirectoryListingBlockMiddleware,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,6 +107,7 @@ Security & request middleware
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
 app.add_middleware(SecurityHeadersMiddleware)  # Security headers with Telegram support
+app.add_middleware(DirectoryListingBlockMiddleware)  # Block directory listing on static files
 
 """Serve Telegram Web App static files at /web-app
 Note: static mount moved after router registration so API endpoints under
@@ -140,14 +145,14 @@ app.add_middleware(
 
 @app.get("/")
 async def root_get():
-    # Redirect root to web-app for now
-    return RedirectResponse(url="/web-app/", status_code=301)
+    # Redirect root to webapp for now
+    return RedirectResponse(url="/webapp/", status_code=301)
 
 
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     """Redirect legacy /app.js requests to the correct path"""
-    return RedirectResponse(url="/web-app/static/app.js", status_code=301)
+    return RedirectResponse(url="/webapp/static/app.js", status_code=301)
 
 
 @app.post("/")
@@ -205,6 +210,14 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(walletconnect_router, prefix="/api/v1")
 app.include_router(image_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(ton_wallet_router)  # Router already has /api/v1/wallet/ton prefix
+app.include_router(stars_marketplace_router)  # Router already has /api/v1/stars/marketplace prefix
+
+# User router at /api prefix (for web app compatibility)
+app.include_router(user_router, prefix="/api")
+
+# Notification router at /api prefix (for web app compatibility)
+app.include_router(notification_router, prefix="/api")
 
 # Payment router already has /api/v1/payments prefix in its definition
 app.include_router(payment_router)
@@ -215,16 +228,16 @@ app.include_router(referrals_router)
 # Telegram Stars payment router already has /api/v1/stars prefix in its definition
 app.include_router(stars_payment_router)
  
-# Mount web app static files under /web-app/static so we can serve a custom
+    # Mount web app static files under /webapp/static so we can serve a custom
 if os.path.isdir(webapp_path):
-    app.mount("/web-app/static", StaticFiles(directory=webapp_path, html=True), name="webapp_static")
+    app.mount("/webapp/static", StaticFiles(directory=webapp_path, html=True), name="webapp_static")
 else:
-    logger.warning(f"Web app static directory not found at {webapp_path} - /web-app static will not be available")
+    logger.warning(f"Web app static directory not found at {webapp_path} - /webapp static will not be available")
 
 
 # Serve production index file explicitly so we can keep index-production.html
-@app.get("/web-app", include_in_schema=False)
-@app.get("/web-app/", include_in_schema=False)
+@app.get("/webapp", include_in_schema=False)
+@app.get("/webapp/", include_in_schema=False)
 async def serve_webapp_index():
     # Serve index.html (new Telegram-native version)
     index_html = os.path.join(webapp_path, "index.html")

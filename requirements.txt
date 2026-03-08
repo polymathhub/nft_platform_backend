@@ -42,3 +42,6 @@ pycryptodome
 
 web3==6.20.0
 eth-account==0.10.0
+
+# Image processing and media handling
+Pillow==10.1.0

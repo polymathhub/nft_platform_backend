@@ -232,7 +232,7 @@ class WebAppWithdrawalRequest(BaseModel):
     init_data: str | None = None
 
 
-@router.post("/web-app/deposit")
+@router.post("/webapp/deposit")
 async def web_app_deposit(
     request: WebAppDepositRequest,
     db: AsyncSession = Depends(get_db_session),
@@ -307,7 +307,7 @@ async def web_app_deposit(
         )
 
 
-@router.post("/web-app/withdrawal")
+@router.post("/webapp/withdrawal")
 async def web_app_withdrawal(
     request: WebAppWithdrawalRequest,
     db: AsyncSession = Depends(get_db_session),
@@ -386,7 +386,7 @@ async def web_app_withdrawal(
         )
 
 
-@router.get("/web-app/balance/{user_id}")
+@router.get("/webapp/balance/{user_id}")
 async def web_app_balance(
     user_id: str,
     db: AsyncSession = Depends(get_db_session),

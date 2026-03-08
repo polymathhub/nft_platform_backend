@@ -1621,7 +1621,7 @@ async def send_telegram_notification(
 # ==================== Telegram Web App Endpoints ====================
 
 
-@router.get("/web-app/init")
+@router.get("/webapp/init")
 async def web_app_init(
     init_data: str = None,
     db: AsyncSession = Depends(get_db_session),
@@ -1742,7 +1742,7 @@ async def web_app_init(
         )
 
 
-@router.get("/web-app/user")
+@router.get("/webapp/user")
 async def web_app_get_user(
     user_id: str,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -1753,7 +1753,7 @@ async def web_app_get_user(
 
     # Only authenticated (real) users can access personal data
     if not telegram_user.get("authenticated"):
-        logger.warning(f"Unauthenticated user attempted to access /web-app/user")
+        logger.warning(f"Unauthenticated user attempted to access /webapp/user")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required to access user data",
@@ -1785,7 +1785,7 @@ async def web_app_get_user(
     }
 
 
-@router.get("/web-app/wallets")
+@router.get("/webapp/wallets")
 async def web_app_get_wallets(
     user_id: str,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -1831,7 +1831,7 @@ async def web_app_get_wallets(
     return response_data
 
 
-@router.get("/web-app/nfts")
+@router.get("/webapp/nfts")
 async def web_app_get_user_nfts(
     user_id: str,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -1842,7 +1842,7 @@ async def web_app_get_user_nfts(
 
     # Only authenticated (real) users can access personal data
     if not telegram_user.get("authenticated"):
-        logger.warning(f"Unauthenticated user attempted to access /web-app/nfts")
+        logger.warning(f"Unauthenticated user attempted to access /webapp/nfts")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required to access NFT data",
@@ -1884,7 +1884,7 @@ async def web_app_get_user_nfts(
     }
 
 
-@router.get("/web-app/dashboard-data")
+@router.get("/webapp/dashboard-data")
 async def web_app_get_dashboard_data(
     user_id: str,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2007,7 +2007,7 @@ async def web_app_get_dashboard_data(
         }
 
 
-@router.post("/web-app/mint")
+@router.post("/webapp/mint")
 async def web_app_mint_nft(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2113,7 +2113,7 @@ async def web_app_mint_nft(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Mint operation failed: {str(e)}")
 
 
-@router.post("/web-app/list-nft")
+@router.post("/webapp/list-nft")
 async def web_app_list_nft(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2207,7 +2207,7 @@ async def web_app_list_nft(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="List operation failed")
 
 
-@router.post("/web-app/transfer")
+@router.post("/webapp/transfer")
 async def web_app_transfer_nft(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2283,7 +2283,7 @@ async def web_app_transfer_nft(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Transfer operation failed")
 
 
-@router.post("/web-app/burn")
+@router.post("/webapp/burn")
 async def web_app_burn_nft(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2352,7 +2352,7 @@ async def web_app_burn_nft(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Burn operation failed")
 
 
-@router.post("/web-app/set-primary")
+@router.post("/webapp/set-primary")
 async def web_app_set_primary_wallet(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2421,7 +2421,7 @@ async def web_app_set_primary_wallet(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Operation failed")
 
 
-@router.post("/web-app/make-offer")
+@router.post("/webapp/make-offer")
 async def web_app_make_offer(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2512,7 +2512,7 @@ async def web_app_make_offer(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Offer operation failed")
 
 
-@router.post("/web-app/cancel-listing")
+@router.post("/webapp/cancel-listing")
 async def web_app_cancel_listing(
     http_request: Request,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2580,7 +2580,7 @@ async def web_app_cancel_listing(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Cancellation failed")
 
 
-@router.get("/web-app/marketplace/listings")
+@router.get("/webapp/marketplace/listings")
 async def get_marketplace_listings(
     limit: int = 50,
     skip: int = 0,
@@ -2644,7 +2644,7 @@ async def get_marketplace_listings(
         }
 
 
-@router.get("/web-app/marketplace/mylistings")
+@router.get("/webapp/marketplace/mylistings")
 async def get_my_listings(
     user_id: str,
     telegram_user: dict = Depends(get_telegram_user_from_request),
@@ -2688,7 +2688,7 @@ async def get_my_listings(
 
 # ==================== Wallet Management ====================
 
-@router.post("/web-app/create-wallet", response_model=dict)
+@router.post("/webapp/create-wallet", response_model=dict)
 async def create_wallet_for_webapp(
     http_request: Request,  # Get raw request first  
     db: AsyncSession = Depends(get_db_session),
@@ -2923,7 +2923,7 @@ async def create_wallet_for_webapp(
         )
 
 
-@router.post("/web-app/import-wallet", response_model=dict)
+@router.post("/webapp/import-wallet", response_model=dict)
 async def import_wallet_for_webapp(
     http_request: Request,
     db: AsyncSession = Depends(get_db_session),
@@ -3084,7 +3084,7 @@ async def import_wallet_for_webapp(
 #  3. Frontend Compatibility: Frontend calls /api/v1/payments/* directly
 #  4. Telegram Bot Access: Bot uses /api/v1/payments/* with Telegram auth (via get_telegram_user_from_request)
 #
-# DO NOT add payment endpoints (/web-app/deposit/*, /web-app/balance, etc.) here.
+# DO NOT add payment endpoints (/webapp/deposit/*, /webapp/balance, etc.) here.
 # Instead, frontend/Telegram use payment_router endpoints:
 #   GET    /api/v1/payments/balance
 #   POST   /api/v1/payments/deposit/initiate

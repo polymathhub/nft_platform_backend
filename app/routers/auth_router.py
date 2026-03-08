@@ -141,3 +141,18 @@ async def refresh_token(
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_route(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+@router.get("/profile", response_model=dict, tags=["user"])
+async def get_user_profile(current_user: User = Depends(get_current_user)):
+    """
+    Get current user profile.
+    
+    Returns user data including avatar URL for display on frontend.
+    Used by web app to fetch user profile information.
+    """
+    return {
+        "success": True,
+        "data": UserResponse.model_validate(current_user),
+        "message": "User profile retrieved successfully"
+    }

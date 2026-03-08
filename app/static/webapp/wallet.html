@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NFT Marketplace">
+  <meta name="theme-color" content="#0a0a14">
+  <title>Wallet - NFT Platform</title>
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-tertiary: #f0f1f3;
+      --text-primary: #1a202c;
+      --text-secondary: #5a6370;
+      --text-tertiary: #9ca3af;
+      --color-primary: #5856d6;
+      --color-secondary: #5856d6;
+      --color-accent: #d946ef;
+      --border-primary: rgba(26, 32, 44, 0.08);
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      /* Mobile-first typography */
+      --font-size-xs: 10px;
+      --font-size-sm: 12px;
+      --font-size-base: 13px;
+      --font-size-lg: 14px;
+      --font-size-xl: 16px;
+      --font-size-2xl: 18px;
+      --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+      padding-bottom: 160px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ============ WELCOME SECTION ============ */
+    .welcome-section {
+      padding: var(--space-xl) var(--space-lg);
+      background: #ffffff;
+      border-bottom: 1px solid rgba(26, 32, 44, 0.06);
+    }
+
+    .welcome-text {
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .welcome-text span {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .notification-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all 200ms;
+      border-radius: 10px;
+      position: relative;
+    }
+
+    .notification-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .notification-badge {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #d946ef;
+      border-radius: 50%;
+      top: 6px;
+      right: 6px;
+    }
+
+    .profile-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #5856d6 0%, #5856d6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 200ms;
+    }
+
+    .profile-avatar:hover {
+      box-shadow: 0 4px 12px rgba(88, 86, 214, 0.2);
+    }
+    }
+
+    /* ============ WALLET CARD ============ */
+    .wallet-card {
+      margin: var(--space-lg);
+      padding: var(--space-xl);
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 24px;
+      color: white;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wallet-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+      border-radius: 50%;
+    }
+
+    .wallet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .network-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 200ms;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .network-selector:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .network-selector svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .wallet-menu-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      border-radius: 12px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 200ms;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .wallet-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .wallet-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .wallet-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.75);
+      text-transform: capitalize;
+      letter-spacing: 0.3px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .wallet-balance-row {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .wallet-amount {
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .wallet-change {
+      font-size: 15px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .wallet-change.positive {
+      color: #86efac;
+    }
+
+    .wallet-change.negative {
+      color: #fca5a5;
+    }
+
+    .wallet-address {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 24px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wallet-address-copy {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 200ms;
+    }
+
+    .wallet-address-copy:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .wallet-address-copy svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .wallet-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .wallet-action-btn {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms;
+    }
+
+    .wallet-action-btn.primary {
+      background: #1a1a1a;
+      color: white;
+    }
+
+    .wallet-action-btn.primary:hover {
+      background: #0d0d0d;
+      transform: translateY(-2px);
+    }
+
+    .wallet-action-btn.secondary {
+      background: white;
+      color: #6366f1;
+    }
+
+    .wallet-action-btn.secondary:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+    }
+
+    .wallet-action-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ============ SECTION ============ */
+    .section {
+      padding: var(--space-lg);
+      margin: var(--space-lg);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+    }
+
+    .section-title {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-lg);
+      color: var(--text-primary);
+    }
+
+    /* ============ TOKENS ============ */
+    .token-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .token-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-lg);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .token-item:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--color-primary);
+    }
+
+    .token-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+    }
+
+    .token-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .token-details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .token-name {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .token-network {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+    }
+
+    .token-balance {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      text-align: right;
+    }
+
+    .token-amount {
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .token-value {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+    }
+
+    /* ============ TRANSACTION HISTORY ============ */
+    .transaction-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-lg) 0;
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .transaction-item:last-child {
+      border-bottom: none;
+    }
+
+    .transaction-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .transaction-details {
+      flex: 1;
+      margin: 0 var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .transaction-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .transaction-time {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+    }
+
+    .transaction-amount {
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+    }
+
+    .transaction-amount.sent {
+      color: #f87171;
+    }
+
+    .transaction-amount.received {
+      color: #4ade80;
+    }
+
+    /* ============ ACTIVITY LIST ============ */
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .activity-item {
+      padding: var(--space-md);
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: white;
+      font-weight: 600;
+    }
+
+    .activity-icon.success {
+      background: #4ade80;
+    }
+
+    .activity-icon.pending {
+      background: #a855f7;
+    }
+
+    .activity-icon.error {
+      background: #ef4444;
+    }
+
+    .activity-details {
+      flex: 1;
+    }
+
+    .activity-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    .activity-amount {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ============ QUICK ACTIONS GRID ============ */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .action-card {
+      padding: 24px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .action-card:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--color-primary);
+      transform: translateY(-6px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+    }
+
+    .action-card:active {
+      transform: translateY(-2px);
+    }
+
+    .action-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-primary);
+      flex-shrink: 0;
+    }
+
+    .action-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke-width: 2;
+    }
+
+    .action-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    /* ============ BOTTOM NAVIGATION ============ */
+
+  </style>
+    <link rel="stylesheet" href="navbar.css?v=2.7">
+</head>
+<body>
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="header-container">
+      <!-- Brand -->
+      <div class="header-brand">
+        <img src="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png" alt="GiftedForge" class="brand-logo">
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Notifications -->
+        <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge"></span>
+        </button>
+
+        <!-- Profile -->
+        <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
+          <div class="profile-avatar" id="profileAvatar">U</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+      <div class="dropdown-header">
+        <h3>Notifications</h3>
+        <button class="close-btn" id="notificationClose">×</button>
+      </div>
+      <div class="notification-list" id="notificationList">
+        <div class="empty-message">No notifications</div>
+      </div>
+    </div>
+
+    <!-- Profile Dropdown -->
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+        <div>
+          <div class="user-name" id="userName">User</div>
+          <div class="user-email" id="userEmail">user@example.com</div>
+        </div>
+      </div>
+      <nav class="dropdown-nav">
+        <a href="/webapp/profile.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile
+        </a>
+        <a href="/webapp/wallet.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <path d="M1 10h22"></path>
+          </svg>
+          Wallet
+        </a>
+        <a href="#" class="dropdown-link" id="darkModeToggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span id="darkModeText">Dark Mode</span>
+        </a>
+      </nav>
+      <div class="dropdown-divider"></div>
+      <a href="#" class="dropdown-link logout-link" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <a href="/webapp/dashboard.html" class="nav-item" data-page="dashboard" aria-label="Home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span class="label">Home</span>
+    </a>
+
+    <a href="/webapp/wallet.html" class="nav-item active" data-page="wallet" aria-label="Wallet">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+        <path d="M1 10h22"></path>
+        <circle cx="17" cy="15" r="3"></circle>
+      </svg>
+      <span class="label">Wallet</span>
+    </a>
+
+    <a href="/webapp/marketplace.html" class="nav-item" data-page="marketplace" aria-label="Market">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span class="label">Market</span>
+    </a>
+
+    <a href="/webapp/mint.html" class="nav-item" data-page="mint" aria-label="Create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 8 12 16"></polyline>
+        <polyline points="8 12 16 12"></polyline>
+      </svg>
+      <span class="label">Create</span>
+    </a>
+
+    <a href="/webapp/profile.html" class="nav-item" data-page="profile" aria-label="Profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span class="label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Overlay for dropdowns -->
+  <div class="header-overlay" id="headerOverlay"></div>
+  <div class="container">
+
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <p class="welcome-text">Welcome back, <span id="user-name">Guest</span></p>
+    </div>
+
+    <!-- Wallet Card -->
+    <div class="wallet-card">
+      <div class="wallet-header">
+        <div class="network-selector">
+          <span class="network-name">Solana</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <button class="wallet-menu-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="2"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+            <circle cx="12" cy="19" r="2"></circle>
+          </svg>
+        </button>
+      </div>
+      <div class="wallet-content">
+        <div class="wallet-label">Total Balance</div>
+        <div class="wallet-balance-row">
+          <div class="wallet-amount" id="wallet-balance">$12,40.50</div>
+          <span class="wallet-change positive">+2.4%</span>
+        </div>
+        <div class="wallet-address" id="wallet-address">
+          <span>8xGd...2Fpl</span>
+          <button class="wallet-address-copy" onclick="copyAddress()" title="Copy address">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </button>
+        </div>
+        <div class="wallet-actions">
+          <button class="wallet-action-btn primary" onclick="alert('Deposit coming soon')">Deposit</button>
+          <button class="wallet-action-btn secondary" onclick="alert('Withdraw coming soon')">Withdraw</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tokens Section (Hidden) -->
+    <div class="section" style="display: none;">
+      <div class="section-title">Your Assets</div>
+      <div class="token-list"></div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section">
+      <div class="section-title">Recent Activity</div>
+      <div class="activity-list">
+        <div class="activity-item">
+          <div class="activity-icon success">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M20.285 2l-11.285 11.567-5.571-5.431-3.429 3.429 9 8.863 14.714-15.429z"></path>
+            </svg>
+          </div>
+          <div class="activity-details">
+            <div class="activity-title">Deposit</div>
+            <div class="activity-time">2 hours ago • NFT Sale</div>
+          </div>
+          <div class="activity-amount">+0.5 SOL</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon pending">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="7" fill="white"></circle>
+            </svg>
+          </div>
+          <div class="activity-details">
+            <div class="activity-title">Withdrawal</div>
+            <div class="activity-time">5 hours ago • Mint Fee</div>
+          </div>
+          <div class="activity-amount">-0.2 SOL</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon success">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M20.285 2l-11.285 11.567-5.571-5.431-3.429 3.429 9 8.863 14.714-15.429z"></path>
+            </svg>
+          </div>
+          <div class="activity-details">
+            <div class="activity-title">Deposit</div>
+            <div class="activity-time">2 days ago • NFT Sale</div>
+          </div>
+          <div class="activity-amount">+1.0 SOL</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section">
+      <div class="section-title">Quick Action's</div>
+      <div class="actions-grid">
+        <div class="action-card" onclick="navigate('/wallet')">
+          <div class="action-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+              <polyline points="12 7 12 12 16 15"></polyline>
+            </svg>
+          </div>
+          <div class="action-label">Create New<br>Wallet</div>
+        </div>
+        <div class="action-card" onclick="navigate('/wallet')">
+          <div class="action-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </div>
+          <div class="action-label">Import Existing<br>Wallet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script type="module">
+    import { auth } from '/webapp/static/js/auth.js';
+    import { api, endpoints } from '/webapp/static/js/api.js';
+
+    // Wallet Manager - Handles wallet data fetching and UI updates
+    class WalletManager {
+      constructor(api, endpoints) {
+        this.api = api;
+        this.endpoints = endpoints;
+        this.wallets = [];
+      }
+
+      /**
+       * Load user's wallet list and balance
+       */
+      async loadWallets() {
+        try {
+          const response = await this.api.get(this.endpoints.wallets.list);
+          this.wallets = response.data || [];
+          this.updateWalletUI();
+        } catch (error) {
+          console.warn('Failed to load wallets:', error);
+          // Keep mock data as fallback
+        }
+      }
+
+      /**
+       * Update wallet display UI with real data
+       */
+      updateWalletUI() {
+        if (this.wallets.length === 0) return;
+
+        // Calculate total balance
+        let totalBalance = 0;
+        this.wallets.forEach(wallet => {
+          totalBalance += (wallet.balance || 0) * (wallet.current_price || 1);
+        });
+
+        // Update display
+        const balanceEl = document.querySelector('.wallet-amount');
+        if (balanceEl) {
+          balanceEl.textContent = '$' + totalBalance.toLocaleString('en-US', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          });
+        }
+
+        // Update token list
+        this.renderTokenList();
+      }
+
+      /**
+       * Render token list from user's wallets
+       */
+      renderTokenList() {
+        const tokenList = document.querySelector('.token-list');
+        if (!tokenList || this.wallets.length === 0) return;
+
+        tokenList.innerHTML = this.wallets.map(wallet => `
+          <div class="token-item" onclick="navigate('/wallet/token/${wallet.id}')">
+            <div class="token-info">
+              <div class="token-icon">${this.getTokenIcon(wallet.blockchain)}</div>
+              <div class="token-details">
+                <div class="token-name">${wallet.blockchain?.toUpperCase() || 'Token'}</div>
+                <div class="token-network">${this.getNetworkName(wallet.blockchain)}</div>
+              </div>
+            </div>
+            <div class="token-balance">
+              <div class="token-amount">${(wallet.balance || 0).toFixed(4)} ${wallet.symbol || wallet.blockchain?.toUpperCase()}</div>
+              <div class="token-value">$${((wallet.balance || 0) * (wallet.current_price || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      /**
+       * Get token emoji/icon based on blockchain
+       */
+      getTokenIcon(blockchain) {
+        const icons = {
+          'solana': '💎',
+          'ethereum': '💜',
+          'ton': '🔷',
+          'bitcoin': '🟠',
+          'polygon': '🟣',
+          'arbitrum': '⬜',
+          'optimism': '🔴'
+        };
+        return icons[blockchain?.toLowerCase()] || '💰';
+      }
+
+      /**
+       * Get human-readable network name
+       */
+      getNetworkName(blockchain) {
+        const names = {
+          'solana': 'Solana Blockchain',
+          'ethereum': 'Ethereum Network',
+          'ton': 'TON Blockchain',
+          'bitcoin': 'Bitcoin Network',
+          'polygon': 'Polygon Chain',
+          'arbitrum': 'Arbitrum Network',
+          'optimism': 'Optimism Network'
+        };
+        return names[blockchain?.toLowerCase()] || `${blockchain} Network`;
+      }
+    }
+
+    // Ensure authenticated
+    if (!auth.isLoggedIn()) {
+      window.location.href = '/';
+    }
+
+    const user = auth.getUser();
+    const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User';
+    document.getElementById('user-name').textContent = firstName;
+
+    // Global functions
+    window.navigate = (path) => window.location.href = path;
+    
+    // Copy wallet address to clipboard
+    window.copyAddress = function() {
+      const addressEl = document.querySelector('#wallet-address span');
+      if (addressEl) {
+        const address = addressEl.textContent;
+        navigator.clipboard.writeText(address).then(() => {
+          // Show feedback
+          const btn = event?.target?.closest('.wallet-address-copy');
+          if (btn) {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+            }, 1500);
+          }
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+        });
+      }
+    };
+    
+    // Initialize wallet manager
+    const walletManager = new WalletManager(api, endpoints);
+    
+    // Load wallet data
+    walletManager.loadWallets();
+    
+    // Set active nav item on click
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+  <script type="module">
+    // Import page initialization for consistent user greeting across pages
+    import PageInitializer from '/webapp/static/js/page-init.js';
+  </script>
+  <script src="navbar.js"></script>
+  <!-- Load Shared Navbar Component -->
+</body>
+</html>

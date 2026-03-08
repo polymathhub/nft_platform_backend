@@ -10,8 +10,6 @@ settings = get_settings()
 
 
 class RequestBodyCachingMiddleware(BaseHTTPMiddleware):
-    """Cache request body early to prevent stream exhaustion errors."""
-    
     async def dispatch(self, request: Request, call_next) -> Response:
         if request.method in ["POST", "PUT", "PATCH"]:
             try:
@@ -35,10 +33,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
         
-        # TELEGRAM WEBAPP FIX: Allow framing by Telegram
-        # Only restrict X-Frame-Options for non-web-app routes
         if request.url.path.startswith("/web-app"):
-            # Allow Telegram to frame the web app
             response.headers["X-Frame-Options"] = "SAMEORIGIN"
         else:
             response.headers["X-Frame-Options"] = "DENY"
@@ -50,7 +45,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if not settings.debug:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         
-        # TELEGRAM WEBAPP FIX: Adjusted CSP to allow Telegram SDK and unsafe-inline for Telegram compatibility
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://telegram.org https://*.telegram.org; "
@@ -63,11 +57,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "form-action 'self'"
         )
         
-        # Intelligent caching based on request type and path
         if request.url.path.startswith("/api/"):
-            # Allow caching for GET requests to safe endpoints (60 seconds)
             if request.method == "GET":
-                # Cache dashboard data and read-only endpoints
                 if any(path in request.url.path for path in [
                     "/web-app/dashboard-data",
                     "/web-app/init",
@@ -79,7 +70,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     response.headers["Cache-Control"] = "public, max-age=60"
                     response.headers["ETag"] = getattr(response, '_etag', None) or ""
             else:
-                # Disable caching for mutations (POST, PUT, PATCH, DELETE)
                 response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
                 response.headers["Pragma"] = "no-cache"
                 response.headers["Expires"] = "0"
@@ -114,3 +104,19 @@ class HTTPSEnforcementMiddleware(BaseHTTPMiddleware):
                     )
         
         return await call_next(request)
+
+
+class DirectoryListingBlockMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        # Block directory listing attempts on static paths
+        if request.url.path.startswith("/webapp/static"):
+            path = request.url.path
+            if path.endswith("/"):
+                logger.warning(f"Blocked directory listing attempt on {path}")
+                return JSONResponse(
+                    content={"detail": "Not found"},
+                    status_code=404
+                )
+        
+        response = await call_next(request)
+        return response

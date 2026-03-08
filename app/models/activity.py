@@ -1,3 +1,4 @@
+
 """
 Activity Log - Tracks all user activities for audit trail and management.
 Every action by a user is logged here for accountability and history.

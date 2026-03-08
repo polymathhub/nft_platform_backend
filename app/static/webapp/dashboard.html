@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GiftedForge NFT Platform">
+  <meta name="theme-color" content="#0a0a14">
+  <title>Dashboard - GiftedForge</title>
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-tertiary: #f0f1f3;
+      --text-primary: #1a202c;
+      --text-secondary: #5a6370;
+      --text-tertiary: #9ca3af;
+      --color-primary: #5856d6;
+      --color-secondary: #5856d6;
+      --color-accent: #d946ef;
+      --border-primary: rgba(26, 32, 44, 0.08);
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --space-3xl: 48px;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      --font-size-xs: 10px;
+      --font-size-sm: 12px;
+      --font-size-base: 13px;
+      --font-size-lg: 14px;
+      --font-size-xl: 16px;
+      --font-size-2xl: 20px;
+      --safe-area-inset-top: env(safe-area-inset-top, 0px);
+      --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+      padding-bottom: 160px;
+      padding-top: var(--safe-area-inset-top);
+    }
+
+    .dashboard-container {
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ============ WELCOME SECTION ============ */
+    .welcome-section {
+      padding: var(--space-xl) var(--space-lg);
+      background: #ffffff;
+      border-bottom: 1px solid rgba(26, 32, 44, 0.06);
+    }
+
+    .welcome-text {
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .welcome-text span {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* ============ BALANCE CARD ============ */
+    .balance-card {
+      margin: var(--space-xl) var(--space-lg);
+      padding: var(--space-2xl) var(--space-xl);
+      background: linear-gradient(135deg, #5856d6 0%, #5856d6 100%);
+      border-radius: 24px;
+      color: white;
+      box-shadow: 0 12px 32px rgba(88, 86, 214, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .balance-card-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .balance-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 8px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      text-transform: capitalize;
+    }
+
+    .balance-amount {
+      font-size: 40px;
+      font-weight: 800;
+      margin-bottom: var(--space-xl);
+      letter-spacing: -0.8px;
+    }
+
+    .balance-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .balance-chip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.15);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .balance-pulse {
+      width: 6px;
+      height: 6px;
+      background: #4ade80;
+      border-radius: 50%;
+    }
+
+    .balance-action {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .balance-action:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ============ STATS GRID ============ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+      padding: 0 var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(26, 32, 44, 0.08);
+      border-radius: 14px;
+      padding: var(--space-lg);
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-md);
+      transition: all var(--transition-fast);
+    }
+
+    .stat-card:hover {
+      background: var(--bg-tertiary);
+      border-color: rgba(26, 32, 44, 0.12);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+      letter-spacing: 0.2px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #f0e5ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: #5856d6;
+      stroke-width: 2;
+    }
+
+    /* ============ QUICK ACTIONS ============ */
+    .quick-actions {
+      padding: 0 var(--space-lg) var(--space-xl);
+      margin-bottom: var(--space-xl);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: var(--space-xl);
+      color: var(--text-primary);
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-xl);
+    }
+
+    .action-card {
+      background: transparent;
+      border: none;
+      border-radius: 12px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: var(--space-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .action-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .action-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f0e5ff 0%, #f8f2ff 100%);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #5856d6;
+      transition: all var(--transition-fast);
+    }
+
+    .action-card:hover .action-icon {
+      background: linear-gradient(135deg, #e8d9ff 0%, #f0e5ff 100%);
+      transform: translateY(-2px);
+    }
+
+    .action-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: #5856d6;
+      color: #5856d6;
+    }
+
+    .action-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* ============ COLLECTION SECTION ============ */
+    .collection-section {
+      padding: 0 var(--space-lg) var(--space-xl);
+      margin-bottom: var(--space-xl);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .section-header a {
+      color: #5856d6;
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .collection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+    }
+
+    .nft-card {
+      background: transparent;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: none;
+    }
+
+    .nft-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .nft-card:hover .nft-image {
+      box-shadow: 0 12px 24px rgba(88, 86, 214, 0.1);
+    }
+
+    .nft-image {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      border-radius: 12px;
+      transition: all var(--transition-fast);
+    }
+
+    .nft-info {
+      padding: var(--space-md) 0;
+    }
+
+    .nft-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .nft-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .nft-creator {
+      color: #5856d6;
+      font-weight: 600;
+    }
+
+    .nft-price {
+      color: var(--text-tertiary);
+      font-weight: 500;
+      font-size: 10px;
+    }
+
+    .nft-button {
+      width: 100%;
+      margin-top: var(--space-md);
+      padding: 8px 12px;
+      background: #5856d6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .nft-button:hover {
+      opacity: 0.9;
+      box-shadow: 0 4px 12px rgba(88, 86, 214, 0.2);
+    }
+
+    /* ============ ACTIVITY SECTION ============ */
+    .activity-section {
+      padding: 0 var(--space-lg) var(--space-2xl);
+      margin-bottom: var(--space-2xl);
+      position: relative;
+      z-index: 1;
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      padding: var(--space-lg);
+      background: var(--bg-secondary);
+      border: 1px solid rgba(26, 32, 44, 0.08);
+      border-radius: 12px;
+      transition: all var(--transition-fast);
+    }
+
+    .activity-item:hover {
+      background: var(--bg-tertiary);
+      border-color: rgba(26, 32, 44, 0.12);
+    }
+
+    .activity-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f0e5ff 0%, #f8f2ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #5856d6;
+    }
+
+    .activity-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: #5856d6;
+      color: #5856d6;
+    }
+
+    .activity-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .activity-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-time {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .activity-badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .activity-badge.pink {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .activity-badge.blue {
+      background: #dbeafe;
+      color: #0284c7;
+    }
+
+    /* ============ BOTTOM NAVIGATION ============ */
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 640px) {
+      .balance-amount {
+        font-size: 28px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="navbar.css?v=2.7">
+</head>
+<body>
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="header-container">
+      <!-- Brand -->
+      <div class="header-brand">
+        <img src="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png" alt="GiftedForge" class="brand-logo">
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Notifications -->
+        <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge"></span>
+        </button>
+
+        <!-- Profile -->
+        <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
+          <div class="profile-avatar" id="profileAvatar">U</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+      <div class="dropdown-header">
+        <h3>Notifications</h3>
+        <button class="close-btn" id="notificationClose">×</button>
+      </div>
+      <div class="notification-list" id="notificationList">
+        <div class="empty-message">No notifications</div>
+      </div>
+    </div>
+
+    <!-- Profile Dropdown -->
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+        <div>
+          <div class="user-name" id="userName">User</div>
+          <div class="user-email" id="userEmail">user@example.com</div>
+        </div>
+      </div>
+      <nav class="dropdown-nav">
+        <a href="/webapp/profile.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile
+        </a>
+        <a href="/webapp/wallet.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <path d="M1 10h22"></path>
+          </svg>
+          Wallet
+        </a>
+        <a href="#" class="dropdown-link" id="darkModeToggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span id="darkModeText">Dark Mode</span>
+        </a>
+      </nav>
+      <div class="dropdown-divider"></div>
+      <a href="#" class="dropdown-link logout-link" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <a href="/webapp/dashboard.html" class="nav-item active" data-page="dashboard" aria-label="Home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span class="label">Home</span>
+    </a>
+
+    <a href="/webapp/wallet.html" class="nav-item" data-page="wallet" aria-label="Wallet">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+        <path d="M1 10h22"></path>
+        <circle cx="17" cy="15" r="3"></circle>
+      </svg>
+      <span class="label">Wallet</span>
+    </a>
+
+    <a href="/webapp/marketplace.html" class="nav-item" data-page="marketplace" aria-label="Marketplace">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span class="label">Marketplace</span>
+    </a>
+
+    <a href="/webapp/mint.html" class="nav-item" data-page="mint" aria-label="Create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 8 12 16"></polyline>
+        <polyline points="8 12 16 12"></polyline>
+      </svg>
+      <span class="label">Create</span>
+    </a>
+
+    <a href="/webapp/profile.html" class="nav-item" data-page="profile" aria-label="Profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span class="label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Overlay for dropdowns -->
+  <div class="header-overlay" id="headerOverlay"></div>
+  <!-- Navigation -->
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="header-container">
+      <!-- Brand -->
+      <div class="header-brand">
+        <img src="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png" alt="GiftedForge" class="brand-logo">
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Notifications -->
+        <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge"></span>
+        </button>
+
+        <!-- Profile -->
+        <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
+          <div class="profile-avatar" id="profileAvatar">U</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+      <div class="dropdown-header">
+        <h3>Notifications</h3>
+        <button class="close-btn" id="notificationClose">×</button>
+      </div>
+      <div class="notification-list" id="notificationList">
+        <div class="empty-message">No notifications</div>
+      </div>
+    </div>
+
+    <!-- Profile Dropdown -->
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+        <div>
+          <div class="user-name" id="userName">User</div>
+          <div class="user-email" id="userEmail">user@example.com</div>
+        </div>
+      </div>
+      <nav class="dropdown-nav">
+        <a href="/webapp/profile.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile
+        </a>
+        <a href="/webapp/wallet.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <path d="M1 10h22"></path>
+          </svg>
+          Wallet
+        </a>
+        <a href="#" class="dropdown-link" id="darkModeToggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span id="darkModeText">Dark Mode</span>
+        </a>
+      </nav>
+      <div class="dropdown-divider"></div>
+      <a href="#" class="dropdown-link logout-link" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <a href="/webapp/dashboard.html" class="nav-item active" data-page="dashboard" aria-label="Home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span class="label">Home</span>
+    </a>
+
+    <a href="/webapp/wallet.html" class="nav-item" data-page="wallet" aria-label="Wallet">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+        <path d="M1 10h22"></path>
+        <circle cx="17" cy="15" r="3"></circle>
+      </svg>
+      <span class="label">Wallet</span>
+    </a>
+
+    <a href="/webapp/marketplace.html" class="nav-item" data-page="marketplace" aria-label="Marketplace">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span class="label">Marketplace</span>
+    </a>
+
+    <a href="/webapp/mint.html" class="nav-item" data-page="mint" aria-label="Create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 8 12 16"></polyline>
+        <polyline points="8 12 16 12"></polyline>
+      </svg>
+      <span class="label">Create</span>
+    </a>
+
+    <a href="/webapp/profile.html" class="nav-item" data-page="profile" aria-label="Profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span class="label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Overlay for dropdowns -->
+  <div class="header-overlay" id="headerOverlay"></div>
+
+  <div class="dashboard-container">
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <p class="welcome-text">Welcome back, <span id="user-name">Guest</span></p>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="balance-card">
+      <div class="balance-card-content">
+        <div class="balance-label">Total Balance</div>
+        <div class="balance-amount" id="balance-amount">$0.00
+          USD</div>
+        <div class="balance-footer">
+          <div class="balance-chip">
+            <div class="balance-pulse"></div>
+            <span id="balance-currency">Usdt</span>
+          </div>
+          <button class="balance-action" onclick="copyBalance()" title="Copy address">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid (2x2) -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-label">NFTs Owned</div>
+          <div class="stat-value">0</div>
+        </div>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-label">Active Listings</div>
+          <div class="stat-value">0</div>
+        </div>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-label">Wallet Balance</div>
+          <div class="stat-value">$0.00</div>
+        </div>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path><circle cx="12" cy="12" r="8"></circle></svg>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-label">Total Profit</div>
+          <div class="stat-value" style="color: #4ade80;">$2</div>
+        </div>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="actions-grid">
+        <div class="action-card" onclick="navigate('/wallet')">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08 0l4.24 4.24"></path></svg>
+          </div>
+          <div class="action-label">Create Wallet</div>
+        </div>
+        <div class="action-card" onclick="navigate('/mint')">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </div>
+          <div class="action-label">Mint NFT</div>
+        </div>
+        <div class="action-card" onclick="navigate('/marketplace')">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+          </div>
+          <div class="action-label">Explore Market</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Your Collection -->
+    <div class="collection-section">
+      <div class="section-header">
+        <h2 class="section-title" style="margin: 0;">Your Collection</h2>
+        <a href="/marketplace">View All</a>
+      </div>
+      <div class="collection-grid">
+        <div class="nft-card" onclick="navigate('/marketplace/nft/1')">
+          <div class="nft-image" style="background: linear-gradient(135deg, #f0e5ff 0%, #e8d9ff 100%); display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="2" style="width: 32px; height: 32px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          </div>
+          <div class="nft-info">
+            <div class="nft-name">Liquid #01</div>
+            <div class="nft-meta">
+              <span class="nft-creator">2 SOL</span>
+              <span class="nft-price">floor 2.3</span>
+            </div>
+          </div>
+          <button class="nft-button">View More</button>
+        </div>
+        <div class="nft-card" onclick="navigate('/marketplace/nft/2')">
+          <div class="nft-image" style="background: linear-gradient(135deg, #f0e5ff 0%, #e8d9ff 100%); display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="2" style="width: 32px; height: 32px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </div>
+          <div class="nft-info">
+            <div class="nft-name">Neon Dreams</div>
+            <div class="nft-meta">
+              <span class="nft-creator">1 SOL</span>
+              <span class="nft-price">floor 1.9</span>
+            </div>
+          </div>
+          <button class="nft-button">View More</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="activity-section">
+      <h2 class="section-title">Recent Activity</h2>
+      <div class="activity-list">
+        <div class="activity-item">
+          <div class="activity-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">Minted Cosmic Cube</div>
+            <div class="activity-time">2 hrs ago</div>
+          </div>
+          <div class="activity-badge pink">MINTED</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">Sold Abstract #22</div>
+            <div class="activity-time">1.5 hrs ago</div>
+          </div>
+          <div class="activity-badge blue">SOLD</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">Bought Pixel Park</div>
+            <div class="activity-time">4 hrs ago</div>
+          </div>
+          <div class="activity-badge pink">BOUGHT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+  <script type="module">
+    import { auth } from '/webapp/static/js/auth.js';
+    import { api, endpoints } from '/webapp/static/js/api.js';
+
+    // Dashboard Activity Manager
+    class ActivityManager {
+      constructor(api, endpoints) {
+        this.api = api;
+        this.endpoints = endpoints;
+      }
+
+      /**
+       * Load recent transactions and render them
+       */
+      async loadRecentActivity() {
+        try {
+          const response = await this.api.get(this.endpoints.dashboard.recentTransactions);
+          this.renderActivity(response.transactions || []);
+        } catch (error) {
+          console.warn('Failed to load activity:', error);
+          // Keep existing mock data as fallback
+        }
+      }
+
+      /**
+       * Transform transaction data to activity item UI
+       */
+      getActivityIcon(transactionType) {
+        const icons = {
+          'mint': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+          'sale': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>',
+          'purchase': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>',
+          'transfer': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path><path d="M10 17h4M12 13v4"></path></svg>'
+        };
+        return icons[transactionType.toLowerCase()] || icons.transfer;
+      }
+
+      /**
+       * Get badge color based on transaction type
+       */
+      getActivityBadge(transactionType) {
+        const badges = {
+          'mint': `<div class="activity-badge pink">MINTED</div>`,
+          'sale': `<div class="activity-badge blue">SOLD</div>`,
+          'purchase': `<div class="activity-badge pink">BOUGHT</div>`,
+          'transfer': `<div class="activity-badge blue">TRANSFERRED</div>`
+        };
+        return badges[transactionType.toLowerCase()] || `<div class="activity-badge pink">${transactionType.toUpperCase()}</div>`;
+      }
+
+      /**
+       * Format timestamp to relative time
+       */
+      formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+        
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        
+        return date.toLocaleDateString();
+      }
+
+      /**
+       * Render activity items to DOM
+       */
+      renderActivity(transactions) {
+        const activityList = document.querySelector('.activity-list');
+        if (!activityList || transactions.length === 0) return;
+
+        // Keep last 3 transactions
+        activityList.innerHTML = transactions.slice(0, 3).map(tx => `
+          <div class="activity-item">
+            <div class="activity-icon">
+              ${this.getActivityIcon(tx.transaction_type || 'transfer')}
+            </div>
+            <div class="activity-content">
+              <div class="activity-title">${tx.description || `${tx.transaction_type} on ${tx.nft_name || 'NFT'}`}</div>
+              <div class="activity-time">${this.formatTime(tx.created_at)}</div>
+            </div>
+            ${this.getActivityBadge(tx.transaction_type || 'transfer')}
+          </div>
+        `).join('');
+      }
+    }
+
+    // Check authentication
+    async function ensureAuthenticated() {
+      try {
+        if (!auth.isLoggedIn()) {
+          window.location.href = '/';
+          return false;
+        }
+
+        const user = auth.getUser();
+        const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User';
+        
+        document.getElementById('user-name').textContent = firstName;
+        
+        return true;
+      } catch (error) {
+        console.error('Auth error:', error);
+        window.location.href = '/';
+        return false;
+      }
+    }
+
+    // Navigation
+    window.navigate = function(path) {
+      window.location.href = path;
+    };
+
+    // Copy balance to clipboard
+    window.copyBalance = function() {
+      const amount = document.getElementById('balance-amount').textContent;
+      navigator.clipboard.writeText(amount).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => {
+          btn.textContent = original;
+        }, 1500);
+      });
+    };
+
+    // Set active nav item
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Initialize activity manager
+    const activityManager = new ActivityManager(api, endpoints);
+
+    // Initialize dashboard
+    async function initDashboard() {
+      const isAuthenticated = await ensureAuthenticated();
+      if (isAuthenticated) {
+        activityManager.loadRecentActivity();
+      }
+    }
+
+    initDashboard();
+  </script>
+  <script type="module">
+    // Import page initialization for consistent user greeting across pages
+    import PageInitializer from '/webapp/static/js/page-init.js';
+  </script>
+  <script src="navbar.js"></script>
+  <!-- Load Shared Navbar Component -->
+</body>
+</html>

@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NFT Marketplace">
+  <meta name="theme-color" content="#0a0a14">
+  <title>Profile NFT Platform</title>
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-tertiary: #f0f1f3;
+      --text-primary: #1a202c;
+      --text-secondary: #5a6370;
+      --text-tertiary: #9ca3af;
+      --color-primary: #5856d6;
+      --color-secondary: #5856d6;
+      --color-accent: #d946ef;
+      --border-primary: rgba(26, 32, 44, 0.08);
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      /* Mobile-first typography */
+      --font-size-xs: 10px;
+      --font-size-sm: 12px;
+      --font-size-base: 13px;
+      --font-size-lg: 14px;
+      --font-size-xl: 16px;
+      --font-size-2xl: 18px;
+      --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+      padding-bottom: 160px;
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ============ PROFILE CARD ============ */
+    .profile-card {
+      padding: var(--space-xl) var(--space-lg);
+      margin: var(--space-lg) var(--space-lg);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-xl);
+      text-align: center;
+    }
+
+    .profile-card .profile-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #5856d6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin: 0 auto var(--space-lg);
+      box-shadow: 0 4px 12px rgba(88, 86, 214, 0.15);
+    }
+
+    .profile-name {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      margin-bottom: var(--space-sm);
+    }
+
+    .profile-username {
+      font-size: var(--font-size-sm);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-lg);
+    }
+
+    /* ============ STATS ============ */
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      padding: var(--space-lg) 0;
+      border-top: 1px solid var(--border-primary);
+      border-bottom: 1px solid var(--border-primary);
+      margin: var(--space-lg) 0;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+      margin-top: var(--space-xs);
+    }
+
+    /* ============ ACTION BUTTONS ============ */
+    .profile-actions {
+      display: flex;
+      gap: var(--space-md);
+      margin-top: var(--space-lg);
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: var(--space-md) var(--space-lg);
+      border: 1px solid var(--border-primary);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      transition: all var(--transition-fast);
+    }
+
+    .action-btn:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--color-primary);
+    }
+
+    .action-btn.primary {
+      background: #5856d6;
+      border-color: transparent;
+      color: white;
+    }
+
+    .action-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    /* ============ SECTIONS ============ */
+    .section {
+      padding: var(--space-lg);
+      margin: var(--space-lg) var(--space-lg);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+    }
+
+    .section-title {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      margin-bottom: var(--space-lg);
+      color: var(--text-primary);
+    }
+
+    .menu-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid var(--border-primary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .menu-item:hover {
+      color: var(--color-primary);
+    }
+
+    .menu-item-label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .menu-item-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .menu-item-desc {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+    }
+
+    .menu-item-arrow {
+      color: var(--text-tertiary);
+      font-size: 1.2rem;
+    }
+
+    /* ============ BOTTOM NAVIGATION ============ */
+
+
+    .danger-btn {
+      width: calc(100% - 32px);
+      padding: var(--space-md) var(--space-lg);
+      background: rgba(248, 113, 113, 0.1);
+      color: #f87171;
+      border: 1px solid #f87171;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      transition: all var(--transition-fast);
+      margin: var(--space-lg) var(--space-lg);
+    }
+
+    .danger-btn:hover {
+      background: #f87171;
+      color: white;
+    }
+  </style>
+    <link rel="stylesheet" href="navbar.css?v=2.7">
+</head>
+<body>
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="header-container">
+      <!-- Brand -->
+      <div class="header-brand">
+        <img src="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png" alt="GiftedForge" class="brand-logo">
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Notifications -->
+        <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge"></span>
+        </button>
+
+        <!-- Profile -->
+        <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
+          <div class="profile-avatar" id="profileAvatar">U</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+      <div class="dropdown-header">
+        <h3>Notifications</h3>
+        <button class="close-btn" id="notificationClose">×</button>
+      </div>
+      <div class="notification-list" id="notificationList">
+        <div class="empty-message">No notifications</div>
+      </div>
+    </div>
+
+    <!-- Profile Dropdown -->
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+        <div>
+          <div class="user-name" id="userName">User</div>
+          <div class="user-email" id="userEmail">user@example.com</div>
+        </div>
+      </div>
+      <nav class="dropdown-nav">
+        <a href="/webapp/profile.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile
+        </a>
+        <a href="/webapp/wallet.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <path d="M1 10h22"></path>
+          </svg>
+          Wallet
+        </a>
+        <a href="#" class="dropdown-link" id="darkModeToggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span id="darkModeText">Dark Mode</span>
+        </a>
+      </nav>
+      <div class="dropdown-divider"></div>
+      <a href="#" class="dropdown-link logout-link" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <a href="/webapp/dashboard.html" class="nav-item" data-page="dashboard" aria-label="Home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span class="label">Home</span>
+    </a>
+
+    <a href="/webapp/wallet.html" class="nav-item" data-page="wallet" aria-label="Wallet">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+        <path d="M1 10h22"></path>
+        <circle cx="17" cy="15" r="3"></circle>
+      </svg>
+      <span class="label">Wallet</span>
+    </a>
+
+    <a href="/webapp/marketplace.html" class="nav-item" data-page="marketplace" aria-label="Market">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span class="label">Market</span>
+    </a>
+
+    <a href="/webapp/mint.html" class="nav-item" data-page="mint" aria-label="Create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 8 12 16"></polyline>
+        <polyline points="8 12 16 12"></polyline>
+      </svg>
+      <span class="label">Create</span>
+    </a>
+
+    <a href="/webapp/profile.html" class="nav-item active" data-page="profile" aria-label="Profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span class="label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Overlay for dropdowns -->
+  <div class="header-overlay" id="headerOverlay"></div>
+  <div class="container">
+
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <p class="welcome-text">Welcome back, <span id="user-name">Guest</span></p>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="profile-card">
+      <div class="profile-avatar">👤</div>
+      <div class="profile-name" id="profile-name">John Smith</div>
+      <div class="profile-username" id="profile-username">@johnsmith</div>
+
+      <div class="profile-stats">
+        <div class="stat">
+          <div class="stat-value">16</div>
+          <div class="stat-label">NFTs Owned</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">$45K</div>
+          <div class="stat-label">Total Value</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Collections</div>
+        </div>
+      </div>
+
+      <div class="profile-actions">
+        <button class="action-btn" onclick="navigate('/wallet')">Wallet</button>
+        <button class="action-btn primary" onclick="navigate('/mint')">Create</button>
+      </div>
+    </div>
+
+    <!-- Referral Section -->
+    <div class="section" style="background: linear-gradient(135deg, rgba(88, 86, 214, 0.05) 0%, rgba(217, 70, 239, 0.05) 100%); border: 1px solid rgba(88, 86, 214, 0.15);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="flex: 1;">
+          <div style="font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-xl);">Referral Code</div>
+          <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: var(--bg-primary); border-radius: var(--radius-lg); border: 1px solid var(--border-primary);">
+            <div style="font-family: monospace; font-weight: 700; font-size: var(--font-size-lg); color: var(--color-primary);" id="referral-code-display">REF000000</div>
+            <div style="display: flex; gap: var(--space-sm); margin-left: auto;">
+              <button 
+                onclick="window.copyReferralCode()" 
+                style="
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: all var(--transition-fast);
+                "
+                onmouseover="this.style.opacity='0.7';"
+                onmouseout="this.style.opacity='1';"
+                title="Copy code"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px; color: var(--color-primary);">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+              <button 
+                onclick="window.shareReferralCode()" 
+                style="
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: all var(--transition-fast);
+                "
+                onmouseover="this.style.opacity='0.7';"
+                onmouseout="this.style.opacity='1';"
+                title="Share code"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px; color: var(--color-primary);">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Referral Stats -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid rgba(88, 86, 214, 0.15);">
+        <div style="text-align: center;">
+          <div style="font-size: var(--font-size-lg); font-weight: 700; color: var(--color-primary);" id="earnings-earned">$42.50</div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--space-xs);">Total Earned</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: var(--font-size-lg); font-weight: 700; color: var(--color-primary);" id="referral-count">5</div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--space-xs);">Referrals</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: var(--font-size-lg); font-weight: 700; color: var(--color-accent);" id="pending-amount">$18.75</div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: var(--space-xs);">Pending</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Section -->
+    <div class="section">
+      <div class="section-title">About</div>
+      <p id="profile-bio" style="color: var(--text-secondary); font-size: var(--font-size-sm); line-height: 1.6;">
+        Digital artist and NFT collector. Passionate about blockchain technology and creative expression.
+      </p>
+    </div>
+
+    <!-- Account Section -->
+    <div class="section">
+      <div class="section-title">Wallet Connection</div>
+      <div class="menu-item" style="flex-direction: column; align-items: flex-start;">
+        <div class="menu-item-label" style="width: 100%;">
+          <div class="menu-item-title">Connected TON Wallet</div>
+          <div class="menu-item-desc" id="wallet-address" style="word-break: break-all;">0x742d35Cc6634C0532925a3b844Bc155e90c36aB4</div>
+        </div>
+        <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); width: 100%;">
+          <button onclick="copyWalletAddress()" style="flex: 1; padding: var(--space-sm) var(--space-md); background: var(--bg-primary); color: var(--color-primary); border: 1px solid var(--color-primary); border-radius: var(--radius-md); cursor: pointer; font-size: var(--font-size-xs); font-weight: 600; transition: all var(--transition-fast);" onmouseover="this.style.background='var(--color-primary)'; this.style.color='white';" onmouseout="this.style.background='var(--bg-primary)'; this.style.color='var(--color-primary)';">
+            Copy Address
+          </button>
+          <button onclick="viewOnExplorer()" style="flex: 1; padding: var(--space-sm) var(--space-md); background: var(--bg-primary); color: var(--color-primary); border: 1px solid var(--color-primary); border-radius: var(--radius-md); cursor: pointer; font-size: var(--font-size-xs); font-weight: 600; transition: all var(--transition-fast);" onmouseover="this.style.background='var(--color-primary)'; this.style.color='white';" onmouseout="this.style.background='var(--bg-primary)'; this.style.color='var(--color-primary)';">
+            View Explorer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="section">
+      <div class="menu-item" onclick="navigate('/security')">
+        <div class="menu-item-label">
+          <div class="menu-item-title">Security</div>
+          <div class="menu-item-desc">Manage passwords & 2FA</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+      <div class="menu-item" onclick="navigate('/notifications-settings')">
+        <div class="menu-item-label">
+          <div class="menu-item-title">Notifications</div>
+          <div class="menu-item-desc">Manage notification preferences</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+    </div>
+
+    <!-- Content Section -->
+    <div class="section">
+      <div class="section-title">Content</div>
+      <div class="menu-item" onclick="navigate('/collections')">
+        <div class="menu-item-label">
+          <div class="menu-item-title">My Collections</div>
+          <div class="menu-item-desc">View and manage collections</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+      <div class="menu-item" onclick="navigate('/favorites')">
+        <div class="menu-item-label">
+          <div class="menu-item-title">Favorites</div>
+          <div class="menu-item-desc">Your saved NFTs</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+      <div class="menu-item" onclick="navigate('/offers')">
+        <div class="menu-item-label">
+          <div class="menu-item-title">Offers</div>
+          <div class="menu-item-desc">Received & sent offers</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+    </div>
+
+    <!-- Support Section -->
+    <div class="section">
+      <div class="section-title">Support</div>
+      <div class="menu-item">
+        <div class="menu-item-label">
+          <div class="menu-item-title">Help & Support</div>
+          <div class="menu-item-desc">Get help with your account</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+      <div class="menu-item">
+        <div class="menu-item-label">
+          <div class="menu-item-title">Report a Problem</div>
+          <div class="menu-item-desc">Report issues or bugs</div>
+        </div>
+        <div class="menu-item-arrow">→</div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <button class="danger-btn" onclick="disconnectWallet()">Disconnect Wallet</button>
+  </div>
+
+
+
+  <script type="module">
+    import { auth } from '/webapp/static/js/auth.js';
+    import { api, endpoints } from '/webapp/static/js/api.js';
+
+    // Ensure authenticated
+    if (!auth.isLoggedIn()) {
+      window.location.href = '/';
+    }
+
+    const user = auth.getUser();
+    document.getElementById('profile-name').textContent = user?.name || 'User';
+    document.getElementById('profile-username').textContent = '@' + (user?.username || 'username');
+
+    // Global functions
+    window.navigate = (path) => window.location.href = path;
+    
+    window.disconnectWallet = async () => {
+      if (confirm('Disconnect your wallet? You will need to reconnect to access the app.')) {
+        await auth.logout();
+        window.location.href = '/';
+      }
+    };
+
+    window.copyWalletAddress = () => {
+      const address = document.getElementById('wallet-address').textContent;
+      navigator.clipboard.writeText(address);
+      alert('Wallet address copied to clipboard!');
+    };
+
+    window.viewOnExplorer = () => {
+      const address = document.getElementById('wallet-address').textContent;
+      // Opens TON blockchain explorer - adjust URL based on network
+      window.open(`https://tonscan.org/address/${address}`, '_blank');
+    };
+
+    // Referral System - Connected to Backend API
+    class ReferralSystem {
+      constructor(apiClient, endpoints) {
+        this.api = apiClient;
+        this.endpoints = endpoints;
+        this.userData = null;
+        this.loading = false;
+      }
+
+      async initialize() {
+        this.loading = true;
+        try {
+          // Fetch actual referral data from backend
+          const response = await this.api.get(this.endpoints.referrals.me);
+          this.userData = {
+            referralCode: response.code,
+            totalEarned: response.lifetime_earnings || 0,
+            referralCount: response.total_referrals || 0,
+            pendingEarnings: response.pending_commissions || 0,
+          };
+          this.renderUI();
+        } catch (error) {
+          console.warn('Could not load referral data from backend, using defaults:', error);
+          // Fallback to mock data if backend unavailable
+          this.userData = {
+            referralCode: 'REFXXXXXX',
+            totalEarned: 0,
+            referralCount: 0,
+            pendingEarnings: 0,
+          };
+          this.renderUI();
+        } finally {
+          this.loading = false;
+        }
+      }
+
+      renderUI() {
+        if (!this.userData) return;
+        
+        const codeElement = document.getElementById('referral-code-display');
+        const earningsElement = document.getElementById('earnings-earned');
+        const countElement = document.getElementById('referral-count');
+        const pendingElement = document.getElementById('pending-amount');
+        
+        if (codeElement) codeElement.textContent = this.userData.referralCode;
+        if (earningsElement) earningsElement.textContent = '$' + this.userData.totalEarned.toFixed(2);
+        if (countElement) countElement.textContent = this.userData.referralCount;
+        if (pendingElement) pendingElement.textContent = '$' + this.userData.pendingEarnings.toFixed(2);
+      }
+
+      copy() {
+        if (!this.userData) return;
+        const code = this.userData.referralCode;
+        navigator.clipboard.writeText(code).then(() => {
+          this.showToast('Referral code copied!');
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          this.showToast('Failed to copy code');
+        });
+      }
+
+      share() {
+        if (!this.userData) return;
+        const code = this.userData.referralCode;
+        const shareText = `Join me on GiftedForge! Use my referral code: ${code}`;
+        const shareUrl = `${window.location.origin}/?ref=${code}`;
+        
+        // Try native Web Share API first (mobile)
+        if (navigator.share) {
+          navigator.share({
+            title: 'GiftedForge Referral',
+            text: shareText,
+            url: shareUrl,
+          }).catch(err => {
+            if (err.name !== 'AbortError') {
+              this.showShareOptions(shareText, shareUrl);
+            }
+          });
+        } else {
+          // Show manual share options on desktop
+          this.showShareOptions(shareText, shareUrl);
+        }
+      }
+
+      showShareOptions(shareText, shareUrl) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          z-index: 1000;
+        `;
+
+        const container = document.createElement('div');
+        container.style.cssText = `
+          background: white;
+          border-radius: 16px 16px 0 0;
+          width: 100%;
+          max-width: 600px;
+          padding: 24px;
+          box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+        `;
+
+        container.innerHTML = `
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 24px; color: #1a202c;">Share Referral Code</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
+            <button onclick="window.shareToTelegram('${this.userData.referralCode}', '${shareText}')" style="
+              padding: 16px;
+              border: 1px solid #e2e8f0;
+              background: #fff;
+              border-radius: 12px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 600;
+              transition: all 200ms;
+            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
+              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px; color: #0088cc;">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-1.13 1.06-.85.09-1.49-.56-2.3-.99-1.27-.79-1.98-1.28-3.22-2.05-1.42-.93-.5-1.43.31-2.26.21-.23 3.86-3.54 3.92-3.84.03-.15.05-.45-.17-.64-.23-.2-.56-.13-.79-.08-.34.05-5.74 3.62-8.15 5.07-.77.48-1.45.67-2.07.66-.68-.01-2-.13-2.98-.25-.96-.12-1.72-.56-1.66-1.2.03-.33.32-.96 1.04-1.92 3.02-4.17 4.47-6.15 4.7-6.53.2-.3.33-.5.33-.5z"/>
+                </svg>
+              </div>
+              Telegram
+            </button>
+            <button onclick="window.shareToWhatsApp('${shareText}', '${shareUrl}')" style="
+              padding: 16px;
+              border: 1px solid #e2e8f0;
+              background: #fff;
+              border-radius: 12px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 600;
+              transition: all 200ms;
+            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
+              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px; color: #25d366;">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.944 1.25c-1.54.919-2.764 2.267-3.592 3.77-.829 1.503-1.269 3.19-.788 4.686.48 1.497 1.904 2.884 3.27 3.646 1.365.762 3.355 1.253 5.037.666 1.268-.427 2.257-1.279 2.953-2.263.695-.983 1.278-2.396 1.514-3.76.236-1.364.052-2.836-.648-4.112-.7-1.275-1.7-2.546-3.106-3.308-1.406-.762-2.82-1.175-4.695-1.175z"/>
+                </svg>
+              </div>
+              WhatsApp
+            </button>
+            <button onclick="window.shareToTwitter('${shareText}', '${shareUrl}')" style="
+              padding: 16px;
+              border: 1px solid #e2e8f0;
+              background: #fff;
+              border-radius: 12px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 600;
+              transition: all 200ms;
+            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
+              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px; color: #000;">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.6l-5.17-6.763-5.91 6.763h-3.308l7.73-8.835L2.56 2.25h6.74l4.68 6.18 5.364-6.18zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              </div>
+              Twitter
+            </button>
+            <button onclick="window.shareToEmail('${shareText}', '${shareUrl}')" style="
+              padding: 16px;
+              border: 1px solid #e2e8f0;
+              background: #fff;
+              border-radius: 12px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 600;
+              transition: all 200ms;
+            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
+              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; color: #666;">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </svg>
+              </div>
+              Email
+            </button>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" style="
+            width: 100%;
+            padding: 12px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a202c;
+          ">Close</button>
+        `;
+
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.remove();
+        });
+      }
+
+      showToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #5856d6 0%, #d946ef 100%);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          z-index: 1000;
+          animation: slideIn 0.3s ease-out;
+          box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3);
+        `;
+        toast.textContent = message;
+        
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.style.animation = 'slideOut 0.3s ease-in';
+          setTimeout(() => toast.remove(), 300);
+        }, 2000);
+      }
+    }
+
+    // Initialize referral system with API client
+    const referralSystem = new ReferralSystem(api, endpoints);
+    referralSystem.initialize();
+
+    // Global referral functions
+    window.copyReferralCode = () => referralSystem.copy();
+    window.shareReferralCode = () => referralSystem.share();
+
+    // Share functions for different platforms
+    window.shareToTelegram = (code, text) => {
+      const url = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + '/?ref=' + code)}&text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+    };
+
+    window.shareToWhatsApp = (text, url) => {
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+      window.open(whatsappUrl, '_blank');
+      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+    };
+
+    window.shareToTwitter = (text, url) => {
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      window.open(twitterUrl, '_blank');
+      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+    };
+
+    window.shareToEmail = (text, url) => {
+      const subject = 'Join GiftedForge - Exclusive NFT Platform';
+      const body = encodeURIComponent(`${text}\n\n${url}`);
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+    };
+
+    // Set active nav item on click
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>  <script type="module">
+    // Import page initialization for consistent user greeting across pages
+    import PageInitializer from '/webapp/static/js/page-init.js';
+  </script>  <script src="navbar.js"></script>
+  <!-- Load Shared Navbar Component -->
+</body>
+</html>

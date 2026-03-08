@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GiftedForge NFT Platform">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="NFT Marketplace - Browse, buy, and sell premium digital assets">
+  <title>Marketplace - GiftedForge NFT Platform</title>
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --text-primary: #1a1a1a;
+      --text-secondary: #7d8fa3;
+      --text-tertiary: #a8b5c4;
+      --border-light: #e8eef7;
+      --color-primary: #5856d6;
+      --color-accent: #d946ef;
+      --color-dark: #1a1a2e;
+      
+      --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --gradient-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      --gradient-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      --gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      --gradient-teal: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+      --gradient-peach: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      --gradient-red: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);
+      
+      --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding-bottom: 140px;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .container {
+      max-width: 428px;
+      margin: 0 auto;
+      width: 100%;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    }
+
+
+
+    .profile-avatar:active {
+      transform: scale(0.95);
+    }
+
+    /* ============ SEARCH SECTION ============ */
+    .search-section {
+      padding: 16px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-light);
+      position: sticky;
+      top: 0;
+      z-index: 99;
+    }
+
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-secondary);
+      border-radius: 24px;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border-light);
+      transition: all 200ms ease;
+    }
+
+    .search-wrapper:focus-within {
+      border-color: var(--color-primary);
+      background: #f0ecff;
+    }
+
+    .search-wrapper svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    #search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      font-size: 15px;
+      color: var(--text-primary);
+      outline: none;
+      font-weight: 500;
+    }
+
+    #search-input::placeholder {
+      color: var(--text-tertiary);
+      font-weight: 400;
+    }
+
+    /* ============ CATEGORY TABS ============ */
+    .category-tabs-section {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .category-tabs-section::-webkit-scrollbar {
+      display: none;
+    }
+
+    .category-tab {
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: transparent;
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 14px;
+      white-space: nowrap;
+      transition: all 200ms ease;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .category-tab:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .category-tab.active {
+      background: var(--color-dark);
+      color: white;
+      border-color: var(--color-dark);
+    }
+
+    /* ============ SUB TABS ============ */
+    .sub-tabs-section {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      gap: 32px;
+    }
+
+    .sub-tab {
+      padding: 6px 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 15px;
+      border-bottom: 3px solid transparent;
+      transition: all 200ms ease;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .sub-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .sub-tab.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    /* ============ MARKETPLACE/GRID ============ */
+    .marketplace-container {
+      padding: 16px 12px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      min-height: calc(100vh - 320px);
+    }
+
+    .nft-card {
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .nft-card:active {
+      transform: scale(0.96);
+    }
+
+    .nft-card:hover {
+      box-shadow: 0 12px 28px rgba(88, 86, 214, 0.15);
+      border-color: rgba(88, 86, 214, 0.2);
+    }
+
+    .nft-image {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      aspect-ratio: 1.15;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px 20px 0 0;
+    }
+
+    .nft-image::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .nft-image-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .nft-image .heart-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+      padding: 0;
+    }
+
+    .nft-image .heart-btn:active {
+      transform: scale(1.2);
+    }
+
+    .nft-image .heart-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke: #ff4444;
+      stroke-width: 2;
+      fill: none;
+      transition: all 200ms ease;
+    }
+
+    .nft-image .heart-btn.active svg {
+      fill: #ff4444;
+    }
+
+    .nft-info {
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .nft-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    .nft-creator {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .nft-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      gap: 8px;
+    }
+
+    .nft-price {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .nft-price svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .nft-action {
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1.5px solid var(--border-light);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms ease;
+      white-space: nowrap;
+    }
+
+    .nft-action:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: #f0ecff;
+    }
+
+    .nft-action:active {
+      background: #e8dffe;
+      transform: scale(0.98);
+    }
+
+    /* ============ BOTTOM NAVIGATION ============ */
+
+
+    .empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      opacity: 0.7;
+    }
+
+    .empty-state h3 {
+      font-size: 16px;
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+    <link rel="stylesheet" href="navbar.css?v=2.7">
+</head>
+<body>
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="header-container">
+      <!-- Brand -->
+      <div class="header-brand">
+        <img src="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png" alt="GiftedForge" class="brand-logo">
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Notifications -->
+        <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="notification-badge" id="notificationBadge"></span>
+        </button>
+
+        <!-- Profile -->
+        <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
+          <div class="profile-avatar" id="profileAvatar">U</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+      <div class="dropdown-header">
+        <h3>Notifications</h3>
+        <button class="close-btn" id="notificationClose">×</button>
+      </div>
+      <div class="notification-list" id="notificationList">
+        <div class="empty-message">No notifications</div>
+      </div>
+    </div>
+
+    <!-- Profile Dropdown -->
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+        <div>
+          <div class="user-name" id="userName">User</div>
+          <div class="user-email" id="userEmail">user@example.com</div>
+        </div>
+      </div>
+      <nav class="dropdown-nav">
+        <a href="/webapp/profile.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Profile
+        </a>
+        <a href="/webapp/wallet.html" class="dropdown-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <path d="M1 10h22"></path>
+          </svg>
+          Wallet
+        </a>
+        <a href="#" class="dropdown-link" id="darkModeToggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span id="darkModeText">Dark Mode</span>
+        </a>
+      </nav>
+      <div class="dropdown-divider"></div>
+      <a href="#" class="dropdown-link logout-link" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <a href="/webapp/dashboard.html" class="nav-item" data-page="dashboard" aria-label="Home">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span class="label">Home</span>
+    </a>
+
+    <a href="/webapp/wallet.html" class="nav-item" data-page="wallet" aria-label="Wallet">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+        <path d="M1 10h22"></path>
+        <circle cx="17" cy="15" r="3"></circle>
+      </svg>
+      <span class="label">Wallet</span>
+    </a>
+
+    <a href="/webapp/marketplace.html" class="nav-item active" data-page="marketplace" aria-label="Market">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span class="label">Market</span>
+    </a>
+
+    <a href="/webapp/mint.html" class="nav-item" data-page="mint" aria-label="Create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 8 12 16"></polyline>
+        <polyline points="8 12 16 12"></polyline>
+      </svg>
+      <span class="label">Create</span>
+    </a>
+
+    <a href="/webapp/profile.html" class="nav-item" data-page="profile" aria-label="Profile">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span class="label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Overlay for dropdowns -->
+  <div class="header-overlay" id="headerOverlay"></div>
+  <div class="container">
+
+
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="search-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search NFT's, Collections...">
+      </div>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="category-tabs-section">
+      <button class="category-tab active" data-category="trending" onclick="switchCategory('trending', event)">Trending</button>
+      <button class="category-tab" data-category="art" onclick="switchCategory('art', event)">Digital Art</button>
+      <button class="category-tab" data-category="gaming" onclick="switchCategory('gaming', event)">Gaming</button>
+    </div>
+
+    <!-- Sub Tabs -->
+    <div class="sub-tabs-section">
+      <button class="sub-tab active" data-tab="explore" onclick="switchTab('explore', event)">Explore</button>
+      <button class="sub-tab" data-tab="listings" onclick="switchTab('listings', event)">My Listing's</button>
+    </div>
+
+    <!-- NFT Grid -->
+    <div class="marketplace-container" id="nft-grid">
+      <!-- NFTs will be rendered here -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { authManager } from '/webapp/static/js/auth.js';
+    import { marketplaceService } from '/webapp/static/js/marketplace-service.js';
+
+    const state = {
+      allNFTs: [],
+      userListings: [],
+      favorites: new Set(),
+      currentCategory: 'trending',
+      currentTab: 'explore',
+      isLoading: false,
+      error: null,
+      isAuthenticated: false,
+      currentUser: null,
+    };
+
+    const gradients = [
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+      'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
+    ];
+
+    async function initializeApp() {
+      try {
+        state.isAuthenticated = authManager.isAuthenticated;
+        state.currentUser = authManager.user;
+
+        if (!state.isAuthenticated) {
+          showError('Please login to view marketplace');
+          setTimeout(() => {
+            window.location.href = '/webapp/index.html';
+          }, 2000);
+          return;
+        }
+
+        loadUserFavorites();
+        await loadMarketplaceData();
+        renderNFTs(state.allNFTs);
+        setupEventListeners();
+        setActiveNavItem();
+
+        marketplaceService.startRealtimeUpdates((updatedListings) => {
+          state.allNFTs = formatListings(updatedListings);
+          renderNFTs(filterNFTs(state.currentCategory));
+        });
+
+        window.addEventListener('beforeunload', () => {
+          marketplaceService.stopRealtimeUpdates();
+        });
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showError('Failed to load marketplace');
+      }
+    }
+
+    async function loadMarketplaceData() {
+      try {
+        state.isLoading = true;
+        const listings = await marketplaceService.fetchListings(0, 50);
+        state.allNFTs = formatListings(listings);
+        
+        if (state.currentUser) {
+          loadUserListings();
+        }
+      } catch (error) {
+        console.error('Error loading marketplace:', error);
+        showError('Failed to load marketplace listings');
+      } finally {
+        state.isLoading = false;
+      }
+    }
+
+    function formatListings(listings) {
+      if (!Array.isArray(listings)) return [];
+      
+      return listings.map((listing, index) => ({
+        id: listing.nft?.id || listing.id || index,
+        nft_id: listing.nft_id || listing.nft?.id,
+        name: listing.nft?.name || 'Unknown NFT',
+        creator_name: listing.seller?.username || '@creator',
+        price: listing.price || 0,
+        category: listing.nft?.category || 'trending',
+        gradient: gradients[index % gradients.length],
+        description: listing.nft?.description || '',
+        image_url: listing.nft?.image_url,
+        status: listing.status,
+        seller_id: listing.seller_id,
+      }));
+    }
+
+    async function loadUserListings() {
+      try {
+        const response = await marketplaceService.api.get(`/api/marketplace/listings?seller_id=${state.currentUser.id}`);
+        state.userListings = formatListings(response.listings || []);
+      } catch (error) {
+        console.warn('Could not load user listings:', error);
+      }
+    }
+
+    function filterNFTs(category) {
+      if (category === 'all') return state.allNFTs;
+      return state.allNFTs.filter(nft => nft.category === category);
+    }
+
+    function searchNFTs(query) {
+      const lowerQuery = query.toLowerCase();
+      return state.allNFTs.filter(nft =>
+        nft.name.toLowerCase().includes(lowerQuery) ||
+        nft.creator_name.toLowerCase().includes(lowerQuery)
+      );
+    }
+
+    function loadUserFavorites() {
+      try {
+        const saved = localStorage.getItem('marketplace_favorites');
+        if (saved) {
+          state.favorites = new Set(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.warn('Could not load favorites:', error);
+      }
+    }
+
+    function saveFavorites() {
+      try {
+        localStorage.setItem('marketplace_favorites', JSON.stringify([...state.favorites]));
+      } catch (error) {
+        console.warn('Could not save favorites:', error);
+      }
+    }
+
+    function renderNFTs(nfts) {
+      const grid = document.getElementById('nft-grid');
+
+      if (state.isLoading) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="loading-spinner"></div>
+            <p>Loading marketplace...</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (!nfts || nfts.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+            <h3>No NFTs found</h3>
+            <p>Try adjusting your filters or search</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = nfts.map((nft) => `
+        <div class="nft-card" data-nft-id="${nft.id}" onclick="window.handleCardClick(${nft.id})">
+          <div class="nft-image" style="background: ${nft.gradient};">
+            ${nft.image_url ? `<img src="${escapeHtml(nft.image_url)}" alt="${escapeHtml(nft.name)}" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
+            <div class="nft-image-content"></div>
+            <button class="heart-btn${state.favorites.has(nft.id) ? ' active' : ''}" 
+                    title="${state.favorites.has(nft.id) ? 'Remove favorite' : 'Add favorite'}"
+                    onclick="window.toggleFavorite(${nft.id}, event)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="nft-info">
+            <div class="nft-name">${escapeHtml(nft.name)}</div>
+            <div class="nft-creator">${escapeHtml(nft.creator_name)}</div>
+            <div class="nft-footer">
+              <div class="nft-price">
+                <img src="https://image2url.com/r2/default/images/1772945017985-1d8c21e6-fe95-4fda-82a5-6e93cf6e0f28.png" alt="Telegram Stars" style="width: 18px; height: 18px; object-fit: contain;">
+                ${nft.price.toFixed(0)}
+              </div>
+              <button class="nft-action" onclick="window.viewNFTDetail(${nft.id}, event)">View</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    window.switchCategory = function(category, event) {
+      event.preventDefault();
+      state.currentCategory = category;
+      document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      renderNFTs(filterNFTs(category));
+    };
+
+    window.switchTab = function(tab, event) {
+      event.preventDefault();
+      state.currentTab = tab;
+      document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      if (tab === 'listings') {
+        renderNFTs(state.userListings);
+      } else {
+        renderNFTs(filterNFTs(state.currentCategory));
+      }
+    };
+
+    window.toggleFavorite = function(nftId, event) {
+      event.stopPropagation();
+      const btn = event.currentTarget;
+      if (state.favorites.has(nftId)) {
+        state.favorites.delete(nftId);
+        btn.classList.remove('active');
+      } else {
+        state.favorites.add(nftId);
+        btn.classList.add('active');
+      }
+      saveFavorites();
+    };
+
+    window.handleCardClick = function(nftId) {
+      const nft = state.allNFTs.find(n => n.id === nftId);
+      if (nft) console.log('Card clicked:', nft);
+    };
+
+    window.viewNFTDetail = function(nftId, event) {
+      event.stopPropagation();
+      const nft = state.allNFTs.find(n => n.id === nftId);
+      if (nft) {
+        localStorage.setItem('selectedNFT', JSON.stringify(nft));
+        window.location.href = '/webapp/nft-detail.html?id=' + nftId;
+      }
+    };
+
+    function setupEventListeners() {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const query = e.target.value;
+          renderNFTs(query.length > 0 ? searchNFTs(query) : filterNFTs(state.currentCategory));
+        });
+      }
+    }
+
+    function setActiveNavItem() {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      const marketItem = document.querySelector('[data-page="marketplace"]');
+      if (marketItem) marketItem.classList.add('active');
+    }
+
+    function showError(message) {
+      const grid = document.getElementById('nft-grid');
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h3>Error</h3>
+          <p>${escapeHtml(message)}</p>
+        </div>
+      `;
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
+  </script>
+  <script src="navbar.js"></script>
+  <!-- Load Shared Navbar Component -->
+</body>
+</html>
