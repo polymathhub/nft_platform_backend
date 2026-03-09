@@ -23,6 +23,56 @@ class Settings(BaseSettings):
     jwt_expiration_hours: int = Field(default=24, ge=1)
     refresh_token_expiration_days: int = Field(default=30, ge=1)
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def validate_database_url(cls, v):
+        """
+        Validate and sanitize the database URL.
+        
+        Handles:
+        - Literal ${DATABASE_URL} strings (loads from environment)
+        - Old postgres:// URLs (converts to postgresql+asyncpg://)
+        - Missing URLs (raises clear error)
+        """
+        import os
+        
+        # If it's the literal string ${DATABASE_URL}, try to load from environment
+        if v == "${DATABASE_URL}":
+            v = os.getenv("DATABASE_URL")
+            if not v:
+                raise ValueError(
+                    "DATABASE_URL is set to literal '${DATABASE_URL}' in .env or config. "
+                    "Either:\n"
+                    "  1. Set DATABASE_URL in .env to actual value (e.g., postgresql+asyncpg://user:pass@host/db)\n"
+                    "  2. Or set the DATABASE_URL environment variable before starting the app\n"
+                    "Example: export DATABASE_URL='postgresql+asyncpg://nft_user:GiftedForge@5.252.155.82:5432/nft_db'"
+                )
+        
+        if not v:
+            raise ValueError(
+                "DATABASE_URL is required. Set it in .env file or as environment variable.\n"
+                "Example:\n"
+                "  DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/dbname"
+            )
+        
+        v = str(v).strip()
+        
+        # Convert old postgres:// to postgresql+asyncpg://
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v.startswith("postgresql://") and "+asyncpg" not in v:
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        
+        # Ensure asyncpg driver for async operations
+        if "postgresql" in v and "+asyncpg" not in v:
+            raise ValueError(
+                f"PostgreSQL URL must use asyncpg driver.\n"
+                f"Invalid: {v[:60]}...\n"
+                f"Expected: postgresql+asyncpg://user:password@host:port/dbname"
+            )
+        
+        return v
+
     telegram_bot_token: Optional[str] = Field(default=None)
     telegram_api_id: Optional[str] = Field(default=None)
     telegram_api_hash: Optional[str] = Field(default=None)
