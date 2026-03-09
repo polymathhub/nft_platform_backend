@@ -30,7 +30,7 @@ def upgrade() -> None:
     # Users
     op.create_table(
         'users',
-        sa.Column('id', sa.String(length=36), primary_key=True),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
         sa.Column('email', sa.String(length=255), unique=True, nullable=False),
         sa.Column('username', sa.String(length=100), unique=True, nullable=False),
         sa.Column('hashed_password', sa.String(length=255), nullable=False),
@@ -51,8 +51,8 @@ def upgrade() -> None:
     # Wallets
     op.create_table(
         'wallets',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('blockchain', sa.String(length=50), nullable=False),
         sa.Column('wallet_type', sa.String(length=50), nullable=False, server_default='custodial'),
         sa.Column('address', sa.String(length=255), unique=True, nullable=False),
@@ -72,11 +72,11 @@ def upgrade() -> None:
     # NFTs
     op.create_table(
         'nfts',
-        sa.Column('id', sa.String(length=36), primary_key=True),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
         sa.Column('global_nft_id', sa.String(length=255), unique=True, nullable=False),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
-        sa.Column('wallet_id', sa.String(length=36), nullable=False),
-        sa.Column('collection_id', sa.String(length=36), nullable=True),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('wallet_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('collection_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('blockchain', sa.String(length=50), nullable=False),
@@ -106,10 +106,10 @@ def upgrade() -> None:
     # Transactions
     op.create_table(
         'transactions',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
-        sa.Column('nft_id', sa.String(length=36), nullable=True),
-        sa.Column('wallet_id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('nft_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('wallet_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('tx_hash', sa.String(length=255), nullable=True),
         sa.Column('tx_type', sa.String(length=50), nullable=False),
         sa.Column('status', sa.String(length=50), nullable=False, server_default='pending'),
@@ -130,9 +130,9 @@ def upgrade() -> None:
     # Listings
     op.create_table(
         'listings',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('nft_id', sa.String(length=36), nullable=False),
-        sa.Column('seller_id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
+        sa.Column('nft_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('seller_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('seller_address', sa.String(length=255), nullable=False),
         sa.Column('price', sa.Float(), nullable=False),
         sa.Column('currency', sa.String(length=50), nullable=False),
@@ -151,10 +151,10 @@ def upgrade() -> None:
     # Offers
     op.create_table(
         'offers',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('nft_id', sa.String(length=36), nullable=False),
-        sa.Column('buyer_id', sa.String(length=36), nullable=False),
-        sa.Column('seller_id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
+        sa.Column('nft_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('buyer_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('seller_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('offer_amount', sa.Float(), nullable=False),
         sa.Column('currency', sa.String(length=50), nullable=False),
         sa.Column('status', sa.String(length=50), nullable=False, server_default='pending'),
@@ -170,11 +170,11 @@ def upgrade() -> None:
     # Orders
     op.create_table(
         'orders',
-        sa.Column('id', sa.String(length=36), primary_key=True),
-        sa.Column('listing_id', sa.String(length=36), nullable=True),
-        sa.Column('offer_id', sa.String(length=36), nullable=True),
-        sa.Column('buyer_id', sa.String(length=36), nullable=False),
-        sa.Column('seller_id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
+        sa.Column('listing_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('offer_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('buyer_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('seller_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('amount', sa.Numeric(18, 6), nullable=False),
         sa.Column('currency', sa.String(length=32), nullable=False),
         sa.Column('status', sa.String(length=32), nullable=False),
