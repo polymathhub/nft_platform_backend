@@ -1,3 +1,11 @@
+"""
+Test fixtures for NFT Platform Backend.
+
+NOTE: Tests use SQLite in-memory database with metadata.create_all()
+because Alembic migrations are for PostgreSQL production only.
+
+For production, all schema changes MUST go through Alembic migrations.
+"""
 
 import pytest
 import uuid
@@ -9,8 +17,13 @@ from app.database import Base
 
 @pytest.fixture
 async def test_db():
-    """Create an async SQLite test database with in-memory storage."""
-    # Use an in-memory SQLite database for tests
+    """
+    Create an async SQLite in-memory test database.
+    
+    Uses SQLAlchemy metadata.create_all() for test schema creation.
+    Production code uses Alembic migrations exclusively.
+    """
+    # Use in-memory SQLite for tests
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -18,30 +31,18 @@ async def test_db():
         echo=False,
     )
     
-    # Configure SQLite to handle UUID values as strings
+    # Configure SQLite for foreign keys and UUID
     @event.listens_for(engine.sync_engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
-        """Enable foreign keys and configure SQLite for UUID support."""
+        """Enable foreign keys in SQLite."""
         cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=OFF")  # Disable for table ops
+        cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
     
-    # Create all tables
+    # Create test schema using metadata (test-only approach)
     async with engine.begin() as conn:
-        # Drop all tables first to avoid conflicts
         await conn.run_sync(Base.metadata.drop_all)
-        # SQLite needs to clean up indexes too
-        await conn.execute(text("PRAGMA foreign_keys=OFF"))
-        # Create tables - use checkfirst=True to avoid duplicate index errors
-        def create_with_checks(c):
-            # SQLite has issues with index creation, so we suppress them
-            try:
-                Base.metadata.create_all(c, checkfirst=True)
-            except Exception:
-                # If there's an error, just continue - the tables should exist
-                pass
-        await conn.run_sync(create_with_checks)
-        await conn.execute(text("PRAGMA foreign_keys=ON"))
+        await conn.run_sync(Base.metadata.create_all)
     
     # Create async session factory
     async_session = async_sessionmaker(
@@ -50,7 +51,7 @@ async def test_db():
         expire_on_commit=False,
     )
     
-    # Yield the session for tests
+    # Yield session for test
     async with async_session() as session:
         yield session
     
@@ -58,6 +59,7 @@ async def test_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     
+    await engine.dispose()
     await engine.dispose()
 
 

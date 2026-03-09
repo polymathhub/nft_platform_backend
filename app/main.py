@@ -53,13 +53,41 @@ except Exception as e:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    FastAPI lifespan context manager.
+    
+    Startup:
+    1. Initialize async database connection pool
+    2. Run Alembic migrations
+    3. Setup Telegram webhook (non-fatal if fails)
+    
+    Shutdown:
+    1. Close database connections
+    """
+    logger.info("=" * 70)
+    logger.info("NFT Platform Backend - Startup")
+    logger.info("=" * 70)
+    
+    # Startup
+    logger.info("\n[1/3] Initializing database connection pool...")
     await init_db()
+    
+    logger.info("\n[2/3] Running database migrations...")
     await auto_migrate()
+    
+    logger.info("\n[3/3] Setting up Telegram webhook...")
     await setup_telegram_webhook()
-
+    
+    logger.info("\n" + "=" * 70)
+    logger.info("✓ Application startup complete")
+    logger.info("=" * 70 + "\n")
+    
     yield
-
+    
+    # Shutdown
+    logger.info("Shutting down application...")
     await close_db()
+    logger.info("✓ Application shutdown complete")
 
 
 app = FastAPI(
