@@ -1,0 +1,37 @@
+[Unit]
+Description=NFT Platform Backend
+Documentation=https://github.com/polymathhub/nft_platform_backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=nft_app
+WorkingDirectory=/home/nft_app/nft_platform
+
+# Environment variables
+Environment="PATH=/home/nft_app/nft_platform/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+EnvironmentFile=/home/nft_app/nft_platform/.env
+
+# Startup command - runs migrations then starts FastAPI
+ExecStart=/home/nft_app/nft_platform/.venv/bin/python /home/nft_app/nft_platform/startup.py
+
+# Restart policy
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=512
+
+# Timeout
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
