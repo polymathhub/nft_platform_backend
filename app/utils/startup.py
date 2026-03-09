@@ -70,12 +70,18 @@ async def auto_migrate():
         
         # CRITICAL: Pass environment variables to subprocess
         # alembic/env.py needs DATABASE_URL from environment
+        # Pydantic loads from .env into memory, but subprocess needs actual env var
+        sub_env = os.environ.copy()
+        sub_env["DATABASE_URL"] = settings.database_url  # Ensure DATABASE_URL is set in subprocess
+        
+        logger.info(f"Subprocess DATABASE_URL: {settings.database_url[:50]}...")
+        
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=PIPE,
             stderr=PIPE,
             cwd=str(project_root),
-            env=os.environ.copy()  # Inherit parent process environment (DATABASE_URL, etc.)
+            env=sub_env  # Pass environment with explicit DATABASE_URL
         )
         stdout, stderr = await proc.communicate()
 
