@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.Column('related_order_id', postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column('status', sa.String(50), nullable=False, server_default='pending', index=True),
         sa.Column('description', sa.String(255), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True, server_default='{}'),
+        sa.Column('tx_metadata', sa.JSON(), nullable=True, server_default='{}'),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('completed_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),

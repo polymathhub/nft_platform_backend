@@ -118,7 +118,7 @@ class StarTransaction(Base):
     description = Column(String(255), nullable=True)
     
     # Metadata
-    metadata = Column(JSON, nullable=True, default={})
+    tx_metadata = Column(JSON, nullable=True, default={})
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

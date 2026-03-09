@@ -189,7 +189,7 @@ async def confirm_star_payment(
         # Find the pending transaction
         star_transaction = db.execute(
             select(StarTransaction).where(
-                (StarTransaction.metadata['invoice_id'].astext == confirmation.invoice_id) &
+                (StarTransaction.tx_metadata['invoice_id'].astext == confirmation.invoice_id) &
                 (StarTransaction.user_id == current_user.id) &
                 (StarTransaction.status == "pending")
             )
