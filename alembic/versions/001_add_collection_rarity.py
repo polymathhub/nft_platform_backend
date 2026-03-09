@@ -19,8 +19,8 @@ def upgrade() -> None:
         op.execute(
                 """
                 CREATE TABLE IF NOT EXISTS collections (
-                    id VARCHAR(36) PRIMARY KEY,
-                    creator_id VARCHAR(36) NOT NULL,
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    creator_id UUID NOT NULL,
                     name VARCHAR(255) NOT NULL,
                     description VARCHAR(500),
                     blockchain VARCHAR(50) NOT NULL,
@@ -44,7 +44,7 @@ def upgrade() -> None:
         op.execute("CREATE INDEX IF NOT EXISTS ix_collections_floor_price ON collections (floor_price);")
 
         # Add columns to nfts table if missing
-        op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS collection_id VARCHAR(36);")
+        op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS collection_id UUID;")
         op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS attributes JSONB;")
         op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_score DOUBLE PRECISION;")
         op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_tier VARCHAR(50);")
