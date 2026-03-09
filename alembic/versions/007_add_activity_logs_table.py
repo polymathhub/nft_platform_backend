@@ -39,10 +39,10 @@ def upgrade() -> None:
     )
     
     # Create indexes for common queries
-    op.create_index('ix_activity_logs_user_timestamp', 'activity_logs', ['user_id', 'timestamp'])
-    op.create_index('ix_activity_logs_activity_type', 'activity_logs', ['activity_type', 'timestamp'])
-    op.create_index('ix_activity_logs_resource', 'activity_logs', ['resource_type', 'resource_id'])
-    op.create_index('ix_activity_logs_telegram', 'activity_logs', ['telegram_id', 'timestamp'])
+    op.create_index('ix_activity_logs_user_timestamp', 'activity_logs', ['user_id', 'timestamp'], if_not_exists=True)
+    op.create_index('ix_activity_logs_activity_type', 'activity_logs', ['activity_type', 'timestamp'], if_not_exists=True)
+    op.create_index('ix_activity_logs_resource', 'activity_logs', ['resource_type', 'resource_id'], if_not_exists=True)
+    op.create_index('ix_activity_logs_telegram', 'activity_logs', ['telegram_id', 'timestamp'], if_not_exists=True)
 
 
 def downgrade() -> None:
