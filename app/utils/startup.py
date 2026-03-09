@@ -68,11 +68,14 @@ async def auto_migrate():
         cmd = [sys.executable, "-m", "alembic", "upgrade", "head"]
         logger.info(f"Executing: {' '.join(cmd)}")
         
+        # CRITICAL: Pass environment variables to subprocess
+        # alembic/env.py needs DATABASE_URL from environment
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=PIPE,
             stderr=PIPE,
-            cwd=str(project_root)
+            cwd=str(project_root),
+            env=os.environ.copy()  # Inherit parent process environment (DATABASE_URL, etc.)
         )
         stdout, stderr = await proc.communicate()
 
