@@ -29,7 +29,7 @@ def upgrade():
         sa.Column('commission_amount', sa.Numeric(precision=18, scale=6), nullable=True),
         sa.Column('status', sa.String(length=32), nullable=False),
         sa.Column('tx_hash', sa.String(length=256), nullable=True),
-        sa.Column('metadata', postgresql.JSONB, nullable=True),
+        sa.Column('escrow_metadata', postgresql.JSONB, nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     )

@@ -58,7 +58,7 @@ def upgrade() -> None:
         sa.Column('read', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('action_url', sa.String(500), nullable=True),
         sa.Column('action_type', sa.String(50), nullable=True),
-        sa.Column('metadata', sa.String(1000), nullable=True),
+        sa.Column('extra_metadata', sa.String(1000), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
         sa.Column('read_at', sa.DateTime(), nullable=True),

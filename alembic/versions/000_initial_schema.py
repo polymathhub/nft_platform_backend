@@ -119,7 +119,7 @@ def upgrade() -> None:
         sa.Column('amount', sa.Numeric(20, 8), nullable=True),
         sa.Column('gas_fee', sa.Numeric(20, 8), nullable=True),
         sa.Column('error_message', sa.Text(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('transaction_metadata', sa.JSON(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )
@@ -179,7 +179,7 @@ def upgrade() -> None:
         sa.Column('currency', sa.String(length=32), nullable=False),
         sa.Column('status', sa.String(length=32), nullable=False),
         sa.Column('tx_hash', sa.String(length=256), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('order_metadata', sa.JSON(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )

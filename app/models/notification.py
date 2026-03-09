@@ -89,7 +89,7 @@ class Notification(Base):
     action_type = Column(String(50), nullable=True)  # e.g., "view_nft", "accept_offer"
     
     # Metadata
-    metadata = Column(String(1000), nullable=True)  # JSON string for extra data
+    extra_metadata = Column(String(1000), nullable=True)  # JSON string for extra data
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
