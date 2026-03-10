@@ -13,6 +13,8 @@ Safe features:
   - Uses PostgreSQL DO block to prevent DuplicateObjectError
   - Idempotent: Can be run multiple times without errors
   - Works on fresh databases and existing databases
+  - Proper Alembic syntax: ForeignKeyConstraint as table argument (not column)
+  - Prevents AssertionError: "assert isinstance(table, Table)" from incorrect syntax
   - Proper downgrade with cascade handling
 """
 from alembic import op
@@ -106,8 +108,12 @@ def upgrade() -> None:
     # =========================================================================
     # Step 2: Create notifications table
     # =========================================================================
+    # Important: ForeignKeyConstraint must be a separate argument to create_table(),
+    # NOT a column argument. This prevents AssertionError: isinstance(table, Table)
+    # =========================================================================
     op.create_table(
         'notifications',
+        # Primary Key Column
         sa.Column(
             'id',
             sa.Uuid(),
@@ -115,14 +121,15 @@ def upgrade() -> None:
             nullable=False,
             comment='Notification ID - UUID primary key'
         ),
+        # Foreign Key Column (constraint defined separately below)
         sa.Column(
             'user_id',
             sa.Uuid(),
-            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
             nullable=False,
             index=True,
             comment='FK to users.id - cascades on user deletion'
         ),
+        # Content Columns
         sa.Column(
             'title',
             sa.String(255),
@@ -147,6 +154,7 @@ def upgrade() -> None:
             nullable=True,
             comment='Alias for title - backward compatibility'
         ),
+        # Type Column (uses ENUM created in Step 1)
         sa.Column(
             'notification_type',
             postgresql.ENUM(*NOTIFICATION_TYPES, name='notificationtype', create_type=False),
@@ -154,6 +162,7 @@ def upgrade() -> None:
             index=True,
             comment='Notification event type (from notificationtype ENUM)'
         ),
+        # Status Columns
         sa.Column(
             'is_read',
             sa.Boolean(),
@@ -169,6 +178,7 @@ def upgrade() -> None:
             server_default='false',
             comment='Alias for is_read - backward compatibility'
         ),
+        # Action/Link Columns
         sa.Column(
             'action_url',
             sa.String(500),
@@ -181,12 +191,14 @@ def upgrade() -> None:
             nullable=True,
             comment='Type of action (e.g., view_nft, accept_offer)'
         ),
+        # Metadata Column
         sa.Column(
             'extra_metadata',
             sa.String(1000),
             nullable=True,
             comment='JSON string with additional metadata'
         ),
+        # Timestamp Columns
         sa.Column(
             'created_at',
             sa.DateTime(),
@@ -214,6 +226,13 @@ def upgrade() -> None:
             nullable=True,
             index=True,
             comment='When the notification expires (for cleanup)'
+        ),
+        # Table Constraints (separate from columns - CRITICAL!)
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            ['users.id'],
+            ondelete='CASCADE',
+            name='fk_notifications_user_id'
         ),
     )
     
