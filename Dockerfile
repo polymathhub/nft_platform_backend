@@ -62,7 +62,11 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Validate that the app module can be imported
-RUN python -c "from app.main import app; print('✓ app.main:app imported successfully')" || \
+# Set placeholder environment variables for build-time validation only
+RUN DATABASE_URL="postgresql+asyncpg://placeholder:placeholder@localhost/placeholder" \
+    JWT_SECRET_KEY="build-time-placeholder-key" \
+    MNEMONIC_ENCRYPTION_KEY="build-time-placeholder-mnemonic-key" \
+    python -c "from app.main import app; print('✓ app.main:app imported successfully')" || \
     (echo "✗ ERROR: Could not import app.main:app" && exit 1)
 
 # ============================================================================
