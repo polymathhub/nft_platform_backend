@@ -1,28 +1,22 @@
 #!/usr/bin/env bash
-# Startup helper for Linux/macOS with uvicorn
+# Startup script for NFT Platform Backend
+# Handles enum type initialization, Alembic migrations, and FastAPI server startup
 set -euo pipefail
 
-# Load .env if present
-if [ -f .env ]; then
-  # shellcheck disable=SC1091
-  export $(grep -v '^#' .env | xargs)
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_PATH="$SCRIPT_DIR/.venv/bin/activate"
 
-PORT=${PORT:-8000}
-ENV=${ENV:-development}
-WORKERS=${WORKERS:-4}
-
-if [ "$ENV" = "production" ]; then
-  echo "Starting in production mode on :$PORT with $WORKERS workers"
-  exec python -m uvicorn app.main:app \
-    --host 0.0.0.0 \
-    --port "$PORT" \
-    --workers "$WORKERS"
+# Activate virtual environment if it exists
+if [ -f "$VENV_PATH" ]; then
+    echo "Activating virtual environment..."
+    # shellcheck disable=SC1091
+    source "$VENV_PATH"
 else
-  echo "Starting in development mode on :$PORT (auto-reload enabled)"
-  exec python -m uvicorn app.main:app \
-    --host 0.0.0.0 \
-    --port "$PORT" \
-    --reload \
-    --log-level debug
+    echo "Virtual environment not found at $VENV_PATH"
+    echo "Please create one with: python -m venv .venv"
+    exit 1
 fi
+
+# Run the startup script with enum type initialization and migrations
+echo "Running startup script with database initialization..."
+exec python "$SCRIPT_DIR/startup.py"
