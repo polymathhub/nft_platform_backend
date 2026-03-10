@@ -77,5 +77,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # ENTRYPOINT (production with async support and auto-scaling)
 # ============================================================================
 
-# Run Alembic migrations first, then start uvicorn
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"]
+# Use the startup.py script which handles migrations and server startup
+CMD ["python", "/app/startup.py"]
