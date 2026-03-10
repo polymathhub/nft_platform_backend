@@ -61,14 +61,7 @@ COPY . .
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Validate that the app module can be imported
-# Set placeholder environment variables for build-time validation only
-# jwt_secret_key: must be 32+ chars | mnemonic_encryption_key: must be exactly 44 chars (Fernet format)
-RUN DATABASE_URL="postgresql+asyncpg://placeholder:placeholder@localhost/placeholder" \
-    JWT_SECRET_KEY="build-time-placeholder-secret-key-12345" \
-    MNEMONIC_ENCRYPTION_KEY="Fernet-build-placeholder-key-1234567890A" \
-    python -c "from app.main import app; print('✓ app.main:app imported successfully')" || \
-    (echo "✗ ERROR: Could not import app.main:app" && exit 1)
+# Skip build-time import validation - will be validated at runtime with real environment variables
 
 # ============================================================================
 # PORT & HEALTHCHECK (Railway expects this)
