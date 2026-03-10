@@ -77,5 +77,17 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # ENTRYPOINT (production with async support and auto-scaling)
 # ============================================================================
 
-# Use the startup.py script which handles migrations and server startup
-CMD ["python", "/app/startup.py"]
+# Create a proper entrypoint script
+RUN cat > /app/entrypoint.sh << 'EOF'
+#!/bin/bash
+set -e
+echo "Running database migrations..."
+alembic upgrade head
+echo "Starting uvicorn server..."
+exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+EOF
+
+RUN chmod +x /app/entrypoint.sh
+
+# Use the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
