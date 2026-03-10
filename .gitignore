@@ -29,7 +29,7 @@ dist/
 
 # Docker
 docker-compose.yml
-Dockerfile
+# Dockerfile (tracked for Railway/container deployments)
 # Byte-compiled
 __pycache__/
 *.py[cod]
