@@ -1,25 +1,34 @@
-"""Add user_role column to users table - PostgreSQL Safe and Indentation Fixed.
+"""Add user_role column to users table - PostgreSQL Safe.
 
 Revision ID: 004_add_user_role
 Revises: 003_add_admin_system
 Create Date: 2026-02-14 00:00:00.000000
 
 ============================================================================
-MIGRATION FIXES (v3 - Indentation Corrected)
+MIGRATION FIXES (v3 - FIXED)
 ============================================================================
 
-Production improvements:
-✓ ENUM type: Created safely with IF NOT EXISTS check in 003
-✓ Column addition: Use ALTER TABLE ADD COLUMN IF NOT EXISTS (idempotent)
-✓ Defaults: Use sa.text() for PostgreSQL-safe ENUM defaults
-✓ Indexes: Use standard op.create_index without try-except
-✓ Error handling: Fail fast with proper exceptions (don't suppress errors)
+✓ FIX 1: IndentationError on line 119 - REMOVED DUPLICATE downgrade() FUNCTION
+  - Had two downgrade() definitions causing IndentationError: unexpected indent
+  - Kept only the first, properly indented downgrade() function
+  - All code now uses 4-space indentation (no tabs)
 
-INDENTATION FIX (Critical):
-✓ Removed duplicate downgrade() function that caused SyntaxError
-✓ Kept only ONE properly indented downgrade() function
-✓ All function bodies use proper 4-space indentation
-✓ No mixing of tabs and spaces
+✓ FIX 2: Production improvements
+  - ENUM type: Created safely with IF NOT EXISTS check in 003
+  - Column addition: Use ALTER TABLE ADD COLUMN IF NOT EXISTS (idempotent)
+  - Defaults: Use sa.text() for PostgreSQL-safe ENUM defaults
+  - Indexes: Use standard op.create_index without try-except
+  - Error handling: Fail fast with proper exceptions (don't suppress errors)
+
+============================================================================
+INDENTATION NOTE
+============================================================================
+This file uses 4-space indentation throughout:
+  - Module level (0 spaces)
+  - Function level (4 spaces for def signature, 8 spaces for body)
+  - Nested blocks (8, 12, 16 spaces as needed)
+  - No tabs - all spaces
+============================================================================
 """
 import logging
 from alembic import op

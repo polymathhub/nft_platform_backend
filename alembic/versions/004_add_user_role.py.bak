@@ -1,11 +1,11 @@
-"""Add user_role column to users table - PostgreSQL Safe and Indentation Fixed.
+"""Add user_role column to users table - PostgreSQL Safe.
 
 Revision ID: 004_add_user_role
 Revises: 003_add_admin_system
 Create Date: 2026-02-14 00:00:00.000000
 
 ============================================================================
-MIGRATION FIXES (v3 - Indentation Corrected)
+MIGRATION FIXES (v2)
 ============================================================================
 
 Production improvements:
@@ -14,12 +14,6 @@ Production improvements:
 ✓ Defaults: Use sa.text() for PostgreSQL-safe ENUM defaults
 ✓ Indexes: Use standard op.create_index without try-except
 ✓ Error handling: Fail fast with proper exceptions (don't suppress errors)
-
-INDENTATION FIX (Critical):
-✓ Removed duplicate downgrade() function that caused SyntaxError
-✓ Kept only ONE properly indented downgrade() function
-✓ All function bodies use proper 4-space indentation
-✓ No mixing of tabs and spaces
 """
 import logging
 from alembic import op
@@ -121,3 +115,20 @@ def downgrade() -> None:
     # userrole ENUM is intentionally preserved
     log.info("  ℹ  userrole ENUM intentionally preserved")
     log.info("Migration 004 downgrade completed")
+        # best-effort index creation
+        pass
+
+
+def downgrade() -> None:
+    """Rollback user_role column addition."""
+    # Drop the index
+    op.drop_index('ix_users_user_role', table_name='users')
+    
+    # Drop the column
+    op.drop_column('users', 'user_role')
+    
+    # Drop the enum type only on Postgres
+    bind = op.get_bind()
+    if bind.dialect.name == 'postgresql':
+        enum_type = postgresql.ENUM('admin', 'user', name='userrole')
+        enum_type.drop(bind, checkfirst=True)

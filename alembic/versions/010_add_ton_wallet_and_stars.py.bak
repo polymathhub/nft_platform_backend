@@ -1,4 +1,4 @@
-"""Add TON Wallet and Telegram Stars integration tables - PostgreSQL Safe.
+"""Add TON Wallet and Telegram Stars integration tables - Production Grade.
 
 Revision ID: 010_add_ton_wallet_and_stars
 Revises: 009_add_notifications_table
@@ -29,16 +29,14 @@ PRODUCTION-GRADE FEATURES
 ============================================================================
 
 ✓ Async SQLAlchemy 2.0+ Compatible
-  - sa.literal() for properly-typed boolean/numeric defaults
-  - sa.text() for PostgreSQL-specific type casting
+  - sa.literal() for boolean defaults (not string 'true'/'false')
   - Proper server defaults for UTC consistency
   - Compatible with asyncpg driver
 
 ✓ PostgreSQL Dialect Compliance
   - op.execute("COMMENT ON INDEX...") for index comments
   - postgresql.UUID(as_uuid=True) for UUID columns
-  - sa.text() for JSON defaults with JSONB type casting
-  - Proper type casting for all server defaults
+  - JSON columns for flexible metadata storage
 
 ✓ Idempotent Operations
   - Both upgrade() and downgrade() are safe to re-run
@@ -138,7 +136,7 @@ def upgrade() -> None:
             'status',
             sa.String(50),
             nullable=False,
-            server_default=sa.text("'pending'::character varying"),
+            server_default=sa.literal('pending'),
             index=True,
             comment='Wallet status: pending, connected, disconnected'
         ),
@@ -148,17 +146,17 @@ def upgrade() -> None:
             'is_primary',
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("'true'::boolean"),
+            server_default=sa.literal(True),
             comment='Whether this is the user\'s primary wallet'
         ),
         
-        # Metadata - Using sa.text() for proper JSONB type casting
+        # Metadata
         sa.Column(
             'wallet_metadata',
             sa.JSON(),
             nullable=True,
-            server_default=sa.text("'{}'::jsonb"),
-            comment='JSON metadata for wallet (public key, etc.) - JSONB type'
+            server_default=sa.literal({}),
+            comment='JSON metadata for wallet (public key, etc.)'
         ),
         
         # Timestamps
@@ -323,7 +321,7 @@ def upgrade() -> None:
             'status',
             sa.String(50),
             nullable=False,
-            server_default=sa.text("'pending'::character varying"),
+            server_default=sa.literal('pending'),
             index=True,
             comment='Transaction status: pending, completed, failed, refunded'
         ),
@@ -336,13 +334,13 @@ def upgrade() -> None:
             comment='Human-readable transaction description'
         ),
         
-        # Metadata - Using sa.text() for proper JSONB type casting
+        # Metadata
         sa.Column(
             'tx_metadata',
             sa.JSON(),
             nullable=True,
-            server_default=sa.text("'{}'::jsonb"),
-            comment='JSON metadata: fee, gas, receipts, etc. - JSONB type'
+            server_default=sa.literal({}),
+            comment='JSON metadata: fee, gas, receipts, etc.'
         ),
         
         # Timestamps

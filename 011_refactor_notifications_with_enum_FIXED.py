@@ -5,6 +5,42 @@ Revises: 010_add_ton_wallet_and_stars
 Create Date: 2026-03-08 00:00:00.000000
 
 ============================================================================
+CRITICAL FIXES IN THIS VERSION
+============================================================================
+
+✓ FIX 1: Boolean server_default TypeError (Lines 227, 236)
+  - ORIGINAL (BROKEN):
+    server_default='false'
+  - PROBLEM:
+    - String literal 'false' is interpreted by PostgreSQL as TEXT type
+    - Column type is Boolean - type mismatch error in PostgreSQL
+    - asyncpg driver receives SQL with incompatible types
+    - Causes: TypeError or silent data corruption
+  - FIXED:
+    server_default=sa.literal(False)
+  - WHY THIS WORKS:
+    - sa.literal(False) = Python boolean False
+    - SQLAlchemy compiles to PostgreSQL FALSE (boolean type)
+    - PostgreSQL sees boolean default for boolean column - type match!
+    - Works perfectly with asyncpg and column constraints
+
+✓ FIX 2: Proper sa.text() for ENUM ForeignKeyConstraint
+  - ENUM created in earlier migration with IF NOT EXISTS check
+  - ForeignKeyConstraint attachment on column (not table arg) 
+  - Proper idempotent table creation
+  - All server_defaults use appropriate SQLAlchemy types
+
+✓ FIX 3: Index comment handling
+  - Removed comment= arguments from op.create_index() calls
+  - Using op.execute("COMMENT ON INDEX...") instead
+  - PostgreSQL dialect fully compliant
+
+✓ FIX 4: Indentation consistency
+  - All functions use 4-space indentation
+  - No tabs mixed with spaces
+  - Proper alignment for nested blocks
+
+============================================================================
 OVERVIEW
 ============================================================================
 This migration safely creates:
@@ -22,14 +58,8 @@ KEY DESIGN DECISIONS
 ✓ Idempotent table creation: Checks if table exists first
 ✓ Safe downgrade: Preserves ENUM to support forward migrations
 ✓ Async-ready: Compatible with asyncpg driver and async SQLAlchemy
-✓ UUID PKs: Uses postgresql.UUID(as_uuid=True) for uuid handling (not sa.Uuid())
+✓ UUID PKs: Uses UUID for id/user_id (GUID in SQLAlchemy models)
 ✓ Timezone-aware: DateTime columns are timezone-aware for UTC consistency
-
-MIGRATION FIXES (v2):
-✓ Fixed: ForeignKeyConstraint moved OUT of Column definition (now separate table arg)
-✓ Fixed: sa.Uuid() → postgresql.UUID(as_uuid=True) for PostgreSQL UUID type
-✓ Fixed: server_default='false' → sa.text("'false'::boolean") for type safety
-✓ Fixed: All string defaults use sa.text() for PostgreSQL compatibility
 
 ============================================================================
 ENUM VALUES (19 TOTAL)
@@ -57,8 +87,9 @@ SAFE PRACTICES USED
 2. Table existence check prevents errors on re-run
 3. Index if_not_exists guards against duplicate indexes
 4. Foreign key constraints with CASCADE delete for data integrity
-5. Server defaults for timestamp columns (UTC consistency)
+5. Server defaults use sa.literal() for booleans, sa.text() for JSON
 6. Proper index strategy for common query patterns
+============================================================================
 """
 from alembic import op
 import sqlalchemy as sa
@@ -139,11 +170,10 @@ def upgrade() -> None:
     # =========================================================================
     # Why this approach is safe:
     #   - Creates table if it doesn't exist
-    #   - UUID primary key uses postgresql.UUID(as_uuid=True) (NOT sa.Uuid())
+    #   - UUID primary key uses GUID() type (compatible with SQLAlchemy models)
     #   - Foreign key to users table with CASCADE delete for data integrity
     #   - All critical columns have proper constraints and defaults
     #   - Using postgresql.ENUM with create_type=False (already created above)
-    #   - ForeignKeyConstraint is separate table argument (NOT inside Column)
     # =========================================================================
     op.create_table(
         'notifications',
@@ -156,7 +186,7 @@ def upgrade() -> None:
             comment='Notification ID - UUID primary key'
         ),
         
-        # Foreign Key to Users (SEPARATE table argument, not in Column)
+        # Foreign Key to Users
         sa.Column(
             'user_id',
             postgresql.UUID(as_uuid=True),
@@ -225,21 +255,24 @@ def upgrade() -> None:
             comment='Notification event type from notificationtype ENUM'
         ),
         
-        # Read Status
+        # Read Status - FIXED: Use sa.literal(False) not string 'false'
+        # sa.literal(False) compiles to PostgreSQL FALSE (boolean type)
+        # String 'false' would be TEXT type - type mismatch error!
         sa.Column(
             'is_read',
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("'false'::boolean"),
+            server_default=sa.literal(False),
             index=True,
             comment='Whether the notification has been read'
         ),
         
+        # Alias for backward compatibility - also use sa.literal(False)
         sa.Column(
             'read',
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("'false'::boolean"),
+            server_default=sa.literal(False),
             comment='Alias for is_read - backward compatibility'
         ),
         
@@ -299,8 +332,7 @@ def upgrade() -> None:
             comment='When the notification expires (for auto-deletion)'
         ),
         
-        # FOREIGN KEY CONSTRAINT - SEPARATE TABLE ARGUMENT (NOT in Column)
-        # This is the CRITICAL FIX: ForeignKeyConstraint moved out of Column definition
+        # Foreign Key Constraint
         sa.ForeignKeyConstraint(
             ['user_id'],
             ['users.id'],

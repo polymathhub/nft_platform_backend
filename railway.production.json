@@ -1,0 +1,74 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfile": "Dockerfile.production",
+    "buildCommand": "docker build -f Dockerfile.production --build-arg ENVIRONMENT=production -t nft-platform:latest .",
+    "buildContext": "."
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3,
+    "startupProbe": {
+      "type": "HTTP",
+      "httpPath": "/health",
+      "initialDelaySeconds": 60,
+      "periodSeconds": 10,
+      "timeoutSeconds": 5,
+      "failureThreshold": 5,
+      "successThreshold": 1
+    },
+    "livenessProbe": {
+      "type": "HTTP",
+      "httpPath": "/health",
+      "initialDelaySeconds": 30,
+      "periodSeconds": 10,
+      "timeoutSeconds": 5,
+      "failureThreshold": 3,
+      "successThreshold": 1
+    },
+    "readinessProbe": {
+      "type": "HTTP",
+      "httpPath": "/health",
+      "initialDelaySeconds": 20,
+      "periodSeconds": 5,
+      "timeoutSeconds": 3,
+      "failureThreshold": 2,
+      "successThreshold": 1
+    }
+  },
+  "variables": {
+    "ENVIRONMENT": "production",
+    "LOG_LEVEL": "info",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    "WORKERS": "4"
+  },
+  "environment": {
+    "DATABASE_URL": "${{ Postgres.DATABASE_URL }}",
+    "ENVIRONMENT": "production",
+    "LOG_LEVEL": "info",
+    "SECRET_KEY": "${{ Railway.Secret.SECRET_KEY }}",
+    "ALGORITHM": "HS256",
+    "ACCESS_TOKEN_EXPIRE_MINUTES": "30",
+    "REFRESH_TOKEN_EXPIRE_DAYS": "7"
+  },
+  "services": {
+    "postgres": {
+      "type": "postgres",
+      "version": "15",
+      "environment": {
+        "POSTGRES_USER": "nft_user",
+        "POSTGRES_DB": "nft_platform",
+        "POSTGRES_PASSWORD": "${{ Railway.Secret.POSTGRES_PASSWORD }}"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "source": "github.com/railwayapp/plugins",
+      "name": "postgres"
+    }
+  ]
+}
