@@ -77,6 +77,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # ENTRYPOINT (production with async support and auto-scaling)
 # ============================================================================
 
-# Direct array form - NO shell interpretation, arguments passed directly to Python
-# This ensures uvicorn receives all arguments correctly
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Direct array form - uvicorn from installed package, no module invocation
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
