@@ -78,18 +78,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # ============================================================================
 
 # Run Alembic migrations first, then start uvicorn
-CMD ["sh", "-c", "\
-  echo 'Starting NFT Platform Backend...' && \
-  echo 'Running database migrations...' && \
-  alembic upgrade head && \
-  echo 'Starting uvicorn server...' && \
-  uvicorn app.main:app \
-    --host 0.0.0.0 \
-    --port 8000 \
-    --workers 4 \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --loop uvloop \
-    --http h11 \
-    --access-log \
-    --log-config /app/app/config/logging.yaml || \
-  (echo 'ERROR: Failed to start server'; exit 1)"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"]

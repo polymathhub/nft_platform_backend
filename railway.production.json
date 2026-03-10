@@ -2,8 +2,8 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfile": "Dockerfile.production",
-    "buildCommand": "docker build -f Dockerfile.production --build-arg ENVIRONMENT=production -t nft-platform:latest .",
+    "dockerfile": "Dockerfile",
+    "buildCommand": "docker build -f Dockerfile --build-arg ENVIRONMENT=production -t nft-platform:latest .",
     "buildContext": "."
   },
   "deploy": {
@@ -49,10 +49,8 @@
     "DATABASE_URL": "${{ Postgres.DATABASE_URL }}",
     "ENVIRONMENT": "production",
     "LOG_LEVEL": "info",
-    "SECRET_KEY": "${{ Railway.Secret.SECRET_KEY }}",
-    "ALGORITHM": "HS256",
-    "ACCESS_TOKEN_EXPIRE_MINUTES": "30",
-    "REFRESH_TOKEN_EXPIRE_DAYS": "7"
+    "JWT_SECRET_KEY": "${{ Railway.Secret.JWT_SECRET_KEY }}",
+    "MNEMONIC_ENCRYPTION_KEY": "${{ Railway.Secret.MNEMONIC_ENCRYPTION_KEY }}"
   },
   "services": {
     "postgres": {
