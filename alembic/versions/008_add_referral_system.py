@@ -38,7 +38,7 @@ PRODUCTION-GRADE FEATURES
 
 ✓ PostgreSQL Dialect Compliance
   - postgresql.UUID(as_uuid=True) for UUID columns
-  - postgresql_comment= for all index comments
+  - op.execute("COMMENT ON INDEX...") for index comments
   - Explicit constraint naming
 
 ✓ Idempotent Operations
@@ -80,7 +80,7 @@ def upgrade() -> None:
     This migration is idempotent and async-safe:
       - Can be run multiple times without errors
       - Uses sa.literal() for boolean/numeric defaults
-      - All indexes have postgresql_comment=
+      - All indexes use op.execute for comments
       - Proper timezone-aware timestamps
     
     Execution order:
@@ -235,24 +235,33 @@ def upgrade() -> None:
     op.create_index(
         'ix_users_referral_code',
         'users',
-        ['referral_code'],
-        postgresql_comment='Index for referral code lookups'
+        ['referral_code']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_users_referral_code IS "
+        "'Index for referral code lookups';"
     )
     log.info("  ✓ Created index: ix_users_referral_code")
     
     op.create_index(
         'ix_users_is_creator',
         'users',
-        ['is_creator'],
-        postgresql_comment='Index for creator filtering'
+        ['is_creator']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_users_is_creator IS "
+        "'Index for creator filtering';"
     )
     log.info("  ✓ Created index: ix_users_is_creator")
     
     op.create_index(
         'ix_users_referred_by',
         'users',
-        ['referred_by_id'],
-        postgresql_comment='Index for referral chain queries'
+        ['referred_by_id']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_users_referred_by IS "
+        "'Index for referral chain queries';"
     )
     log.info("  ✓ Created index: ix_users_referred_by")
     
@@ -405,16 +414,22 @@ def upgrade() -> None:
     op.create_index(
         'ix_referrals_referrer_status',
         'referrals',
-        ['referrer_id', 'status'],
-        postgresql_comment='Composite index for referrer earnings queries'
+        ['referrer_id', 'status']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_referrals_referrer_status IS "
+        "'Composite index for referrer earnings queries';"
     )
     log.info("  ✓ Created index: ix_referrals_referrer_status")
     
     op.create_index(
         'ix_referrals_code_status',
         'referrals',
-        ['referral_code', 'status'],
-        postgresql_comment='Composite index for active referral code lookups'
+        ['referral_code', 'status']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_referrals_code_status IS "
+        "'Composite index for active referral code lookups';"
     )
     log.info("  ✓ Created index: ix_referrals_code_status")
     
@@ -535,8 +550,11 @@ def upgrade() -> None:
     op.create_index(
         'ix_referral_commissions_referral_status',
         'referral_commissions',
-        ['referral_id', 'status'],
-        postgresql_comment='Composite index for commission status queries'
+        ['referral_id', 'status']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_referral_commissions_referral_status IS "
+        "'Composite index for commission status queries';"
     )
     log.info("  ✓ Created index: ix_referral_commissions_referral_status")
     

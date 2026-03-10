@@ -301,6 +301,7 @@ def upgrade() -> None:
     #   - if_not_exists=True prevents duplicate index errors
     #   - Some indexes already created via Column(index=True) above
     #   - Composite indexes for common multi-column queries
+    #   - Comments use op.execute with COMMENT ON INDEX (not comment= arg)
     # =========================================================================
     
     # Composite index: user_id + created_at (common query: "get user's recent notifications")
@@ -308,8 +309,11 @@ def upgrade() -> None:
         'idx_notifications_user_id_created_at',
         'notifications',
         ['user_id', 'created_at'],
-        if_not_exists=True,
-        comment='Optimizes queries filtering by user and date range'
+        if_not_exists=True
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_user_id_created_at IS "
+        "'Composite index optimizing queries filtering by user and date range';"
     )
     
     # Composite index: user_id + is_read (common query: "get unread notifications for user")
@@ -317,8 +321,11 @@ def upgrade() -> None:
         'idx_notifications_user_id_is_read',
         'notifications',
         ['user_id', 'is_read'],
-        if_not_exists=True,
-        comment='Optimizes queries finding unread notifications by user'
+        if_not_exists=True
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_user_id_is_read IS "
+        "'Composite index optimizing queries finding unread notifications by user';"
     )
     
     # Index on notification_type (already created via Column index, but explicit for clarity)
@@ -326,8 +333,11 @@ def upgrade() -> None:
         'idx_notifications_notification_type',
         'notifications',
         ['notification_type'],
-        if_not_exists=True,
-        comment='Optimizes filtering by notification type'
+        if_not_exists=True
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_notification_type IS "
+        "'Index optimizing filtering by notification type';"
     )
     
     # Index on expires_at (for notification expiration queries)
@@ -335,8 +345,11 @@ def upgrade() -> None:
         'idx_notifications_expires_at',
         'notifications',
         ['expires_at'],
-        if_not_exists=True,
-        comment='Optimizes deletion of expired notifications'
+        if_not_exists=True
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_expires_at IS "
+        "'Index optimizing deletion of expired notifications';"
     )
 
 

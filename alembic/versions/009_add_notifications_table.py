@@ -45,7 +45,7 @@ PRODUCTION-GRADE FEATURES
 
 ✓ PostgreSQL Dialect Compliance
   - postgresql.ENUM for type safety
-  - postgresql_comment= for index comments (not comment=)
+  - op.execute("COMMENT ON INDEX...") for index comments
   - Explicit naming conventions for all constraints
 
 ✓ Idempotent Operations
@@ -398,11 +398,8 @@ def upgrade() -> None:
     # Index Strategy:
     #   - Composite indexes for multi-column queries
     #   - Single-column indexes for filtering
-    #   - All use if_not_exists=False (safe for idempotent runs)
-    #
-    # PostgreSQL Dialect:
-    #   - Use postgresql_comment= instead of comment= for index comments
-    #   - Prevents TypeError with PostgreSQL dialect
+    #   - Comments applied via op.execute (not on create_index)
+    #   - All are idempotent and async-safe
     # =========================================================================
     log.info("Step 3: Creating performance indexes...")
     
@@ -412,7 +409,10 @@ def upgrade() -> None:
         'idx_notifications_user_id_created_at',
         'notifications',
         ['user_id', 'created_at'],
-        postgresql_comment='Composite index for recent notifications by user - optimizes date range queries',
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_user_id_created_at IS "
+        "'Composite index for recent notifications by user - optimizes date range queries';"
     )
     log.info("  ✓ Created index: idx_notifications_user_id_created_at")
     
@@ -422,7 +422,10 @@ def upgrade() -> None:
         'idx_notifications_user_id_is_read',
         'notifications',
         ['user_id', 'is_read'],
-        postgresql_comment='Composite index for filtering unread notifications - optimizes is_read checks per user',
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_user_id_is_read IS "
+        "'Composite index for filtering unread notifications - optimizes is_read checks per user';"
     )
     log.info("  ✓ Created index: idx_notifications_user_id_is_read")
     
@@ -432,7 +435,10 @@ def upgrade() -> None:
         'idx_notifications_notification_type',
         'notifications',
         ['notification_type'],
-        postgresql_comment='Index for filtering by notification event type',
+    )
+    op.execute(
+        "COMMENT ON INDEX idx_notifications_notification_type IS "
+        "'Index for filtering by notification event type';"
     )
     log.info("  ✓ Created index: idx_notifications_notification_type")
     

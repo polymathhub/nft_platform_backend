@@ -34,7 +34,7 @@ PRODUCTION-GRADE FEATURES
   - Compatible with asyncpg driver
 
 ✓ PostgreSQL Dialect Compliance
-  - postgresql_comment= for index comments
+  - op.execute("COMMENT ON INDEX...") for index comments
   - postgresql.UUID(as_uuid=True) for UUID columns
   - JSON columns for flexible metadata storage
 
@@ -76,7 +76,7 @@ def upgrade() -> None:
       - Can be run multiple times without errors
       - Works with asyncpg and async SQLAlchemy
       - All foreign keys have explicit names
-      - All indexes use postgresql_comment=
+      - All indexes use op.execute for comments
     
     Execution order:
       1. Create ton_wallets table
@@ -209,16 +209,22 @@ def upgrade() -> None:
     op.create_index(
         'ix_ton_wallets_user_status',
         'ton_wallets',
-        ['user_id', 'status'],
-        postgresql_comment='Composite index for wallet status queries by user'
+        ['user_id', 'status']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_ton_wallets_user_status IS "
+        "'Composite index for wallet status queries by user';"
     )
     log.info("  ✓ Created index: ix_ton_wallets_user_status")
     
     op.create_index(
         'ix_ton_wallets_address',
         'ton_wallets',
-        ['wallet_address'],
-        postgresql_comment='Index for wallet address lookups'
+        ['wallet_address']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_ton_wallets_address IS "
+        "'Index for wallet address lookups';"
     )
     log.info("  ✓ Created index: ix_ton_wallets_address")
     
@@ -404,24 +410,33 @@ def upgrade() -> None:
     op.create_index(
         'ix_star_transactions_user_status',
         'star_transactions',
-        ['user_id', 'status'],
-        postgresql_comment='Composite index for transaction status queries by user'
+        ['user_id', 'status']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_star_transactions_user_status IS "
+        "'Composite index for transaction status queries by user';"
     )
     log.info("  ✓ Created index: ix_star_transactions_user_status")
     
     op.create_index(
         'ix_star_transactions_telegram_id',
         'star_transactions',
-        ['telegram_payment_charge_id'],
-        postgresql_comment='Index for Telegram payment charge ID lookups'
+        ['telegram_payment_charge_id']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_star_transactions_telegram_id IS "
+        "'Index for Telegram payment charge ID lookups';"
     )
     log.info("  ✓ Created index: ix_star_transactions_telegram_id")
     
     op.create_index(
         'ix_star_transactions_nft',
         'star_transactions',
-        ['related_nft_id'],
-        postgresql_comment='Index for NFT-related transaction queries'
+        ['related_nft_id']
+    )
+    op.execute(
+        "COMMENT ON INDEX ix_star_transactions_nft IS "
+        "'Index for NFT-related transaction queries';"
     )
     log.info("  ✓ Created index: ix_star_transactions_nft")
     
