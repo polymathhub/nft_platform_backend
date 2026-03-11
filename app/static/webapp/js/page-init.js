@@ -177,12 +177,14 @@ class PageInitializer {
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
+    PageInitializer.rewriteWebappAnchors();
     PageInitializer.initializePage();
     PageInitializer.setupNavigateFunction();
     PageInitializer.setupAuthListeners();
   });
 } else {
   // DOM already loaded
+  PageInitializer.rewriteWebappAnchors();
   PageInitializer.initializePage();
   PageInitializer.setupNavigateFunction();
   PageInitializer.setupAuthListeners();
