@@ -51,6 +51,14 @@ try:
 except Exception as e:
     logger.warning(f"Failed to configure detailed logging: {e}. Continuing with bootstrap logger.")
 
+# Reduce noisy access logs from uvicorn in production/dev previews
+try:
+    uvicorn_access_logger = logging.getLogger('uvicorn.access')
+    uvicorn_access_logger.setLevel(logging.WARNING)
+except Exception:
+    # Non-fatal: if uvicorn logger isn't present, continue
+    pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -191,6 +199,15 @@ async def tonconnect_manifest():
     if os.path.isfile(manifest_path):
         return FileResponse(manifest_path, media_type="application/json")
     raise HTTPException(status_code=404, detail="TonConnect manifest not found")
+
+
+# Serve a simple favicon to avoid browser 404 noise
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    icon_path = os.path.join(os.path.dirname(__file__), 'static', 'icon.svg')
+    if os.path.isfile(icon_path):
+        return FileResponse(icon_path, media_type='image/svg+xml')
+    raise HTTPException(status_code=404, detail='Favicon not found')
 
 
 @app.post("/")
