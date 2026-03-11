@@ -633,13 +633,15 @@
           localStorage.setItem('token', result.token);
         }
 
-        tg.showAlert('Wallet connected successfully!');
-        
+        if (tg && tg.showAlert) tg.showAlert('Wallet connected successfully!');
+        else alert('Wallet connected successfully!');
+
         // Redirect to dashboard
         window.location.href = result.redirect_url || '/dashboard';
       } catch (error) {
         console.error('Wallet connection error:', error);
-        tg.showAlert(`Connection failed: ${error.message}`);
+        if (tg && tg.showAlert) tg.showAlert(`Connection failed: ${error.message}`);
+        else alert(`Connection failed: ${error.message}`);
       }
     }
 
