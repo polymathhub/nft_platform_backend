@@ -212,7 +212,7 @@ async def redirect_app_js():
 
 # Serve TonConnect manifest at root path for TonConnect clients
 @app.get("/tonconnect-manifest.json", include_in_schema=False)
-async def tonconnect_manifest():
+async def tonconnect_manifest(request: Request):
     """
     Serve a TonConnect manifest generated at runtime using the configured
     `settings.APP_URL` so the manifest `url` and icon URLs match the deployed
@@ -228,12 +228,26 @@ async def tonconnect_manifest():
         with open(manifest_path, "r", encoding="utf-8") as fh:
             manifest = json.load(fh)
 
-        # Ensure manifest references the current application origin
-        origin = getattr(settings, "APP_URL", None) or f"{request_base_origin() if 'request_base_origin' in globals() else ''}"
-        # Fallback: use request host if settings.APP_URL is not set
+        # Prefer an explicit configured webapp URL, otherwise derive origin from request
+        from urllib.parse import urlparse
+
+        configured = getattr(settings, "telegram_webapp_url", None) or getattr(settings, "APP_URL", None)
+        origin = ""
+        if configured:
+            parsed = urlparse(configured)
+            if parsed.scheme and parsed.netloc:
+                origin = f"{parsed.scheme}://{parsed.netloc}"
+
+        # Fallback to deriving origin from the incoming request
         if not origin:
-            # try to detect from environment or default to empty
-            origin = ""
+            parsed = request.url
+            host = parsed.hostname or ""
+            port = parsed.port
+            scheme = parsed.scheme or ""
+            if host and scheme:
+                origin = f"{scheme}://{host}"
+                if port and port not in (80, 443):
+                    origin = f"{origin}:{port}"
 
         if origin:
             manifest["url"] = origin

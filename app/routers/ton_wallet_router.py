@@ -69,29 +69,35 @@ async def initiate_ton_connection(
     """
     try:
         settings = get_settings()
-        
+
         # Generate unique session ID
         session_id = f"ton_{uuid.uuid4().hex[:12]}"
-        
-        # Create TonConnect manifest
-        manifest_url = f"{settings.APP_URL}/tonconnect-manifest.json"
-        
-        # Build TonConnect connection URL
-        # Using universal link format that works in Telegram and browsers
-        connect_url = (
-            f"https://app.tonkeeper.com/transfer/"
-            f"0:0000000000000000000000000000000000000000000000000000000000000000"  # dummy address
-            f"?text=Marketplace%20wallet%20connection"
-        )
-        
-        # In production, use proper TonConnect library
-        # For now, return the connection request data
+
+        # Build manifest URL using configured Telegram WebApp origin (or fallback to configured APP_URL)
+        from urllib.parse import urlparse
+        configured = getattr(settings, "telegram_webapp_url", None) or getattr(settings, "APP_URL", None)
+        manifest_origin = None
+        if configured:
+            parsed = urlparse(configured)
+            if parsed.scheme and parsed.netloc:
+                manifest_origin = f"{parsed.scheme}://{parsed.netloc}"
+
+        # Fallback to server settings host/port if no configured origin available
+        if not manifest_origin:
+            manifest_origin = f"https://{settings.host}:{settings.port}" if settings.host and settings.port else ""
+
+        manifest_url = manifest_origin.rstrip("/") + "/tonconnect-manifest.json"
+
+        # NOTE: Proper TonConnect integration requires creating a TonConnect session and returning
+        # a protocol-compliant connect URL. This project previously returned a dummy transfer link
+        # which will not open the TonConnect modal. For now we return the manifest URL and session id
+        # so the frontend can use the TonConnect UI client-side to initiate a session.
         return {
             "success": True,
             "session_id": session_id,
             "manifest": manifest_url,
-            "connect_url": connect_url,
-            "message": "Please connect your TON wallet using TonConnect"
+            "connect_url": None,
+            "message": "Initiated TON connection session. Use TonConnect UI on client to proceed."
         }
         
     except Exception as e:
