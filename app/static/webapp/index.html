@@ -438,13 +438,18 @@
 
   <!-- Application Module -->
   <script type="module">
-    const tg = window.Telegram.WebApp;
+    import { auth } from '/webapp/js/auth.js';
+
+    const tg = window.Telegram?.WebApp || null;
     let tonConnectUI;
 
     async function initializeApp() {
-      // Ready the WebApp
-      tg.ready();
-      tg.expand();
+      // Ready the WebApp if available
+      if (tg) {
+        try { tg.ready(); tg.expand(); } catch (e) { console.warn('Telegram WebApp ready failed', e); }
+      } else {
+        console.log('Not running inside Telegram WebApp');
+      }
 
       // Initialize TonConnect UI
       try {
@@ -464,9 +469,9 @@
         return;
       }
 
-      // Authenticate with Telegram data
+      // Authenticate with Telegram data if available
       try {
-        const initData = tg.initData;
+        const initData = tg?.initData;
         if (initData) {
           const authResponse = await fetch('/api/v1/auth/telegram/login', {
             method: 'POST',
@@ -527,7 +532,8 @@
         showWalletSelectionModal(sessionId);
       } catch (error) {
         console.error('TON wallet connection error:', error);
-        tg.showAlert(`Failed to connect: ${error.message}`);
+        if (tg && tg.showAlert) tg.showAlert(`Failed to connect: ${error.message}`);
+        else alert(`Failed to connect: ${error.message}`);
       }
     }
 
