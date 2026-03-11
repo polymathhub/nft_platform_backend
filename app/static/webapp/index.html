@@ -637,16 +637,45 @@
         </div>
       `;
 
-      document.getElementById('tonkeeperBtn').addEventListener('click', () => {
-        connectWithWallet(sessionId, 'tonkeeper');
+      document.getElementById('tonkeeperBtn').addEventListener('click', async () => {
+        // Open deep link and poll for session result
+        try {
+          await getWalletAddressFromApp('tonkeeper', sessionId);
+          const result = await pollSessionConnected(sessionId);
+          // If backend reports connected, redirect/finish
+          const successMsg = 'Wallet connected: ' + result.wallet_address;
+          if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
+          else Toast.show(successMsg, 'success', 3000);
+          window.location.href = '/webapp/dashboard.html';
+        } catch (e) {
+          console.warn('Tonkeeper flow failed', e);
+        }
       });
 
-      document.getElementById('walletBtn').addEventListener('click', () => {
-        connectWithWallet(sessionId, 'tonwallet');
+      document.getElementById('walletBtn').addEventListener('click', async () => {
+        try {
+          await getWalletAddressFromApp('tonwallet', sessionId);
+          const result = await pollSessionConnected(sessionId);
+          const successMsg = 'Wallet connected: ' + result.wallet_address;
+          if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
+          else Toast.show(successMsg, 'success', 3000);
+          window.location.href = '/webapp/dashboard.html';
+        } catch (e) {
+          console.warn('Tonwallet flow failed', e);
+        }
       });
 
-      document.getElementById('telegramWalletBtn').addEventListener('click', () => {
-        connectWithWallet(sessionId, 'tgwallet');
+      document.getElementById('telegramWalletBtn').addEventListener('click', async () => {
+        try {
+          await getWalletAddressFromApp('tgwallet', sessionId);
+          const result = await pollSessionConnected(sessionId);
+          const successMsg = 'Wallet connected: ' + result.wallet_address;
+          if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
+          else Toast.show(successMsg, 'success', 3000);
+          window.location.href = '/webapp/dashboard.html';
+        } catch (e) {
+          console.warn('Telegram wallet flow failed', e);
+        }
       });
 
       document.getElementById('closeModalBtn').addEventListener('click', () => {
@@ -720,6 +749,26 @@
         if (tg && typeof tg.showAlert === 'function') tg.showAlert(`Connection failed: ${error.message}`);
         else Toast.show(`Connection failed: ${error.message}`, 'error', 5000);
       }
+    }
+
+    // Polling helper: poll server for session status, resolve when connected
+    async function pollSessionConnected(sessionId, timeoutMs = 60000, intervalMs = 1500) {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        try {
+          const res = await fetch(`/api/v1/wallet/ton/verify?session_id=${encodeURIComponent(sessionId)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'connected' && data.wallet_address) {
+              return data;
+            }
+          }
+        } catch (e) {
+          console.warn('Polling error', e);
+        }
+        await new Promise(r => setTimeout(r, intervalMs));
+      }
+      throw new Error('Timeout waiting for wallet connection');
     }
 
     async function getWalletAddressFromApp(walletType, sessionId) {

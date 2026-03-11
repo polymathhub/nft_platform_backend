@@ -17,6 +17,10 @@ from app.config import get_settings
 
 router = APIRouter(prefix="/api/v1/wallet/ton", tags=["TON Wallet"])
 
+# Simple in-memory session store for TonConnect demo/testing purposes.
+# In production this should be persisted in a database or Redis and cleaned up appropriately.
+_TON_SESSIONS: dict = {}
+
 # ========== SCHEMAS ==========
 
 class TONConnectRequest(BaseModel):
@@ -89,9 +93,15 @@ async def initiate_ton_connection(
         manifest_url = manifest_origin.rstrip("/") + "/tonconnect-manifest.json"
 
         # NOTE: Proper TonConnect integration requires creating a TonConnect session and returning
-        # a protocol-compliant connect URL. This project previously returned a dummy transfer link
-        # which will not open the TonConnect modal. For now we return the manifest URL and session id
-        # so the frontend can use the TonConnect UI client-side to initiate a session.
+        # a protocol-compliant connect URL. Here we create a simple session record so the frontend
+        # can poll for the connection result. Replace with production session management later.
+        # Create a session entry so frontend can poll for updates
+        _TON_SESSIONS[session_id] = {
+            "status": "pending",
+            "wallet_address": None,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
         return {
             "success": True,
             "session_id": session_id,
@@ -106,6 +116,20 @@ async def initiate_ton_connection(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to initiate TON wallet connection"
         )
+
+
+@router.get('/verify')
+async def verify_ton_session(session_id: str):
+    """Verify session status for a TonConnect session (simple polling endpoint)."""
+    rec = _TON_SESSIONS.get(session_id)
+    if not rec:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Session not found')
+    return {
+        'success': True,
+        'session_id': session_id,
+        'status': rec.get('status'),
+        'wallet_address': rec.get('wallet_address')
+    }
 
 
 @router.post("/callback")
@@ -153,6 +177,12 @@ async def ton_connect_callback(
             db.commit()
             
             # Redirect to dashboard
+            # Update session store if present
+            for sid, rec in list(_TON_SESSIONS.items()):
+                if rec.get("wallet_address") == wallet_address:
+                    rec["status"] = "connected"
+                    rec["wallet_address"] = wallet_address
+
             return {
                 "success": True,
                 "message": "TON wallet reconnected successfully",
@@ -212,7 +242,7 @@ async def ton_connect_callback(
             }
         
     except HTTPException:
-        raise
+            else:
     except Exception as e:
         logger.error(f"Error in TON wallet callback: {e}")
         db.rollback()
@@ -224,6 +254,19 @@ async def ton_connect_callback(
 
 @router.get("/status")
 async def get_ton_wallet_status(
+
+            # Update in-memory session store if session_id present in body
+            session_id = body.get('session_id')
+            if session_id and session_id in _TON_SESSIONS:
+                _TON_SESSIONS[session_id]['status'] = 'connected'
+                _TON_SESSIONS[session_id]['wallet_address'] = wallet_address
+
+            return {
+                "success": True,
+                "message": "TON wallet connected successfully",
+                "wallet_address": wallet_address,
+                "redirect_url": "/dashboard"
+            }
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
