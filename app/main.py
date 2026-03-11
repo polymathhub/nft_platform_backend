@@ -144,6 +144,7 @@ directory is missing we log a warning and API paths remain available.
 """
 import os
 webapp_path = os.path.join(os.path.dirname(__file__), "static", "webapp")
+static_path = os.path.join(os.path.dirname(__file__), "static")
 
 """CORS"""
 """ Build allowed origins - include same-origin for web app"""
@@ -279,6 +280,15 @@ if os.path.isdir(webapp_path):
     # html=True enables directory traversal and HTML fallback behavior
     app.mount("/webapp", StaticFiles(directory=webapp_path, html=True), name="webapp")
     logger.info(f"✓ Mounted web app static files at /webapp")
+    
+    # Mount static directory at /static for manifest.json and other assets
+    try:
+        if os.path.isdir(static_path):
+            app.mount("/static", StaticFiles(directory=static_path), name="static")
+            logger.info(f"✓ Mounted static assets at /static")
+    except Exception as e:
+        logger.warning(f"Failed to mount /static directory: {e}")
+
 else:
     logger.error(f"✗ Web app static directory NOT FOUND at {webapp_path}")
     logger.error(f"  This will cause 404 errors for CSS/JS files")

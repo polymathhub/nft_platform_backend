@@ -438,8 +438,6 @@
 
   <!-- Application Module -->
   <script type="module">
-    import { auth } from '/static/modules/auth.js';
-
     const tg = window.Telegram.WebApp;
     let tonConnectUI;
 
@@ -451,7 +449,7 @@
       // Initialize TonConnect UI
       try {
         tonConnectUI = new TonConnectUI({
-          manifestUrl: window.location.origin + '/manifest.json',
+          manifestUrl: window.location.origin + '/static/manifest.json',
           buttonRootId: 'tonconnect-button'
         });
       } catch (error) {
