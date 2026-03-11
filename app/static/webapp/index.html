@@ -435,13 +435,13 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
   <!-- TonConnect UI Library -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.css">
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.js"></script>
 
   <!-- Application Module -->
   <script type="module">
-    import { auth } from '/webapp/js/auth.js';
-    import { Toast } from '/webapp/js/components.js';
+    import { auth } from './js/auth.js';
+    import { Toast } from './js/components.js';
 
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
     const tg = window.Telegram?.WebApp ?? null;
@@ -463,8 +463,10 @@
       // Initialize TonConnect UI (optional)
       try {
         if (typeof TonConnectUI !== 'undefined') {
+          // Use the root-hosted manifest endpoint that the backend exposes.
+          const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
           tonConnectUI = new TonConnectUI({
-            manifestUrl: window.location.origin + '/static/manifest.json',
+            manifestUrl,
             buttonRootId: 'tonconnect-button'
           });
         }
@@ -508,6 +510,14 @@
 
       // Setup event listeners safely (ensure elements exist)
       const connectBtn = document.getElementById('connectBtn');
+      // Ensure TonConnect UI has a button container available
+      if (!document.getElementById('tonconnect-button')) {
+        const tonBtnRoot = document.createElement('div');
+        tonBtnRoot.id = 'tonconnect-button';
+        // insert it next to connectBtn for parity
+        if (connectBtn && connectBtn.parentNode) connectBtn.parentNode.insertBefore(tonBtnRoot, connectBtn.nextSibling);
+        else document.body.appendChild(tonBtnRoot);
+      }
       const exploreBtn = document.getElementById('exploreBtn');
 
       if (connectBtn) connectBtn.addEventListener('click', (e) => { console.debug('[index] connectBtn clicked'); handleConnectTelegram(e); });

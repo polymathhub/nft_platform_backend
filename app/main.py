@@ -213,10 +213,42 @@ async def redirect_app_js():
 # Serve TonConnect manifest at root path for TonConnect clients
 @app.get("/tonconnect-manifest.json", include_in_schema=False)
 async def tonconnect_manifest():
+    """
+    Serve a TonConnect manifest generated at runtime using the configured
+    `settings.APP_URL` so the manifest `url` and icon URLs match the deployed
+    origin. This avoids mismatch issues when the static `manifest.json` was
+    authored for a different domain.
+    """
+    import json
     manifest_path = os.path.join(os.path.dirname(__file__), "static", "manifest.json")
-    if os.path.isfile(manifest_path):
-        return FileResponse(manifest_path, media_type="application/json")
-    raise HTTPException(status_code=404, detail="TonConnect manifest not found")
+    if not os.path.isfile(manifest_path):
+        raise HTTPException(status_code=404, detail="TonConnect manifest not found")
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as fh:
+            manifest = json.load(fh)
+
+        # Ensure manifest references the current application origin
+        origin = getattr(settings, "APP_URL", None) or f"{request_base_origin() if 'request_base_origin' in globals() else ''}"
+        # Fallback: use request host if settings.APP_URL is not set
+        if not origin:
+            # try to detect from environment or default to empty
+            origin = ""
+
+        if origin:
+            manifest["url"] = origin
+            # Normalize icons to absolute URLs
+            if isinstance(manifest.get("icons"), list):
+                for ico in manifest["icons"]:
+                    src = ico.get("src") or ''
+                    if src and not src.startswith("http"):
+                        ico["src"] = origin.rstrip("/") + "/" + src.lstrip("/")
+
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content=manifest, media_type="application/json")
+    except Exception as e:
+        logger.error(f"Failed to load tonconnect manifest: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load TonConnect manifest")
 
 
 # Serve a simple favicon to avoid browser 404 noise
