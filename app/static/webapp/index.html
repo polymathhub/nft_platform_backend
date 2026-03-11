@@ -563,36 +563,64 @@
         const sessionId = connectData.session_id;
 
         // Prefer client-side TonConnect UI when available (recommended)
-        if (typeof tonConnectUI !== 'undefined' && tonConnectUI && typeof tonConnectUI.connect === 'function') {
+        if (typeof TonConnectUI !== 'undefined') {
           try {
             console.debug('[index] initiating TonConnect UI client-side connect');
-            // If the backend supplied a manifest, ensure the UI knows about it
+            // Instantiate a fresh TonConnect UI client with manifest from backend
             if (connectData.manifest) {
-              try { tonConnectUI.manifestUrl = connectData.manifest; } catch (_) { /* ignore */ }
+              try {
+                const tc = new TonConnectUI({ manifestUrl: connectData.manifest });
+                const session = await tc.connect();
+                console.debug('[index] TonConnectUI.connect result', session);
+
+                // Try to extract a wallet address from common response shapes
+                let walletAddress = null;
+                if (session) {
+                  walletAddress = session.account?.address || session.account?.addressBase64 || session.wallet?.address || session.address || null;
+                }
+
+                if (walletAddress) {
+                  // Notify backend of successful connection
+                  try {
+                    await fetch('/api/v1/wallet/ton/callback', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ session_id: sessionId, wallet_address: walletAddress, tonconnect_session: session })
+                    });
+                  } catch (e) {
+                    console.warn('Failed to POST TonConnect session to backend', e);
+                  }
+                  // redirect/finish
+                  if (tg && typeof tg.showAlert === 'function') tg.showAlert('Wallet connected');
+                  else Toast.show('Wallet connected', 'success', 3000);
+                  window.location.href = basePath + '/dashboard.html';
+                  return;
+                }
+              } catch (e) {
+                console.warn('TonConnect UI client connect failed, falling back to deep-links/modal', e);
+              }
             }
-            await tonConnectUI.connect();
-            // TonConnect UI will handle the modal; also show fallback selector for non-supported clients
-            showWalletSelectionModal(sessionId);
-            return;
           } catch (e) {
-            console.warn('TonConnect UI client connect failed, falling back to backend URL', e);
-            // continue to fallback
+            console.warn('TonConnect UI initialization error', e);
           }
         }
 
-        if (connectData.connect_url) {
-          console.debug('[index] opening connect_url from backend', connectData.connect_url);
-          try {
-            if (tg && typeof tg.openLink === 'function') tg.openLink(connectData.connect_url);
-            else if (tg && typeof tg.openUrl === 'function') tg.openUrl(connectData.connect_url);
-            else window.open(connectData.connect_url, '_blank');
-          } catch (e) {
-            console.warn('Failed to open connect_url via Telegram API, falling back:', e);
-            window.location.href = connectData.connect_url;
+        // If backend returned deep links, open the most appropriate one
+        if (connectData.connect_links) {
+          const links = connectData.connect_links;
+          const linkToOpen = links.tonkeeper || links.telegram || links.tonwallet;
+          if (linkToOpen) {
+            try {
+              if (tg && typeof tg.openLink === 'function') tg.openLink(linkToOpen);
+              else if (tg && typeof tg.openUrl === 'function') tg.openUrl(linkToOpen);
+              else window.open(linkToOpen, '_blank');
+            } catch (e) {
+              console.warn('Failed to open deep link via Telegram API, falling back:', e);
+              window.location.href = linkToOpen;
+            }
+            showWalletSelectionModal(sessionId);
+            return;
           }
-
-          showWalletSelectionModal(sessionId);
-          return;
         }
 
         // Final fallback: show a manual wallet selector modal
