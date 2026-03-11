@@ -233,6 +233,43 @@ class MintRequestData(BaseModel):
 # ==================== Endpoints ====================
 
 
+@router.get("/webhook")
+async def telegram_webhook_get(request: Request) -> dict:
+    """
+    GET /api/v1/telegram/webhook
+    
+    Production mode (ENVIRONMENT=production):
+        Returns 405 Method Not Allowed (Telegram only sends POST)
+    
+    Local/Development mode (ENVIRONMENT=development):
+        Returns 200 OK with status info for debugging.
+        Use this to test connectivity without sending real Telegram data.
+    
+    Example local test:
+        curl -X GET http://localhost:8000/api/v1/telegram/webhook
+    """
+    from app.config import get_settings
+    settings = get_settings()
+    
+    # In production, only POST is allowed
+    if settings.environment.lower() == "production":
+        logger.debug("GET request to webhook in production - returning 405")
+        raise HTTPException(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            detail="Method not allowed. Use POST to send Telegram updates."
+        )
+    
+    # In development, return helpful status
+    logger.info(f"GET request to webhook from {request.client.host if request.client else 'unknown'} (development mode)")
+    return {
+        "status": "webhook_running",
+        "environment": settings.environment,
+        "webhook_url": settings.telegram_webhook_url,
+        "message": "Webhook is running and ready to receive Telegram updates. Use POST method.",
+        "debug_mode": True
+    }
+
+
 @router.post("/webhook")
 async def telegram_webhook(
     request: Request,
@@ -241,38 +278,92 @@ async def telegram_webhook(
 ) -> dict:
     """
     Telegram webhook endpoint for receiving bot updates.
-    URL: POST /api/v1/telegram/webhook (MUST be registered with Telegram API)
-    Validates secret token and processes messages/callbacks.
-    Returns 200 OK always to prevent Telegram retries.
+    
+    Route: POST /api/v1/telegram/webhook
+    
+    Security:
+    - Validates X-Telegram-Bot-Api-Secret-Token header if TELEGRAM_WEBHOOK_SECRET is set
+    - Rejects requests with invalid tokens early
+    - Only processes valid Telegram updates
+    
+    Processing:
+    - Messages: Forward to handle_message()
+    - Callback queries: Forward to handle_callback_query()
+    
+    Returns:
+    - Always 200 OK (even on errors) to prevent Telegram retry spam
+    - Telegram stops retrying after 3-5 failed attempts if we keep 200ing
+    
+    Logging:
+    - Updates are logged with chat_id and user_id for debugging
+    - Errors are logged but don't crash the app
     """
+    client_ip = request.client.host if request.client else "unknown"
+    
     try:
         from app.config import get_settings
-        
         settings = get_settings()
         
-        # Validate secret token if configured
+        # Log webhook request (sanitized)
+        update_type = "message" if update.message else "callback_query" if update.callback_query else "unknown"
+        logger.info(
+            f"Telegram webhook: update_type={update_type} from IP={client_ip}"
+        )
+        
+        # ===== SECURITY: Validate Secret Token =====
         if settings.telegram_webhook_secret:
             header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
             if not header_secret:
-                logger.warning("Webhook rejected: missing secret token header")
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing secret token")
+                logger.warning(f"Webhook rejected: missing secret token header from {client_ip}")
+                # Return 200 to prevent Telegram retry, but log the security issue
+                return {"ok": True, "error": "Missing secret token"}
+            
             if header_secret != settings.telegram_webhook_secret:
-                logger.warning(f"Webhook rejected: secret mismatch from {request.client.host if request.client else 'unknown'}")
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid secret token")
-
-        # Process Telegram update
-        if update.message:
-            await handle_message(db, update.message)
-        elif update.callback_query:
-            await handle_callback_query(db, update.callback_query)
+                logger.warning(
+                    f"Webhook rejected: secret token mismatch from {client_ip} "
+                    f"(expected {len(settings.telegram_webhook_secret)} chars)"
+                )
+                # Return 200 to prevent Telegram retry, but reject this request
+                return {"ok": True, "error": "Invalid secret token"}
         
+        logger.debug(f"Webhook security: token validated ✓")
+        
+        # ===== PROCESSING: Route Update to Handler =====
+        if update.message:
+            logger.info(
+                f"Processing message: chat_id={update.message.chat.get('id')}, "
+                f"user_id={update.message.get('from', {}).get('id')}"
+            )
+            await handle_message(db, update.message)
+            logger.info(f"Message processed successfully")
+            
+        elif update.callback_query:
+            logger.info(
+                f"Processing callback: chat_id={update.callback_query.get('from', {}).get('id')}, "
+                f"callback_data={update.callback_query.get('data', 'N/A')}"
+            )
+            await handle_callback_query(db, update.callback_query)
+            logger.info(f"Callback processed successfully")
+        
+        else:
+            logger.debug(f"Received Telegram update with no message or callback_query (update_id={update.update_id})")
+        
+        # Always return 200 OK to prevent Telegram retries
         return {"ok": True}
     
     except HTTPException:
-        raise
+        # Pydantic/FastAPI validation errors
+        logger.warning(f"Webhook validation error from {client_ip}: invalid update format")
+        return {"ok": True}
+    
     except Exception as e:
-        logger.error(f"Webhook error: {e}", exc_info=True)
-        # Return 200 OK even on error to prevent Telegram retry loop
+        # Catch-all for unexpected errors
+        logger.error(
+            f"Webhook processing error from {client_ip}: {type(e).__name__}: {str(e)}",
+            exc_info=True
+        )
+        # Return 200 OK even on error to prevent Telegram from retrying
+        # This prevents infinite retry loops if our server is having issues
         return {"ok": True}
 
 
