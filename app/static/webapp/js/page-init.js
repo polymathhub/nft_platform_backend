@@ -106,6 +106,25 @@ class PageInitializer {
   }
 
   /**
+   * Rewrite any anchors that use absolute `/webapp/` paths to be basePath-aware at runtime
+   * This avoids 404s when the app is served at root (static preview) or mounted at `/webapp`.
+   */
+  static rewriteWebappAnchors() {
+    try {
+      const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
+      const anchors = document.querySelectorAll('a[href^="/webapp/"]');
+      anchors.forEach(a => {
+        const href = a.getAttribute('href');
+        if (!href) return;
+        const newHref = href.replace(/^\/webapp/, basePath);
+        a.setAttribute('href', newHref);
+      });
+    } catch (err) {
+      console.warn('rewriteWebappAnchors failed', err);
+    }
+  }
+
+  /**
    * Global navigate function for onclick handlers
    * Can be called from HTML onclick="navigate('/path')"
    */
