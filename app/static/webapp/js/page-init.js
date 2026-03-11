@@ -95,7 +95,7 @@ class PageInitializer {
       }
 
       // Also handle click events for manual navigation
-      item.addEventListener('click', function(e) {
+      item.addEventListener('click', function() {
         // Don't prevent default, just update active state
         if (!this.href) return; // Links will naturally navigate
         

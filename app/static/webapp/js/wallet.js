@@ -247,7 +247,9 @@ class WalletManager {
       else if (this.provider === window.solana) {
         const messageBytes = new TextEncoder().encode(message);
         const result = await this.provider.signMessage(messageBytes);
-        signature = Buffer.from(result.signature).toString('hex');
+        // result.signature may be a Uint8Array or ArrayBuffer in browser wallets
+        const sigArr = result.signature instanceof Uint8Array ? result.signature : new Uint8Array(result.signature);
+        signature = Array.from(sigArr).map(b => b.toString(16).padStart(2, '0')).join('');
       }
 
       return signature;
@@ -312,7 +314,7 @@ class WalletManager {
    * Send Solana transaction
    * @private
    */
-  async sendSolanaTransaction(to, amount) {
+  async sendSolanaTransaction(_to, _amount) {
     try {
       // This is simplified - full implementation would use @solana/web3.js
       throw new Error('Solana transactions require @solana/web3.js library');
