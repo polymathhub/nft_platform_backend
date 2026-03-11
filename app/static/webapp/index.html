@@ -502,11 +502,16 @@
       try {
         // Get connect request from backend
         console.debug('[index] handleConnectTelegram - requesting connect-request');
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const connectResponse = await fetch('/api/v1/wallet/ton/connect-request', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers,
+          credentials: 'include',
           body: JSON.stringify({
             manifest: {
               name: 'GiftedForge NFT Marketplace',
@@ -599,11 +604,14 @@
         }
 
         // Send wallet connection data to backend
+        const cbHeaders = { 'Content-Type': 'application/json' };
+        const cbToken = localStorage.getItem('token');
+        if (cbToken) cbHeaders['Authorization'] = `Bearer ${cbToken}`;
+
         const response = await fetch('/api/v1/wallet/ton/callback', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: cbHeaders,
+          credentials: 'include',
           body: JSON.stringify({
             session_id: sessionId,
             wallet_address: walletAddress,
