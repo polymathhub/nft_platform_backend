@@ -507,11 +507,12 @@
       const connectBtn = document.getElementById('connectBtn');
       const exploreBtn = document.getElementById('exploreBtn');
 
-      if (connectBtn) connectBtn.addEventListener('click', handleConnectTelegram);
+      if (connectBtn) connectBtn.addEventListener('click', (e) => { console.debug('[index] connectBtn clicked'); handleConnectTelegram(e); });
       else console.warn('connectBtn not found in DOM');
 
       if (exploreBtn) exploreBtn.addEventListener('click', () => {
-        window.location.href = '/marketplace';
+        console.debug('[index] exploreBtn clicked');
+        window.location.href = '/webapp/marketplace.html';
       });
       else console.warn('exploreBtn not found in DOM');
     }
@@ -531,15 +532,17 @@
           headers,
           credentials: 'include',
           body: JSON.stringify({
-            manifest: {
-              name: 'GiftedForge NFT Marketplace',
-              description: 'Trade, create, and collect NFTs using Telegram Stars',
-              url: window.location.origin,
-              iconUrl: window.location.origin + '/static/icon.svg'
-            }
-          })
-        });
+              // Store token if provided
+              if (result.token) {
+                localStorage.setItem('token', result.token);
+              }
 
+              const successMsg = result.message || 'Wallet connected successfully!';
+              if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
+              else Toast.show(successMsg, 'success', 3000);
+
+              // Redirect to dashboard (serve static dashboard page)
+              window.location.href = result.redirect_url || '/webapp/dashboard.html';
         if (!connectResponse.ok) {
           const error = await connectResponse.json();
           console.error('[index] connect-request failed', error);
@@ -686,8 +689,26 @@
           'tgwallet': `https://wallet.tg/ton-connect?request_id=${sessionId}`
         };
 
-        // Open the wallet app
-        window.location.href = deepLinks[walletType];
+        // Open the wallet app. Prefer Telegram-provided openLink APIs when available.
+        const urlToOpen = deepLinks[walletType];
+        try {
+          if (tg) {
+            if (typeof tg.openLink === 'function') {
+              tg.openLink(urlToOpen);
+            } else if (typeof tg.openUrl === 'function') {
+              tg.openUrl(urlToOpen);
+            } else if (typeof tg.openExternalLink === 'function') {
+              tg.openExternalLink(urlToOpen);
+            } else {
+              window.open(urlToOpen, '_blank');
+            }
+          } else {
+            window.open(urlToOpen, '_blank');
+          }
+        } catch (e) {
+          console.warn('Deep link open fallback, using window.location:', e);
+          window.location.href = urlToOpen;
+        }
 
         // Simulate wallet returning address after delay
         // In production, this would be handled by the wallet app sending data back
