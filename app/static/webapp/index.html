@@ -553,7 +553,23 @@
         console.debug('[index] connect-request response', connectData);
         const sessionId = connectData.session_id;
 
-        // Show wallet selection modal
+        // If backend returned a connect_url, open it immediately (TonConnect flow)
+        if (connectData.connect_url) {
+          console.debug('[index] opening connect_url from backend', connectData.connect_url);
+          try {
+            if (tg && typeof tg.openLink === 'function') tg.openLink(connectData.connect_url);
+            else if (tg && typeof tg.openUrl === 'function') tg.openUrl(connectData.connect_url);
+            else window.open(connectData.connect_url, '_blank');
+          } catch (e) {
+            console.warn('Failed to open connect_url via Telegram API, falling back:', e);
+            window.location.href = connectData.connect_url;
+          }
+          // Also show wallet selection modal as a fallback option
+          showWalletSelectionModal(sessionId);
+          return;
+        }
+
+        // Show wallet selection modal (no deep link provided)
         showWalletSelectionModal(sessionId);
       } catch (error) {
         console.error('TON wallet connection error:', error);

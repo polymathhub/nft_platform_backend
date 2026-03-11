@@ -184,6 +184,15 @@ async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
 
 
+# Serve TonConnect manifest at root path for TonConnect clients
+@app.get("/tonconnect-manifest.json", include_in_schema=False)
+async def tonconnect_manifest():
+    manifest_path = os.path.join(os.path.dirname(__file__), "static", "manifest.json")
+    if os.path.isfile(manifest_path):
+        return FileResponse(manifest_path, media_type="application/json")
+    raise HTTPException(status_code=404, detail="TonConnect manifest not found")
+
+
 @app.post("/")
 async def root_post(data: dict):
     return {"message": "POST received", "data": data}
