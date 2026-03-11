@@ -439,20 +439,32 @@
   <!-- Application Module -->
   <script type="module">
     import { auth } from '/webapp/js/auth.js';
-    const tg = window.Telegram.WebApp;
+    import { Toast } from '/webapp/js/components.js';
+
+    const tg = window.Telegram?.WebApp ?? null;
     let tonConnectUI;
 
     async function initializeApp() {
-      // Ready the WebApp
-      tg.ready();
-      tg.expand();
+      // Initialize Telegram UI only if available
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+        } catch (e) {
+          console.warn('Telegram WebApp methods not fully available:', e);
+        }
+      } else {
+        console.info('Not running inside Telegram WebApp - using browser mode');
+      }
 
-      // Initialize TonConnect UI
+      // Initialize TonConnect UI (optional)
       try {
-        tonConnectUI = new TonConnectUI({
-          manifestUrl: window.location.origin + '/static/manifest.json',
-          buttonRootId: 'tonconnect-button'
-        });
+        if (typeof TonConnectUI !== 'undefined') {
+          tonConnectUI = new TonConnectUI({
+            manifestUrl: window.location.origin + '/static/manifest.json',
+            buttonRootId: 'tonconnect-button'
+          });
+        }
       } catch (error) {
         console.log('TonConnect UI not available, using fallback mode');
       }
@@ -491,11 +503,17 @@
         console.log('Telegram auth not available, showing landing page');
       }
 
-      // Setup event listeners
-      document.getElementById('connectBtn').addEventListener('click', handleConnectTelegram);
-      document.getElementById('exploreBtn').addEventListener('click', () => {
+      // Setup event listeners safely (ensure elements exist)
+      const connectBtn = document.getElementById('connectBtn');
+      const exploreBtn = document.getElementById('exploreBtn');
+
+      if (connectBtn) connectBtn.addEventListener('click', handleConnectTelegram);
+      else console.warn('connectBtn not found in DOM');
+
+      if (exploreBtn) exploreBtn.addEventListener('click', () => {
         window.location.href = '/marketplace';
       });
+      else console.warn('exploreBtn not found in DOM');
     }
 
     async function handleConnectTelegram() {
@@ -536,7 +554,14 @@
         showWalletSelectionModal(sessionId);
       } catch (error) {
         console.error('TON wallet connection error:', error);
-        tg.showAlert(`Failed to connect: ${error.message}`);
+        const msg = `Failed to connect: ${error.message}`;
+        if (tg && typeof tg.showAlert === 'function') tg.showAlert(msg);
+        else Toast.show(msg, 'error', 5000);
+
+        // Offer a retry via confirm (simple UX fallback)
+        if (confirm('Connection failed. Retry?')) {
+          try { await handleConnectTelegram(); } catch (_) { /* noop */ }
+        }
       }
     }
 
