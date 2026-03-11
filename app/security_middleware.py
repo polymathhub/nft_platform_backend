@@ -33,7 +33,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
         
-        if request.url.path.startswith("/web-app"):
+        if request.url.path.startswith("/webapp"):
             response.headers["X-Frame-Options"] = "SAMEORIGIN"
         else:
             response.headers["X-Frame-Options"] = "DENY"
@@ -60,8 +60,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/api/"):
             if request.method == "GET":
                 if any(path in request.url.path for path in [
-                    "/web-app/dashboard-data",
-                    "/web-app/init",
+                    "/webapp/dashboard-data",
+                    "/webapp/init",
                     "/health",
                     "/nft/",
                     "/wallet/",
