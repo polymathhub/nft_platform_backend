@@ -183,19 +183,27 @@ async def setup_telegram_webhook() -> bool:
     """
     Setup Telegram webhook on application startup.
     
-    SKIPPED for local development (localhost, debug mode).
+    Webhook is set up in PRODUCTION mode only (ENVIRONMENT=production).
+    Local development (debug=True or ENVIRONMENT=development) uses polling instead.
     Non-fatal - app will start even if webhook setup fails.
     """
     if not settings.telegram_bot_token:
         logger.info("Telegram bot token not configured, skipping Telegram webhook setup")
         return True
 
+    # Determine if we're in production mode
+    # Priority: settings.environment from config (loaded from Railway or .env)
+    is_production = settings.environment.lower() == "production" and not settings.debug
+    
     # Skip webhook setup for local development (use polling instead)
-    if settings.debug or os.getenv("ENVIRONMENT", "").lower() == "development":
-        logger.info("Local development detected - skipping Telegram webhook setup (polling mode)")
+    if not is_production:
+        logger.info(
+            f"Local development detected (ENVIRONMENT={settings.environment}, DEBUG={settings.debug}) "
+            "- skipping Telegram webhook setup (using polling mode)"
+        )
         return True
     
-    # Only set webhook if explicitly enabled in non-debug mode
+    # Only set webhook if explicitly enabled in production mode
     if not settings.telegram_auto_setup_webhook:
         logger.info("Telegram auto-setup webhook disabled - skipping setup")
         return True
@@ -204,7 +212,7 @@ async def setup_telegram_webhook() -> bool:
         logger.warning("Telegram webhook URL not configured - skipping setup. Set TELEGRAM_WEBHOOK_URL to enable.")
         return True
 
-    logger.info("Initializing Telegram webhook integration...")
+    logger.info("Setting up Telegram webhook for production...")
     webhook_url = settings.telegram_webhook_url
 
     try:
@@ -213,24 +221,31 @@ async def setup_telegram_webhook() -> bool:
 
         if current_info:
             current_url = current_info.get("url")
-            logger.info(f"Current Telegram webhook: {current_url}")
+            logger.info(f"Current Telegram webhook on Telegram servers: {current_url}")
             if current_url == webhook_url:
-                logger.info("✓ Webhook already correctly configured")
+                logger.info(f"✓ Telegram webhook already correctly configured: {webhook_url}")
                 return True
+            else:
+                logger.info(f"Updating Telegram webhook from {current_url} to {webhook_url}")
 
-        logger.info(f"Setting Telegram webhook to: {webhook_url}")
+        logger.info(f"Registering Telegram webhook: {webhook_url}")
         success = await manager.set_webhook(
             webhook_url,
             secret_token=settings.telegram_webhook_secret,
         )
 
         if success:
-            logger.info("✓ Telegram webhook setup successful")
+            logger.info(f"✓ Telegram webhook registered successfully: {webhook_url}")
             return True
         else:
-            logger.warning("⚠ Telegram webhook setup failed - continuing startup")
+            logger.warning(f"⚠ Telegram webhook registration returned False - this may indicate a network issue")
+            logger.warning("  The app will continue, and the webhook may register on next restart")
             return True
 
     except Exception as e:
-        logger.warning(f"⚠ Telegram webhook setup error (non-fatal): {e}")
+        logger.warning(f"⚠ Telegram webhook setup failed (non-fatal): {str(e)}")
+        logger.warning(
+            "  The app will continue with polling mode. "
+            "Webhook will retry on next restart if settings are correct."
+        )
         return True
