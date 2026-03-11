@@ -255,30 +255,41 @@ app.include_router(referrals_router)
 
 # Telegram Stars payment router already has /api/v1/stars prefix in its definition
 app.include_router(stars_payment_router)
- 
-    # Mount web app static files under /webapp/static so we can serve a custom
+
+# Mount web app static files and HTML pages
+# StaticFiles mounts the webapp directory at root, serving:
+# - /webapp/index.html (handled separately below)
+# - /webapp/css/*.css
+# - /webapp/js/*.js
+# - Other static assets
 if os.path.isdir(webapp_path):
-    app.mount("/webapp/static", StaticFiles(directory=webapp_path, html=True), name="webapp_static")
+    # Mount entire webapp directory at /webapp root
+    # This allows relative paths in HTML (css/variables.css) to work correctly
+    app.mount("/webapp", StaticFiles(directory=webapp_path, html=False), name="webapp")
+    logger.info(f"Mounted web app static files from {webapp_path} at /webapp")
 else:
-    logger.warning(f"Web app static directory not found at {webapp_path} - /webapp static will not be available")
+    logger.warning(f"Web app static directory not found at {webapp_path} - /webapp will not be available")
 
 
-# Serve production index file explicitly so we can keep index-production.html
+# Serve index.html for /webapp and /webapp/ routes explicitly
+# This allows the SPA to handle its own routing
 @app.get("/webapp", include_in_schema=False)
-@app.get("/webapp/", include_in_schema=False)
-async def serve_webapp_index():
-    # Serve index.html (new Telegram-native version)
+@app.head("/webapp", include_in_schema=False)
+async def serve_webapp_index_root():
+    """Serve index.html at /webapp"""
     index_html = os.path.join(webapp_path, "index.html")
     if os.path.isfile(index_html):
         return FileResponse(index_html, media_type="text/html")
-    # Fallback to index-production.html
-    index_prod = os.path.join(webapp_path, "index-production.html")
-    if os.path.isfile(index_prod):
-        return FileResponse(index_prod, media_type="text/html")
-    # Fallback to index-fixed.html for legacy
-    index_fixed = os.path.join(webapp_path, "index-fixed.html")
-    if os.path.isfile(index_fixed):
-        return FileResponse(index_fixed, media_type="text/html")
+    raise StarletteHTTPException(status_code=404, detail="Web app index not found")
+
+
+@app.get("/webapp/", include_in_schema=False)
+@app.head("/webapp/", include_in_schema=False)
+async def serve_webapp_index_slash():
+    """Serve index.html at /webapp/"""
+    index_html = os.path.join(webapp_path, "index.html")
+    if os.path.isfile(index_html):
+        return FileResponse(index_html, media_type="text/html")
     raise StarletteHTTPException(status_code=404, detail="Web app index not found")
 
 
