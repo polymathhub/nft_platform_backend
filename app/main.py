@@ -258,39 +258,37 @@ app.include_router(stars_payment_router)
 
 # Mount web app static files and HTML pages
 # StaticFiles mounts the webapp directory at root, serving:
-# - /webapp/index.html (handled separately below)
 # - /webapp/css/*.css
 # - /webapp/js/*.js
+# - /webapp/index.html
 # - Other static assets
+logger.info(f"Checking web app static directory: {webapp_path}")
 if os.path.isdir(webapp_path):
-    # Mount entire webapp directory at /webapp root
-    # This allows relative paths in HTML (css/variables.css) to work correctly
-    app.mount("/webapp", StaticFiles(directory=webapp_path, html=False), name="webapp")
-    logger.info(f"Mounted web app static files from {webapp_path} at /webapp")
+    # List files in the directory for debugging
+    import glob
+    css_files = glob.glob(os.path.join(webapp_path, "css", "*.css"))
+    js_files = glob.glob(os.path.join(webapp_path, "js", "*.js"))
+    html_files = glob.glob(os.path.join(webapp_path, "*.html"))
+    
+    logger.info(f"✓ Web app directory found: {webapp_path}")
+    logger.info(f"  CSS files found: {len(css_files)} - {[os.path.basename(f) for f in css_files]}")
+    logger.info(f"  JS files found: {len(js_files)}")
+    logger.info(f"  HTML files found: {len(html_files)} - {[os.path.basename(f) for f in html_files]}")
+    
+    # Mount entire webapp directory at /webapp
+    # html=True enables directory traversal and HTML fallback behavior
+    app.mount("/webapp", StaticFiles(directory=webapp_path, html=True), name="webapp")
+    logger.info(f"✓ Mounted web app static files at /webapp")
 else:
-    logger.warning(f"Web app static directory not found at {webapp_path} - /webapp will not be available")
+    logger.error(f"✗ Web app static directory NOT FOUND at {webapp_path}")
+    logger.error(f"  This will cause 404 errors for CSS/JS files")
 
 
-# Serve index.html for /webapp and /webapp/ routes explicitly
-# This allows the SPA to handle its own routing
-@app.get("/webapp", include_in_schema=False)
-@app.head("/webapp", include_in_schema=False)
-async def serve_webapp_index_root():
-    """Serve index.html at /webapp"""
-    index_html = os.path.join(webapp_path, "index.html")
-    if os.path.isfile(index_html):
-        return FileResponse(index_html, media_type="text/html")
-    raise StarletteHTTPException(status_code=404, detail="Web app index not found")
-
-
-@app.get("/webapp/", include_in_schema=False)
-@app.head("/webapp/", include_in_schema=False)
-async def serve_webapp_index_slash():
-    """Serve index.html at /webapp/"""
-    index_html = os.path.join(webapp_path, "index.html")
-    if os.path.isfile(index_html):
-        return FileResponse(index_html, media_type="text/html")
-    raise StarletteHTTPException(status_code=404, detail="Web app index not found")
+# Fallback routes for root redirects (only if not served by StaticFiles)
+@app.get("/", include_in_schema=False)
+async def redirect_to_webapp():
+    """Redirect root to /webapp"""
+    return RedirectResponse(url="/webapp/", status_code=301)
 
 
 
