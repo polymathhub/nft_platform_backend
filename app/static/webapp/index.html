@@ -501,6 +501,7 @@
     async function handleConnectTelegram() {
       try {
         // Get connect request from backend
+        console.debug('[index] handleConnectTelegram - requesting connect-request');
         const connectResponse = await fetch('/api/v1/wallet/ton/connect-request', {
           method: 'POST',
           headers: {
@@ -518,10 +519,12 @@
 
         if (!connectResponse.ok) {
           const error = await connectResponse.json();
+          console.error('[index] connect-request failed', error);
           throw new Error(error.detail || 'Failed to initiate TON connection');
         }
 
         const connectData = await connectResponse.json();
+        console.debug('[index] connect-request response', connectData);
         const sessionId = connectData.session_id;
 
         // Show wallet selection modal

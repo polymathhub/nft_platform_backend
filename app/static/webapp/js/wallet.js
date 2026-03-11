@@ -78,6 +78,7 @@ class WalletManager {
    */
   async connect(walletName) {
     try {
+      console.debug('[Wallet] connect() called for', walletName);
       const wallet = this.detectedWallets.find(w => w.name === walletName);
       if (!wallet) {
         throw new Error(`Wallet ${walletName} not found`);
@@ -104,6 +105,7 @@ class WalletManager {
    */
   async connectEVM() {
     try {
+      console.debug('[Wallet] connectEVM() - requesting accounts');
       const accounts = await this.provider.request({
         method: 'eth_requestAccounts',
       });
@@ -123,6 +125,7 @@ class WalletManager {
       await this.getBalance();
 
       // Register wallet on backend
+      console.debug('[Wallet] registering wallet on backend', this.walletAddress, this.network);
       await this.registerWallet();
 
       this.dispatchEvent('wallet:connected', {
@@ -147,6 +150,7 @@ class WalletManager {
    */
   async connectSolana() {
     try {
+      console.debug('[Wallet] connectSolana() - connecting to provider');
       const response = await this.provider.connect();
       this.walletAddress = response.publicKey.toString();
       this.connected = true;
@@ -175,6 +179,7 @@ class WalletManager {
    */
   async registerWallet() {
     try {
+      console.debug('[Wallet] registerWallet POST', endpoints.wallets.connect, { address: this.walletAddress, blockchain: this.network || 'ethereum' });
       await api.post(endpoints.wallets.connect, {
         address: this.walletAddress,
         blockchain: this.network || 'ethereum',
