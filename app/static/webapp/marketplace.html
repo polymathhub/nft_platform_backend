@@ -554,8 +554,10 @@
   </div>
 
   <script type="module">
-    import { auth } from '/webapp/js/auth.js';
-    import { marketplaceService } from '/webapp/js/marketplace-service.js';
+    import { auth } from './js/auth.js';
+    import { marketplaceService } from './js/marketplace-service.js';
+
+    const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
 
     const state = {
       allNFTs: [],
@@ -588,7 +590,7 @@
         if (!state.isAuthenticated) {
           showError('Please login to view marketplace');
           setTimeout(() => {
-            window.location.href = '/webapp/index.html';
+            window.location.href = basePath + '/index.html';
           }, 2000);
           return;
         }
@@ -796,7 +798,7 @@
       const nft = state.allNFTs.find(n => n.id === nftId);
       if (nft) {
         localStorage.setItem('selectedNFT', JSON.stringify(nft));
-        window.location.href = '/webapp/nft-detail.html?id=' + nftId;
+        window.location.href = basePath + '/nft-detail.html?id=' + nftId;
       }
     };
 
