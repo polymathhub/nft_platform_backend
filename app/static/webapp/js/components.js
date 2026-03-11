@@ -4,7 +4,7 @@
  * @module js/components
  */
 
-import { escapeHTML, generateId } from '/webapp/js/utils.js';
+import { escapeHTML, generateId } from './utils.js';
 
 /**
  * Toast notification system

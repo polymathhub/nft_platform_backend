@@ -612,30 +612,8 @@
     function showWalletSelectionModal(sessionId) {
       const modal = document.getElementById('tonModal');
       
-      modal.innerHTML = `
-        <div class="modal">
-          <div class="modal-content">
-            <div class="modal-icon">🔐</div>
-            <h2 class="modal-title">Connect Your Wallet</h2>
-            <p class="modal-description">Choose your TON wallet app to connect and start trading NFTs with Telegram Stars.</p>
-            
-            <div style="display: flex; flex-direction: column; gap: var(--space-md);">
-              <button class="btn-primary" id="tonkeeperBtn" style="text-align: left; padding-left: var(--space-md);">
-                <span style="margin-right: var(--space-sm);">📱</span> Tonkeeper
-              </button>
-              <button class="btn-primary" id="walletBtn" style="text-align: left; padding-left: var(--space-md);">
-                <span style="margin-right: var(--space-sm);">💳</span> Ton Wallet
-              </button>
-              <button class="btn-primary" id="telegramWalletBtn" style="text-align: left; padding-left: var(--space-md);">
-                <span style="margin-right: var(--space-sm);">✈️</span> Telegram Wallet
-              </button>
-              <button class="btn-secondary" id="closeModalBtn">Cancel</button>
-            </div>
-
-            <p class="modal-footer">Don't have a wallet? Download Tonkeeper from App Store or Google Play.</p>
-          </div>
-        </div>
-      `;
+  
+      
 
       document.getElementById('tonkeeperBtn').addEventListener('click', async () => {
         // Open deep link and poll for session result
@@ -682,12 +660,12 @@
         modal.innerHTML = '';
       });
 
-      // Close modal on background click
-      modal.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
+      // Close modal on background click (assign onclick to avoid duplicate listeners)
+      modal.onclick = (e) => {
+        if (e.target.classList && e.target.classList.contains('modal')) {
           modal.innerHTML = '';
         }
-      });
+      };
     }
 
     async function connectWithWallet(sessionId, walletType) {
@@ -806,11 +784,28 @@
 
         // Simulate wallet returning address after delay
         // In production, this would be handled by the wallet app sending data back
-        setTimeout(() => {
+        setTimeout(async () => {
           // Generate a valid TON address for demo
           const generatedAddress = '0:' + Math.random().toString(16).substr(2, 56).padEnd(56, '0');
+
+          // Notify backend callback endpoint to simulate wallet app returning the address
+          try {
+            await fetch('/api/v1/wallet/ton/callback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                session_id: sessionId,
+                wallet_address: generatedAddress,
+                tonconnect_session: { connected: true, wallet: walletType },
+                wallet_metadata: { wallet_type: walletType, simulated: true }
+              })
+            });
+          } catch (e) {
+            console.warn('Failed to POST simulated callback', e);
+          }
+
           resolve(generatedAddress);
-        }, 2000);
+        }, 1000);
       });
     }
 

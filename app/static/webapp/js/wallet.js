@@ -4,7 +4,7 @@
  * @module js/wallet
  */
 
-import { api, endpoints } from '/webapp/js/api.js';
+import { api, endpoints } from './api.js';
 
 class WalletManager {
   constructor() {

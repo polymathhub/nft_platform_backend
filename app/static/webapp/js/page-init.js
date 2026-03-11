@@ -4,7 +4,7 @@
  * @module js/page-init
  */
 
-import { auth } from '/webapp/js/auth.js';
+import { auth } from './auth.js';
 
 class PageInitializer {
   /**
