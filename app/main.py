@@ -178,6 +178,24 @@ app.add_middleware(
 )
 
 
+# Development helper: prevent aggressive caching of static assets so frontend changes
+# appear immediately. In production you may want to remove or relax these headers.
+@app.middleware("http")
+async def disable_static_caching(request: Request, call_next):
+    response = await call_next(request)
+    try:
+        path = request.url.path or ""
+        if path.startswith("/webapp/") or path.startswith("/static/"):
+            # Force browsers to always revalidate during development
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+    except Exception:
+        # Don't let caching logic break the app
+        pass
+    return response
+
+
 """Root endpoints"""
 
 @app.get("/")
