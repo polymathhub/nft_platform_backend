@@ -101,6 +101,7 @@ class AuthManager {
       this.dispatchEvent('auth:error', { error: error.message });
       throw error;
     }
+    }
   
 
   /**
