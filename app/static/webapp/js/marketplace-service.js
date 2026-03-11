@@ -1,4 +1,4 @@
-import { api, endpoints } from '/webapp/js/api.js';
+import { api, endpoints } from '/webapp/static/js/api.js';
 
 class MarketplaceService {
   constructor() {
