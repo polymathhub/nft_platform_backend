@@ -242,7 +242,7 @@ async def ton_connect_callback(
             }
         
     except HTTPException:
-            else:
+        raise
     except Exception as e:
         logger.error(f"Error in TON wallet callback: {e}")
         db.rollback()
@@ -254,19 +254,6 @@ async def ton_connect_callback(
 
 @router.get("/status")
 async def get_ton_wallet_status(
-
-            # Update in-memory session store if session_id present in body
-            session_id = body.get('session_id')
-            if session_id and session_id in _TON_SESSIONS:
-                _TON_SESSIONS[session_id]['status'] = 'connected'
-                _TON_SESSIONS[session_id]['wallet_address'] = wallet_address
-
-            return {
-                "success": True,
-                "message": "TON wallet connected successfully",
-                "wallet_address": wallet_address,
-                "redirect_url": "/dashboard"
-            }
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
