@@ -42,6 +42,7 @@ class AuthManager {
       this.dispatchEvent('telegram:ready', { tg: this.tg });
     }
   }
+  setUser(userData) {
     if (!userData) {
       this.user = null;
       this.isAuthenticated = false;
