@@ -14,12 +14,62 @@ from app.models import User, TONWallet, TONWalletStatus, StarTransaction
 from app.security.auth import get_current_user
 from app.utils.logger import logger
 from app.config import get_settings
+import json
+import aioredis
+import asyncio
 
 router = APIRouter(prefix="/api/v1/wallet/ton", tags=["TON Wallet"])
 
 # Simple in-memory session store for TonConnect demo/testing purposes.
 # In production this should be persisted in a database or Redis and cleaned up appropriately.
 _TON_SESSIONS: dict = {}
+_REDIS_CLIENT = None
+
+async def _get_redis():
+    global _REDIS_CLIENT
+    if _REDIS_CLIENT:
+        return _REDIS_CLIENT
+    settings = get_settings()
+    try:
+        # aioredis from_url returns Redis client
+        _REDIS_CLIENT = aioredis.from_url(settings.redis_url, encoding='utf-8', decode_responses=True)
+        # Test connection
+        await _REDIS_CLIENT.ping()
+        return _REDIS_CLIENT
+    except Exception:
+        _REDIS_CLIENT = None
+        return None
+
+async def _persist_session(session_id: str, payload: dict, expire: int = 24 * 3600):
+    r = await _get_redis()
+    if not r:
+        # fallback to in-memory
+        _TON_SESSIONS[session_id] = payload
+        return
+    try:
+        await r.set(f"ton_session:{session_id}", json.dumps(payload))
+        if expire:
+            await r.expire(f"ton_session:{session_id}", expire)
+    except Exception:
+        _TON_SESSIONS[session_id] = payload
+
+async def _load_session(session_id: str):
+    r = await _get_redis()
+    if r:
+        try:
+            raw = await r.get(f"ton_session:{session_id}")
+            if raw:
+                return json.loads(raw)
+        except Exception:
+            pass
+    return _TON_SESSIONS.get(session_id)
+
+async def _update_session(session_id: str, update: dict):
+    rec = await _load_session(session_id)
+    if not rec:
+        rec = {}
+    rec.update(update)
+    await _persist_session(session_id, rec)
 
 # ========== SCHEMAS ==========
 
@@ -96,17 +146,31 @@ async def initiate_ton_connection(
         # a protocol-compliant connect URL. Here we create a simple session record so the frontend
         # can poll for the connection result. Replace with production session management later.
         # Create a session entry so frontend can poll for updates
-        _TON_SESSIONS[session_id] = {
+        session_payload = {
             "status": "pending",
             "wallet_address": None,
             "created_at": datetime.utcnow().isoformat(),
+            "user_id": str(current_user.id) if current_user else None,
+        }
+
+        # Persist session (Redis if available, otherwise in-memory)
+        try:
+            await _persist_session(session_id, session_payload)
+        except Exception:
+            _TON_SESSIONS[session_id] = session_payload
+
+        # Provide common wallet deep-links that clients can open to trigger wallet app
+        connect_links = {
+            "tonkeeper": f"https://app.tonkeeper.com/ton-connect?request_id={session_id}",
+            "tonwallet": f"ton://connect?request_id={session_id}",
+            "telegram": f"https://wallet.tg/ton-connect?request_id={session_id}",
         }
 
         return {
             "success": True,
             "session_id": session_id,
             "manifest": manifest_url,
-            "connect_url": None,
+            "connect_links": connect_links,
             "message": "Initiated TON connection session. Use TonConnect UI on client to proceed."
         }
         
@@ -121,7 +185,7 @@ async def initiate_ton_connection(
 @router.get('/verify')
 async def verify_ton_session(session_id: str):
     """Verify session status for a TonConnect session (simple polling endpoint)."""
-    rec = _TON_SESSIONS.get(session_id)
+    rec = await _load_session(session_id)
     if not rec:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Session not found')
     return {
