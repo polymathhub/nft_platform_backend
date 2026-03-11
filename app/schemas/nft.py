@@ -101,7 +101,7 @@ class NFTDetailResponse(NFTResponse):
 # ==================== WebApp Specific Requests ====================
 
 class WebAppMintNFTRequest(BaseModel):
-    """Request model for /web-app/mint endpoint"""
+    """Request model for /webapp/mint endpoint"""
     wallet_id: UUID
     nft_name: str = Field(..., min_length=1, max_length=255)
     nft_description: Optional[str] = Field(None, max_length=2000)
@@ -111,7 +111,7 @@ class WebAppMintNFTRequest(BaseModel):
 
 
 class WebAppListNFTRequest(BaseModel):
-    """Request model for /web-app/list-nft endpoint"""
+    """Request model for /webapp/list-nft endpoint"""
     nft_id: UUID
     price: float = Field(..., gt=0)
     currency: str = Field("USDT", max_length=10)
@@ -120,7 +120,7 @@ class WebAppListNFTRequest(BaseModel):
 
 
 class WebAppTransferNFTRequest(BaseModel):
-    """Request model for /web-app/transfer endpoint"""
+    """Request model for /webapp/transfer endpoint"""
     nft_id: UUID
     to_address: str = Field(..., min_length=1, max_length=255)
     user_id: UUID
@@ -128,21 +128,21 @@ class WebAppTransferNFTRequest(BaseModel):
 
 
 class WebAppBurnNFTRequest(BaseModel):
-    """Request model for /web-app/burn endpoint"""
+    """Request model for /webapp/burn endpoint"""
     nft_id: UUID
     user_id: UUID
     init_data: Optional[str] = None
 
 
 class WebAppSetPrimaryWalletRequest(BaseModel):
-    """Request model for /web-app/set-primary endpoint"""
+    """Request model for /webapp/set-primary endpoint"""
     wallet_id: UUID
     user_id: UUID
     init_data: Optional[str] = None
 
 
 class WebAppMakeOfferRequest(BaseModel):
-    """Request model for /web-app/make-offer endpoint"""
+    """Request model for /webapp/make-offer endpoint"""
     listing_id: UUID
     offer_price: float = Field(..., gt=0)
     user_id: UUID
@@ -150,7 +150,7 @@ class WebAppMakeOfferRequest(BaseModel):
 
 
 class WebAppCancelListingRequest(BaseModel):
-    """Request model for /web-app/cancel-listing endpoint"""
+    """Request model for /webapp/cancel-listing endpoint"""
     listing_id: UUID
     user_id: UUID
     init_data: Optional[str] = None

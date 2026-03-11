@@ -145,9 +145,9 @@ app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses large
 app.add_middleware(SecurityHeadersMiddleware)  # Security headers with Telegram support
 app.add_middleware(DirectoryListingBlockMiddleware)  # Block directory listing on static files
 
-"""Serve Telegram Web App static files at /web-app
+"""Serve Telegram Web App static files at /webapp
 Note: static mount moved after router registration so API endpoints under
-`/web-app/*` (POST create/import/etc.) are matched first. If the static
+`/webapp/*` (POST create/import/etc.) are matched first. If the static
 directory is missing we log a warning and API paths remain available.
 """
 import os
