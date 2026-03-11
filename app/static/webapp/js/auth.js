@@ -42,6 +42,10 @@ class AuthManager {
       this.dispatchEvent('telegram:ready', { tg: this.tg });
     }
   }
+  /**
+   * Populate the current user object
+   * @param {Object|null} userData
+   */
   setUser(userData) {
     if (!userData) {
       this.user = null;
@@ -70,6 +74,7 @@ class AuthManager {
     if (userData.theme) {
       this.setTheme(userData.theme);
     }
+  }
   }
 
   async login(email, password) {

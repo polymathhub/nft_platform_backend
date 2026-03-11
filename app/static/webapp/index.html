@@ -439,17 +439,13 @@
   <!-- Application Module -->
   <script type="module">
     import { auth } from '/webapp/js/auth.js';
-
-    const tg = window.Telegram?.WebApp || null;
+    const tg = window.Telegram.WebApp;
     let tonConnectUI;
 
     async function initializeApp() {
-      // Ready the WebApp if available
-      if (tg) {
-        try { tg.ready(); tg.expand(); } catch (e) { console.warn('Telegram WebApp ready failed', e); }
-      } else {
-        console.log('Not running inside Telegram WebApp');
-      }
+      // Ready the WebApp
+      tg.ready();
+      tg.expand();
 
       // Initialize TonConnect UI
       try {
@@ -469,9 +465,9 @@
         return;
       }
 
-      // Authenticate with Telegram data if available
+      // Authenticate with Telegram data
       try {
-        const initData = tg?.initData;
+        const initData = tg.initData;
         if (initData) {
           const authResponse = await fetch('/api/v1/auth/telegram/login', {
             method: 'POST',
@@ -532,8 +528,7 @@
         showWalletSelectionModal(sessionId);
       } catch (error) {
         console.error('TON wallet connection error:', error);
-        if (tg && tg.showAlert) tg.showAlert(`Failed to connect: ${error.message}`);
-        else alert(`Failed to connect: ${error.message}`);
+        tg.showAlert(`Failed to connect: ${error.message}`);
       }
     }
 
@@ -633,15 +628,13 @@
           localStorage.setItem('token', result.token);
         }
 
-        if (tg && tg.showAlert) tg.showAlert('Wallet connected successfully!');
-        else alert('Wallet connected successfully!');
-
+        tg.showAlert('Wallet connected successfully!');
+        
         // Redirect to dashboard
         window.location.href = result.redirect_url || '/dashboard';
       } catch (error) {
         console.error('Wallet connection error:', error);
-        if (tg && tg.showAlert) tg.showAlert(`Connection failed: ${error.message}`);
-        else alert(`Connection failed: ${error.message}`);
+        tg.showAlert(`Connection failed: ${error.message}`);
       }
     }
 
