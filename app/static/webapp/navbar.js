@@ -413,7 +413,8 @@ class NavbarController {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('notifications');
-      window.location.href = '/webapp/index.html';
+      const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
+      window.location.href = basePath + '/index.html';
     }
   }
 }
