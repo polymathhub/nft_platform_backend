@@ -79,29 +79,59 @@ async def login(
 
 
 @router.post("/telegram/login", response_model=dict)
-async def telegram_login(
-    request: TelegramLoginRequest,
-    db: AsyncSession = Depends(get_db_session),
-) -> dict:
-    telegram_data = request.model_dump()
-    if not verify_telegram_data(telegram_data):
+async def telegram_login(request_obj: Request, db: AsyncSession = Depends(get_db_session)) -> dict:
+    """
+    Accept raw Telegram init data (as sent by the WebApp). This endpoint is tolerant
+    to both the raw Telegram parameter names (id, username, auth_date, hash, etc.)
+    and our internal field names (telegram_id, telegram_username). We parse and
+    verify the signature using the configured bot token, then map values to the
+    AuthService call.
+    """
+    try:
+        raw = await request_obj.json()
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload")
+
+    # Accept input either as a single 'init_data' string (legacy) or as an object
+    telegram_payload = {}
+    if isinstance(raw, dict) and raw.get('init_data') and isinstance(raw.get('init_data'), str):
+        # If frontend sent a raw init_data string, parse it into dict
+        from urllib.parse import parse_qs
+        parsed = parse_qs(raw.get('init_data'))
+        # parse_qs returns lists for each key; normalize to single values
+        telegram_payload = {k: v[0] for k, v in parsed.items()}
+    elif isinstance(raw, dict):
+        telegram_payload = raw
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported Telegram payload format")
+
+    # Normalize field names (allow both 'id' and 'telegram_id', 'username' and 'telegram_username')
+    data_for_verification = dict(telegram_payload)  # copy
+
+    if not verify_telegram_data(data_for_verification):
         logger.warning(
             f"[AUTH] Telegram login failed - signature verification failed | "
-            f"telegram_id={telegram_data.get('telegram_id')} | "
-            f"hash_present={bool(telegram_data.get('hash'))} | "
-            f"auth_date={telegram_data.get('auth_date')}"
+            f"telegram_id={data_for_verification.get('telegram_id') or data_for_verification.get('id')} | "
+            f"hash_present={bool(data_for_verification.get('hash'))} | "
+            f"auth_date={data_for_verification.get('auth_date')}"
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Telegram data verification failed",
         )
-    
+
+    # Map fields for AuthService
+    telegram_id = int(telegram_payload.get('telegram_id') or telegram_payload.get('id'))
+    telegram_username = telegram_payload.get('telegram_username') or telegram_payload.get('username') or ''
+    first_name = telegram_payload.get('first_name')
+    last_name = telegram_payload.get('last_name')
+
     user, error = await AuthService.authenticate_telegram(
         db=db,
-        telegram_id=request.telegram_id,
-        telegram_username=request.telegram_username,
-        first_name=request.first_name,
-        last_name=request.last_name,
+        telegram_id=telegram_id,
+        telegram_username=telegram_username,
+        first_name=first_name,
+        last_name=last_name,
     )
 
     if error:
