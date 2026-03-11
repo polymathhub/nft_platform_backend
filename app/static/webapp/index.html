@@ -415,7 +415,9 @@
 
     <div class="hero-content">
       <div class="brand-name">GiftedForge</div>
-      <h1 class="headline">Buy & Sell NFTs with Stars</h1>
+      <h1 class="headline">Buy & Sell NFTs and send gifts using Telegram stars
+        
+      </h1>
       <p class="tagline">Trade premium NFTs securely using Telegram Stars. Connect your TON wallet and start collecting or selling today.</p>
       
       <div class="button-group">
@@ -441,6 +443,7 @@
     import { auth } from '/webapp/js/auth.js';
     import { Toast } from '/webapp/js/components.js';
 
+    const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
     const tg = window.Telegram?.WebApp ?? null;
     let tonConnectUI;
 
@@ -472,8 +475,8 @@
       // Check if user is authenticated
       const token = localStorage.getItem('token');
       if (token) {
-        // Redirect authenticated users to dashboard
-        window.location.href = '/dashboard';
+        // Redirect authenticated users to dashboard (static path aware)
+        window.location.href = basePath + '/dashboard.html';
         return;
       }
 
@@ -519,11 +522,9 @@
 
     async function handleConnectTelegram() {
       try {
-        // Get connect request from backend
         console.debug('[index] handleConnectTelegram - requesting connect-request');
-        const headers = {
-          'Content-Type': 'application/json'
-        };
+
+        const headers = { 'Content-Type': 'application/json' };
         const token = localStorage.getItem('token');
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -532,19 +533,17 @@
           headers,
           credentials: 'include',
           body: JSON.stringify({
-              // Store token if provided
-              if (result.token) {
-                localStorage.setItem('token', result.token);
-              }
+            manifest: {
+              name: 'GiftedForge NFT Marketplace',
+              description: 'Trade, create, and collect NFTs using Telegram Stars',
+              url: window.location.origin,
+              iconUrl: window.location.origin + '/static/icon.svg'
+            }
+          })
+        });
 
-              const successMsg = result.message || 'Wallet connected successfully!';
-              if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
-              else Toast.show(successMsg, 'success', 3000);
-
-              // Redirect to dashboard (serve static dashboard page)
-              window.location.href = result.redirect_url || '/webapp/dashboard.html';
         if (!connectResponse.ok) {
-          const error = await connectResponse.json();
+          const error = await connectResponse.json().catch(() => ({}));
           console.error('[index] connect-request failed', error);
           throw new Error(error.detail || 'Failed to initiate TON connection');
         }
@@ -553,7 +552,6 @@
         console.debug('[index] connect-request response', connectData);
         const sessionId = connectData.session_id;
 
-        // If backend returned a connect_url, open it immediately (TonConnect flow)
         if (connectData.connect_url) {
           console.debug('[index] opening connect_url from backend', connectData.connect_url);
           try {
@@ -564,12 +562,11 @@
             console.warn('Failed to open connect_url via Telegram API, falling back:', e);
             window.location.href = connectData.connect_url;
           }
-          // Also show wallet selection modal as a fallback option
+
           showWalletSelectionModal(sessionId);
           return;
         }
 
-        // Show wallet selection modal (no deep link provided)
         showWalletSelectionModal(sessionId);
       } catch (error) {
         console.error('TON wallet connection error:', error);
@@ -577,7 +574,6 @@
         if (tg && typeof tg.showAlert === 'function') tg.showAlert(msg);
         else Toast.show(msg, 'error', 5000);
 
-        // Offer a retry via confirm (simple UX fallback)
         if (confirm('Connection failed. Retry?')) {
           try { await handleConnectTelegram(); } catch (_) { /* noop */ }
         }
@@ -643,7 +639,8 @@
         const walletAddress = await getWalletAddressFromApp(walletType, sessionId);
         
         if (!walletAddress) {
-          tg.showAlert(`Wallet connection cancelled`);
+          if (tg && typeof tg.showAlert === 'function') tg.showAlert('Wallet connection cancelled');
+          else Toast.show('Wallet connection cancelled', 'warning', 3000);
           return;
         }
 
@@ -683,13 +680,16 @@
           localStorage.setItem('token', result.token);
         }
 
-        tg.showAlert('Wallet connected successfully!');
-        
+        const successMsg = result.message || 'Wallet connected successfully!';
+        if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
+        else Toast.show(successMsg, 'success', 3000);
+
         // Redirect to dashboard
-        window.location.href = result.redirect_url || '/dashboard';
+        window.location.href = result.redirect_url || (basePath + '/dashboard.html');
       } catch (error) {
         console.error('Wallet connection error:', error);
-        tg.showAlert(`Connection failed: ${error.message}`);
+        if (tg && typeof tg.showAlert === 'function') tg.showAlert(`Connection failed: ${error.message}`);
+        else Toast.show(`Connection failed: ${error.message}`, 'error', 5000);
       }
     }
 
