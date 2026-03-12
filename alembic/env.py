@@ -15,12 +15,12 @@ import app.models  # Ensures all models are imported
 config = context.config
 fileConfig(config.config_file_name)
 
-def get_url():
-    return (
-        os.getenv("ALEMBIC_SQLALCHEMY_URL")
-        or os.getenv("DATABASE_URL")
-        or config.get_main_option("sqlalchemy.url")
-    )
+def get_url(): 
+    return ( 
+        os.getenv("ALEMBIC_SQLALCHEMY_URL") 
+        or os.getenv("DATABASE_URL") 
+        or config.get_main_option("sqlalchemy.url") 
+    ) 
 
 target_metadata = Base.metadata
 
