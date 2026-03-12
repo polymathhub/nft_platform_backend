@@ -242,11 +242,11 @@ async def tonconnect_manifest(request: Request):
     """
     Serve a TonConnect manifest generated at runtime using the configured
     `settings.APP_URL` so the manifest `url` and icon URLs match the deployed
-    origin. This avoids mismatch issues when the static `manifest.json` was
+    origin. This avoids mismatch issues when the static `tonconnect-manifest.json` was
     authored for a different domain.
     """
     import json
-    manifest_path = os.path.join(os.path.dirname(__file__), "static", "manifest.json")
+    manifest_path = os.path.join(os.path.dirname(__file__), "static", "tonconnect-manifest.json")
     if not os.path.isfile(manifest_path):
         raise HTTPException(status_code=404, detail="TonConnect manifest not found")
 
@@ -287,7 +287,7 @@ async def tonconnect_manifest(request: Request):
         from fastapi.responses import JSONResponse
         return JSONResponse(content=manifest, media_type="application/json")
     except Exception as e:
-        logger.error(f"Failed to load tonconnect manifest: {e}")
+        logger.error(f"Failed to load tonconnect-manifest: {e}")
         raise HTTPException(status_code=500, detail="Failed to load TonConnect manifest")
 
 
@@ -410,7 +410,7 @@ if os.path.isdir(webapp_path):
     app.mount("/webapp", StaticFiles(directory=webapp_path, html=True), name="webapp")
     logger.info(f"✓ Mounted web app static files at /webapp")
     
-    # Mount static directory at /static for manifest.json and other assets
+    # Mount static directory at /static for tonconnect-manifest.json and other assets
     try:
         if os.path.isdir(static_path):
             app.mount("/static", StaticFiles(directory=static_path), name="static")
