@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey, Float, Integer, JSON, Index
 from datetime import datetime
 import uuid
-from app.database import Base
+from app.database.base_class import Base
 from app.database.types import GUID
 
 
