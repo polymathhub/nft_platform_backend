@@ -1,8 +1,5 @@
-from sqlalchemy.orm import DeclarativeBase
-
-class Base(DeclarativeBase):
-    pass
 from app.database.base_class import Base
-import app.models  # Ensures all models are imported for Alembic
+# Import all models so Base.metadata is populated for Alembic and SQLAlchemy
+import app.models  # noqa: F401
 
 __all__ = ["Base"]

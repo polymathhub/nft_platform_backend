@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, DateTime, Boolean, Index, Enum, ForeignKe
 from datetime import datetime
 import uuid
 from enum import Enum as PyEnum
-from app.database import Base
+from app.database.base_class import Base
 from app.database.types import GUID
 
 

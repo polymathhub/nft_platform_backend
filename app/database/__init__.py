@@ -6,7 +6,6 @@ from app.database.connection import (
     AsyncSessionLocal,
     engine,
 )
-from app.database.base import Base
 
 __all__ = [
     "init_db",
@@ -15,5 +14,4 @@ __all__ = [
     "get_db",
     "AsyncSessionLocal",
     "engine",
-    "Base",
 ]
