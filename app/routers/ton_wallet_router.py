@@ -15,7 +15,7 @@ from app.security.auth import get_current_user
 from app.utils.logger import logger
 from app.config import get_settings
 import json
-import aioredis
+import redis.asyncio as redis
 import asyncio
 
 router = APIRouter(prefix="/api/v1/wallet/ton", tags=["TON Wallet"])
@@ -31,9 +31,9 @@ async def _get_redis():
         return _REDIS_CLIENT
     settings = get_settings()
     try:
-        # aioredis from_url returns Redis client
-        _REDIS_CLIENT = aioredis.from_url(settings.redis_url, encoding='utf-8', decode_responses=True)
-        # Test connection
+        # redis.asyncio.from_url returns a Redis client
+        _REDIS_CLIENT = redis.from_url(settings.redis_url, encoding='utf-8', decode_responses=True)
+        # Test connection (awaitable)
         await _REDIS_CLIENT.ping()
         return _REDIS_CLIENT
     except Exception:

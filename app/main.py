@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.database import init_db, close_db
 from app.utils.logger import configure_logging
 from app.utils.startup import setup_telegram_webhook, auto_migrate
+import redis.asyncio as redis
 
 from app.routers import (
     auth_router,
@@ -79,6 +80,22 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("\n[1/3] Initializing database connection pool...")
     await init_db()
+    # Attempt to establish a shared async Redis client for the app (optional)
+    try:
+        logger.info("[1b/3] Connecting to Redis (if configured)...")
+        if getattr(settings, "redis_url", None):
+            app.state.redis = redis.from_url(settings.redis_url, encoding='utf-8', decode_responses=True)
+            try:
+                await app.state.redis.ping()
+                logger.info("✓ Connected to Redis")
+            except Exception as e:
+                logger.warning(f"Redis ping failed: {e}")
+                app.state.redis = None
+        else:
+            app.state.redis = None
+    except Exception as e:
+        logger.warning(f"Failed to initialize Redis client: {e}")
+        app.state.redis = None
     
     logger.info("\n[2/3] Running database migrations...")
     await auto_migrate()
@@ -94,7 +111,16 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down application...")
+    # Close DB
     await close_db()
+    # Close Redis client if present
+    try:
+        r = getattr(app.state, "redis", None)
+        if r:
+            await r.close()
+            logger.info("✓ Redis client closed")
+    except Exception:
+        pass
     logger.info("✓ Application shutdown complete")
 
 
@@ -287,6 +313,19 @@ async def health_check():
         "telegram_bot_token": bool(settings.telegram_bot_token),
         "database_url": "configured" if settings.database_url else "not configured",
     }
+
+
+@app.get('/redis-ping', include_in_schema=False)
+async def redis_ping():
+    """Simple Redis connectivity check that uses the shared async client on app.state."""
+    r = getattr(app.state, "redis", None)
+    if not r:
+        return {"status": "no_redis", "available": False}
+    try:
+        pong = await r.ping()
+        return {"status": "ok", "available": True, "pong": pong}
+    except Exception as e:
+        return {"status": "error", "available": False, "error": str(e)}
 
 """Include routers"""
 

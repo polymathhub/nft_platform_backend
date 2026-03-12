@@ -197,13 +197,6 @@ class Settings(BaseSettings):
             raise ValueError("mnemonic_encryption_key must be a 44-char Fernet key")
         return v
     
-    @field_validator("database_url")
-    @classmethod
-    def validate_database_url(cls, v: str) -> str:
-        if not v or len(v.strip()) == 0:
-            raise ValueError("DATABASE_URL is required and cannot be empty")
-        return v
-    
     @field_validator("redis_url")
     @classmethod
     def validate_redis_url(cls, v: str) -> str:
