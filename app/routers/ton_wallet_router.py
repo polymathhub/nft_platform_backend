@@ -196,6 +196,7 @@ async def verify_ton_session(session_id: str):
     }
 
 
+
 @router.post("/callback")
 async def ton_connect_callback(
     request: Request,
@@ -203,50 +204,78 @@ async def ton_connect_callback(
 ) -> dict:
     """
     Handle callback from TON wallet apps (Tonkeeper, Ton Wallet, etc.).
-    Works with or without authentication - creates user if needed.
+    Requires Telegram initData for authentication.
     """
     try:
+        import hmac
+        import hashlib
+        import time
+        from urllib.parse import parse_qsl
+
         # Get request body
         body = await request.json()
         wallet_address = body.get('wallet_address')
         tonconnect_session = body.get('tonconnect_session', {})
         wallet_metadata = body.get('wallet_metadata', {})
-        
+        init_data = body.get('init_data', '')
+
         if not wallet_address:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Wallet address is required"
             )
-        
+        if not init_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Telegram initData is required"
+            )
+
         # Validate wallet address format (TON addresses start with 0: or -1:)
         if not (wallet_address.startswith('0:') or wallet_address.startswith('-1:')):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid TON wallet address format"
             )
-        
-        # Check if wallet already connected
+
+        # --- Telegram initData verification (HMAC, expiry) ---
+        settings = get_settings()
+        bot_token = getattr(settings, 'telegram_bot_token', None)
+        if not bot_token:
+            raise HTTPException(status_code=500, detail="Telegram bot token not configured")
+
+        # Parse initData
+        try:
+            parts = dict(parse_qsl(init_data, keep_blank_values=True))
+            hash_received = parts.pop('hash', None)
+            auth_date = int(parts.get('auth_date', '0'))
+            data_check_string = '\n'.join(f"{k}={v}" for k, v in sorted(parts.items()))
+            secret_key = hashlib.sha256(bot_token.encode()).digest()
+            hmac_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(hmac_hash, hash_received):
+                raise HTTPException(status_code=401, detail="Telegram initData HMAC verification failed")
+            # Check expiry (allow max 1 day)
+            if abs(time.time() - auth_date) > 86400:
+                raise HTTPException(status_code=401, detail="Telegram initData expired")
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=f"Invalid Telegram initData: {e}")
+
+        # --- Wallet logic (unchanged) ---
         existing_wallet = db.execute(
             select(TONWallet).where(
                 TONWallet.wallet_address == wallet_address
             )
         ).scalar_one_or_none()
-        
+
         if existing_wallet:
-            # Update existing wallet connection
             existing_wallet.status = "connected"
             existing_wallet.connected_at = datetime.utcnow()
             if wallet_metadata:
                 existing_wallet.wallet_metadata.update(wallet_metadata)
             db.commit()
-            
-            # Redirect to dashboard
-            # Update session store if present
             for sid, rec in list(_TON_SESSIONS.items()):
                 if rec.get("wallet_address") == wallet_address:
                     rec["status"] = "connected"
                     rec["wallet_address"] = wallet_address
-
             return {
                 "success": True,
                 "message": "TON wallet reconnected successfully",
@@ -254,28 +283,21 @@ async def ton_connect_callback(
                 "redirect_url": "/dashboard"
             }
         else:
-            # Create new user if this is their first wallet
             from app.models import User
-            from app.utils.security import create_access_token
-            from app.utils.security import hash_password
-            
-            # Generate user account from wallet
+            from app.utils.security import create_access_token, hash_password
             user_id = uuid.uuid4()
             wallet_short = wallet_address[:8]
-            
             new_user = User(
                 id=user_id,
-                telegram_id=None,  # Will be linked later if they verify
+                telegram_id=None,
                 username=f"wallet_{wallet_short}",
                 email=f"wallet_{wallet_short}@giftedforge.local",
-                hashed_password=hash_password(uuid.uuid4().hex),  # Random password, not used for wallet auth
+                hashed_password=hash_password(uuid.uuid4().hex),
                 user_role="user",
                 is_verified=False
             )
             db.add(new_user)
             db.commit()
-            
-            # Create new wallet connection
             new_wallet = TONWallet(
                 id=uuid.uuid4(),
                 user_id=new_user.id,
@@ -292,10 +314,7 @@ async def ton_connect_callback(
             )
             db.add(new_wallet)
             db.commit()
-            
-            # Create JWT token for the user
             token = create_access_token(data={"sub": str(new_user.id)})
-            
             return {
                 "success": True,
                 "message": "TON wallet connected successfully",
@@ -304,7 +323,6 @@ async def ton_connect_callback(
                 "user_id": str(new_user.id),
                 "redirect_url": "/dashboard"
             }
-        
     except HTTPException:
         raise
     except Exception as e:

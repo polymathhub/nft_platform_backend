@@ -536,7 +536,7 @@
           connectBtn.disabled = true;
           connectBtn.title = 'TON Connect is not available.';
         }
-        connectBtn.addEventListener('click', (e) => {
+        connectBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           if (!manifestOk) {
             showError('TON Connect manifest is not available.');
@@ -544,9 +544,34 @@
           }
           if (typeof TonConnectUI !== 'undefined' && tonConnectUI) {
             try {
-              tonConnectUI.openModal();
+              // Open the modal and wait for connection
+              const result = await tonConnectUI.openModal();
+              if (result && result.account && result.account.address) {
+                // Send wallet address and Telegram initData to backend
+                const initData = tg?.initData || '';
+                const resp = await fetch('/api/v1/wallet/ton/callback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    wallet_address: result.account.address,
+                    tonconnect_session: result,
+                    init_data: initData
+                  })
+                });
+                if (resp.ok) {
+                  const data = await resp.json();
+                  if (data.success) {
+                    Toast.show('Wallet connected!', 'success', 3000);
+                    // Optionally redirect or update UI
+                  } else {
+                    showError(data.detail || 'Wallet connect failed.');
+                  }
+                } else {
+                  showError('Wallet connect failed.');
+                }
+              }
             } catch (err) {
-              showError('Failed to open TON Connect modal.');
+              showError('Failed to open TON Connect modal or connect wallet.');
             }
           } else {
             showError('TON Connect UI not available.');
