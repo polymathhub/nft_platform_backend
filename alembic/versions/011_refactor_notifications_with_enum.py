@@ -135,71 +135,22 @@ def upgrade() -> None:
     )
     
     # =========================================================================
-    # STEP 2: Create notifications table
+    # STEP 2: Create notifications table (SKIPPED - already created by migration 009)
     # =========================================================================
-    # Why this approach is safe:
-    #   - Creates table if it doesn't exist
-    #   - UUID primary key uses postgresql.UUID(as_uuid=True) (NOT sa.Uuid())
-    #   - Foreign key to users table with CASCADE delete for data integrity
-    #   - All critical columns have proper constraints and defaults
-    #   - Using postgresql.ENUM with create_type=False (already created above)
-    #   - ForeignKeyConstraint is separate table argument (NOT inside Column)
+    # Migration 009 creates the notifications table with all necessary columns.
+    # This migration only ensures the ENUM type exists (STEP 1 above).
+    # Skipping table creation here prevents "table already exists" errors.
     # =========================================================================
-    op.create_table(
-        'notifications',
-        # Primary Key
-        sa.Column(
-            'id',
-            postgresql.UUID(as_uuid=True),
-            primary_key=True,
-            nullable=False,
-            comment='Notification ID - UUID primary key'
-        ),
-        
-        # Foreign Key to Users (SEPARATE table argument, not in Column)
-        sa.Column(
-            'user_id',
-            postgresql.UUID(as_uuid=True),
-            nullable=False,
-            index=True,
-            comment='FK to users.id - Cascade deletes on user removal'
-        ),
-        
-        # Notification Content
-        sa.Column(
-            'title',
-            sa.String(255),
-            nullable=False,
-            comment='Display title of the notification'
-        ),
-        
-        sa.Column(
-            'description',
-            sa.Text(),
-            nullable=True,
-            comment='Detailed description/content of notification'
-        ),
-        
-        sa.Column(
-            'message',
-            sa.Text(),
-            nullable=True,
-            comment='Alias for description - message text'
-        ),
-        
-        sa.Column(
-            'subject',
-            sa.String(255),
-            nullable=True,
-            comment='Alias for title - subject line'
-        ),
-        
-        # Notification Type (using ENUM)
-        sa.Column(
-            'notification_type',
-            postgresql.ENUM(
-                'nft_minted',
-                'nft_sold',
+    # NOTE: Table creation is handled by migration 009_add_notifications_table.py
+    # op.create_table(
+    #     'notifications',
+    #     ... [rest of columns omitted] ...
+    # )
+    # =========================================================================
+    
+    # =========================================================================
+    # STEP 3: Create indexes for query optimization
+    # =========================================================================
                 'nft_purchased',
                 'nft_listed',
                 'nft_offer_received',
@@ -222,7 +173,6 @@ def upgrade() -> None:
             ),
             nullable=False,
             index=True,
-            comment='Notification event type from notificationtype ENUM'
         ),
         
         # Read Status
@@ -232,7 +182,6 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("'false'::boolean"),
             index=True,
-            comment='Whether the notification has been read'
         ),
         
         sa.Column(
@@ -240,7 +189,6 @@ def upgrade() -> None:
             sa.Boolean(),
             nullable=False,
             server_default=sa.text("'false'::boolean"),
-            comment='Alias for is_read - backward compatibility'
         ),
         
         # Action/Link
@@ -248,14 +196,12 @@ def upgrade() -> None:
             'action_url',
             sa.String(500),
             nullable=True,
-            comment='URL to navigate to when notification is clicked'
         ),
         
         sa.Column(
             'action_type',
             sa.String(50),
             nullable=True,
-            comment='Type of action (e.g., "view_nft", "accept_offer", "complete_payment")'
         ),
         
         # Extra Metadata
@@ -263,7 +209,6 @@ def upgrade() -> None:
             'extra_metadata',
             sa.String(1000),
             nullable=True,
-            comment='JSON string containing additional metadata'
         ),
         
         # Timestamps
@@ -273,7 +218,6 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
             index=True,
-            comment='When the notification was created (UTC)'
         ),
         
         sa.Column(
@@ -281,14 +225,12 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             nullable=False,
             server_default=sa.func.now(),
-            comment='When the notification was last updated (UTC)'
         ),
         
         sa.Column(
             'read_at',
             sa.DateTime(timezone=True),
             nullable=True,
-            comment='When the notification was read (UTC)'
         ),
         
         sa.Column(
@@ -296,18 +238,16 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             nullable=True,
             index=True,
-            comment='When the notification expires (for auto-deletion)'
         ),
         
         # FOREIGN KEY CONSTRAINT - SEPARATE TABLE ARGUMENT (NOT in Column)
-        # This is the CRITICAL FIX: ForeignKeyConstraint moved out of Column definition
         sa.ForeignKeyConstraint(
             ['user_id'],
             ['users.id'],
             ondelete='CASCADE',
             name='fk_notifications_user_id'
         ),
-    )
+"""
     
     # =========================================================================
     # STEP 3: Create indexes for query optimization
