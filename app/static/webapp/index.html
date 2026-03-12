@@ -447,89 +447,99 @@
     const tg = window.Telegram?.WebApp ?? null;
     let tonConnectUI;
 
-    function onTelegramReady(callback) {
-      if (tg && typeof tg.ready === 'function') {
-        tg.ready();
-        setTimeout(callback, 100); // Give Telegram a moment to finish UI setup
-      } else {
-        callback();
-      }
-    }
-
-    async function initializeApp() {
-      onTelegramReady(async () => {
-        if (tg) {
-          try {
-            tg.expand();
-          } catch (e) {
-            console.warn('Telegram WebApp expand failed:', e);
-          }
+    // Wait for Telegram WebApp to be ready before initializing anything
+    function waitForTelegramReady() {
+      return new Promise((resolve) => {
+        if (tg && typeof tg.ready === 'function') {
+          tg.ready();
+          setTimeout(resolve, 150); // Give Telegram a moment to finish UI setup
+        } else {
+          resolve();
         }
-
-        // Initialize TonConnect UI with correct manifest URL
-        try {
-          if (typeof TonConnectUI !== 'undefined') {
-            const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
-            tonConnectUI = new TonConnectUI({
-              manifestUrl,
-              buttonRootId: 'tonconnect-button'
-            });
-          }
-        } catch (error) {
-          console.log('TonConnect UI not available, using fallback mode');
-        }
-
-        // Check if user is authenticated
-        const token = localStorage.getItem('token');
-        if (token) {
-          window.location.href = basePath + '/dashboard.html';
-          return;
-        }
-
-        // Authenticate with Telegram data
-        try {
-          const initData = tg?.initData;
-          if (initData) {
-            const authResponse = await fetch('/api/v1/auth/telegram/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ init_data: initData })
-            });
-            if (authResponse.ok) {
-              const authData = await authResponse.json();
-              if (authData.token) {
-                localStorage.setItem('token', authData.token);
-                console.log('Authenticated via Telegram');
-              }
-            }
-          }
-        } catch (error) {
-          console.log('Telegram auth not available, showing landing page');
-        }
-
-        // Setup event listeners
-        const connectBtn = document.getElementById('connectBtn');
-        if (!document.getElementById('tonconnect-button')) {
-          const tonBtnRoot = document.createElement('div');
-          tonBtnRoot.id = 'tonconnect-button';
-          if (connectBtn && connectBtn.parentNode) connectBtn.parentNode.insertBefore(tonBtnRoot, connectBtn.nextSibling);
-          else document.body.appendChild(tonBtnRoot);
-        }
-        const exploreBtn = document.getElementById('exploreBtn');
-
-        if (connectBtn) connectBtn.addEventListener('click', handleConnectTelegram);
-        if (exploreBtn) exploreBtn.addEventListener('click', () => {
-          window.location.href = '/webapp/marketplace.html';
-        });
       });
     }
 
-    async function handleConnectTelegram() {
-      if (typeof TonConnectUI !== 'undefined' && tonConnectUI) {
-        tonConnectUI.openModal();
+    async function initializeApp() {
+      await waitForTelegramReady();
+      if (tg) {
+        try {
+          tg.expand();
+        } catch (e) {
+          console.warn('Telegram WebApp expand failed:', e);
+        }
+      }
+
+      // Initialize TonConnect UI with correct manifest URL
+      try {
+        if (typeof TonConnectUI !== 'undefined') {
+          const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+          tonConnectUI = new TonConnectUI({
+            manifestUrl,
+            buttonRootId: 'tonconnect-button'
+          });
+        }
+      } catch (error) {
+        showError('TonConnect UI not available.');
+      }
+
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (token) {
+        window.location.href = basePath + '/dashboard.html';
         return;
       }
-      Toast.show('TON Connect UI not available', 'error', 3000);
+
+      // Authenticate with Telegram data
+      try {
+        const initData = tg?.initData;
+        if (initData) {
+          const authResponse = await fetch('/api/v1/auth/telegram/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: initData })
+          });
+          if (authResponse.ok) {
+            const authData = await authResponse.json();
+            if (authData.token) {
+              localStorage.setItem('token', authData.token);
+              console.log('Authenticated via Telegram');
+            }
+          }
+        }
+      } catch (error) {
+        showError('Telegram authentication failed.');
+      }
+
+      // Setup event listeners
+      const connectBtn = document.getElementById('connectBtn');
+      if (!document.getElementById('tonconnect-button')) {
+        const tonBtnRoot = document.createElement('div');
+        tonBtnRoot.id = 'tonconnect-button';
+        if (connectBtn && connectBtn.parentNode) connectBtn.parentNode.insertBefore(tonBtnRoot, connectBtn.nextSibling);
+        else document.body.appendChild(tonBtnRoot);
+      }
+      const exploreBtn = document.getElementById('exploreBtn');
+
+      if (connectBtn) connectBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof TonConnectUI !== 'undefined' && tonConnectUI) {
+          try {
+            tonConnectUI.openModal();
+          } catch (err) {
+            showError('Failed to open TON Connect modal.');
+          }
+        } else {
+          showError('TON Connect UI not available.');
+        }
+      });
+      if (exploreBtn) exploreBtn.addEventListener('click', () => {
+        window.location.href = '/webapp/marketplace.html';
+      });
+    }
+
+    function showError(msg) {
+      if (tg && typeof tg.showAlert === 'function') tg.showAlert(msg);
+      else Toast.show(msg, 'error', 4000);
     }
 
     window.addEventListener('DOMContentLoaded', initializeApp);
