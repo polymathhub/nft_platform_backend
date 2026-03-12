@@ -2,21 +2,21 @@
   "tonconnect": "2",
   "name": "GiftedForge",
   "description": "Trade, create, and collect NFTs using Telegram Stars on the TON blockchain",
-  "url": "https://giftedforge.io",
+  "url": "https://nftplatformbackend-production-9081.up.railway.app/",
   "icons": [
     {
-      "src": "https://giftedforge.io/static/icon.png",
+      "src": "https://nftplatformbackend-production-9081.up.railway.app/static/icon.png",
       "sizes": "192x192"
     },
     {
-      "src": "https://giftedforge.io/static/icon-256.png",
+      "src": "https://nftplatformbackend-production-9081.up.railway.app/static/icon-256.png",
       "sizes": "256x256"
     }
   ],
   "buttons": [
     {
       "name": "apiVersion",
-      "url": "https://giftedforge.io/api/v1"
+      "url": "https://nftplatformbackend-production-9081.up.railway.app/api/v1"
     }
   ]
 }

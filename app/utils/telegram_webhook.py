@@ -141,7 +141,7 @@ async def setup_telegram_webhook():
         return False
 
     manager = TelegramWebhookManager()
-    webhook_url = settings.telegram_webhook_url or "https://nftplatformbackend-production-b67d.up.railway.app/api/v1/telegram/webhook"
+    webhook_url = settings.telegram_webhook_url or "https://nftplatformbackend-production-9081.up.railway.app/api/v1/telegram/webhook"
     success = await manager.set_webhook(webhook_url)
     if not success:
         logger.warning("Webhook setup failed, continuing startup...")
