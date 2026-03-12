@@ -1,35 +1,4 @@
-"""Add user_role column to users table - PostgreSQL Safe.
-
-Revision ID: 004_add_user_role
-Revises: 003_add_admin_system
-Create Date: 2026-02-14 00:00:00.000000
-
-============================================================================
-MIGRATION FIXES (v3 - FIXED)
-============================================================================
-
-✓ FIX 1: IndentationError on line 119 - REMOVED DUPLICATE downgrade() FUNCTION
-  - Had two downgrade() definitions causing IndentationError: unexpected indent
-  - Kept only the first, properly indented downgrade() function
-  - All code now uses 4-space indentation (no tabs)
-
-✓ FIX 2: Production improvements
-  - ENUM type: Created safely with IF NOT EXISTS check in 003
-  - Column addition: Use ALTER TABLE ADD COLUMN IF NOT EXISTS (idempotent)
-  - Defaults: Use sa.text() for PostgreSQL-safe ENUM defaults
-  - Indexes: Use standard op.create_index without try-except
-  - Error handling: Fail fast with proper exceptions (don't suppress errors)
-
-============================================================================
-INDENTATION NOTE
-============================================================================
-This file uses 4-space indentation throughout:
-  - Module level (0 spaces)
-  - Function level (4 spaces for def signature, 8 spaces for body)
-  - Nested blocks (8, 12, 16 spaces as needed)
-  - No tabs - all spaces
-============================================================================
-"""
+"""Add user_role column to users table. Because users need roles, and roles need love."""
 import logging
 from alembic import op
 import sqlalchemy as sa
@@ -45,38 +14,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """Add user_role ENUM column to users table.
-    
-    Why this approach is safe:
-      - ENUM type created in migration 003 with IF NOT EXISTS
-      - Column addition uses IF NOT EXISTS (idempotent)
-      - Proper default value via sa.text() for PostgreSQL
-      - Index creation is explicit and clear
-    """
+    # Add user_role ENUM column to users table. It's like a hat, but for your database rows.
     
     log.info("Starting Migration 004: Add user_role column to users table")
     
     bind = op.get_bind()
     
-    # =========================================================================
-    # STEP 1: Verify we're working with PostgreSQL
-    # =========================================================================
     if bind.dialect.name != 'postgresql':
-        log.warning(
-            "Migration 004 is optimized for PostgreSQL. "
-            "For other databases, manual adjustment required."
-        )
-        return
-    
-    # =========================================================================
-    # STEP 2: Add user_role column with ENUM type and default
-    # =========================================================================
-    # Why IF NOT EXISTS:
-    #   - Makes migration idempotent (can re-run safely)
-    #   - Handles databases where column already exists
-    #   - Uses standard PostgreSQL syntax
-    # =========================================================================
-    log.info("Step 1: Adding user_role column to users table...")
+      log.warning("Sorry, this migration only speaks PostgreSQL.")
+      return
+    log.info("Adding user_role column to users table. It's ENUM-tastic!")
     
     op.execute(
         """
@@ -86,10 +33,7 @@ def upgrade() -> None:
     )
     log.info("  ✓ user_role column added or already exists with default='user'")
     
-    # =========================================================================
-    # STEP 3: Create index on user_role for query optimization
-    # =========================================================================
-    log.info("Step 2: Creating index on user_role...")
+    log.info("Creating index on user_role. Because speed matters.")
     
     op.create_index(
         'ix_users_user_role',

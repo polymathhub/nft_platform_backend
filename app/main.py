@@ -45,83 +45,56 @@ from app.security_middleware import (
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# Configure detailed logging after settings are loaded
-# Wrap in try-except to ensure app boots even if logging config fails
 try:
     configure_logging()
 except Exception as e:
-    logger.warning(f"Failed to configure detailed logging: {e}. Continuing with bootstrap logger.")
-
-# Reduce noisy access logs from uvicorn in production/dev previews
+    logger.warning(f"Logging broke, but we keep rolling: {e}")
 try:
     uvicorn_access_logger = logging.getLogger('uvicorn.access')
     uvicorn_access_logger.setLevel(logging.WARNING)
 except Exception:
-    # Non-fatal: if uvicorn logger isn't present, continue
-    pass
+    pass  # Uvicorn logger is on vacation
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    FastAPI lifespan context manager.
-    
-    Startup:
-    1. Initialize async database connection pool
-    2. Run Alembic migrations
-    3. Setup Telegram webhook (non-fatal if fails)
-    
-    Shutdown:
-    1. Close database connections
-    """
+    # This function runs when the app wakes up and goes to sleep. Like coffee, but for servers.
     logger.info("=" * 70)
     logger.info("NFT Platform Backend - Startup")
     logger.info("=" * 70)
     
-    # Startup
-    logger.info("\n[1/3] Initializing database connection pool...")
+    logger.info("[Wake up] Initializing DB pool...")
     await init_db()
-    # Attempt to establish a shared async Redis client for the app (optional)
     try:
-        logger.info("[1b/3] Connecting to Redis (if configured)...")
+        logger.info("[Redis] Trying to connect...")
         if getattr(settings, "redis_url", None):
             app.state.redis = redis.from_url(settings.redis_url, encoding='utf-8', decode_responses=True)
             try:
                 await app.state.redis.ping()
-                logger.info("✓ Connected to Redis")
+                logger.info("Redis is alive! 🦄")
             except Exception as e:
-                logger.warning(f"Redis ping failed: {e}")
+                logger.warning(f"Redis is grumpy: {e}")
                 app.state.redis = None
         else:
             app.state.redis = None
     except Exception as e:
-        logger.warning(f"Failed to initialize Redis client: {e}")
+        logger.warning(f"Redis totally bailed: {e}")
         app.state.redis = None
-    
-    logger.info("\n[2/3] Running database migrations...")
+    logger.info("[Migrations] Running...")
     await auto_migrate()
-    
-    logger.info("\n[3/3] Setting up Telegram webhook...")
+    logger.info("[Telegram] Setting up webhook...")
     await setup_telegram_webhook()
-    
-    logger.info("\n" + "=" * 70)
-    logger.info("✓ Application startup complete")
-    logger.info("=" * 70 + "\n")
-    
+    logger.info("[Ready] App startup complete! 🎉")
     yield
-    
-    # Shutdown
-    logger.info("Shutting down application...")
-    # Close DB
+    logger.info("[Nap time] Shutting down...")
     await close_db()
-    # Close Redis client if present
     try:
         r = getattr(app.state, "redis", None)
         if r:
             await r.close()
-            logger.info("✓ Redis client closed")
+            logger.info("Redis is napping.")
     except Exception:
         pass
-    logger.info("✓ Application shutdown complete")
+    logger.info("App is now asleep. 💤")
 
 
 app = FastAPI(
