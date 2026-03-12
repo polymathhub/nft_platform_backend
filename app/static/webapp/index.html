@@ -469,17 +469,28 @@
         }
       }
 
-      // Initialize TonConnect UI with correct manifest URL
+      // Initialize TonConnect UI with manifest fetch validation
+      let manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+      let manifestOk = false;
       try {
-        if (typeof TonConnectUI !== 'undefined') {
-          const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+        const resp = await fetch(manifestUrl, { method: 'GET' });
+        manifestOk = resp.ok;
+        if (!manifestOk) throw new Error('Manifest not found or not reachable');
+        await resp.json(); // Validate JSON
+      } catch (e) {
+        showError('TON Connect manifest could not be loaded. Please try again later.');
+        manifestOk = false;
+      }
+
+      if (manifestOk && typeof TonConnectUI !== 'undefined') {
+        try {
           tonConnectUI = new TonConnectUI({
             manifestUrl,
             buttonRootId: 'tonconnect-button'
           });
+        } catch (error) {
+          showError('TonConnect UI failed to initialize.');
         }
-      } catch (error) {
-        showError('TonConnect UI not available.');
       }
 
       // Check if user is authenticated
@@ -520,21 +531,39 @@
       }
       const exploreBtn = document.getElementById('exploreBtn');
 
-      if (connectBtn) connectBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (typeof TonConnectUI !== 'undefined' && tonConnectUI) {
-          try {
-            tonConnectUI.openModal();
-          } catch (err) {
-            showError('Failed to open TON Connect modal.');
-          }
-        } else {
-          showError('TON Connect UI not available.');
+      if (connectBtn) {
+        if (!manifestOk || !(typeof TonConnectUI !== 'undefined' && tonConnectUI)) {
+          connectBtn.disabled = true;
+          connectBtn.title = 'TON Connect is not available.';
         }
-      });
-      if (exploreBtn) exploreBtn.addEventListener('click', () => {
-        window.location.href = '/webapp/marketplace.html';
-      });
+        connectBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (!manifestOk) {
+            showError('TON Connect manifest is not available.');
+            return;
+          }
+          if (typeof TonConnectUI !== 'undefined' && tonConnectUI) {
+            try {
+              tonConnectUI.openModal();
+            } catch (err) {
+              showError('Failed to open TON Connect modal.');
+            }
+          } else {
+            showError('TON Connect UI not available.');
+          }
+        });
+        console.log('Connect TON Wallet button event attached');
+      } else {
+        console.warn('Connect TON Wallet button not found in DOM');
+      }
+      if (exploreBtn) {
+        exploreBtn.addEventListener('click', () => {
+          window.location.href = '/webapp/marketplace.html';
+        });
+        console.log('Browse Marketplace button event attached');
+      } else {
+        console.warn('Browse Marketplace button not found in DOM');
+      }
     }
 
     function showError(msg) {
@@ -543,147 +572,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', initializeApp);
-        // Generate a demo wallet address for testing
-        // In production, this would come from the wallet app via deep link or TonConnect
-        const walletAddress = await getWalletAddressFromApp(walletType, sessionId);
-        
-        if (!walletAddress) {
-          if (tg && typeof tg.showAlert === 'function') tg.showAlert('Wallet connection cancelled');
-          else Toast.show('Wallet connection cancelled', 'warning', 3000);
-          return;
-        }
-
-        // Send wallet connection data to backend
-        const cbHeaders = { 'Content-Type': 'application/json' };
-        const cbToken = localStorage.getItem('token');
-        if (cbToken) cbHeaders['Authorization'] = `Bearer ${cbToken}`;
-
-        const response = await fetch('/api/v1/wallet/ton/callback', {
-          method: 'POST',
-          headers: cbHeaders,
-          credentials: 'include',
-          body: JSON.stringify({
-            session_id: sessionId,
-            wallet_address: walletAddress,
-            tonconnect_session: {
-              connected: true,
-              wallet: walletType
-            },
-            wallet_metadata: {
-              wallet_type: walletType,
-              connection_method: 'deep_link',
-              device: navigator.userAgent
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.detail || 'Failed to connect wallet');
-        }
-
-        const result = await response.json();
-        
-        // Store token if provided
-        if (result.token) {
-          localStorage.setItem('token', result.token);
-        }
-
-        const successMsg = result.message || 'Wallet connected successfully!';
-        if (tg && typeof tg.showAlert === 'function') tg.showAlert(successMsg);
-        else Toast.show(successMsg, 'success', 3000);
-
-        // Redirect to dashboard
-        window.location.href = result.redirect_url || (basePath + '/dashboard.html');
-      } catch (error) {
-        console.error('Wallet connection error:', error);
-        if (tg && typeof tg.showAlert === 'function') tg.showAlert(`Connection failed: ${error.message}`);
-        else Toast.show(`Connection failed: ${error.message}`, 'error', 5000);
-      }
-    }
-
-    // Polling helper: poll server for session status, resolve when connected
-    async function pollSessionConnected(sessionId, timeoutMs = 60000, intervalMs = 1500) {
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs) {
-        try {
-          const res = await fetch(`/api/v1/wallet/ton/verify?session_id=${encodeURIComponent(sessionId)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status === 'connected' && data.wallet_address) {
-              return data;
-            }
-          }
-        } catch (e) {
-          console.warn('Polling error', e);
-        }
-        await new Promise(r => setTimeout(r, intervalMs));
-      }
-      throw new Error('Timeout waiting for wallet connection');
-    }
-
-    async function getWalletAddressFromApp(walletType, sessionId) {
-      // This function would normally be called after user returns from wallet app
-      // For testing, we'll generate a valid TON address
-      // In production, the wallet app returns this via deep link
-      return new Promise((resolve) => {
-        // Show deep link options to user
-        const deepLinks = {
-          'tonkeeper': `https://app.tonkeeper.com/ton-connect?client_id=${sessionId}`,
-          'tonwallet': `ton://connect?request_id=${sessionId}`,
-          'tgwallet': `https://wallet.tg/ton-connect?request_id=${sessionId}`
-        };
-
-        // Open the wallet app. Prefer Telegram-provided openLink APIs when available.
-        const urlToOpen = deepLinks[walletType];
-        try {
-          if (tg) {
-            if (typeof tg.openLink === 'function') {
-              tg.openLink(urlToOpen);
-            } else if (typeof tg.openUrl === 'function') {
-              tg.openUrl(urlToOpen);
-            } else if (typeof tg.openExternalLink === 'function') {
-              tg.openExternalLink(urlToOpen);
-            } else {
-              window.open(urlToOpen, '_blank');
-            }
-          } else {
-            window.open(urlToOpen, '_blank');
-          }
-        } catch (e) {
-          console.warn('Deep link open fallback, using window.location:', e);
-          window.location.href = urlToOpen;
-        }
-
-        // Simulate wallet returning address after delay
-        // In production, this would be handled by the wallet app sending data back
-        setTimeout(async () => {
-          // Generate a valid TON address for demo
-          const generatedAddress = '0:' + Math.random().toString(16).substr(2, 56).padEnd(56, '0');
-
-          // Notify backend callback endpoint to simulate wallet app returning the address
-          try {
-            await fetch('/api/v1/wallet/ton/callback', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                session_id: sessionId,
-                wallet_address: generatedAddress,
-                tonconnect_session: { connected: true, wallet: walletType },
-                wallet_metadata: { wallet_type: walletType, simulated: true }
-              })
-            });
-          } catch (e) {
-            console.warn('Failed to POST simulated callback', e);
-          }
-
-          resolve(generatedAddress);
-        }, 1000);
-      });
-    }
-
-    // Initialize on page load
-    initializeApp();
   </script>
 </body>
 </html>
