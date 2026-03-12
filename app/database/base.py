@@ -1,7 +1,4 @@
-from app.database.connection import Base
+from app.database.base_class import Base
+import app.models  # Ensures all models are imported for Alembic
 
 __all__ = ["Base"]
-from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base(cls=AsyncAttrs)
