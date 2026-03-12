@@ -27,25 +27,33 @@ async def init_db():
     global engine, AsyncSessionLocal
     settings = get_settings()
 
-    # Use connection pooling for production (PostgreSQL on Railway)
-    # NullPool for SQLite/testing, QueuePool for PostgreSQL/production
-    if "postgresql" in settings.database_url or "postgres" in settings.database_url:
-        # Production PostgreSQL configuration with connection pooling
-        engine = create_async_engine(
-            settings.database_url,
-            echo=settings.database_echo,
-            poolclass=QueuePool,
-            pool_size=10,  # Number of connections to keep in the pool
-            max_overflow=20,  # Max additional connections beyond pool_size
-            pool_recycle=3600,  # Recycle connections after 1 hour to avoid stale connections
-            pool_pre_ping=True,  # Test connections before using them
-        )
-    else:
-        # Development/test SQLite without pooling
-        engine = create_async_engine(
-            settings.database_url,
-            echo=settings.database_echo,
-            poolclass=NullPool,
+        # Use connection pooling for production (PostgreSQL on Railway)
+        # NullPool for SQLite/testing, QueuePool for PostgreSQL/production
+        if "postgresql" in settings.database_url or "postgres" in settings.database_url:
+            # Production PostgreSQL configuration with connection pooling
+            engine = create_async_engine(
+                settings.database_url,
+                echo=settings.database_echo,
+                poolclass=QueuePool,
+                pool_size=10,  # Number of connections to keep in the pool
+                max_overflow=20,  # Max additional connections beyond pool_size
+                pool_recycle=3600,  # Recycle connections after 1 hour to avoid stale connections
+                pool_pre_ping=True,  # Test connections before using them
+            )
+        else:
+            # Development/test SQLite without pooling
+            engine = create_async_engine(
+                settings.database_url,
+                echo=settings.database_echo,
+                poolclass=NullPool,
+            )
+    
+        # Update AsyncSessionLocal to use async_sessionmaker
+        AsyncSessionLocal = async_sessionmaker(
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
         )
     
     # keep compatibility alias in sync

@@ -22,100 +22,34 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+
 async def auto_migrate():
     """
-    Run Alembic database migrations programmatically.
-    
-    This is the ONLY method for managing database schema.
-    SQLAlchemy's metadata.create_all() is NOT used.
-    
-    Migrations are idempotent and safe to run multiple times.
+    Run Alembic migrations on startup.
     """
-    from app.database.connection import engine
-    
-    if engine is None:
-        raise RuntimeError("Database engine is not initialized. Call init_db() first.")
+    import asyncio
+    import os
+    import sys
+    from pathlib import Path
 
-    logger.info("=" * 70)
-    logger.info("Running Alembic database migrations...")
-    logger.info("=" * 70)
+    project_root = Path(__file__).resolve().parents[2]
+    cmd = [sys.executable, "-m", "alembic", "upgrade", "head"]
+    sub_env = os.environ.copy()
+    sub_env["DATABASE_URL"] = settings.database_url
 
-    try:
-        project_root = Path(__file__).resolve().parents[2]
-        
-        # Check if alembic_version table exists
-        logger.info("Checking migration status...")
-        async with engine.connect() as conn:
-            try:
-                result = await conn.execute(
-                    text(
-                        "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
-                        "WHERE table_schema='public' AND table_name='alembic_version')"
-                    )
-                )
-                alembic_table_exists = bool(result.scalar())
-            except Exception as e:
-                # For non-PostgreSQL databases, just proceed
-                logger.debug(f"Could not check alembic_version table: {e}")
-                alembic_table_exists = False
-
-        if alembic_table_exists:
-            logger.info("✓ Alembic migration tracking table exists")
-        else:
-            logger.info("  Alembic migration tracking table will be created on first migration")
-
-        # Run: alembic upgrade head
-        cmd = [sys.executable, "-m", "alembic", "upgrade", "head"]
-        logger.info(f"Executing: {' '.join(cmd)}")
-        
-        # CRITICAL: Pass environment variables to subprocess
-        # alembic/env.py needs DATABASE_URL from environment
-        # Pydantic loads from .env into memory, but subprocess needs actual env var
-        sub_env = os.environ.copy()
-        sub_env["DATABASE_URL"] = settings.database_url  # Ensure DATABASE_URL is set in subprocess
-        
-        logger.info(f"Subprocess DATABASE_URL: {settings.database_url[:50]}...")
-        
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=PIPE,
-            stderr=PIPE,
-            cwd=str(project_root),
-            env=sub_env  # Pass environment with explicit DATABASE_URL
-        )
-        stdout, stderr = await proc.communicate()
-
-        if proc.returncode == 0:
-            logger.info("✓ Alembic migrations completed successfully")
-            if stdout:
-                out_text = stdout.decode(errors="ignore").strip()
-                if out_text:
-                    logger.info(f"Migration output:\n{out_text}")
-            return
-        else:
-            # Alembic failed
-            err_text = stderr.decode(errors="ignore") if stderr else ""
-            out_text = stdout.decode(errors="ignore") if stdout else ""
-
-            # Some errors are safe to ignore (objects already exist)
-            if any(x in err_text.lower() for x in ["already exists", "duplicate", "constraint"]):
-                logger.warning(f"⚠ Alembic warning (non-fatal): {err_text[:300]}")
-                return
-            
-            # Critical error
-            logger.error(f"✗ Alembic migration failed (exit code {proc.returncode})")
-            logger.error(f"stderr: {err_text}")
-            logger.error(f"stdout: {out_text}")
-            raise RuntimeError(
-                f"Alembic migration failed with exit code {proc.returncode}. "
-                f"Database schema is not initialized. Error: {err_text}"
-            )
-
-    except Exception as e:
-        logger.error(f"✗ Failed to run migrations: {e}", exc_info=True)
-        raise RuntimeError(
-            f"Database migration failed. Application cannot start. Error: {e}"
-        ) from e
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=str(project_root),
+        env=sub_env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode == 0:
+        logger.info("✓ Alembic migrations completed successfully")
+    else:
+        logger.error(f"Alembic migration failed: {stderr.decode()}")
+        raise RuntimeError("Alembic migration failed")
 
 
 
