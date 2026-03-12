@@ -157,17 +157,6 @@ static_path = os.path.join(os.path.dirname(__file__), "static")
 """ Build allowed origins - include same-origin for web app"""
 cors_origins = settings.allowed_origins.copy() if settings.allowed_origins else []
 
-"""Always allow same-origin requests (important for internal web app)"""
-
-if "http://localhost" not in ",".join(cors_origins):
-    cors_origins.extend([
-        "http://localhost",
-        "http://localhost:8000",
-        "http://127.0.0.1",
-        "http://127.0.0.1:8000",
-        "https://nftplatformbackend-production-9081.up.railway.app",
-    ])
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -217,6 +206,11 @@ async def tonconnect_manifest(request: Request):
     `settings.APP_URL` so the manifest `url` and icon URLs match the deployed
     origin. This avoids mismatch issues when the static `tonconnect-manifest.json` was
     authored for a different domain.
+    
+    Priority for origin determination:
+    1. APP_URL from settings (Railway environment variable)
+    2. Derived from X-Forwarded-Proto/X-Forwarded-Host headers (Railway/proxy)
+    3. Request origin
     """
     import json
     manifest_path = os.path.join(os.path.dirname(__file__), "static", "tonconnect-manifest.json")
@@ -227,27 +221,37 @@ async def tonconnect_manifest(request: Request):
         with open(manifest_path, "r", encoding="utf-8") as fh:
             manifest = json.load(fh)
 
-        # Prefer an explicit configured webapp URL, otherwise derive origin from request
         from urllib.parse import urlparse
 
-        configured = getattr(settings, "telegram_webapp_url", None) or getattr(settings, "APP_URL", None)
+        # Method 1: Check for configured APP_URL (Railway environment or explicit config)
         origin = ""
-        if configured:
-            parsed = urlparse(configured)
-            if parsed.scheme and parsed.netloc:
-                origin = f"{parsed.scheme}://{parsed.netloc}"
-
-        # Fallback to deriving origin from the incoming request
+        if settings.app_url:
+            origin = settings.app_url.rstrip('/')
+        
+        # Method 2: Derive from X-Forwarded headers (Railway/proxy setup)
+        if not origin or origin == "https://localhost:8000":
+            forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+            forwarded_host = request.headers.get("x-forwarded-host", "").strip()
+            
+            if forwarded_proto and forwarded_host:
+                origin = f"{forwarded_proto}://{forwarded_host}"
+        
+        # Method 3: Derive from incoming request
         if not origin:
-            parsed = request.url
-            host = parsed.hostname or ""
-            port = parsed.port
-            scheme = parsed.scheme or ""
-            if host and scheme:
+            scheme = request.url.scheme or "https"
+            host = request.url.hostname or ""
+            port = request.url.port
+            if host:
                 origin = f"{scheme}://{host}"
                 if port and port not in (80, 443):
                     origin = f"{origin}:{port}"
-
+        
+        # Fallback for local/invalid origins
+        if not origin or origin.startswith("http://localhost"):
+            origin = "https://localhost:8000"
+        
+        logger.info(f"TonConnect manifest origin: {origin}")
+        
         if origin:
             manifest["url"] = origin
             # Normalize icons to absolute URLs

@@ -445,156 +445,301 @@
 
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
     const tg = window.Telegram?.WebApp ?? null;
-    let tonConnectUI;
+    let tonConnectUI = null;
+    let tonConnectReady = false;
+    let manifestLoaded = false;
 
-    // Wait for Telegram WebApp to be ready before initializing anything
+    // ===== Utility Functions =====
+
+    function showError(msg) {
+      console.error('Error:', msg);
+      if (tg && typeof tg.showAlert === 'function') {
+        tg.showAlert(msg);
+      } else if (Toast) {
+        Toast.show(msg, 'error', 4000);
+      } else {
+        alert(msg);
+      }
+    }
+
+    function showInfo(msg) {
+      console.log('Info:', msg);
+      if (Toast) {
+        Toast.show(msg, 'info', 3000);
+      }
+    }
+
+    // ===== Telegram Setup =====
+
     function waitForTelegramReady() {
       return new Promise((resolve) => {
         if (tg && typeof tg.ready === 'function') {
           tg.ready();
-          setTimeout(resolve, 150); // Give Telegram a moment to finish UI setup
+          setTimeout(resolve, 150);
         } else {
           resolve();
         }
       });
     }
 
-    async function initializeApp() {
-      await waitForTelegramReady();
-      if (tg) {
-        try {
-          tg.expand();
-        } catch (e) {
-          console.warn('Telegram WebApp expand failed:', e);
-        }
-      }
+    // ===== TonConnect Manifest Validation =====
 
-      // Initialize TonConnect UI with manifest fetch validation
-      let manifestUrl = window.location.origin + '/tonconnect-manifest.json';
-      let manifestOk = false;
-      try {
-        const resp = await fetch(manifestUrl, { method: 'GET' });
-        manifestOk = resp.ok;
-        if (!manifestOk) throw new Error('Manifest not found or not reachable');
-        await resp.json(); // Validate JSON
-      } catch (e) {
-        showError('TON Connect manifest could not be loaded. Please try again later.');
-        manifestOk = false;
-      }
-
-      if (manifestOk && typeof TonConnectUI !== 'undefined') {
+    async function validateManifest(retries = 3) {
+      const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
+      
+      for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-          tonConnectUI = new TonConnectUI({
-            manifestUrl,
-            buttonRootId: 'tonconnect-button'
+          const resp = await fetch(manifestUrl, { 
+            method: 'GET',
+            cache: 'no-cache'
           });
+          
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+          }
+          
+          const manifest = await resp.json();
+          
+          if (!manifest.url) {
+            throw new Error('Manifest missing "url" field');
+          }
+          
+          console.log('✓ TonConnect manifest loaded:', manifest.url);
+          manifestLoaded = true;
+          return { success: true, url: manifestUrl };
         } catch (error) {
-          showError('TonConnect UI failed to initialize.');
+          console.warn(`Manifest fetch attempt ${attempt}/${retries} failed:`, error.message);
+          
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 1000 * attempt)); // exponential backoff
+          }
         }
       }
+      
+      return { 
+        success: false, 
+        error: 'Failed to load TonConnect manifest after retries' 
+      };
+    }
 
-      // Check if user is authenticated
-      const token = localStorage.getItem('token');
-      if (token) {
-        window.location.href = basePath + '/dashboard.html';
+    // ===== TonConnect UI Initialization =====
+
+    async function initializeTonConnect(manifestUrl) {
+      if (typeof TonConnectUI === 'undefined') {
+        console.warn('TonConnectUI library not available');
+        return false;
+      }
+
+      try {
+        // Create root element if it doesn't exist
+        let rootElement = document.getElementById('tonconnect-button');
+        if (!rootElement) {
+          rootElement = document.createElement('div');
+          rootElement.id = 'tonconnect-button';
+          const connectBtn = document.getElementById('connectBtn');
+          if (connectBtn && connectBtn.parentNode) {
+            connectBtn.parentNode.insertBefore(rootElement, connectBtn.nextSibling);
+          } else {
+            document.body.appendChild(rootElement);
+          }
+        }
+
+        // Initialize TonConnect UI
+        tonConnectUI = new TonConnectUI({
+          manifestUrl,
+          buttonRootId: 'tonconnect-button'
+        });
+
+        tonConnectReady = true;
+        console.log('✓ TonConnect UI initialized');
+        return true;
+      } catch (error) {
+        console.error('TonConnect initialization failed:', error);
+        tonConnectReady = false;
+        return false;
+      }
+    }
+
+    // ===== Main App Initialization =====
+
+    async function initializeApp() {
+      try {
+        // Step 1: Initialize Telegram WebApp
+        await waitForTelegramReady();
+        if (tg) {
+          try {
+            tg.expand();
+          } catch (e) {
+            console.warn('Telegram expand failed:', e);
+          }
+        }
+
+        // Step 2: Check if user is already authenticated
+        const token = localStorage.getItem('token');
+        if (token) {
+          window.location.href = basePath + '/dashboard.html';
+          return;
+        }
+
+        // Step 3: Try Telegram login if initData available
+        try {
+          const initData = tg?.initData;
+          if (initData) {
+            const authResponse = await fetch('/api/v1/auth/telegram/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ init_data: initData })
+            });
+            if (authResponse.ok) {
+              const authData = await authResponse.json();
+              if (authData.token) {
+                localStorage.setItem('token', authData.token);
+                console.log('✓ Authenticated via Telegram');
+                window.location.href = basePath + '/dashboard.html';
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Telegram login attempt failed:', error);
+          // Continue to show manual connection options
+        }
+
+        // Step 4: Load and initialize TonConnect
+        const manifestValidation = await validateManifest();
+        if (manifestValidation.success) {
+          const tonConnectInitSuccess = await initializeTonConnect(manifestValidation.url);
+          if (tonConnectInitSuccess) {
+            setupConnectButton();
+          } else {
+            disableConnectButton('TonConnect UI initialization failed');
+          }
+        } else {
+          disableConnectButton(manifestValidation.error);
+        }
+
+        // Step 5: Setup other buttons
+        setupExploreButton();
+
+      } catch (error) {
+        console.error('App initialization error:', error);
+        showError('Failed to initialize app. Please refresh the page.');
+      }
+    }
+
+    // ===== Button Handlers =====
+
+    function disableConnectButton(reason) {
+      const connectBtn = document.getElementById('connectBtn');
+      if (connectBtn) {
+        connectBtn.disabled = true;
+        connectBtn.style.opacity = '0.6';
+        connectBtn.title = `Disabled: ${reason}`;
+        connectBtn.textContent = '⚠ Connection Unavailable';
+        console.warn('Connect button disabled:', reason);
+      }
+    }
+
+    function setupConnectButton() {
+      const connectBtn = document.getElementById('connectBtn');
+      if (!connectBtn) {
+        console.warn('Connect button not found in DOM');
         return;
       }
 
-      // Authenticate with Telegram data
-      try {
-        const initData = tg?.initData;
-        if (initData) {
-          const authResponse = await fetch('/api/v1/auth/telegram/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData })
-          });
-          if (authResponse.ok) {
-            const authData = await authResponse.json();
-            if (authData.token) {
-              localStorage.setItem('token', authData.token);
-              console.log('Authenticated via Telegram');
-            }
-          }
-        }
-      } catch (error) {
-        showError('Telegram authentication failed.');
-      }
+      // Enable button
+      connectBtn.disabled = false;
+      connectBtn.style.opacity = '1';
+      connectBtn.title = 'Click to connect your TON wallet';
 
-      // Setup event listeners
-      const connectBtn = document.getElementById('connectBtn');
-      if (!document.getElementById('tonconnect-button')) {
-        const tonBtnRoot = document.createElement('div');
-        tonBtnRoot.id = 'tonconnect-button';
-        if (connectBtn && connectBtn.parentNode) connectBtn.parentNode.insertBefore(tonBtnRoot, connectBtn.nextSibling);
-        else document.body.appendChild(tonBtnRoot);
-      }
-      const exploreBtn = document.getElementById('exploreBtn');
+      connectBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
 
-      if (connectBtn) {
-        if (!manifestOk || !(typeof TonConnectUI !== 'undefined' && tonConnectUI)) {
-          connectBtn.disabled = true;
-          connectBtn.title = 'TON Connect is not available.';
+        if (!tonConnectReady || !tonConnectUI) {
+          showError('TonConnect is not available. Please refresh and try again.');
+          return;
         }
-        connectBtn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          if (!manifestOk) {
-            showError('TON Connect manifest is not available.');
+
+        // Show loading state
+        const originalText = connectBtn.textContent;
+        const originalDisabled = connectBtn.disabled;
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Connecting...';
+
+        try {
+          // Open TON Connect modal
+          console.log('Opening TonConnect modal...');
+          const result = await tonConnectUI.openModal();
+
+          if (!result || !result.account || !result.account.address) {
+            // User cancelled or no account selected
+            console.log('TonConnect modal closed without selection');
+            connectBtn.textContent = originalText;
+            connectBtn.disabled = originalDisabled;
             return;
           }
-          if (typeof TonConnectUI !== 'undefined' && tonConnectUI) {
-            try {
-              // Open the modal and wait for connection
-              const result = await tonConnectUI.openModal();
-              if (result && result.account && result.account.address) {
-                // Send wallet address and Telegram initData to backend
-                const initData = tg?.initData || '';
-                const resp = await fetch('/api/v1/wallet/ton/callback', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    wallet_address: result.account.address,
-                    tonconnect_session: result,
-                    init_data: initData
-                  })
-                });
-                if (resp.ok) {
-                  const data = await resp.json();
-                  if (data.success) {
-                    Toast.show('Wallet connected!', 'success', 3000);
-                    // Optionally redirect or update UI
-                  } else {
-                    showError(data.detail || 'Wallet connect failed.');
-                  }
-                } else {
-                  showError('Wallet connect failed.');
-                }
-              }
-            } catch (err) {
-              showError('Failed to open TON Connect modal or connect wallet.');
-            }
-          } else {
-            showError('TON Connect UI not available.');
+
+          const walletAddress = result.account.address;
+          console.log('Wallet selected:', walletAddress);
+          showInfo('Wallet selected. Saving to backend...');
+
+          // Send wallet data to backend
+          connectBtn.textContent = 'Saving wallet...';
+          const initData = tg?.initData || '';
+          
+          const response = await fetch('/api/v1/wallet/ton/callback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              wallet_address: walletAddress,
+              tonconnect_session: result,
+              init_data: initData
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Backend error: ${response.status}`);
           }
-        });
-        console.log('Connect TON Wallet button event attached');
-      } else {
-        console.warn('Connect TON Wallet button not found in DOM');
-      }
-      if (exploreBtn) {
-        exploreBtn.addEventListener('click', () => {
-          window.location.href = '/webapp/marketplace.html';
-        });
-        console.log('Browse Marketplace button event attached');
-      } else {
-        console.warn('Browse Marketplace button not found in DOM');
-      }
+
+          const data = await response.json();
+          if (data.success) {
+            console.log('✓ Wallet connected successfully');
+            Toast.show('Wallet connected! Redirecting...', 'success', 2000);
+            setTimeout(() => {
+              window.location.href = basePath + '/dashboard.html';
+            }, 1500);
+          } else {
+            throw new Error(data.detail || 'Backend rejected wallet connection');
+          }
+
+        } catch (error) {
+          console.error('TON Connect error:', error);
+          const errorMsg = error.message || 'Failed to connect wallet. Please try again.';
+          showError(errorMsg);
+          connectBtn.textContent = originalText;
+          connectBtn.disabled = originalDisabled;
+        }
+      });
+
+      console.log('✓ Connect TON Wallet button ready');
     }
 
-    function showError(msg) {
-      if (tg && typeof tg.showAlert === 'function') tg.showAlert(msg);
-      else Toast.show(msg, 'error', 4000);
+    function setupExploreButton() {
+      const exploreBtn = document.getElementById('exploreBtn');
+      if (!exploreBtn) {
+        console.warn('Explore button not found in DOM');
+        return;
+      }
+
+      exploreBtn.addEventListener('click', () => {
+        window.location.href = basePath + '/marketplace.html';
+      });
+
+      console.log('✓ Browse Marketplace button ready');
     }
+
+    // ===== Start App =====
 
     window.addEventListener('DOMContentLoaded', initializeApp);
   </script>

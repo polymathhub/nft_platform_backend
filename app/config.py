@@ -79,8 +79,22 @@ class Settings(BaseSettings):
     telegram_webhook_url: Optional[str] = Field(default=None)  # Ngrok or public URL
     telegram_auto_setup_webhook: bool = Field(default=False)  # Auto-setup webhook on startup
     telegram_webhook_secret: Optional[str] = Field(default=None)  # Secret token for webhook validation
-    telegram_webapp_url: str = Field(default="https://nftplatformbackend-production-9081.up.railway.app/webapp/")  # Telegram Web App URL
+    app_url: Optional[str] = Field(default=None)  # Full public URL (e.g., https://example.railway.app) - Railway uses this
+    telegram_webapp_url: Optional[str] = Field(default=None)  # Telegram Web App URL - auto-derived from app_url if not set
     banner_image_url: str = Field(default="https://image2url.com/r2/default/images/1771155009572-149f055b-78f0-4595-bfc2-fdd990329354.png")  # /start banner image (1200x600 for mobile responsiveness)
+
+    @field_validator("telegram_webapp_url", mode="before")
+    @classmethod
+    def derive_telegram_webapp_url(cls, v, info):
+        """If TELEGRAM_WEBAPP_URL not set, derive from APP_URL or use default."""
+        if v:
+            return v
+        # Try to use APP_URL if available
+        app_url = info.data.get('app_url')
+        if app_url:
+            return app_url.rstrip('/') + '/webapp/'
+        # Final fallback
+        return "https://localhost:8000/webapp/"
 
     ipfs_api_url: str = Field(default="http://localhost:5001")
     ipfs_gateway_url: str = Field(default="https://gateway.pinata.cloud/ipfs")
@@ -107,19 +121,21 @@ class Settings(BaseSettings):
     
     @field_validator("allowed_origins", mode="before")
     @classmethod
-    def parse_allowed_origins(cls, v):
+    def parse_allowed_origins(cls, v, info):
         """
         Parse allowed origins from environment variable.
         Supports:
         - JSON array: ["http://localhost:3000","https://myfrontend.com"]
         - Comma-separated string: http://localhost:3000,https://myfrontend.com
         - Python list: ["http://localhost:3000"]
-        """
-        if isinstance(v, list):
-            # Already a list, return as-is
-            return v
         
-        if isinstance(v, str):
+        On Railway, also adds the APP_URL if configured.
+        """
+        origins = []
+        
+        if isinstance(v, list):
+            origins = v
+        elif isinstance(v, str):
             v = v.strip()
             
             # Try to parse as JSON array first
@@ -127,16 +143,42 @@ class Settings(BaseSettings):
                 try:
                     parsed = json.loads(v)
                     if isinstance(parsed, list):
-                        return [str(item).strip() for item in parsed if item]
+                        origins = [str(item).strip() for item in parsed if item]
                 except (json.JSONDecodeError, ValueError):
-                    pass  # Fall through to comma-separated parsing
+                    pass
             
-            # Parse as comma-separated string
-            if v:
-                return [origin.strip() for origin in v.split(",") if origin.strip()]
+            # Parse as comma-separated string if JSON failed
+            if not origins and v:
+                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
         
-        # Default fallback
-        return ["http://localhost:3000"]
+        if not origins:
+            origins = ["http://localhost:3000"]
+        
+        # Add APP_URL if configured (Railway deployments)
+        app_url = info.data.get('app_url')
+        if app_url:
+            origins.append(app_url)
+        
+        # Add standard localhost origins for development
+        localhost_origins = [
+            "http://localhost",
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8000",
+        ]
+        origins.extend(localhost_origins)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_origins = []
+        for origin in origins:
+            if origin not in seen:
+                seen.add(origin)
+                unique_origins.append(origin)
+        
+        return unique_origins
     
     require_https: bool = Field(default=True)
     max_request_size: int = Field(default=10485760)

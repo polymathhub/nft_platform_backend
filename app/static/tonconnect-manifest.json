@@ -1,5 +1,7 @@
 {
-  "url": "https://nftplatformbackend-production-9081.up.railway.app",
+  "url": "https://localhost:8000",
   "name": "GiftedForge",
-  "iconUrl": "https://image2url.com/r2/default/images/1773286803181-3e04067a-db2d-48b1-93e7-d486c16f805c.jpg"
+  "iconUrl": "https://image2url.com/r2/default/images/1773286803181-3e04067a-db2d-48b1-93e7-d486c16f805c.jpg",
+  "termsOfUseUrl": "https://localhost:8000/terms",
+  "privacyUrl": "https://localhost:8000/privacy"
 }

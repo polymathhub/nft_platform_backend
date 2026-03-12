@@ -54,9 +54,11 @@
     "JWT_SECRET_KEY": "${{ Railway.Secret.JWT_SECRET_KEY }}",
     "MNEMONIC_ENCRYPTION_KEY": "${{ Railway.Secret.MNEMONIC_ENCRYPTION_KEY }}",
     "TELEGRAM_BOT_TOKEN": "${{ Railway.Secret.TELEGRAM_BOT_TOKEN }}",
-    "TELEGRAM_WEBHOOK_URL": "https://nftplatformbackend-production-9081.up.railway.app/api/v1/telegram/webhook",
+    "TELEGRAM_WEBHOOK_URL": "${{ Railway.Env.RAILWAY_PUBLIC_DOMAIN }}/api/v1/telegram/webhook",
     "TELEGRAM_AUTO_SETUP_WEBHOOK": "True",
-    "TELEGRAM_WEBHOOK_SECRET": "${{ Railway.Secret.TELEGRAM_WEBHOOK_SECRET }}"
+    "TELEGRAM_WEBHOOK_SECRET": "${{ Railway.Secret.TELEGRAM_WEBHOOK_SECRET }}",
+    "TELEGRAM_WEBAPP_URL": "https://${{ Railway.Env.RAILWAY_PUBLIC_DOMAIN }}/webapp/",
+    "APP_URL": "https://${{ Railway.Env.RAILWAY_PUBLIC_DOMAIN }}"
   },
   "services": {
     "postgres": {
