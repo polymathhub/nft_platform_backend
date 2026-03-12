@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -7,81 +6,62 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     AsyncEngine,
 )
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool, QueuePool
 from app.config import get_settings
-
-# SQLAlchemy ORM base class
-Base = declarative_base()
+from app.database.base_class import Base  # Use DeclarativeBase for Alembic
 
 # Global engine and session factory
 engine: AsyncEngine | None = None
 AsyncSessionLocal: async_sessionmaker | None = None
-
-# Backwards compatibility: some tests and modules expect `async_engine`
-# Export `async_engine` alias that mirrors `engine` so imports remain stable.
-async_engine: AsyncEngine | None = None
-
+async_engine: AsyncEngine | None = None  # Backwards compatibility
 
 async def init_db():
-    global engine, AsyncSessionLocal
+    """
+    Initialize the async database engine and sessionmaker for PostgreSQL (asyncpg) or SQLite.
+    Ensures Alembic can use Base.metadata for migrations.
+    """
+    global engine, AsyncSessionLocal, async_engine
     settings = get_settings()
 
-        # Use connection pooling for production (PostgreSQL on Railway)
-        # NullPool for SQLite/testing, QueuePool for PostgreSQL/production
-        if "postgresql" in settings.database_url or "postgres" in settings.database_url:
-            # Production PostgreSQL configuration with connection pooling
-            engine = create_async_engine(
-                settings.database_url,
-                echo=settings.database_echo,
-                poolclass=QueuePool,
-                pool_size=10,  # Number of connections to keep in the pool
-                max_overflow=20,  # Max additional connections beyond pool_size
-                pool_recycle=3600,  # Recycle connections after 1 hour to avoid stale connections
-                pool_pre_ping=True,  # Test connections before using them
-            )
-        else:
-            # Development/test SQLite without pooling
-            engine = create_async_engine(
-                settings.database_url,
-                echo=settings.database_echo,
-                poolclass=NullPool,
-            )
-    
-        # Update AsyncSessionLocal to use async_sessionmaker
-        AsyncSessionLocal = async_sessionmaker(
-            engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autoflush=False,
+    if "postgresql" in settings.database_url or "postgres" in settings.database_url:
+        # Production PostgreSQL configuration with connection pooling
+        engine = create_async_engine(
+            settings.database_url,
+            echo=getattr(settings, "database_echo", False),
+            poolclass=QueuePool,
+            pool_size=10,
+            max_overflow=20,
+            pool_recycle=3600,
+            pool_pre_ping=True,
         )
-    
-    # keep compatibility alias in sync
-    global async_engine
-    async_engine = engine
+    else:
+        # Development/test SQLite without pooling
+        engine = create_async_engine(
+            settings.database_url,
+            echo=getattr(settings, "database_echo", False),
+            poolclass=NullPool,
+        )
+
     AsyncSessionLocal = async_sessionmaker(
         engine,
         class_=AsyncSession,
         expire_on_commit=False,
         autoflush=False,
     )
+    async_engine = engine
 
-
-"""Database connection management"""
 async def close_db():
-    global engine
-
+    """Dispose the async engine (for shutdown/cleanup)."""
+    global engine, async_engine
     if engine:
         await engine.dispose()
-    # ensure alias cleared as well
-    global async_engine
+    engine = None
     async_engine = None
 
-
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Yield an async SQLAlchemy session (use in FastAPI dependencies)."""
     if not AsyncSessionLocal:
         raise RuntimeError("Database not initialized. Call init_db() first.")
-
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -91,7 +71,6 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise e
         finally:
             await session.close()
-
 
 # Alias for backwards compatibility with routers that use get_db
 get_db = get_db_session
