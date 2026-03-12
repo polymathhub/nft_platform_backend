@@ -143,52 +143,33 @@ def upgrade() -> None:
     # =========================================================================
     # STEP 1: Create PostgreSQL ENUM type safely
     # =========================================================================
-    # Why this approach:
-    #   - PostgreSQL DO block is atomic (all-or-nothing)
-    #   - pg_type catalog check detects existing ENUMs reliably
-    #   - Prevents DuplicateObjectError that checkfirst=True misses
-    #   - Works with asyncpg driver (op.execute uses connection.execute)
-    #
-    # Execution:
-    #   - Checks if notificationtype ENUM exists
-    #   - Only creates if missing
-    #   - Succeeds silently if already present
-    # =========================================================================
     log.info("Step 1: Creating notificationtype ENUM...")
     
     op.execute(
         """
         DO $$
         BEGIN
-            -- Safely check if notificationtype ENUM already exists
-            -- typtype = 'e' filters for ENUM types only (excludes base, composite, etc.)
             IF NOT EXISTS (
                 SELECT 1 FROM pg_type 
                 WHERE typname = 'notificationtype' 
                 AND typtype = 'e'
             ) THEN
-                -- Create ENUM with all 19 notification type values
                 CREATE TYPE notificationtype AS ENUM (
-                    -- NFT Events (6 values)
                     'nft_minted',
                     'nft_sold',
                     'nft_purchased',
                     'nft_listed',
                     'nft_offer_received',
                     'nft_offer_accepted',
-                    -- Marketplace Events (3 values)
                     'listing_sold',
                     'offer_made',
                     'offer_accepted',
-                    -- System Events (3 values)
                     'payment_received',
                     'payment_pending',
                     'referral_earned',
-                    -- User Account Events (3 values)
                     'account_verified',
                     'account_warning',
                     'password_changed',
-                    -- General Events (4 values)
                     'info',
                     'warning',
                     'error',
@@ -203,190 +184,41 @@ def upgrade() -> None:
     # =========================================================================
     # STEP 2: Create notifications table
     # =========================================================================
-    # Critical Alembic Rules:
-    #   1. ForeignKeyConstraint must be separate table argument (NOT in Column)
-    #   2. This prevents AssertionError: isinstance(table, Table)
-    #   3. All constraints should have explicit names for debugging
-    #   4. Server defaults ensure consistency across app and database
-    #
-    # Column Organization:
-    #   - Primary keys first
-    #   - Foreign keys next
-    #   - Regular data columns
-    #   - Status/metadata columns
-    #   - Timestamps last
-    #   - Constraints after all columns
-    # =========================================================================
     log.info("Step 2: Creating notifications table...")
     
     op.create_table(
         'notifications',
-        # =====================================================================
-        # PRIMARY KEY
-        # =====================================================================
-        sa.Column(
-            'id',
-            sa.Uuid(),
-            primary_key=True,
-            nullable=False,
-            comment='Notification ID - UUID primary key, generated on creation'
-        ),
-        
-        # =====================================================================
-        # FOREIGN KEY (Constraint defined separately at end)
-        # =====================================================================
-        sa.Column(
-            'user_id',
-            sa.Uuid(),
-            nullable=False,
-            index=True,
-            comment='FK to users.id - Cascades on user deletion'
-        ),
-        
-        # =====================================================================
-        # NOTIFICATION CONTENT COLUMNS
-        # =====================================================================
-        sa.Column(
-            'title',
-            sa.String(255),
-            nullable=False,
-            comment='Notification title/display name (max 255 chars)'
-        ),
-        
-        sa.Column(
-            'description',
-            sa.Text(),
-            nullable=True,
-            comment='Long-form description of the notification'
-        ),
-        
-        sa.Column(
-            'message',
-            sa.Text(),
-            nullable=True,
-            comment='Alias for description - message text (backward compatibility)'
-        ),
-        
-        sa.Column(
-            'subject',
-            sa.String(255),
-            nullable=True,
-            comment='Alias for title - subject line (backward compatibility)'
-        ),
-        
-        # =====================================================================
-        # NOTIFICATION TYPE (Uses ENUM created in Step 1)
-        # =====================================================================
-        # create_type=False: ENUM already created above in Step 1
-        # name='notificationtype': Explicitly reference the ENUM type
-        # =====================================================================
+        sa.Column('id', sa.Uuid(), primary_key=True, nullable=False),
+        sa.Column('user_id', sa.Uuid(), nullable=False, index=True),
+        sa.Column('title', sa.String(255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('message', sa.Text(), nullable=True),
+        sa.Column('subject', sa.String(255), nullable=True),
         sa.Column(
             'notification_type',
             postgresql.ENUM(
                 *NOTIFICATION_TYPES,
                 name='notificationtype',
-                create_type=False,  # Already created in DO block above
+                create_type=False,
                 metadata=None,
             ),
             nullable=False,
             index=True,
-            comment='Notification event type (from notificationtype ENUM)'
         ),
-        
-        # =====================================================================
-        # STATUS COLUMNS
-        # =====================================================================
-        sa.Column(
-            'is_read',
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.literal(False),  # Async-safe default
-            index=True,
-            comment='Whether the notification has been read by user'
-        ),
-        
-        sa.Column(
-            'read',
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.literal(False),  # Async-safe default
-            comment='Alias for is_read - backward compatibility'
-        ),
-        
-        # =====================================================================
-        # ACTION/LINK COLUMNS
-        # =====================================================================
-        sa.Column(
-            'action_url',
-            sa.String(500),
-            nullable=True,
-            comment='URL to navigate to when notification is clicked'
-        ),
-        
-        sa.Column(
-            'action_type',
-            sa.String(50),
-            nullable=True,
-            comment='Type of action: view_nft, accept_offer, complete_payment, etc.'
-        ),
-        
-        # =====================================================================
-        # METADATA COLUMN
-        # =====================================================================
-        sa.Column(
-            'extra_metadata',
-            sa.String(1000),
-            nullable=True,
-            comment='JSON string containing additional event metadata'
-        ),
-        
-        # =====================================================================
-        # TIMESTAMP COLUMNS
-        # =====================================================================
-        sa.Column(
-            'created_at',
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),  # UTC via PostgreSQL NOW()
-            index=True,
-            comment='When the notification was created (UTC)'
-        ),
-        
-        sa.Column(
-            'updated_at',
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),  # UTC via PostgreSQL NOW()
-            comment='When the notification was last updated (UTC)'
-        ),
-        
-        sa.Column(
-            'read_at',
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment='When the notification was marked as read (UTC)'
-        ),
-        
-        sa.Column(
-            'expires_at',
-            sa.DateTime(timezone=True),
-            nullable=True,
-            index=True,
-            comment='When the notification expires (for auto-cleanup)'
-        ),
-        
-        # =====================================================================
-        # TABLE CONSTRAINTS (MUST be separate from columns)
-        # =====================================================================
-        # Critical: ForeignKeyConstraint as separate argument prevents
-        # AssertionError: isinstance(table, Table)
-        # =====================================================================
+        sa.Column('is_read', sa.Boolean(), nullable=False, server_default=sa.literal(False), index=True),
+        sa.Column('read', sa.Boolean(), nullable=False, server_default=sa.literal(False)),
+        sa.Column('action_url', sa.String(500), nullable=True),
+        sa.Column('action_type', sa.String(50), nullable=True),
+        sa.Column('extra_metadata', sa.String(1000), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now(), index=True),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True, index=True),
         sa.ForeignKeyConstraint(
             ['user_id'],
             ['users.id'],
             ondelete='CASCADE',
             name='fk_notifications_user_id',
-            comment='Cascade user deletion to remove all their notifications'
         ),
     )
     
@@ -395,50 +227,26 @@ def upgrade() -> None:
     # =========================================================================
     # STEP 3: Create performance indexes
     # =========================================================================
-    # Index Strategy:
-    #   - Composite indexes for multi-column queries
-    #   - Single-column indexes for filtering
-    #   - Comments applied via op.execute (not on create_index)
-    #   - All are idempotent and async-safe
-    # =========================================================================
     log.info("Step 3: Creating performance indexes...")
     
-    # Composite index: user_id + created_at
-    # Common query: "Get user's notifications in date order"
     op.create_index(
         'idx_notifications_user_id_created_at',
         'notifications',
         ['user_id', 'created_at'],
     )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_user_id_created_at IS "
-        "'Composite index for recent notifications by user - optimizes date range queries';"
-    )
     log.info("  ✓ Created index: idx_notifications_user_id_created_at")
     
-    # Composite index: user_id + is_read
-    # Common query: "Get unread notification count for user"
     op.create_index(
         'idx_notifications_user_id_is_read',
         'notifications',
         ['user_id', 'is_read'],
     )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_user_id_is_read IS "
-        "'Composite index for filtering unread notifications - optimizes is_read checks per user';"
-    )
     log.info("  ✓ Created index: idx_notifications_user_id_is_read")
     
-    # Single index: notification_type
-    # Common query: "Get all notifications of a specific type"
     op.create_index(
         'idx_notifications_notification_type',
         'notifications',
         ['notification_type'],
-    )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_notification_type IS "
-        "'Index for filtering by notification event type';"
     )
     log.info("  ✓ Created index: idx_notifications_notification_type")
     
