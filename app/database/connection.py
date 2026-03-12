@@ -1,23 +1,20 @@
-from __future__ import annotations
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
-    from typing import AsyncGenerator
-    from sqlalchemy.ext.asyncio import (
-        create_async_engine,
-        AsyncSession,
-        async_sessionmaker,
-        AsyncEngine,
-    )
-    from sqlalchemy.pool import NullPool, QueuePool
-    from app.config import get_settings
-    from app.database.base_class import Base
+    create_async_engine,
+    AsyncSession,
+    async_sessionmaker,
+    AsyncEngine,
+)
+from sqlalchemy.pool import NullPool, QueuePool
+from app.config import get_settings
+from app.database.base_class import Base
 
-    engine: AsyncEngine | None = None
-    AsyncSessionLocal: async_sessionmaker | None = None
+engine: AsyncEngine | None = None
+AsyncSessionLocal: async_sessionmaker | None = None
 
-    async def init_db():
-        """
-        Initialize the async database engine and sessionmaker for PostgreSQL (asyncpg) or SQLite.
+async def init_db():
+    """
+    Initialize the async database engine and sessionmaker for PostgreSQL (asyncpg) or SQLite.
         """
         global engine, AsyncSessionLocal
         settings = get_settings()
