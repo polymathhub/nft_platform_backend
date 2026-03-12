@@ -74,7 +74,7 @@ depends_on = None
 
 def upgrade() -> None:
     """
-    Create notifications table and notificationtype ENUM safely.
+    Ensure notificationtype ENUM exists (table already created by migration 009).
     
     This function is idempotent - it can be run multiple times without error.
     All checks for existence prevent DuplicateObjectError exceptions.
@@ -97,33 +97,24 @@ def upgrade() -> None:
             IF NOT EXISTS (
                 SELECT 1 FROM pg_type 
                 WHERE typname = 'notificationtype' 
-                AND typtype = 'e'  -- typtype 'e' = ENUM type
+                AND typtype = 'e'
             ) THEN
                 CREATE TYPE notificationtype AS ENUM (
-                    -- NFT Events (6 values)
                     'nft_minted',
                     'nft_sold',
                     'nft_purchased',
                     'nft_listed',
                     'nft_offer_received',
                     'nft_offer_accepted',
-                    
-                    -- Marketplace Events (3 values)
                     'listing_sold',
                     'offer_made',
                     'offer_accepted',
-                    
-                    -- System Events (3 values)
                     'payment_received',
                     'payment_pending',
                     'referral_earned',
-                    
-                    -- User Account Events (3 values)
                     'account_verified',
                     'account_warning',
                     'password_changed',
-                    
-                    -- General Events (4 values)
                     'info',
                     'warning',
                     'error',
@@ -135,119 +126,8 @@ def upgrade() -> None:
     )
     
     # =========================================================================
-    # STEP 2: Create notifications table (SKIPPED - already created by migration 009)
+    # STEP 2: Create indexes for query optimization
     # =========================================================================
-    # Migration 009 creates the notifications table with all necessary columns.
-    # This migration only ensures the ENUM type exists (STEP 1 above).
-    # Skipping table creation here prevents "table already exists" errors.
-    # =========================================================================
-    # NOTE: Table creation is handled by migration 009_add_notifications_table.py
-    # op.create_table(
-    #     'notifications',
-    #     ... [rest of columns omitted] ...
-    # )
-    # =========================================================================
-    
-    # =========================================================================
-    # STEP 3: Create indexes for query optimization
-    # =========================================================================
-                'nft_purchased',
-                'nft_listed',
-                'nft_offer_received',
-                'nft_offer_accepted',
-                'listing_sold',
-                'offer_made',
-                'offer_accepted',
-                'payment_received',
-                'payment_pending',
-                'referral_earned',
-                'account_verified',
-                'account_warning',
-                'password_changed',
-                'info',
-                'warning',
-                'error',
-                'success',
-                name='notificationtype',
-                create_type=False,  # Already created in STEP 1
-            ),
-            nullable=False,
-            index=True,
-        ),
-        
-        # Read Status
-        sa.Column(
-            'is_read',
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("'false'::boolean"),
-            index=True,
-        ),
-        
-        sa.Column(
-            'read',
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("'false'::boolean"),
-        ),
-        
-        # Action/Link
-        sa.Column(
-            'action_url',
-            sa.String(500),
-            nullable=True,
-        ),
-        
-        sa.Column(
-            'action_type',
-            sa.String(50),
-            nullable=True,
-        ),
-        
-        # Extra Metadata
-        sa.Column(
-            'extra_metadata',
-            sa.String(1000),
-            nullable=True,
-        ),
-        
-        # Timestamps
-        sa.Column(
-            'created_at',
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-            index=True,
-        ),
-        
-        sa.Column(
-            'updated_at',
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        
-        sa.Column(
-            'read_at',
-            sa.DateTime(timezone=True),
-            nullable=True,
-        ),
-        
-        sa.Column(
-            'expires_at',
-            sa.DateTime(timezone=True),
-            nullable=True,
-            index=True,
-        ),
-        
-        # FOREIGN KEY CONSTRAINT - SEPARATE TABLE ARGUMENT (NOT in Column)
-        sa.ForeignKeyConstraint(
-            ['user_id'],
-            ['users.id'],
-            ondelete='CASCADE',
-            name='fk_notifications_user_id'
-        ),
-"""
     
     # =========================================================================
     # STEP 3: Create indexes for query optimization
