@@ -91,7 +91,6 @@ async def auto_migrate():
                 out_text = stdout.decode(errors="ignore").strip()
                 if out_text:
                     logger.info(f"Migration output:\n{out_text}")
-            await ensure_enum_types()
             return
         else:
             # Alembic failed
@@ -101,7 +100,6 @@ async def auto_migrate():
             # Some errors are safe to ignore (objects already exist)
             if any(x in err_text.lower() for x in ["already exists", "duplicate", "constraint"]):
                 logger.warning(f"⚠ Alembic warning (non-fatal): {err_text[:300]}")
-                await ensure_enum_types()
                 return
             
             # Critical error
@@ -120,63 +118,6 @@ async def auto_migrate():
         ) from e
 
 
-async def ensure_enum_types():
-    """
-    Safely ensure all required PostgreSQL enum types exist.
-    
-    This is called AFTER migrations run to ensure enums are created
-    in the correct order for PostgreSQL.
-    """
-    from app.database.connection import engine
-    
-    if engine is None:
-        return
-
-    # Only for PostgreSQL
-    if "postgresql" not in settings.database_url:
-        return
-
-    enum_types = {
-        "notificationtype": [
-            "PAYMENT_RECEIVED", "PAYMENT_FAILED", "COLLECTION_CREATED", "NFT_LISTED",
-            "NFT_UNLISTED", "OFFER_RECEIVED", "OFFER_ACCEPTED", "OFFER_REJECTED",
-            "AUCTION_STARTED", "AUCTION_ENDED", "BID_PLACED", "BID_CANCELLED",
-            "PURCHASE_COMPLETED", "REFERRAL_BONUS", "WALLET_CONNECTED",
-            "WALLET_DISCONNECTED", "ESCROW_CREATED", "ESCROW_RELEASED", "ESCROW_FAILED",
-        ],
-        "userrole": ["user", "admin"],
-    }
-
-    try:
-        async with engine.connect() as conn:
-            for enum_name, enum_values in enum_types.items():
-                try:
-                    # Check if enum exists
-                    result = await conn.execute(
-                        text(
-                            "SELECT 1 FROM pg_type WHERE typname = :enum_name"
-                        ),
-                        {"enum_name": enum_name},
-                    )
-                    if result.scalar():
-                        logger.debug(f"✓ Enum type '{enum_name}' exists")
-                        continue
-
-                    # Create enum if missing
-                    enum_values_str = ", ".join(f"'{val}'" for val in enum_values)
-                    create_sql = f"CREATE TYPE {enum_name} AS ENUM ({enum_values_str})"
-                    await conn.execute(text(create_sql))
-                    await conn.commit()
-                    logger.info(f"✓ Created enum type '{enum_name}'")
-
-                except Exception as e:
-                    if "already exists" in str(e).lower():
-                        logger.debug(f"Enum type '{enum_name}' already exists")
-                    else:
-                        logger.warning(f"Could not ensure enum '{enum_name}': {e}")
-    except Exception as e:
-        logger.warning(f"Could not check/create enum types: {e}")
-        # Non-fatal - migrations already handle this
 
 
 async def setup_telegram_webhook() -> bool:
