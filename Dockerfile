@@ -77,5 +77,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # ENTRYPOINT (production with async support and auto-scaling)
 # ============================================================================
 
-# Direct array form - uvicorn from installed package, no module invocation
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Entrypoint script: runs Alembic migrations, then starts FastAPI
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
