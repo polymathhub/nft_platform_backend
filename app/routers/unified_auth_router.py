@@ -12,14 +12,20 @@ import logging
 from app.database import get_db_session
 from app.models import User
 from app.schemas.auth_unified import (
-    UnifiedAuthRequest,
-    UnifiedAuthResponse,
-    AuthMethodType,
+    TelegramAuthRequest,
+    TONWalletAuthRequest,
+    AuthSuccessResponse,
+    AuthErrorResponse,
+    AuthMethodEnum,
+    TokenResponse,
+    UserIdentityResponse,
+    IdentityData,
+    InitDataSource,
 )
 from app.services.unified_user_service import UnifiedUserService
 from app.services.unified_token_service import UnifiedTokenService
+from app.services.security_service import UnifiedSecurityService
 from app.utils.auth import get_current_user
-from app.utils.telegram_security import verify_telegram_data
 from app.config import get_settings
 
 router = APIRouter(prefix="/api/v1/auth", tags=["unified-auth"])
@@ -27,9 +33,9 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-@router.post("/telegram/login", response_model=UnifiedAuthResponse)
+@router.post("/telegram/login", response_model=AuthSuccessResponse)
 async def telegram_login(
-    request: UnifiedAuthRequest,
+    request: TelegramAuthRequest,
     db: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -38,55 +44,63 @@ async def telegram_login(
     Validates Telegram init_data, creates/updates user, and returns JWT tokens.
     """
     try:
-        # Validate Telegram data signature
-        if not verify_telegram_data(request.init_data):
+        # Validate Telegram data signature and extract identity
+        is_valid, error = UnifiedSecurityService.verify_telegram_initdata(
+            request.init_data,
+            settings.telegram_bot_token
+        )
+        
+        if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid Telegram signature"
+                detail=error or "Invalid Telegram signature"
             )
-
-        # Extract user info from init_data
-        telegram_user = request.telegram_data.get("user", {})
-        telegram_id = str(telegram_user.get("id"))
-        telegram_username = telegram_user.get("username")
-
-        if not telegram_id:
+        
+        # Extract identity from validated initData
+        identity = UnifiedSecurityService.extract_telegram_identity(request.init_data)
+        if not identity:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid Telegram user data"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Failed to extract Telegram identity"
             )
 
         # Create or get user
-        user = await UnifiedUserService.get_or_create_user_by_telegram(
+        user, error = await UnifiedUserService.get_or_create_user_from_identity(
             db=db,
-            telegram_id=telegram_id,
-            telegram_username=telegram_username,
+            identity=identity,
         )
+        
+        if error or not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error or "Failed to create user"
+            )
 
         # Generate tokens
-        tokens = UnifiedTokenService.generate_tokens(user.id)
+        tokens = UnifiedTokenService.generate_tokens(str(user.id))
 
         logger.info(f"User {user.id} authenticated via Telegram")
 
-        return UnifiedAuthResponse(
-            user=user,
-            tokens=tokens,
-            auth_method=AuthMethodType.TELEGRAM,
+        return AuthSuccessResponse(
+            success=True,
+            auth_method=AuthMethodEnum.TELEGRAM,
+            user=UserIdentityResponse.model_validate(user),
+            tokens=TokenResponse(**tokens),
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Telegram auth error: {str(e)}")
+        logger.error(f"Telegram auth error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication failed"
         )
 
 
-@router.post("/ton/login", response_model=UnifiedAuthResponse)
+@router.post("/ton/login", response_model=AuthSuccessResponse)
 async def ton_login(
-    request: UnifiedAuthRequest,
+    request: TONWalletAuthRequest,
     db: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -101,47 +115,66 @@ async def ton_login(
                 detail="Wallet address required"
             )
 
-        # Normalize wallet address
-        wallet_address = request.wallet_address.lower().strip()
-
-        # Validate TON wallet format (basic check)
-        if not wallet_address.startswith("0:") and not wallet_address.startswith("u"):
+        # Validate TON wallet address format and extract identity
+        is_valid, error = UnifiedSecurityService.verify_ton_wallet_address(
+            request.wallet_address
+        )
+        
+        if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid TON wallet address format"
+                detail=error or "Invalid TON wallet address format"
+            )
+        
+        # Extract identity from wallet address
+        identity = UnifiedSecurityService.extract_ton_identity(
+            request.wallet_address,
+            request.wallet_metadata
+        )
+        
+        if not identity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to extract TON identity"
             )
 
         # Create or get user
-        user = await UnifiedUserService.get_or_create_user_by_ton_wallet(
+        user, error = await UnifiedUserService.get_or_create_user_from_identity(
             db=db,
-            wallet_address=wallet_address,
-            wallet_metadata=request.ton_wallet_metadata,
+            identity=identity,
         )
+        
+        if error or not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error or "Failed to create user"
+            )
 
         # Generate tokens
-        tokens = UnifiedTokenService.generate_tokens(user.id)
+        tokens = UnifiedTokenService.generate_tokens(str(user.id))
 
-        logger.info(f"User {user.id} authenticated via TON wallet {wallet_address}")
+        logger.info(f"User {user.id} authenticated via TON wallet {request.wallet_address}")
 
-        return UnifiedAuthResponse(
-            user=user,
-            tokens=tokens,
-            auth_method=AuthMethodType.TON_WALLET,
+        return AuthSuccessResponse(
+            success=True,
+            auth_method=AuthMethodEnum.TON_WALLET,
+            user=UserIdentityResponse.model_validate(user),
+            tokens=TokenResponse(**tokens),
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"TON auth error: {str(e)}")
+        logger.error(f"TON auth error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication failed"
         )
 
 
-@router.post("/link-wallet", response_model=dict)
+@router.post("/link-wallet")
 async def link_wallet(
-    request: UnifiedAuthRequest,
+    request: TONWalletAuthRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -158,12 +191,18 @@ async def link_wallet(
             )
 
         # Link wallet to user
-        await UnifiedUserService.link_ton_wallet_to_user(
+        wallet, error = await UnifiedUserService.link_ton_wallet_to_user(
             db=db,
-            user_id=current_user.id,
+            user_id=str(current_user.id),
             wallet_address=request.wallet_address,
-            wallet_metadata=request.ton_wallet_metadata,
+            wallet_metadata=request.wallet_metadata,
         )
+        
+        if error or not wallet:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error or "Failed to link wallet"
+            )
 
         logger.info(f"TON wallet linked to user {current_user.id}")
 
@@ -176,7 +215,7 @@ async def link_wallet(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Link wallet error: {str(e)}")
+        logger.error(f"Link wallet error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to link wallet"

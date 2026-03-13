@@ -4,7 +4,7 @@ import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 from uuid import UUID
-import jwt
+from jose import jwt, JWTError
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -133,11 +133,11 @@ class UnifiedTokenService:
             logger.debug(f"Access token verified for user {user_id}")
             return user_id
             
-        except jwt.ExpiredSignatureError:
-            logger.debug("Token has expired")
-            return None
-        except jwt.InvalidTokenError as e:
-            logger.debug(f"Invalid token: {e}")
+        except JWTError as e:
+            if "expired" in str(e).lower():
+                logger.debug("Token has expired")
+            else:
+                logger.debug(f"Invalid token: {e}")
             return None
         except Exception as e:
             logger.error(f"Error verifying token: {e}", exc_info=True)
@@ -178,11 +178,11 @@ class UnifiedTokenService:
             logger.debug(f"Refresh token verified for user {user_id}")
             return user_id
             
-        except jwt.ExpiredSignatureError:
-            logger.debug("Refresh token has expired")
-            return None
-        except jwt.InvalidTokenError as e:
-            logger.debug(f"Invalid refresh token: {e}")
+        except JWTError as e:
+            if "expired" in str(e).lower():
+                logger.debug("Refresh token has expired")
+            else:
+                logger.debug(f"Invalid refresh token: {e}")
             return None
         except Exception as e:
             logger.error(f"Error verifying refresh token: {e}", exc_info=True)

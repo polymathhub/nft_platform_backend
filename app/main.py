@@ -229,6 +229,12 @@ async def tonconnect_manifest(request: Request):
         if settings.app_url:
             origin = settings.app_url.rstrip('/')
         
+        # Method 1b: If APP_URL not set, try to derive from TELEGRAM_WEBAPP_URL
+        if not origin and settings.telegram_webapp_url:
+            parsed = urlparse(settings.telegram_webapp_url)
+            if parsed.scheme and parsed.netloc:
+                origin = f"{parsed.scheme}://{parsed.netloc}"
+        
         # Method 2: Derive from X-Forwarded headers (Railway/proxy setup)
         if not origin or origin == "https://localhost:8000":
             forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()

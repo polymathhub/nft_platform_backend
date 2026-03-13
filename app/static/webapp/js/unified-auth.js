@@ -51,7 +51,7 @@ export class UnifiedAuthManager {
       // Check if TonConnect UI library is available
       if (typeof TonConnectUI !== 'undefined') {
         this.tonConnectUI = new TonConnectUI({
-          manifestUrl: '/static/tonconnect-manifest.json',
+          manifestUrl: '/tonconnect-manifest.json',
         });
         console.log('✅ TonConnect UI initialized');
         

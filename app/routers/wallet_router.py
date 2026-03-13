@@ -298,7 +298,16 @@ async def list_user_wallets(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="user_id is required")
         from uuid import UUID as _UUID
 
-        uid = _UUID(user_id)
+        # ✅ FIXED: Proper UUID validation with clear error message
+        try:
+            uid = _UUID(user_id)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid user_id format: {user_id} - {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid user_id format. Must be a valid UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)"
+            )
+
         bc = None
         if blockchain:
             try:
@@ -327,7 +336,7 @@ async def list_user_wallets(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"List wallets error: {e}")
+        logger.error(f"List wallets error: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
