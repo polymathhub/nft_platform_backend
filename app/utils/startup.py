@@ -37,6 +37,10 @@ async def auto_migrate():
     sub_env = os.environ.copy()
     sub_env["DATABASE_URL"] = settings.database_url
 
+    logger.info("Running Alembic migrations...")
+    logger.info(f"Command: {' '.join(cmd)}")
+    logger.info(f"Working directory: {project_root}")
+    
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         cwd=str(project_root),
@@ -45,11 +49,17 @@ async def auto_migrate():
         stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await proc.communicate()
+    stdout_text = stdout.decode() if stdout else ""
+    stderr_text = stderr.decode() if stderr else ""
+    
+    logger.info(f"Alembic stdout:\n{stdout_text}")
+    
     if proc.returncode == 0:
         logger.info("✓ Alembic migrations completed successfully")
     else:
-        logger.error(f"Alembic migration failed: {stderr.decode()}")
-        raise RuntimeError("Alembic migration failed")
+        logger.error(f"Alembic migration failed with return code {proc.returncode}")
+        logger.error(f"Alembic stderr:\n{stderr_text}")
+        raise RuntimeError(f"Alembic migration failed: {stderr_text}")
 
 
 
