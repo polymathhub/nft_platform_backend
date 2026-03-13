@@ -155,16 +155,24 @@ export const api = new APIClient();
 
 // Namespace for API endpoints
 export const endpoints = {
-  // Auth
+  // Auth - Standard endpoints
   auth: {
     login: '/api/auth/login',
     register: '/api/auth/register',
     logout: '/api/auth/logout',
     refresh: '/api/auth/refresh',
     profile: '/api/auth/profile',
-    telegramLogin: '/api/auth/telegram/login',
     oauthGoogle: '/api/auth/oauth/google',
     oauthTwitter: '/api/auth/oauth/twitter',
+  },
+
+  // Unified Auth - Telegram & TON Wallet
+  unifiedAuth: {
+    telegramLogin: '/api/v1/auth/telegram/login',
+    tonLogin: '/api/v1/auth/ton/login',
+    linkWallet: '/api/v1/auth/link-wallet',
+    profile: '/api/v1/auth/profile',
+    logout: '/api/v1/auth/logout',
   },
 
   // Users

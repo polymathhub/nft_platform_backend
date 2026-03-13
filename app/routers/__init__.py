@@ -1,4 +1,5 @@
 from app.routers.auth_router import router as auth_router
+from app.routers.unified_auth_router import router as unified_auth_router
 from app.routers.wallet_router import router as wallet_router
 from app.routers.nft_router import router as nft_router
 from app.routers.notification_router import router as notification_router
@@ -16,6 +17,7 @@ from app.routers.stars_marketplace_router import router as stars_marketplace_rou
 
 __all__ = [
     "auth_router",
+    "unified_auth_router",
     "wallet_router",
     "nft_router",
     "notification_router",

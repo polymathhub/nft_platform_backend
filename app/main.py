@@ -29,6 +29,7 @@ from app.routers import (
     user_router,
     ton_wallet_router,
     stars_marketplace_router,
+    unified_auth_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -336,6 +337,7 @@ app.include_router(
 """routers"""
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(unified_auth_router)  # Unified TON & Telegram auth - prefix included in router
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
 app.include_router(notification_router, prefix="/api/v1")
