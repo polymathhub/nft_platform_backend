@@ -125,142 +125,18 @@ def upgrade() -> None:
         """
     )
     
-    # =========================================================================
-    # STEP 2: Create indexes for query optimization
-    # =========================================================================
-    
-    # =========================================================================
-    # STEP 3: Create indexes for query optimization
-    # =========================================================================
-    # Why this approach is safe:
-    #   - if_not_exists=True prevents duplicate index errors
-    #   - Some indexes already created via Column(index=True) above
-    #   - Composite indexes for common multi-column queries
-    #   - Comments use op.execute with COMMENT ON INDEX (not comment= arg)
-    # =========================================================================
-    
-    # Composite index: user_id + created_at (common query: "get user's recent notifications")
-    op.create_index(
-        'idx_notifications_user_id_created_at',
-        'notifications',
-        ['user_id', 'created_at'],
-        if_not_exists=True
-    )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_user_id_created_at IS "
-        "'Composite index optimizing queries filtering by user and date range';"
-    )
-    
-    # Composite index: user_id + is_read (common query: "get unread notifications for user")
-    op.create_index(
-        'idx_notifications_user_id_is_read',
-        'notifications',
-        ['user_id', 'is_read'],
-        if_not_exists=True
-    )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_user_id_is_read IS "
-        "'Composite index optimizing queries finding unread notifications by user';"
-    )
-    
-    # Index on notification_type (already created via Column index, but explicit for clarity)
-    op.create_index(
-        'idx_notifications_notification_type',
-        'notifications',
-        ['notification_type'],
-        if_not_exists=True
-    )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_notification_type IS "
-        "'Index optimizing filtering by notification type';"
-    )
-    
-    # Index on expires_at (for notification expiration queries)
-    op.create_index(
-        'idx_notifications_expires_at',
-        'notifications',
-        ['expires_at'],
-        if_not_exists=True
-    )
-    op.execute(
-        "COMMENT ON INDEX idx_notifications_expires_at IS "
-        "'Index optimizing deletion of expired notifications';"
-    )
+    # Table and indexes are already created by migration 009
+    # This migration only ensures the ENUM type exists
 
 
 def downgrade() -> None:
     """
-    Drop notifications table safely, preserving the ENUM type.
+    Downgrade by preserving the ENUM type.
     
-    Important: The notificationtype ENUM is NOT dropped in this migration.
-    This allows future forward migrations to recreate the table without
-    issues, and prevents errors if other tables also reference this ENUM.
-    
-    If you absolutely need to remove the ENUM, run manually:
-        ALTER TYPE notificationtype OWNER TO postgres;  -- Or your user
-        DROP TYPE IF EXISTS notificationtype CASCADE;
+    Important: The notificationtype ENUM is NOT dropped here.
+    This allows future forward migrations to recreate the table without issues.
+    The notifications table is managed by migration 009.
     """
-    
-    # =========================================================================
-    # STEP 1: Drop all indexes first (before dropping table)
-    # =========================================================================
-    # Why this order is important:
-    #   - PostgreSQL requires indexes be dropped before the table
-    #   - Using if_exists=True prevents errors if indexes don't exist
-    #   - Dropping in reverse order of creation (best practice)
-    # =========================================================================
-    
-    op.drop_index(
-        'idx_notifications_expires_at',
-        table_name='notifications',
-        if_exists=True
-    )
-    
-    op.drop_index(
-        'idx_notifications_notification_type',
-        table_name='notifications',
-        if_exists=True
-    )
-    
-    op.drop_index(
-        'idx_notifications_user_id_is_read',
-        table_name='notifications',
-        if_exists=True
-    )
-    
-    op.drop_index(
-        'idx_notifications_user_id_created_at',
-        table_name='notifications',
-        if_exists=True
-    )
-    
-    # Note: Indexes created via Column(index=True) are dropped automatically
-    # by drop_table(), but explicitly dropping separate indexes is cleaner
-    
-    # =========================================================================
-    # STEP 2: Drop the notifications table
-    # =========================================================================
-    op.drop_table('notifications', if_exists=True)
-    
-    # =========================================================================
-    # STEP 3: DO NOT drop the ENUM type
-    # =========================================================================
-    # The notificationtype ENUM is intentionally preserved because:
-    #   1. Allows forward migrations to recreate the table without ENUM issues
-    #   2. May be referenced by other tables or future features
-    #   3. Prevents DuplicateObjectError if this migration is re-run
-    #   4. Easier to manage manually if actually needed
-    #
-    # To manually remove the ENUM if truly needed (be careful!):
-    #   alembic revision --autogenerate -m "drop_notificationtype_enum"
-    #   Then add this to the upgrade function:
-    #     op.execute("DROP TYPE IF EXISTS notificationtype CASCADE;")
-    # =========================================================================
-    
-    # Reference: The ENUM value list for documentation
-    # IF you need to recreate it in the future, it includes:
-    #   nft_minted, nft_sold, nft_purchased, nft_listed, 
-    #   nft_offer_received, nft_offer_accepted, listing_sold, 
-    #   offer_made, offer_accepted, payment_received, payment_pending,
-    #   referral_earned, account_verified, account_warning, 
-    #   password_changed, info, warning, error, success
+    # No action needed - ENUM is intentionally preserved
+    # Migration 009 handles table drops in its downgrade function
+    pass
