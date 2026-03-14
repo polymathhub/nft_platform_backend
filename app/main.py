@@ -80,8 +80,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Redis totally bailed: {e}")
         app.state.redis = None
-    logger.info("[Migrations] Running...")
-    await auto_migrate()
+    logger.info("[Migrations] Running... (AUTO_MIGRATE toggle respected)")
+    try:
+        import os
+        auto_flag = os.environ.get("AUTO_MIGRATE", "true").lower()
+        if auto_flag in ("1", "true", "yes"):
+            await auto_migrate()
+        else:
+            logger.info("AUTO_MIGRATE disabled via environment; skipping Alembic migrations on startup.")
+    except Exception as e:
+        logger.warning(f"Skipping auto_migrate due to error reading AUTO_MIGRATE: {e}")
     logger.info("[Telegram] Setting up webhook...")
     await setup_telegram_webhook()
     logger.info("[Ready] App startup complete! 🎉")
@@ -139,11 +147,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 """
 Security & request middleware
 """
-# RequestBodyCachingMiddleware MUST be added first to cache bodies early
+# Keep only essential middleware for request handling; remove strict security
+# middleware that interferes with Telegram WebApp environment. Retain
+# request body caching and gzip compression. Add request size limiting.
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
-app.add_middleware(SecurityHeadersMiddleware)  # Security headers with Telegram support
-app.add_middleware(DirectoryListingBlockMiddleware)  # Block directory listing on static files
+# Lightweight request size limiter to protect against very large uploads
+from app.security_middleware import RequestSizeLimitMiddleware
+app.add_middleware(RequestSizeLimitMiddleware)
 
 """Serve Telegram Web App static files at /webapp
 Note: static mount moved after router registration so API endpoints under
@@ -297,6 +308,39 @@ async def health_check():
         "telegram_bot_token": bool(settings.telegram_bot_token),
         "database_url": "configured" if settings.database_url else "not configured",
     }
+
+
+@app.get("/health/tonconnect", include_in_schema=False)
+async def health_tonconnect(request: Request):
+    """Check presence of vendored TonConnect assets and manifest availability.
+    Returns JSON with boolean flags: vendor_js, vendor_css, manifest_ok
+    """
+    import os
+    from urllib.request import urlopen
+    result = {"vendor_js": False, "vendor_css": False, "manifest_ok": False}
+
+    vendor_dir = os.path.join(os.path.dirname(__file__), "static", "vendor", "tonconnect")
+    # Support both minified and non-minified filenames
+    possible_js = ["tonconnect-ui.js", "tonconnect-ui.min.js"]
+    possible_css = ["tonconnect-ui.css", "tonconnect-ui.min.css"]
+    result["vendor_js"] = any(os.path.isfile(os.path.join(vendor_dir, p)) for p in possible_js)
+    result["vendor_css"] = any(os.path.isfile(os.path.join(vendor_dir, p)) for p in possible_css)
+
+    # Try manifest endpoint (fast 3s timeout)
+    try:
+        scheme = request.url.scheme or "https"
+        host = request.url.hostname or (settings.app_url.split('://')[-1] if settings.app_url else '')
+        origin = f"{scheme}://{host}" if host else (settings.app_url or "")
+        manifest_url = origin.rstrip('/') + '/tonconnect-manifest.json'
+        try:
+            with urlopen(manifest_url, timeout=3) as resp:
+                result["manifest_ok"] = (getattr(resp, 'status', None) == 200)
+        except Exception:
+            result["manifest_ok"] = False
+    except Exception:
+        result["manifest_ok"] = False
+
+    return JSONResponse(content=result)
 
 
 @app.get('/redis-ping', include_in_schema=False)
