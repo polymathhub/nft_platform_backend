@@ -253,9 +253,9 @@ async def tonconnect_manifest(request: Request):
                 if port and port not in (80, 443):
                     origin = f"{origin}:{port}"
         
-        # Fallback for local/invalid origins
+        # Fallback for local/invalid origins - use production URL
         if not origin or origin.startswith("http://localhost"):
-            origin = "https://localhost:8000"
+            origin = "https://nftplatformbackend-production-9081.up.railway.app"
         
         logger.info(f"TonConnect manifest origin: {origin}")
         

@@ -93,8 +93,8 @@ class Settings(BaseSettings):
         app_url = info.data.get('app_url')
         if app_url:
             return app_url.rstrip('/') + '/webapp/'
-        # Final fallback
-        return "https://localhost:8000/webapp/"
+        # Final fallback - use production URL
+        return "https://nftplatformbackend-production-9081.up.railway.app/webapp/"
 
     ipfs_api_url: str = Field(default="http://localhost:5001")
     ipfs_gateway_url: str = Field(default="https://gateway.pinata.cloud/ipfs")
