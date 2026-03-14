@@ -77,6 +77,51 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RelaxedSecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """A relaxed set of security headers suitable for hosting inside
+    Telegram Web Apps and similar in-app browsers.
+
+    Intended for use in production where we still want basic protections
+    but must allow script/style loading from known CDNs and Telegram.
+    """
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+
+        # Allow Telegram webapp frames and same-origin framing for our webapp
+        if request.url.path.startswith("/webapp"):
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        else:
+            response.headers["X-Frame-Options"] = "ALLOW-FROM https://telegram.org"
+
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # HSTS kept but only when not debugging
+        if settings.require_https and not settings.debug:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Relaxed CSP: permit Telegram, common CDNs, and our own origin
+        csp = (
+            "default-src 'self' https:; "
+            "script-src 'self' 'unsafe-inline' https://*.telegram.org https://telegram.org https://unpkg.com https://cdn.jsdelivr.net https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
+            "connect-src 'self' https: https://*.telegram.org; "
+            "frame-ancestors 'self' https://*.telegram.org; "
+            "base-uri 'self'; form-action 'self'"
+        )
+
+        response.headers["Content-Security-Policy"] = csp
+
+        # Minimal caching guidance for API GETs
+        if request.url.path.startswith("/api/") and request.method == "GET":
+            response.headers["Cache-Control"] = "public, max-age=60"
+
+        return response
+
+
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         if request.method in ["POST", "PUT", "PATCH"]:

@@ -39,8 +39,8 @@ from app.routers.image_router import router as image_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
-    SecurityHeadersMiddleware,
-    DirectoryListingBlockMiddleware,
+    RequestSizeLimitMiddleware,
+    RelaxedSecurityHeadersMiddleware,
 )
 
 logger = logging.getLogger(__name__)
@@ -152,9 +152,18 @@ Security & request middleware
 # request body caching and gzip compression. Add request size limiting.
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)  # Compress responses larger than 500 bytes
-# Lightweight request size limiter to protect against very large uploads
-from app.security_middleware import RequestSizeLimitMiddleware
 app.add_middleware(RequestSizeLimitMiddleware)
+
+# Apply relaxed security headers in production only to avoid blocking
+# Telegram WebApp and CDN-loaded resources during development.
+try:
+    if getattr(settings, 'environment', '').lower() == 'production':
+        app.add_middleware(RelaxedSecurityHeadersMiddleware)
+        logger.info('RelaxedSecurityHeadersMiddleware enabled for production')
+    else:
+        logger.info('Skipping relaxed security headers in non-production (development)')
+except Exception:
+    logger.warning('Unable to configure RelaxedSecurityHeadersMiddleware; continuing without it')
 
 """Serve Telegram Web App static files at /webapp
 Note: static mount moved after router registration so API endpoints under
