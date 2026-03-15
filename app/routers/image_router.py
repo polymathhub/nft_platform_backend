@@ -32,12 +32,6 @@ async def upload_nft_media(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user),
 ) -> dict:
-    Upload NFT media (images, GIFs) including Telegram-compatible formats.
-    Supported formats:
-    - JPEG, PNG, WebP (images)
-    - GIF, MP4, WebM (animated/video)
-    - TGS (Telegram animated sticker)
-    Returns: {"image_url": "data:image/...", "media_type": "image/png", "size": ...}
     try:
         allowed_mimetypes = {
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',

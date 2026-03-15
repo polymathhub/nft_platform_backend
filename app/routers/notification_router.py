@@ -182,11 +182,6 @@ async def websocket_notification_endpoint(websocket: WebSocket, user_id: str):
             pass
 @router.get("/notifications/stats", tags=["notifications"], summary="Get Notification Stats")
 async def get_notification_stats():
-    Get current notification service statistics.
-    Returns:
-    - active_users: Number of currently connected WebSocket clients
-    - status: "healthy" or "degraded" based on connection count
-    - timestamp: When stats were collected
     active_users = NotificationService.get_active_users()
     return {
         "success": True,

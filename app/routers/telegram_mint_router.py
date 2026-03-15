@@ -2098,15 +2098,6 @@ async def create_wallet_for_webapp(
     auth: dict = Depends(get_telegram_user_from_request),
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ) -> dict:
-    Create a new wallet for the current user via web app.
-    Requires Telegram WebApp init_data for authentication.
-    Uses bot_service.handle_wallet_create for proper wallet generation.
-    Request body:
-    {
-        "blockchain": "ethereum",
-        "wallet_type": "custodial",
-        "is_primary": false
-    }
     import anyio
     from app.services.activity_service import ActivityService
     from app.models.activity import ActivityType
@@ -2287,16 +2278,6 @@ async def import_wallet_for_webapp(
     db: AsyncSession = Depends(get_db_session),
     auth: dict = Depends(get_telegram_user_from_request),
 ) -> dict:
-    Import an existing wallet for the current user.
-    Requires Telegram WebApp init_data for authentication.
-    Logs activity to audit trail.
-    Request body:
-    {
-        "blockchain": "ethereum",
-        "address": "0x123...",
-        "public_key": "optional",
-        "is_primary": false
-    }
     import anyio
     from app.services.activity_service import ActivityService
     from app.models.activity import ActivityType

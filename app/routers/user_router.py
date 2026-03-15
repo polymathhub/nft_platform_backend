@@ -12,26 +12,6 @@ async def get_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ):
-    Get current user profile with all user data.
-    Used by web app to fetch user information including:
-    - username
-    - email
-    - avatar_url (profile picture)
-    - user_id
-    - telegram information if authenticated
-    Returns:
-    {
-        "success": true,
-        "data": {
-            "id": "user-uuid",
-            "username": "username",
-            "email": "user@example.com",
-            "avatar_url": "https://...",
-            "telegram_id": "...",
-            "telegram_username": "...",
-            ...
-        }
-    }
     return {
         "success": True,
         "data": UserResponse.model_validate(current_user),

@@ -147,7 +147,7 @@ async def get_recent_transactions(
             {
                 "id": str(tx.id),
                 "icon": "📊" if tx.transaction_type == "SALE" else "💰",
-                "title": f"Transaction
+                "title": f"Transaction #{tx.id}",
                 "description": f"{(datetime.utcnow() - tx.created_at).days} days ago",
                 "type": "positive" if tx.transaction_type in ["PROFIT", "RECEIVED"] else "negative",
                 "amount": f"${abs(float(tx.amount or 0)):.2f}",

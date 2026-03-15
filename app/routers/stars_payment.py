@@ -250,14 +250,6 @@ async def wallet_signin(
     req: WalletSignInRequest,
     db: Session = Depends(get_db),
 ):
-    Sign in with wallet address (supports MetaMask, WalletConnect, etc).
-    Flow:
-    1. Frontend gets user's wallet address
-    2. Generate message: "Sign in to GiftedForge as {address} at {timestamp}"
-    3. User signs with wallet private key
-    4. Send wallet_address + signature to this endpoint
-    5. Server verifies signature and creates/updates user
-    6. Return JWT token for authentication
     from eth_account.messages import encode_defunct
     from eth_account import Account
     wallet_address = req.wallet_address.lower()
