@@ -12,7 +12,6 @@ from app.models.admin import AdminLog, AdminLogAction, AdminSettings
 from app.models.activity import ActivityLog, ActivityType
 from app.models.referral import Referral, ReferralStatus, ReferralCommission, CommissionStatus
 from app.models.notification import Notification, NotificationType
-
 __all__ = [
     "User",
     "UserRole",

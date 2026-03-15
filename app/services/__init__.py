@@ -5,7 +5,6 @@ from app.services.notification_service import NotificationService, NotificationT
 from app.services.marketplace_service import MarketplaceService
 from app.services.attestation_service import AttestationService
 from app.services.valuation_service import ValuationService
-
 __all__ = [
     "AuthService",
     "WalletService",
@@ -15,5 +14,4 @@ __all__ = [
     "MarketplaceService",
     "AttestationService",
     "ValuationService",
-
 ]

@@ -9,5 +9,8 @@
   },
   "devDependencies": {
     "eslint": "^8.57.1"
+  },
+  "dependencies": {
+    "@tonconnect/ui": "^2.4.2"
   }
 }

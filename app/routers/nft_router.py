@@ -19,23 +19,14 @@ from app.schemas.nft import (
     NFTMetadataUploadResponse,
 )
 from app.services.nft_service import NFTService
-
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/nfts", tags=["nfts"])
-
-
 @router.post("/mint", response_model=NFTDetailResponse)
 async def mint_nft(
     request: MintNFTRequest,
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> NFTDetailResponse:
-    """
-    Complete NFT minting flow:
-    1. Create NFT record in database
-    2. Mint on blockchain
-    3. Confirm transaction and update record
-    """
     nft, error = await NFTService.mint_nft_with_blockchain_confirmation(
         db=db,
         user_id=current_user.id,
@@ -48,10 +39,7 @@ async def mint_nft(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-
     return NFTDetailResponse.model_validate(nft)
-
-
 @router.post("/{nft_id}/transfer", response_model=NFTDetailResponse)
 async def transfer_nft(
     nft_id: UUID,
@@ -62,10 +50,8 @@ async def transfer_nft(
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-
-    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
+    if nft.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
-
     transferred, error = await NFTService.transfer_nft(
         db=db,
         nft_id=nft_id,
@@ -75,8 +61,6 @@ async def transfer_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(transferred)
-
-
 @router.post("/{nft_id}/burn", response_model=NFTDetailResponse, status_code=status.HTTP_202_ACCEPTED)
 async def burn_nft(
     nft_id: UUID,
@@ -86,15 +70,12 @@ async def burn_nft(
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
+    if nft.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
-
     burned, error = await NFTService.burn_nft(db=db, nft_id=nft_id, transaction_hash="")
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(burned)
-
-
 @router.post("/{nft_id}/lock", response_model=NFTDetailResponse)
 async def lock_nft(
     nft_id: UUID,
@@ -102,13 +83,11 @@ async def lock_nft(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> NFTDetailResponse:
-    """Lock an NFT to prevent transfers."""
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
+    if nft.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
-
     locked, error = await NFTService.lock_nft(
         db=db,
         nft_id=nft_id,
@@ -118,8 +97,6 @@ async def lock_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(locked)
-
-
 @router.post("/{nft_id}/unlock", response_model=NFTDetailResponse)
 async def unlock_nft(
     nft_id: UUID,
@@ -127,19 +104,15 @@ async def unlock_nft(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> NFTDetailResponse:
-    """Unlock an NFT to allow transfers."""
     nft = await NFTService.get_nft_by_id(db, nft_id)
     if not nft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NFT not found")
-    if nft.user_id != current_user.id:  #  FIXED: Direct UUID comparison
+    if nft.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="unauthorized")
-
     unlocked, error = await NFTService.unlock_nft(db=db, nft_id=nft_id)
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(unlocked)
-
-
 @router.get("/user/collection", response_model=UserNFTListResponse)
 async def get_user_nfts(
     skip: int = 0,
@@ -159,8 +132,6 @@ async def get_user_nfts(
     )
     items = [NFTResponse.model_validate(n) for n in nfts]
     return UserNFTListResponse(total=total, page=(skip // limit) + 1, per_page=limit, items=items)
-
-
 @router.get("/{nft_id}", response_model=NFTDetailResponse)
 async def get_nft(
     nft_id: UUID,
@@ -173,8 +144,6 @@ async def get_nft(
             detail="NFT not found",
         )
     return NFTDetailResponse.model_validate(nft)
-
-
 @router.post("/metadata/upload", response_model=NFTMetadataUploadResponse)
 async def upload_nft_metadata(
     metadata: dict,
@@ -183,7 +152,6 @@ async def upload_nft_metadata(
 ) -> NFTMetadataUploadResponse:
     if not metadata.get("name"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="missing name")
-
     uploaded = await NFTService.upload_metadata_to_ipfs(metadata)
     if not uploaded:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="ipfs upload failed")

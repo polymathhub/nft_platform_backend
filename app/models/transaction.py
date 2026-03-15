@@ -4,27 +4,17 @@ import uuid
 from enum import Enum as PyEnum
 from app.database.base_class import Base
 from app.database.types import GUID
-
-
 class TransactionType(str, PyEnum):
-
     MINT = "mint"
     TRANSFER = "transfer"
     BURN = "burn"
     BRIDGE = "bridge"
-
-
 class TransactionStatus(str, PyEnum):
-
     PENDING = "pending"
     CONFIRMED = "confirmed"
     FAILED = "failed"
-
-
 class Transaction(Base):
-
     __tablename__ = "transactions"
-
     id = Column(
         GUID(),
         primary_key=True,
@@ -72,12 +62,10 @@ class Transaction(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     confirmed_at = Column(DateTime, nullable=True)
-
     __table_args__ = (
         Index("ix_transactions_user_blockchain", "user_id", "blockchain"),
         Index("ix_transactions_nft_status", "nft_id", "status"),
         Index("ix_transactions_hash", "transaction_hash"),
     )
-
     def __repr__(self) -> str:
         return f"<Transaction(id={self.id}, type={self.transaction_type}, status={self.status}, hash={self.transaction_hash})>"

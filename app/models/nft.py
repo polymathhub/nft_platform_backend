@@ -4,37 +4,24 @@ import uuid
 from enum import Enum as PyEnum
 from app.database.base_class import Base
 from app.database.types import GUID
-
-
 class NFTStatus(str, PyEnum):
-
     PENDING = "pending"
     MINTED = "minted"
     TRANSFERRED = "transferred"
     LOCKED = "locked"
     BURNED = "burned"
-
-
 class NFTLockReason(str, PyEnum):
-
     MARKETPLACE = "marketplace"
     STAKING = "staking"
     BRIDGE = "bridge"
     CUSTOM = "custom"
-
-
 class RarityTier(str, PyEnum):
-
     COMMON = "common"
     RARE = "rare"
     EPIC = "epic"
     LEGENDARY = "legendary"
-
-
 class NFT(Base):
-
     __tablename__ = "nfts"
-
     id = Column(
         GUID(),
         primary_key=True,
@@ -42,7 +29,7 @@ class NFT(Base):
         unique=True,
         nullable=False,
     )
-    global_nft_id = Column(String(255), unique=True, nullable=False)  # unique=True creates index automatically
+    global_nft_id = Column(String(255), unique=True, nullable=False)
     user_id = Column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -80,22 +67,18 @@ class NFT(Base):
     image_url = Column(String(500), nullable=True)
     media_type = Column(String(50), nullable=True)
     royalty_percentage = Column(Integer, default=0, nullable=False)
-    
-    # Rarity and attributes
-    attributes = Column(JSON, nullable=True, default=dict)  # {trait_name: trait_value, ...}
-    rarity_score = Column(Float, nullable=True, default=None)  # 0-100 score
+    attributes = Column(JSON, nullable=True, default=dict)
+    rarity_score = Column(Float, nullable=True, default=None)
     rarity_tier = Column(
         Enum(RarityTier),
         nullable=True,
         default=None,
     )
-    
     nft_metadata = Column(JSON, nullable=True, default=dict)
     transaction_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     minted_at = Column(DateTime, nullable=True)
-
     __table_args__ = (
         Index("ix_nfts_user_blockchain", "user_id", "blockchain"),
         Index("ix_nfts_contract_token", "contract_address", "token_id"),
@@ -105,6 +88,5 @@ class NFT(Base):
         Index("ix_nfts_rarity_tier", "rarity_tier"),
         Index("ix_nfts_rarity_score", "rarity_score"),
     )
-
     def __repr__(self) -> str:
         return f"<NFT(id={self.id}, name={self.name}, blockchain={self.blockchain}, token_id={self.token_id})>"

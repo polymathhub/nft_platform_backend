@@ -25,19 +25,14 @@ from app.schemas.marketplace import (
     ListingOffersResponse,
     UserOrdersResponse,
 )
-
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
-
-
 @router.post("/listings", response_model=ListingResponse, status_code=status.HTTP_201_CREATED)
 async def create_listing(
     request: ListingRequest,
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> ListingResponse:
-    
-    """Create a new NFT listing."""
     listing, error = await MarketplaceService.create_listing(
         db=db,
         nft_id=request.nft_id,
@@ -50,26 +45,19 @@ async def create_listing(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-
     return ListingResponse.model_validate(listing)
-
-
 @router.post("/listings/{listing_id}/cancel", response_model=ListingResponse)
 async def cancel_listing(
     listing_id: UUID,
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> ListingResponse:
-    """Cancel an active listing."""
     listing, error = await MarketplaceService.cancel_listing(
         db=db, listing_id=listing_id, user_id=current_user.id
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-
     return ListingResponse.model_validate(listing)
-
-
 @router.get("/listings", response_model=ActiveListingsResponse)
 async def get_active_listings(
     skip: int = 0,
@@ -77,29 +65,22 @@ async def get_active_listings(
     blockchain: str | None = None,
     db: AsyncSession = Depends(get_db_session),
 ) -> ActiveListingsResponse:
-    """Get active listings."""
     listings, total = await MarketplaceService.get_active_listings(
         db=db, skip=skip, limit=limit, blockchain=blockchain
     )
-    
-    # Populate image_url and name from related NFTs
     items = []
     for listing in listings:
         resp = ListingResponse.model_validate(listing)
-        # Add NFT info from relationship
         if hasattr(listing, 'nft') and listing.nft:
             resp.name = listing.nft.name
             resp.image_url = listing.nft.image_url
         items.append(resp)
-    
     return ActiveListingsResponse(
         total=total,
         page=skip // limit + 1,
         per_page=limit,
         items=items,
     )
-
-
 @router.get("/listings/user", response_model=UserListingsResponse)
 async def get_user_listings(
     skip: int = 0,
@@ -107,29 +88,22 @@ async def get_user_listings(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> UserListingsResponse:
-    """Get user's listings."""
     listings, total = await MarketplaceService.get_user_listings(
         db=db, user_id=current_user.id, skip=skip, limit=limit
     )
-    
-    # Populate image_url and name from related NFTs
     items = []
     for listing in listings:
         resp = ListingResponse.model_validate(listing)
-        # Add NFT info from relationship
         if hasattr(listing, 'nft') and listing.nft:
             resp.name = listing.nft.name
             resp.image_url = listing.nft.image_url
         items.append(resp)
-    
     return UserListingsResponse(
         total=total,
         page=skip // limit + 1,
         per_page=limit,
         items=items,
     )
-
-
 @router.post("/listings/{listing_id}/buy", response_model=OrderResponse)
 async def buy_now(
     listing_id: UUID,
@@ -137,7 +111,6 @@ async def buy_now(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> OrderResponse:
-    """Instant buy at listing price."""
     order, error = await MarketplaceService.buy_now(
         db=db,
         listing_id=listing_id,
@@ -147,17 +120,13 @@ async def buy_now(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-
     return OrderResponse.model_validate(order)
-
-
 @router.post("/offers", response_model=OfferResponse, status_code=status.HTTP_201_CREATED)
 async def make_offer(
     request: OfferRequest,
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> OfferResponse:
-    """Make an offer on a listing."""
     offer, error = await MarketplaceService.make_offer(
         db=db,
         listing_id=request.listing_id,
@@ -169,10 +138,7 @@ async def make_offer(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-
     return OfferResponse.model_validate(offer)
-
-
 @router.post("/offers/{offer_id}/accept", response_model=OrderResponse)
 async def accept_offer(
     offer_id: UUID,
@@ -180,7 +146,6 @@ async def accept_offer(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> OrderResponse:
-    """Accept an offer and create an order."""
     order, error = await MarketplaceService.accept_offer(
         db=db,
         offer_id=offer_id,
@@ -189,10 +154,7 @@ async def accept_offer(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-
     return OrderResponse.model_validate(order)
-
-
 @router.get("/listings/{listing_id}/offers", response_model=ListingOffersResponse)
 async def get_listing_offers(
     listing_id: UUID,
@@ -200,7 +162,6 @@ async def get_listing_offers(
     limit: int = 50,
     db: AsyncSession = Depends(get_db_session),
 ) -> ListingOffersResponse:
-    """Get offers for a listing."""
     offers, total = await MarketplaceService.get_listing_offers(
         db=db, listing_id=listing_id, skip=skip, limit=limit
     )
@@ -210,25 +171,18 @@ async def get_listing_offers(
         per_page=limit,
         items=[OfferResponse.model_validate(o) for o in offers],
     )
-
-
 @router.get("/orders/{order_id}", response_model=OrderResponse)
 async def get_order(
     order_id: UUID,
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> OrderResponse:
-    """Get order details."""
     order = await MarketplaceService.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-
     if order.buyer_id != current_user.id and order.seller_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
-
     return OrderResponse.model_validate(order)
-
-
 @router.get("/orders", response_model=UserOrdersResponse)
 async def get_user_orders(
     skip: int = 0,
@@ -236,7 +190,6 @@ async def get_user_orders(
     db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user),
 ) -> UserOrdersResponse:
-    """Get user's buy/sell orders."""
     orders, total = await MarketplaceService.get_user_orders(
         db=db, user_id=current_user.id, skip=skip, limit=limit
     )
@@ -246,52 +199,39 @@ async def get_user_orders(
         per_page=limit,
         items=[OrderResponse.model_validate(o) for o in orders],
     )
-
 @router.get("/nfts/{nft_id}/valuation")
 async def get_nft_valuation(
     nft_id: UUID,
     db: AsyncSession = Depends(get_db_session),
 ):
     from app.schemas.collection import NFTValuation
-    
     valuation, error = await MarketplaceService.get_nft_valuation(db=db, nft_id=nft_id)
     if error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
-    
     return NFTValuation(**valuation)
-
-
 @router.get("/nfts/{nft_id}/price-suggestion")
 async def get_price_suggestion(
     nft_id: UUID,
     db: AsyncSession = Depends(get_db_session),
 ):
     from app.schemas.collection import PriceSuggestion
-    
     suggested_price, error = await MarketplaceService.get_price_suggestion(db=db, nft_id=nft_id)
     if error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
-    
     return PriceSuggestion(
         nft_id=str(nft_id),
         suggested_price=suggested_price,
     )
-
-
 @router.get("/collections/{collection_id}/stats")
 async def get_collection_stats(
     collection_id: UUID,
     db: AsyncSession = Depends(get_db_session),
 ):
     from app.schemas.collection import CollectionStats
-    
     stats, error = await MarketplaceService.get_collection_stats(db=db, collection_id=collection_id)
     if error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
-    
     return CollectionStats(**stats)
-
-
 @router.post("/collections", status_code=status.HTTP_201_CREATED)
 async def create_collection(
     request,
@@ -299,7 +239,6 @@ async def create_collection(
     current_user = Depends(get_current_user),
 ):
     from app.schemas.collection import CollectionCreate, CollectionResponse
-    
     collection, error = await MarketplaceService.create_collection(
         db=db,
         creator_id=current_user.id,
@@ -313,10 +252,7 @@ async def create_collection(
     )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-    
     return CollectionResponse.model_validate(collection)
-
-
 @router.get("/listings/rarity/{rarity_tier}")
 async def get_listings_by_rarity(
     rarity_tier: str,
@@ -328,7 +264,6 @@ async def get_listings_by_rarity(
 ):
     from app.models import RarityTier
     from app.schemas.collection import ListingWithRarity
-    
     try:
         tier = RarityTier(rarity_tier.lower())
     except ValueError:
@@ -336,7 +271,6 @@ async def get_listings_by_rarity(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid rarity tier. Must be: common, rare, epic, legendary"
         )
-    
     listings, total = await MarketplaceService.get_listings_by_rarity(
         db=db,
         collection_id=collection_id,
@@ -345,16 +279,12 @@ async def get_listings_by_rarity(
         skip=skip,
         limit=limit,
     )
-    
     return {
         "total": total,
         "page": skip // limit + 1,
         "per_page": limit,
         "items": [ListingWithRarity.model_validate(l) for l in listings],
     }
-
-
-
 @router.post("/escrows/{escrow_id}/release")
 async def release_escrow(
     escrow_id: UUID,
@@ -365,16 +295,12 @@ async def release_escrow(
     escrow = result.scalar_one_or_none()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow not found")
-
     if escrow.seller_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to release this escrow")
-
     released, err = await WalletService.release_escrow(db=db, escrow_id=escrow_id)
     if err:
         raise HTTPException(status_code=400, detail=err)
     return {"status": "released", "escrow_id": str(escrow_id)}
-
-
 @router.post("/escrows/{escrow_id}/refund")
 async def refund_escrow(
     escrow_id: UUID,
@@ -386,44 +312,33 @@ async def refund_escrow(
     escrow = result.scalar_one_or_none()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow not found")
-
     if escrow.buyer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to refund this escrow")
-
     refunded, err = await WalletService.refund_escrow(db=db, escrow_id=escrow_id, reason=reason)
     if err:
         raise HTTPException(status_code=400, detail=err)
     return {"status": "refunded", "escrow_id": str(escrow_id)}
-
-
 @router.post("/offers/{offer_id}/deposit")
 async def offer_deposit_info(
     offer_id: UUID,
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ):
-    # Return deposit address/instructions for buyer to send external funds
     result = await db.execute(select(Offer).where(Offer.id == offer_id))
     offer = result.scalar_one_or_none()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
-
     if offer.buyer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-
-    # Find listing to determine blockchain
     listing_res = await db.execute(select(Listing).where(Listing.id == offer.listing_id))
     listing = listing_res.scalar_one_or_none()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-
     settings = get_settings()
     platform_addr = settings.platform_wallets.get(listing.blockchain.lower()) if hasattr(settings, 'platform_wallets') else None
     if not platform_addr:
         raise HTTPException(status_code=500, detail="Platform wallet not configured for this blockchain")
-
     contract = USDTHelper.get_usdt_contract(listing.blockchain, settings)
-
     return {
         "deposit_address": platform_addr,
         "amount": float(offer.offer_price),
@@ -431,8 +346,6 @@ async def offer_deposit_info(
         "token_contract": contract,
         "instructions": "Send the exact amount of USDT from your external wallet to the deposit address. After sending, use /deposit-confirm <offer_id> <tx_hash> to confirm."
     }
-
-
 @router.post("/offers/{offer_id}/confirm-deposit")
 async def offer_confirm_deposit(
     offer_id: UUID,
@@ -440,21 +353,16 @@ async def offer_confirm_deposit(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ):
-    # Only buyer may confirm their deposit
     result = await db.execute(select(Offer).where(Offer.id == offer_id))
     offer = result.scalar_one_or_none()
     if not offer:
         raise HTTPException(status_code=404, detail="Offer not found")
-
     if offer.buyer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-
     escrow, err = await WalletService.verify_deposit_for_offer(db=db, offer_id=offer_id, tx_hash=tx_hash)
     if err:
         raise HTTPException(status_code=400, detail=err)
     return {"status": "held", "escrow_id": str(escrow.id)}
-
-
 @router.get("/listings/sorted-by-rarity")
 async def get_listings_sorted_by_rarity(
     collection_id: UUID | None = None,
@@ -464,13 +372,11 @@ async def get_listings_sorted_by_rarity(
     db: AsyncSession = Depends(get_db_session),
 ):
     from app.schemas.collection import ListingWithRarity
-    
     if sort_order.lower() not in ["asc", "desc"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="sort_order must be 'asc' or 'desc'"
         )
-    
     listings, total = await MarketplaceService.get_listings_sorted_by_rarity(
         db=db,
         collection_id=collection_id,
@@ -478,15 +384,12 @@ async def get_listings_sorted_by_rarity(
         skip=skip,
         limit=limit,
     )
-    
     return {
         "total": total,
         "page": skip // limit + 1,
         "per_page": limit,
         "items": [ListingWithRarity.model_validate(l) for l in listings],
     }
-
-
 @router.get("/listings/price-range")
 async def get_listings_by_price_range(
     min_price: float,
@@ -498,13 +401,11 @@ async def get_listings_by_price_range(
     db: AsyncSession = Depends(get_db_session),
 ):
     from app.schemas.marketplace import ListingResponse
-    
     if min_price > max_price:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="min_price must be less than or equal to max_price"
         )
-    
     listings, total = await MarketplaceService.get_listings_by_price_range(
         db=db,
         min_price=min_price,
@@ -514,15 +415,12 @@ async def get_listings_by_price_range(
         skip=skip,
         limit=limit,
     )
-    
     return {
         "total": total,
         "page": skip // limit + 1,
         "per_page": limit,
         "items": [ListingResponse.model_validate(l) for l in listings],
     }
-
-
 @router.get("/collections/{collection_id}/listings")
 async def get_collection_listings(
     collection_id: UUID,
@@ -531,14 +429,12 @@ async def get_collection_listings(
     db: AsyncSession = Depends(get_db_session),
 ):
     from app.schemas.collection import ListingWithRarity
-    
     listings, total = await MarketplaceService.get_collection_listings(
         db=db,
         collection_id=collection_id,
         skip=skip,
         limit=limit,
     )
-    
     return {
         "total": total,
         "page": skip // limit + 1,

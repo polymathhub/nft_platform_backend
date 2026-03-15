@@ -14,13 +14,10 @@ from app.utils.blockchain_utils import (
     BlockchainHelper,
     UnitType,
 )
-
 from  app.models.user import User
 from  app.models.wallet import Wallet
 from  app.models.nft import NFT
 from  app.models.collection import Collection
-
-
 __all__ = [
     "hash_password",
     "verify_password",

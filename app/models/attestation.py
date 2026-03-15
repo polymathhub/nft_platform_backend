@@ -4,26 +4,19 @@ import uuid
 from enum import Enum as PyEnum
 from app.database.base_class import Base
 from app.database.types import GUID
-
-
 class AttestationType(str, PyEnum):
     AUTHENTICITY = "authenticity"
     ROYALTY = "royalty"
     PROVENANCE = "provenance"
     RARITY = "rarity"
     VERIFICATION = "verification"
-
-
 class AttestationStatus(str, PyEnum):
     PENDING = "pending"
     VERIFIED = "verified"
     REJECTED = "rejected"
     EXPIRED = "expired"
-
-
 class Attestation(Base):
     __tablename__ = "attestations"
-
     id = Column(
         GUID(),
         primary_key=True,
@@ -57,10 +50,8 @@ class Attestation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     verified_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=True)
-
     __table_args__ = (
         Index("ix_attestations_type_status", "attestation_type", "status"),
     )
-
     def __repr__(self) -> str:
         return f"<Attestation(id={self.id}, nft_id={self.nft_id}, type={self.attestation_type}, status={self.status})>"

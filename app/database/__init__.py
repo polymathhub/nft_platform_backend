@@ -6,7 +6,6 @@ from app.database.connection import (
     AsyncSessionLocal,
     engine,
 )
-
 __all__ = [
     "init_db",
     "close_db",

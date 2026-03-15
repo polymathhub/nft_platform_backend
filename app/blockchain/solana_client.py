@@ -2,16 +2,12 @@ import logging
 import aiohttp
 from typing import Optional, Dict, Any, List
 from app.config import get_settings
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
 class SolanaClient:
     def __init__(self, rpc_url: str = settings.solana_rpc_url):
         self.rpc_url = rpc_url
         self.commitment = settings.solana_commitment
-
     async def get_wallet_balance(self, address: str) -> Optional[float]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -32,7 +28,6 @@ class SolanaClient:
         except Exception as e:
             logger.error(f"Solana balance query error: {e}")
             return None
-
     async def get_token_balance(
         self,
         token_account: str,
@@ -54,7 +49,6 @@ class SolanaClient:
         except Exception as e:
             logger.error(f"Solana token balance query error: {e}")
             return None
-
     async def get_transaction_status(
         self,
         transaction_hash: str,
@@ -76,7 +70,6 @@ class SolanaClient:
         except Exception as e:
             logger.error(f"Solana transaction query error: {e}")
             return None
-
     async def mint_nft(
         self,
         creator_address: str,
@@ -86,7 +79,6 @@ class SolanaClient:
             name = nft_metadata.get("name", "Untitled NFT")
             symbol = nft_metadata.get("symbol", "NFT")
             metadata_uri = nft_metadata.get("uri", "")
-            
             logger.info(
                 f"Solana NFT mint initiated - creator: {creator_address}, "
                 f"name: {name}, uri: {metadata_uri}"
@@ -102,7 +94,6 @@ class SolanaClient:
         except Exception as e:
             logger.error(f"Solana NFT mint error: {e}")
             return None
-
     async def transfer_nft(
         self,
         from_address: str,
@@ -114,18 +105,14 @@ class SolanaClient:
                 f"Solana NFT transfer requested - from: {from_address}, "
                 f"to: {to_address}, nft_mint: {nft_mint}"
             )
-            
             if not from_address or not to_address or not nft_mint:
                 logger.error("Transfer requires valid addresses and nft_mint")
                 return None
-            
             logger.warning("Solana transfer prepared (requires signing)")
             return None
-            
         except Exception as e:
             logger.error(f"Solana NFT transfer error: {e}", exc_info=True)
             return None
-
     async def get_nft_metadata(
         self,
         nft_mint: str,
@@ -147,7 +134,6 @@ class SolanaClient:
         except Exception as e:
             logger.error(f"Solana NFT metadata query error: {e}")
             return None
-
     async def get_recent_blockhash(self) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:

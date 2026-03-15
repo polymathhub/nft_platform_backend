@@ -14,7 +14,6 @@ from app.routers.dashboard_router import router as dashboard_router
 from app.routers.user_router import router as user_router
 from app.routers.ton_wallet_router import router as ton_wallet_router
 from app.routers.stars_marketplace_router import router as stars_marketplace_router
-
 __all__ = [
     "auth_router",
     "unified_auth_router",

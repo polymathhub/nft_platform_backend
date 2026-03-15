@@ -2,16 +2,12 @@ import logging
 import aiohttp
 from typing import Optional, Dict, Any
 from app.config import get_settings
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
 class TONClient:
     def __init__(self, rpc_url: str = settings.ton_rpc_url):
         self.rpc_url = rpc_url
         self.workchain = settings.ton_workchain
-
     async def get_wallet_balance(self, address: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -31,7 +27,6 @@ class TONClient:
         except Exception as e:
             logger.error(f"TON balance query error: {e}")
             return None
-
     async def get_transaction_status(
         self,
         transaction_hash: str,
@@ -53,7 +48,6 @@ class TONClient:
         except Exception as e:
             logger.error(f"TON transaction query error: {e}")
             return None
-
     async def mint_nft(
         self,
         owner_address: str,
@@ -63,12 +57,10 @@ class TONClient:
             name = nft_data.get("name", "Untitled NFT")
             description = nft_data.get("description", "")
             content_uri = nft_data.get("content_uri", "")
-            
             logger.info(
                 f"TON NFT mint initiated - owner: {owner_address}, "
                 f"name: {name}, uri: {content_uri}"
             )
-            
             return {
                 "status": "pending",
                 "owner_address": owner_address,
@@ -80,7 +72,6 @@ class TONClient:
         except Exception as e:
             logger.error(f"TON NFT mint error: {e}")
             return None
-
     async def transfer_nft(
         self,
         from_address: str,
@@ -92,17 +83,14 @@ class TONClient:
                 f"TON NFT transfer requested - from: {from_address}, "
                 f"to: {to_address}, nft: {nft_address}"
             )
-            
             if not from_address or not to_address or not nft_address:
                 logger.error("Transfer requires valid addresses")
                 return None
-            
             logger.warning("TON transfer prepared (requires signing)")
             return None
         except Exception as e:
             logger.error(f"TON NFT transfer error: {e}", exc_info=True)
             return None
-
     async def get_contract_code(self, address: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:

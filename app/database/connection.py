@@ -8,18 +8,11 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool, QueuePool
 from app.config import get_settings
 from app.database.base_class import Base
-
-# Global engine and session factory
 engine: AsyncEngine | None = None
 AsyncSessionLocal: async_sessionmaker | None = None
-
 async def init_db():
-    """
-    Initialize the async database engine and sessionmaker for PostgreSQL (asyncpg) or SQLite.
-    """
     global engine, AsyncSessionLocal
     settings = get_settings()
-
     if "postgresql" in settings.database_url or "postgres" in settings.database_url:
         engine = create_async_engine(
             settings.database_url,
@@ -36,23 +29,18 @@ async def init_db():
             echo=getattr(settings, "database_echo", False),
             poolclass=NullPool,
         )
-
     AsyncSessionLocal = async_sessionmaker(
         engine,
         class_=AsyncSession,
         expire_on_commit=False,
         autoflush=False,
     )
-
 async def close_db():
-    """Dispose the async engine (for shutdown/cleanup)."""
     global engine
     if engine:
         await engine.dispose()
     engine = None
-
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Yield an async SQLAlchemy session (use in FastAPI dependencies)."""
     if not AsyncSessionLocal:
         raise RuntimeError("Database not initialized. Call init_db() first.")
     async with AsyncSessionLocal() as session:
@@ -64,11 +52,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
-
-get_db = get_db_session  # Alias for FastAPI dependencies
-
+get_db = get_db_session
 async def create_tables_if_missing():
-    """Create all tables if they do not exist (useful for first deploy or dev)."""
     if not engine:
         raise RuntimeError("Engine not initialized. Call init_db() first.")
     async with engine.begin() as conn:
@@ -82,17 +67,11 @@ async def create_tables_if_missing():
         from sqlalchemy.pool import NullPool, QueuePool
         from app.config import get_settings
         from app.database.base_class import Base
-
         engine: AsyncEngine | None = None
         AsyncSessionLocal: async_sessionmaker | None = None
-
         async def init_db():
-            """
-            Initialize the async database engine and sessionmaker for PostgreSQL (asyncpg) or SQLite.
-            """
             global engine, AsyncSessionLocal
             settings = get_settings()
-
             if "postgresql" in settings.database_url or "postgres" in settings.database_url:
                 engine = create_async_engine(
                     settings.database_url,
@@ -109,23 +88,18 @@ async def create_tables_if_missing():
                     echo=getattr(settings, "database_echo", False),
                     poolclass=NullPool,
                 )
-
             AsyncSessionLocal = async_sessionmaker(
                 engine,
                 class_=AsyncSession,
                 expire_on_commit=False,
                 autoflush=False,
             )
-
         async def close_db():
-            """Dispose the async engine (for shutdown/cleanup)."""
             global engine
             if engine:
                 await engine.dispose()
             engine = None
-
         async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-            """Yield an async SQLAlchemy session (use in FastAPI dependencies)."""
             if not AsyncSessionLocal:
                 raise RuntimeError("Database not initialized. Call init_db() first.")
             async with AsyncSessionLocal() as session:
@@ -137,11 +111,8 @@ async def create_tables_if_missing():
                     raise
                 finally:
                     await session.close()
-
-        get_db = get_db_session  # Alias for FastAPI dependencies
-
+        get_db = get_db_session
         async def create_tables_if_missing():
-            """Create all tables if they do not exist (useful for first deploy or dev)."""
             if not engine:
                 raise RuntimeError("Engine not initialized. Call init_db() first.")
             async with engine.begin() as conn:

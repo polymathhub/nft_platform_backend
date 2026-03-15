@@ -4,11 +4,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 from app.config import get_settings
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
 class RequestBodyCachingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         if request.method in ["POST", "PUT", "PATCH"]:
@@ -24,27 +21,20 @@ class RequestBodyCachingMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 logger.error(f"Error reading request body: {e}")
                 request.state.body = b""
-        
         response = await call_next(request)
         return response
-
-
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
-        
         if request.url.path.startswith("/webapp"):
             response.headers["X-Frame-Options"] = "SAMEORIGIN"
         else:
             response.headers["X-Frame-Options"] = "DENY"
-        
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
         if not settings.debug:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
-        
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://telegram.org https://*.telegram.org; "
@@ -56,7 +46,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'; "
             "form-action 'self'"
         )
-        
         if request.url.path.startswith("/api/"):
             if request.method == "GET":
                 if any(path in request.url.path for path in [
@@ -73,35 +62,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
                 response.headers["Pragma"] = "no-cache"
                 response.headers["Expires"] = "0"
-        
         return response
-
-
 class RelaxedSecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """A relaxed set of security headers suitable for hosting inside
-    Telegram Web Apps and similar in-app browsers.
-
-    Intended for use in production where we still want basic protections
-    but must allow script/style loading from known CDNs and Telegram.
-    """
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
-
-        # Allow Telegram webapp frames and same-origin framing for our webapp
         if request.url.path.startswith("/webapp"):
             response.headers["X-Frame-Options"] = "SAMEORIGIN"
         else:
             response.headers["X-Frame-Options"] = "ALLOW-FROM https://telegram.org"
-
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-
-        # HSTS kept but only when not debugging
         if settings.require_https and not settings.debug:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-
-        # Relaxed CSP: permit Telegram, common CDNs, and our own origin
         csp = (
             "default-src 'self' https:; "
             "script-src 'self' 'unsafe-inline' https://*.telegram.org https://telegram.org https://unpkg.com https://cdn.jsdelivr.net https://cdn.jsdelivr.net; "
@@ -112,16 +85,10 @@ class RelaxedSecurityHeadersMiddleware(BaseHTTPMiddleware):
             "frame-ancestors 'self' https://*.telegram.org; "
             "base-uri 'self'; form-action 'self'"
         )
-
         response.headers["Content-Security-Policy"] = csp
-
-        # Minimal caching guidance for API GETs
         if request.url.path.startswith("/api/") and request.method == "GET":
             response.headers["Cache-Control"] = "public, max-age=60"
-
         return response
-
-
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         if request.method in ["POST", "PUT", "PATCH"]:
@@ -132,10 +99,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
                     status_code=413,
                     media_type="application/json"
                 )
-        
         return await call_next(request)
-
-
 class HTTPSEnforcementMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         if settings.require_https and not settings.debug:
@@ -147,13 +111,9 @@ class HTTPSEnforcementMiddleware(BaseHTTPMiddleware):
                         status_code=403,
                         media_type="application/json"
                     )
-        
         return await call_next(request)
-
-
 class DirectoryListingBlockMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
-        # Block directory listing attempts on static paths
         if request.url.path.startswith("/webapp/static"):
             path = request.url.path
             if path.endswith("/"):
@@ -162,6 +122,5 @@ class DirectoryListingBlockMiddleware(BaseHTTPMiddleware):
                     content={"detail": "Not found"},
                     status_code=404
                 )
-        
         response = await call_next(request)
         return response

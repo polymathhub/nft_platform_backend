@@ -1,8 +1,6 @@
-"""Test PostgreSQL connection"""
 import asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
-
 async def test():
     url = 'postgresql+asyncpg://nft_user:GiftedForge@localhost:5432/nft_db'
     print(f'Testing connection...')
@@ -10,7 +8,6 @@ async def test():
     print(f'User: nft_user')
     print(f'Database: nft_db')
     print()
-    
     try:
         engine = create_async_engine(url, echo=False)
         async with engine.begin() as conn:
@@ -26,5 +23,4 @@ async def test():
         import traceback
         print('\nFull traceback:')
         traceback.print_exc()
-
 asyncio.run(test())

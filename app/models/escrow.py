@@ -4,19 +4,14 @@ import uuid
 from enum import Enum as PyEnum
 from app.database.base_class import Base
 from app.database.types import GUID
-
-
 class EscrowStatus(str, PyEnum):
     PENDING = "pending"
     HELD = "held"
     RELEASED = "released"
     REFUNDED = "refunded"
     DISPUTED = "disputed"
-
-
 class Escrow(Base):
     __tablename__ = "escrows"
-
     id = Column(
         GUID(),
         primary_key=True,
@@ -37,6 +32,5 @@ class Escrow(Base):
     tx_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
     def __repr__(self) -> str:
         return f"<Escrow(id={self.id}, offer_id={self.offer_id}, amount={self.amount}, status={self.status})>"

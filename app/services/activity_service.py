@@ -1,23 +1,12 @@
-"""
-Activity Logging Service - Centralized activity tracking.
-All operations log to ActivityLog for audit trail and user history.
-"""
-
 import logging
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import insert
-
 from app.models.activity import ActivityLog, ActivityType
-
 logger = logging.getLogger(__name__)
-
-
 class ActivityService:
-    """Service for logging user activities to audit trail."""
-
     @staticmethod
     async def log_activity(
         db: AsyncSession,
@@ -34,27 +23,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """
-        Log an activity for a user.
-        
-        Args:
-            db: Database session
-            user_id: UUID of the user
-            activity_type: Type of activity (from ActivityType enum)
-            description: Human-readable description
-            resource_type: Type of resource affected (wallet, nft, listing, etc.)
-            resource_id: ID of the resource affected
-            metadata: Additional context as dict
-            ip_address: Client IP address
-            user_agent: Client user agent
-            status: success/failed/pending
-            error_message: Error message if failed
-            telegram_id: User's Telegram ID (for logging)
-            telegram_username: User's Telegram username (for identification)
-        
-        Returns:
-            Created ActivityLog object
-        """
         try:
             activity = ActivityLog(
                 user_id=user_id,
@@ -71,24 +39,18 @@ class ActivityService:
                 error_message=error_message,
                 timestamp=datetime.utcnow(),
             )
-            
             db.add(activity)
-            await db.flush()  # Flush to get the ID without committing
-            
+            await db.flush()
             logger.info(
                 f"Activity logged: user={telegram_username or user_id} "
                 f"action={activity_type.value} "
                 f"resource={resource_type}/{resource_id} "
                 f"status={status}"
             )
-            
             return activity
-        
         except Exception as e:
             logger.error(f"Failed to log activity: {e}", exc_info=True)
-            # Don't raise - logging failures shouldn't break operations
             return None
-
     @staticmethod
     async def log_wallet_created(
         db: AsyncSession,
@@ -99,7 +61,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """Log wallet creation."""
         return await ActivityService.log_activity(
             db=db,
             user_id=user_id,
@@ -111,7 +72,6 @@ class ActivityService:
             telegram_id=telegram_id,
             telegram_username=telegram_username,
         )
-
     @staticmethod
     async def log_wallet_imported(
         db: AsyncSession,
@@ -122,7 +82,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """Log wallet import."""
         return await ActivityService.log_activity(
             db=db,
             user_id=user_id,
@@ -134,7 +93,6 @@ class ActivityService:
             telegram_id=telegram_id,
             telegram_username=telegram_username,
         )
-
     @staticmethod
     async def log_wallet_set_primary(
         db: AsyncSession,
@@ -144,7 +102,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """Log setting wallet as primary."""
         return await ActivityService.log_activity(
             db=db,
             user_id=user_id,
@@ -156,7 +113,6 @@ class ActivityService:
             telegram_id=telegram_id,
             telegram_username=telegram_username,
         )
-
     @staticmethod
     async def log_nft_minted(
         db: AsyncSession,
@@ -167,7 +123,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """Log NFT minting."""
         return await ActivityService.log_activity(
             db=db,
             user_id=user_id,
@@ -179,7 +134,6 @@ class ActivityService:
             telegram_id=telegram_id,
             telegram_username=telegram_username,
         )
-
     @staticmethod
     async def log_nft_listed(
         db: AsyncSession,
@@ -191,7 +145,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """Log NFT listing."""
         return await ActivityService.log_activity(
             db=db,
             user_id=user_id,
@@ -203,7 +156,6 @@ class ActivityService:
             telegram_id=telegram_id,
             telegram_username=telegram_username,
         )
-
     @staticmethod
     async def log_error(
         db: AsyncSession,
@@ -216,7 +168,6 @@ class ActivityService:
         telegram_id: str = None,
         telegram_username: str = None,
     ) -> ActivityLog:
-        """Log activity failure."""
         return await ActivityService.log_activity(
             db=db,
             user_id=user_id,

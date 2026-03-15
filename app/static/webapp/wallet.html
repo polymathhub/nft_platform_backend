@@ -596,6 +596,11 @@
 
   </style>
     <link rel="stylesheet" href="navbar.css?v=2.7">
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- TON Connect UI Styles -->
+    <script src="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.css" rel="stylesheet" />
 </head>
 <body>
   <!-- TOP HEADER -->
@@ -738,12 +743,12 @@
     <div class="wallet-card">
       <div class="wallet-header">
         <div class="network-selector">
-          <span class="network-name">Solana</span>
+          <span class="network-name" id="ton-network">TON</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </div>
-        <button class="wallet-menu-btn">
+        <button class="wallet-menu-btn" id="tonWalletMenuBtn">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="12" cy="5" r="2"></circle>
             <circle cx="12" cy="12" r="2"></circle>
@@ -752,14 +757,14 @@
         </button>
       </div>
       <div class="wallet-content">
-        <div class="wallet-label">Total Balance</div>
+        <div class="wallet-label">TON Wallet Balance</div>
         <div class="wallet-balance-row">
-          <div class="wallet-amount" id="wallet-balance">$12,40.50</div>
-          <span class="wallet-change positive">+2.4%</span>
+          <div class="wallet-amount" id="ton-balance">0 TON</div>
+          <span class="wallet-change positive" id="ton-change" style="display: none;">+2.4%</span>
         </div>
-        <div class="wallet-address" id="wallet-address">
-          <span>8xGd...2Fpl</span>
-          <button class="wallet-address-copy" onclick="copyAddress()" title="Copy address">
+        <div class="wallet-address" id="ton-wallet-display" style="display: none;">
+          <span id="ton-address-short">Not Connected</span>
+          <button class="wallet-address-copy" id="ton-copy-btn" onclick="window.tonWallet && window.tonWallet.copyAddress()" title="Copy address">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
               <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
@@ -767,8 +772,8 @@
           </button>
         </div>
         <div class="wallet-actions">
-          <button class="wallet-action-btn primary" onclick="alert('Deposit coming soon')">Deposit</button>
-          <button class="wallet-action-btn secondary" onclick="alert('Withdraw coming soon')">Withdraw</button>
+          <button class="wallet-action-btn primary" id="ton-connect-btn" onclick="window.tonWallet && window.tonWallet.connectWallet()">Connect Wallet</button>
+          <button class="wallet-action-btn secondary" id="ton-disconnect-btn" onclick="window.tonWallet && window.tonWallet.disconnectWallet()" style="display: none;">Disconnect</button>
         </div>
       </div>
     </div>
@@ -854,9 +859,135 @@
   <script type="module">
     import { auth } from './js/auth.js';
     import { api, endpoints } from './js/api.js';
+    import { tonConnect } from './js/tonconnect.js';
 
-    // Wallet Manager - Handles wallet data fetching and UI updates
-    class WalletManager {
+    // ========== TON WALLET INTEGRATION ==========
+    class TONWalletUI {
+      constructor() {
+        this.tonConnect = tonConnect;
+        this.fullAddress = null;
+        this.init();
+      }
+
+      async init() {
+        try {
+          // Initialize TON Connect
+          const initialized = await this.tonConnect.initialize();
+          
+          if (initialized && this.tonConnect.isConnected()) {
+            // Wallet was already connected in previous session
+            this.updateUI();
+          } else {
+            // Show connect button
+            this.showConnectButton();
+          }
+
+          // Listen for wallet changes
+          this.tonConnect.on('wallet:connected', (data) => {
+            this.fullAddress = data.wallet.account.address;
+            this.updateUI();
+          });
+
+          this.tonConnect.on('wallet:disconnected', () => {
+            this.fullAddress = null;
+            this.showConnectButton();
+          });
+        } catch (error) {
+          console.error('Failed to initialize TON Wallet UI:', error);
+          this.showConnectButton();
+        }
+      }
+
+      async connectWallet() {
+        try {
+          const result = await this.tonConnect.openModal();
+          if (result && result.account) {
+            this.fullAddress = result.account.address;
+            this.updateUI();
+          }
+        } catch (error) {
+          console.error('Failed to connect wallet:', error);
+          this.showError('Failed to connect wallet. Please try again.');
+        }
+      }
+
+      async disconnectWallet() {
+        try {
+          await this.tonConnect.disconnect();
+          this.fullAddress = null;
+          this.showConnectButton();
+        } catch (error) {
+          console.error('Failed to disconnect wallet:', error);
+          this.showError('Failed to disconnect wallet.');
+        }
+      }
+
+      copyAddress() {
+        if (!this.fullAddress) return;
+        
+        navigator.clipboard.writeText(this.fullAddress).then(() => {
+          const btn = document.getElementById('ton-copy-btn');
+          if (btn) {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+            }, 1500);
+          }
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+        });
+      }
+
+      updateUI() {
+        // Show wallet info
+        const display = document.getElementById('ton-wallet-display');
+        const connectBtn = document.getElementById('ton-connect-btn');
+        const disconnectBtn = document.getElementById('ton-disconnect-btn');
+        const shortAddr = document.getElementById('ton-address-short');
+        const balanceEl = document.getElementById('ton-balance');
+
+        if (this.fullAddress) {
+          // Show connected state
+          shortAddr.textContent = this.getShortAddress(this.fullAddress);
+          display.style.display = 'flex';
+          connectBtn.style.display = 'none';
+          disconnectBtn.style.display = 'block';
+          
+          // TODO: Fetch real balance from API if available
+          balanceEl.textContent = '0 TON';
+        } else {
+          this.showConnectButton();
+        }
+      }
+
+      showConnectButton() {
+        const display = document.getElementById('ton-wallet-display');
+        const connectBtn = document.getElementById('ton-connect-btn');
+        const disconnectBtn = document.getElementById('ton-disconnect-btn');
+        const balanceEl = document.getElementById('ton-balance');
+
+        display.style.display = 'none';
+        connectBtn.style.display = 'block';
+        disconnectBtn.style.display = 'none';
+        balanceEl.textContent = '0 TON';
+      }
+
+      getShortAddress(address) {
+        if (!address || address.length < 10) return address;
+        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+      }
+
+      showError(message) {
+        // Show toast or alert
+        alert(message);
+      }
+    }
+
+    // Make available globally for onclick handlers
+    window.tonWallet = new TONWalletUI();
+
+    // ========== ORIGINAL WALLET MANAGER CODE ==========
       constructor(api, endpoints) {
         this.api = api;
         this.endpoints = endpoints;

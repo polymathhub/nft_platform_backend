@@ -1,11 +1,7 @@
 import logging
 import logging.config
 import sys
-
-#  CRITICAL: Create logger IMMEDIATELY without dependencies 
 logger = logging.getLogger("app")
-
-# Minimal bootstrap handler to stdout - used until configure_logging() is called
 _bootstrap_handler = logging.StreamHandler(sys.stdout)
 _bootstrap_handler.setLevel(logging.DEBUG)
 _bootstrap_formatter = logging.Formatter(
@@ -14,22 +10,9 @@ _bootstrap_formatter = logging.Formatter(
 _bootstrap_handler.setFormatter(_bootstrap_formatter)
 logger.addHandler(_bootstrap_handler)
 logger.setLevel(logging.DEBUG)
-
-
 def get_logger(name: str) -> logging.Logger:
-    """Get a logger instance by name.
-    
-    Safe to call at any time, even before configure_logging().
-    """
     return logging.getLogger(name)
-
-
 def configure_logging():
-    """Configure detailed logging when settings are available.
-    
-    This is called AFTER app.config is successfully loaded.
-    Uses Railway-safe stdout/stderr handlers for container environments.
-    """
     try:
         from app.config import get_settings
         settings = get_settings()
@@ -39,8 +22,6 @@ def configure_logging():
             "Using bootstrap configuration."
         )
         return
-
-    # Build dynamic config with loaded settings
     config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -72,8 +53,6 @@ def configure_logging():
             },
         },
     }
-
-    # Only add file handler if not running in production/container environment
     environment = getattr(settings, "environment", "development")
     if environment != "production":
         config["handlers"]["file"] = {
@@ -86,5 +65,4 @@ def configure_logging():
         }
         config["root"]["handlers"].append("file")
         config["loggers"]["app"]["handlers"].append("file")
-
     logging.config.dictConfig(config)

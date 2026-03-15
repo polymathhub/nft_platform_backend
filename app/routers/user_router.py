@@ -1,8 +1,3 @@
-"""
-User endpoints - Compatibility layer for web app.
-Provides user profile and data endpoints for frontend applications.
-"""
-
 import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,26 +5,20 @@ from app.database import get_db_session
 from app.models import User
 from app.schemas.user import UserResponse
 from app.utils.auth import get_current_user
-
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/user", tags=["user"])
-
-
 @router.get("/profile", response_model=dict, summary="Get User Profile")
 async def get_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ):
-    """
     Get current user profile with all user data.
-    
     Used by web app to fetch user information including:
     - username
     - email
     - avatar_url (profile picture)
     - user_id
     - telegram information if authenticated
-    
     Returns:
     {
         "success": true,
@@ -43,20 +32,13 @@ async def get_profile(
             ...
         }
     }
-    """
     return {
         "success": True,
         "data": UserResponse.model_validate(current_user),
         "message": "User profile retrieved successfully"
     }
-
-
 @router.get("/info", response_model=dict, summary="Get User Info")
 async def get_user_info(current_user: User = Depends(get_current_user)):
-    """
-    Get basic user information.
-    Simplified version of profile endpoint.
-    """
     return {
         "success": True,
         "data": {

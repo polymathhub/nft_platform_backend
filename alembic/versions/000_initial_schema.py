@@ -1,33 +1,11 @@
-"""Initial schema - create base tables.
-
-Revision ID: 000_initial_schema
-Revises: None
-Create Date: 2026-02-13 00:00:00.000000
-
-This migration creates all base tables needed for the application:
-- users
-- wallets
-- transactions
-- listings
-- offers
-- orders
-"""
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-
-# revision identifiers, used by Alembic.
 revision = '000_initial_schema'
 down_revision = None
 branch_labels = None
 depends_on = None
-
-
 def upgrade() -> None:
-    """Create all base tables."""
-    # Use SQLAlchemy table creation for portability across dialects
-    # Users
     op.create_table(
         'users',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -47,8 +25,6 @@ def upgrade() -> None:
     )
     op.create_index('ix_users_is_active', 'users', ['is_active'], unique=False)
     op.create_index('ix_users_username_active', 'users', ['username', 'is_active'], unique=False)
-
-    # Wallets
     op.create_table(
         'wallets',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -68,8 +44,6 @@ def upgrade() -> None:
     op.create_index('ix_wallets_user_id', 'wallets', ['user_id'], unique=False)
     op.create_index('ix_wallets_user_blockchain', 'wallets', ['user_id', 'blockchain'], unique=False)
     op.create_index('ix_wallets_address', 'wallets', ['address'], unique=False)
-
-    # NFTs
     op.create_table(
         'nfts',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -102,8 +76,6 @@ def upgrade() -> None:
     op.create_index('ix_nfts_name', 'nfts', ['name'], unique=False)
     op.create_index('ix_nfts_status', 'nfts', ['status'], unique=False)
     op.create_index('ix_nfts_token_id', 'nfts', ['token_id'], unique=False)
-
-    # Transactions
     op.create_table(
         'transactions',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -126,8 +98,6 @@ def upgrade() -> None:
     op.create_index('ix_transactions_user_id', 'transactions', ['user_id'], unique=False)
     op.create_index('ix_transactions_tx_hash', 'transactions', ['tx_hash'], unique=False)
     op.create_index('ix_transactions_status', 'transactions', ['status'], unique=False)
-
-    # Listings
     op.create_table(
         'listings',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -147,8 +117,6 @@ def upgrade() -> None:
     op.create_index('ix_listings_seller_id', 'listings', ['seller_id'], unique=False)
     op.create_index('ix_listings_status', 'listings', ['status'], unique=False)
     op.create_index('ix_listings_blockchain', 'listings', ['blockchain'], unique=False)
-
-    # Offers
     op.create_table(
         'offers',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -166,8 +134,6 @@ def upgrade() -> None:
     op.create_index('ix_offers_nft_id', 'offers', ['nft_id'], unique=False)
     op.create_index('ix_offers_buyer_id', 'offers', ['buyer_id'], unique=False)
     op.create_index('ix_offers_status', 'offers', ['status'], unique=False)
-
-    # Orders
     op.create_table(
         'orders',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -186,11 +152,7 @@ def upgrade() -> None:
     op.create_index('ix_orders_buyer_id', 'orders', ['buyer_id'], unique=False)
     op.create_index('ix_orders_seller_id', 'orders', ['seller_id'], unique=False)
     op.create_index('ix_orders_status', 'orders', ['status'], unique=False)
-
-
 def downgrade() -> None:
-    """Drop all base tables."""
-    # Drop in reverse order of dependencies
     op.drop_table('orders')
     op.drop_table('offers')
     op.drop_table('listings')

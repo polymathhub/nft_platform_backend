@@ -13,14 +13,9 @@ from app.utils.security import (
     decode_token,
 )
 from app.config import get_settings
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
 class AuthService:
-    """Service for authentication operations."""
-
     @staticmethod
     async def register_user(
         db: AsyncSession,
@@ -34,7 +29,6 @@ class AuthService:
         )
         if existing_user.scalar_one_or_none():
             return None, "User with this email or username already exists"
-
         new_user = User(
             email=email,
             username=username,
@@ -45,7 +39,6 @@ class AuthService:
         await db.commit()
         await db.refresh(new_user)
         return new_user, None
-
     @staticmethod
     async def authenticate_user(
         db: AsyncSession,
@@ -54,15 +47,11 @@ class AuthService:
     ) -> Tuple[Optional[User], Optional[str]]:
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
-
         if not user or not verify_password(password, user.hashed_password):
             return None, "Invalid email or password"
-
         if not user.is_active:
             return None, "User account is disabled"
-
         return user, None
-
     @staticmethod
     async def authenticate_telegram(
         db: AsyncSession,
@@ -75,16 +64,13 @@ class AuthService:
             select(User).where(User.telegram_id == str(telegram_id))
         )
         user = result.scalar_one_or_none()
-
         if user:
             if not user.is_active:
                 return None, "User account is disabled"
             return user, None
-
         email = f"telegram_{telegram_id}@nftplatform.local"
         username = telegram_username or f"user_{telegram_id}"
         full_name = f"{first_name or ''} {last_name or ''}".strip()
-
         counter = 1
         original_username = username
         while True:
@@ -95,7 +81,6 @@ class AuthService:
                 break
             username = f"{original_username}_{counter}"
             counter += 1
-
         new_user = User(
             email=email,
             username=username,
@@ -109,7 +94,6 @@ class AuthService:
         await db.commit()
         await db.refresh(new_user)
         return new_user, None
-
     @staticmethod
     def generate_tokens(user_id: UUID) -> dict:
         access_token = create_access_token(
@@ -130,7 +114,6 @@ class AuthService:
             "token_type": "bearer",
             "expires_in": settings.jwt_expiration_hours * 3600,
         }
-
     @staticmethod
     def verify_token(token: str) -> Optional[UUID]:
         payload = decode_token(
@@ -144,7 +127,6 @@ class AuthService:
             except (ValueError, TypeError):
                 return None
         return None
-
     @staticmethod
     async def refresh_access_token(
         db: AsyncSession,
@@ -157,17 +139,14 @@ class AuthService:
         )
         if not payload or payload.get("type") != "refresh":
             return None, "Invalid refresh token"
-
         try:
             user_id = UUID(payload.get("sub"))
         except (ValueError, TypeError):
             return None, "Invalid token payload"
-
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user or not user.is_active:
             return None, "User not found or inactive"
-
         new_access_token = create_access_token(
             subject=user_id,
             expires_delta=timedelta(hours=settings.jwt_expiration_hours),

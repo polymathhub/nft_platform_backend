@@ -1,23 +1,11 @@
-"""Add payments table for deposits and withdrawals.
-
-Revision ID: 006_add_payments_table
-Revises: 005_normalize_userrole_enum
-Create Date: 2026-02-17 00:00:00.000000
-
-"""
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-
-# revision identifiers, used by Alembic.
 revision = '006_add_payments_table'
 down_revision = '005_normalize_userrole_enum'
 branch_labels = None
 depends_on = None
-
-
 def upgrade() -> None:
-    """Create payments table for tracking deposits and withdrawals."""
     op.create_table(
         'payments',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
@@ -41,15 +29,10 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['wallet_id'], ['wallets.id']),
     )
-    
-    # Create indexes
     op.create_index('ix_payments_user_type_status', 'payments', ['user_id', 'payment_type', 'status'])
     op.create_index('ix_payments_wallet_type', 'payments', ['wallet_id', 'payment_type'])
     op.create_index('ix_payments_blockchain_hash', 'payments', ['blockchain', 'transaction_hash'])
-
-
 def downgrade() -> None:
-    """Drop payments table."""
     op.drop_index('ix_payments_blockchain_hash', 'payments')
     op.drop_index('ix_payments_wallet_type', 'payments')
     op.drop_index('ix_payments_user_type_status', 'payments')

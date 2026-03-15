@@ -2,18 +2,13 @@ import logging
 import aiohttp
 from typing import Optional, Dict, Any, List
 from app.config import get_settings
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
 class BitcoinClient:
     def __init__(self, rpc_url: str = settings.bitcoin_rpc_url):
         self.rpc_url = rpc_url
         self.base_url = rpc_url.rstrip("/")
-
     async def get_address_balance(self, address: str) -> Optional[Dict[str, Any]]:
-        # Get address balance and tx data
         try:
             async with aiohttp.ClientSession() as session:
                 url = f"{self.base_url}/address/{address}"
@@ -34,9 +29,7 @@ class BitcoinClient:
         except Exception as e:
             logger.error(f"Bitcoin address query error: {e}")
             return None
-
     async def get_address_utxos(self, address: str) -> Optional[List[Dict[str, Any]]]:
-        # Get unspent transaction outputs
         try:
             async with aiohttp.ClientSession() as session:
                 url = f"{self.base_url}/address/{address}/utxo"
@@ -49,7 +42,6 @@ class BitcoinClient:
         except Exception as e:
             logger.error(f"Bitcoin UTXO query error: {e}")
             return None
-
     async def get_transaction(self, tx_id: str) -> Optional[Dict[str, Any]]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -77,7 +69,6 @@ class BitcoinClient:
         except Exception as e:
             logger.error(f"Bitcoin transaction query error: {e}")
             return None
-
     async def broadcast_transaction(self, tx_hex: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -92,7 +83,6 @@ class BitcoinClient:
         except Exception as e:
             logger.error(f"Bitcoin broadcast error: {e}")
             return None
-
     async def get_fees(self) -> Optional[Dict[str, float]]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -100,12 +90,10 @@ class BitcoinClient:
                 async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
                     if response.status == 200:
                         fees = await response.json()
-
-                        # where key is confirmation count
                         return {
-                            "fast": fees.get("1", 50),      # 1 block confirmation
-                            "normal": fees.get("3", 30),    # 3 block confirmations
-                            "slow": fees.get("6", 20),      # 6 block confirmations
+                            "fast": fees.get("1", 50),
+                            "normal": fees.get("3", 30),
+                            "slow": fees.get("6", 20),
                         }
                     else:
                         logger.error(f"Bitcoin fees API error: HTTP {response.status}")
@@ -113,7 +101,6 @@ class BitcoinClient:
         except Exception as e:
             logger.error(f"Bitcoin fees query error: {e}")
             return None
-
     async def get_block_height(self) -> Optional[int]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -127,7 +114,6 @@ class BitcoinClient:
         except Exception as e:
             logger.error(f"Bitcoin block height query error: {e}")
             return None
-
     async def get_mempool_stats(self) -> Optional[Dict[str, Any]]:
         try:
             async with aiohttp.ClientSession() as session:

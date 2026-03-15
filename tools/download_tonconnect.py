@@ -1,13 +1,8 @@
-"""Simple script to attempt fetching TonConnect dist files from CDN and save locally as fallback.
-Usage: python tools/download_tonconnect.py
-"""
 import os
 import urllib.request
-
 CDN_BASE = 'https://unpkg.com/@tonconnect/ui@latest/dist/'
 TARGET_DIR = os.path.join('app', 'static', 'vendor', 'tonconnect')
 FILES = ['tonconnect-ui.js', 'tonconnect-ui.css']
-
 os.makedirs(TARGET_DIR, exist_ok=True)
 for f in FILES:
     url = CDN_BASE + f

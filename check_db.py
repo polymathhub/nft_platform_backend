@@ -1,13 +1,8 @@
-"""
-Check and setup PostgreSQL for NFT Platform Backend
-"""
 import asyncio
 import asyncpg
 import sys
-
 async def main():
     try:
-        # Connect as postgres user (no password prompt if using peer auth or trust)
         print("[1/4] Connecting to PostgreSQL...")
         conn = await asyncpg.connect(
             host='localhost',
@@ -16,14 +11,11 @@ async def main():
             database='postgres'
         )
         print("✓ PostgreSQL connection successful")
-        
-        # Check if nft_user exists
         print("\n[2/4] Checking for nft_user...")
         user_exists = await conn.fetchval(
             "SELECT 1 FROM pg_user WHERE usename = $1",
             'nft_user'
         )
-        
         if user_exists:
             print("✓ User nft_user exists")
         else:
@@ -36,14 +28,11 @@ async def main():
                 print("✓ User nft_user created")
             except Exception as e:
                 print(f"  Error creating user: {e}")
-        
-        # Check if nft_db database exists
         print("\n[3/4] Checking for nft_db database...")
         db_exists = await conn.fetchval(
             "SELECT 1 FROM pg_database WHERE datname = $1",
             'nft_db'
         )
-        
         if db_exists:
             print("✓ Database nft_db exists")
         else:
@@ -56,10 +45,7 @@ async def main():
                 print("✓ Database nft_db created")
             except Exception as e:
                 print(f"  Error creating database: {e}")
-        
         await conn.close()
-        
-        # Try to connect as nft_user
         print("\n[4/4] Testing connection as nft_user...")
         try:
             nft_conn = await asyncpg.connect(
@@ -82,7 +68,6 @@ async def main():
         except asyncpg.PostgresError as e:
             print(f"✗ PostgreSQL Error: {e}")
             return 1
-            
     except ConnectionRefusedError:
         print("✗ Cannot connect to PostgreSQL on localhost:5432")
         print("  Is PostgreSQL running?")
@@ -97,7 +82,6 @@ async def main():
         import traceback
         traceback.print_exc()
         return 1
-
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
     sys.exit(exit_code)

@@ -4,20 +4,14 @@ import logging
 from typing import Optional
 from app.config import get_settings
 import re
-
 MAX_METADATA_SIZE = 1024 * 1024
 MAX_FIELD_LENGTH = 1000
-
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
 class IPFSClient:
-
     def __init__(self, api_url: str = settings.ipfs_api_url, gateway_url: str = settings.ipfs_gateway_url):
         self.api_url = api_url
         self.gateway_url = gateway_url
-
     async def upload_file(self, file_data: bytes, filename: str) -> Optional[str]:
         try:
             async with aiohttp.ClientSession() as session:
@@ -41,7 +35,6 @@ class IPFSClient:
         except Exception as e:
             logger.error(f"IPFS upload error: {e}")
             return None
-
     async def upload_json(self, data: dict, filename: str = "metadata.json") -> Optional[str]:
         clean = sanitize_metadata(data)
         json_bytes = json.dumps(clean).encode("utf-8")
@@ -49,7 +42,6 @@ class IPFSClient:
             logger.error("Metadata size exceeds maximum allowed")
             return None
         return await self.upload_file(json_bytes, filename)
-
     async def retrieve_file(self, ipfs_hash: str) -> Optional[bytes]:
         try:
             gateway_url = f"{self.gateway_url}/{ipfs_hash}"
@@ -63,7 +55,6 @@ class IPFSClient:
         except Exception as e:
             logger.error(f"IPFS retrieval error: {e}")
             return None
-
     async def retrieve_json(self, ipfs_hash: str) -> Optional[dict]:
         content = await self.retrieve_file(ipfs_hash)
         if content:
@@ -73,22 +64,17 @@ class IPFSClient:
                 logger.error(f"JSON parse error: {e}")
                 return None
         return None
-
     def get_gateway_url(self, ipfs_hash: str) -> str:
         return f"{self.gateway_url}/{ipfs_hash}"
-
-
 def sanitize_metadata(metadata: dict) -> dict:
     if not isinstance(metadata, dict):
         return {}
-
     clean = {}
     for k, v in metadata.items():
         if not isinstance(k, str):
             continue
         if k.startswith("$") or "<script" in k.lower():
             continue
-
         if isinstance(v, str):
             val = v.strip()
             val = re.sub(r"(?i)<script.*?>.*?</script>", "", val)
@@ -112,10 +98,7 @@ def sanitize_metadata(metadata: dict) -> dict:
                 else:
                     new_list.append(item)
             clean[k] = new_list
-
     return clean
-
-
 def validate_cid(cid: str) -> bool:
     if not isinstance(cid, str):
         return False

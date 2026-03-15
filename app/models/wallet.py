@@ -4,34 +4,21 @@ import uuid
 from enum import Enum as PyEnum
 from app.database.base_class import Base
 from app.database.types import GUID
-
-
 class BlockchainType(str, PyEnum):
-
-    # Layer 1 Blockchains
     TON = "ton"
     SOLANA = "solana"
     ETHEREUM = "ethereum"
     BITCOIN = "bitcoin"
     AVALANCHE = "avalanche"
-    
-    # Layer 2 / Sidechains
     POLYGON = "polygon"
     ARBITRUM = "arbitrum"
     OPTIMISM = "optimism"
     BASE = "base"
-
-
 class WalletType(str, PyEnum):
-
     CUSTODIAL = "custodial"
     SELF_CUSTODY = "self_custody"
-
-
 class Wallet(Base):
-
     __tablename__ = "wallets"
-
     id = Column(
         GUID(),
         primary_key=True,
@@ -63,11 +50,9 @@ class Wallet(Base):
     wallet_metadata = Column(JSON, nullable=True, default={})
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
     __table_args__ = (
         Index("ix_wallets_user_blockchain", "user_id", "blockchain"),
         Index("ix_wallets_address", "address"),
     )
-
     def __repr__(self) -> str:
         return f"<Wallet(id={self.id}, user_id={self.user_id}, blockchain={self.blockchain}, address={self.address})>"
