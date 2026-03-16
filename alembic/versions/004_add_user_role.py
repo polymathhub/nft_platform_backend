@@ -19,7 +19,7 @@ def upgrade() -> None:
     log.info("Step 1: Adding user_role column to users table...")
     op.execute(
     )
-    log.info("  ✓ user_role column added or already exists with default='user'")
+    log.info("  user_role column added or already exists with default='user'")
     log.info("Step 2: Creating index on user_role...")
     op.create_index(
         'ix_users_user_role',
@@ -27,7 +27,7 @@ def upgrade() -> None:
         ['user_role'],
         if_not_exists=True
     )
-    log.info("  ✓ Index ix_users_user_role created")
+    log.info("  Index ix_users_user_role created")
     log.info("Migration 004 upgrade completed successfully")
 def downgrade() -> None:
     log.info("Starting Migration 004 downgrade...")
@@ -39,5 +39,5 @@ def downgrade() -> None:
     op.drop_index('ix_users_user_role', table_name='users', if_exists=True)
     log.info("Removing user_role column...")
     op.execute("ALTER TABLE users DROP COLUMN IF EXISTS user_role;")
-    log.info("  ℹ  userrole ENUM intentionally preserved")
+    log.info("  userrole ENUM intentionally preserved")
     log.info("Migration 004 downgrade completed")

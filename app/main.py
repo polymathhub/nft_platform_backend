@@ -307,15 +307,15 @@ if os.path.isdir(webapp_path):
     logger.info(f"  JS files found: {len(js_files)}")
     logger.info(f"  HTML files found: {len(html_files)} - {[os.path.basename(f) for f in html_files]}")
     app.mount("/webapp", StaticFiles(directory=webapp_path, html=True), name="webapp")
-    logger.info(f"✓ Mounted web app static files at /webapp")
+    logger.info(f"Mounted web app static files at /webapp")
     try:
         if os.path.isdir(static_path):
             app.mount("/static", StaticFiles(directory=static_path), name="static")
-            logger.info(f"✓ Mounted static assets at /static")
+            logger.info(f"Mounted static assets at /static")
     except Exception as e:
         logger.warning(f"Failed to mount /static directory: {e}")
 else:
-    logger.error(f"✗ Web app static directory NOT FOUND at {webapp_path}")
+    logger.error(f"Web app static directory NOT FOUND at {webapp_path}")
     logger.error(f"  This will cause 404 errors for CSS/JS files")
 @app.get("/", include_in_schema=False)
 async def redirect_to_webapp():

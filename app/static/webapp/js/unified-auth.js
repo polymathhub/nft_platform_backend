@@ -39,7 +39,7 @@ export class UnifiedAuthManager {
       this.tg.isClosingConfirmationEnabled = true;
       this.tg.setHeaderColor('#0f0f1a');
       this.tg.setBackgroundColor('#0f0f1a');
-      console.log('✅ Telegram WebApp initialized');
+      console.log('Telegram WebApp initialized');
     }
   }
 
@@ -53,14 +53,14 @@ export class UnifiedAuthManager {
         this.tonConnectUI = new TonConnectUI({
           manifestUrl: '/tonconnect-manifest.json',
         });
-        console.log('✅ TonConnect UI initialized');
+        console.log('TonConnect UI initialized');
         
         // Setup TonConnect event listeners
         this.tonConnectUI.onStatusChange((wallet) => {
           this.handleTonConnectStatusChange(wallet);
         });
       } else {
-        console.warn('⚠️  TonConnect UI SDK not loaded');
+        console.warn(' TonConnect UI SDK not loaded');
       }
     } catch (error) {
       console.error('Failed to initialize TonConnect:', error);
@@ -74,10 +74,10 @@ export class UnifiedAuthManager {
     try {
       const profile = await api.get(endpoints.unifiedAuth.profile);
       this.setUser(profile);
-      console.log('✅ Session restored');
+      console.log('Session restored');
       this.dispatchEvent('auth:initialized', { user: this.user });
     } catch (error) {
-      console.log('ℹ️  No active session');
+      console.log('No active session');
     }
   }
 
@@ -208,10 +208,10 @@ export class UnifiedAuthManager {
    */
   async handleTonConnectStatusChange(wallet) {
     if (wallet) {
-      console.log('✅ TON wallet connected:', wallet);
+      console.log(' TON wallet connected:', wallet);
       this.dispatchEvent('ton:connected', { wallet });
     } else {
-      console.log('❌ TON wallet disconnected');
+      console.log('TON wallet disconnected');
       this.dispatchEvent('ton:disconnected');
     }
   }
@@ -237,7 +237,7 @@ export class UnifiedAuthManager {
     try {
       if (this.tonConnectUI) {
         await this.tonConnectUI.disconnect();
-        console.log('✅ TON wallet disconnected');
+        console.log('TON wallet disconnected');
         this.dispatchEvent('ton:disconnected');
       }
     } catch (error) {

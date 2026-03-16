@@ -12,7 +12,7 @@ def upgrade() -> None:
     log.info("Step 1: Creating adminlogaction ENUM type...")
     op.execute(
     )
-    log.info("  ✓ adminlogaction ENUM created or already exists")
+    log.info("  adminlogaction ENUM created or already exists")
     log.info("Step 2: Creating admin_logs table...")
     op.create_table(
         'admin_logs',
@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )
     op.create_index('ix_admin_logs_admin_action', 'admin_logs', ['admin_id', 'action'])
-    log.info("  ✓ admin_logs table created with indexes")
+    log.info("  admin_logs table created with indexes")
     log.info("Step 3: Creating admin_settings table...")
     op.create_table(
         'admin_settings',
@@ -90,7 +90,7 @@ def upgrade() -> None:
         sa.Column('updated_by', postgresql.UUID(as_uuid=True), nullable=True),
     )
     op.create_index('ix_admin_settings_updated_at', 'admin_settings', ['updated_at'])
-    log.info("  ✓ admin_settings table created with proper DECIMAL defaults")
+    log.info("  admin_settings table created with proper DECIMAL defaults")
 def downgrade() -> None:
     log.info("Starting Migration 003 downgrade...")
     log.info("Dropping admin_settings indexes and table...")
@@ -102,5 +102,5 @@ def downgrade() -> None:
     op.drop_index('ix_admin_logs_action', table_name='admin_logs', if_exists=True)
     op.drop_index('ix_admin_logs_admin_id', table_name='admin_logs', if_exists=True)
     op.drop_table('admin_logs', if_exists=True)
-    log.info("  ℹ  adminlogaction ENUM intentionally preserved for forward migration safety")
+    log.info("  adminlogaction ENUM intentionally preserved for forward migration safety")
     log.info("Migration 003 downgrade completed")
