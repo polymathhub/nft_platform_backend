@@ -145,7 +145,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=settings.cors_allow_headers,
 )
-@middleware("http")
+
+@app.middleware("http")
 async def disable_static_caching(request: Request, call_next):
     response = await call_next(request)
     try:
