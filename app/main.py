@@ -43,11 +43,8 @@ try:
     configure_logging()
 except Exception as e:
     logger.warning(f"Logging broke, but we keep rolling: {e}")
-try:
-    uvicorn_access_logger = logging.getLogger('uvicorn.access')
-    uvicorn_access_logger.setLevel(logging.WARNING)
-except Exception:
-    pass
+# Note: Uvicorn access logs are now configured in logger.py - keeping INFO level
+# to capture API endpoint logs for debugging
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("=" * 70)

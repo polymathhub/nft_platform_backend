@@ -22,6 +22,11 @@ def configure_logging():
             "Using bootstrap configuration."
         )
         return
+    
+    # Get log level from settings, default to DEBUG to capture all logs
+    log_level = getattr(settings, "log_level", "DEBUG").upper()
+    environment = getattr(settings, "environment", "development")
+    
     config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -36,28 +41,39 @@ def configure_logging():
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
-                "level": getattr(settings, "log_level", "INFO"),
+                "level": "DEBUG",
                 "formatter": "default",
                 "stream": "ext://sys.stdout",
             },
         },
         "root": {
-            "level": getattr(settings, "log_level", "INFO"),
+            "level": "DEBUG",
             "handlers": ["console"],
         },
         "loggers": {
             "app": {
-                "level": getattr(settings, "log_level", "INFO"),
+                "level": "DEBUG",
+                "handlers": ["console"],
+                "propagate": True,
+            },
+            "uvicorn": {
+                "level": "INFO",
+                "handlers": ["console"],
+                "propagate": False,
+            },
+            "uvicorn.access": {
+                "level": "INFO",
                 "handlers": ["console"],
                 "propagate": False,
             },
         },
     }
-    environment = getattr(settings, "environment", "development")
+    
+    # Add file handler for non-production environments
     if environment != "production":
         config["handlers"]["file"] = {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": getattr(settings, "log_level", "INFO"),
+            "level": "DEBUG",
             "formatter": "detailed",
             "filename": "app.log",
             "maxBytes": 10485760,
@@ -65,4 +81,6 @@ def configure_logging():
         }
         config["root"]["handlers"].append("file")
         config["loggers"]["app"]["handlers"].append("file")
+    
     logging.config.dictConfig(config)
+    logger.info(f"Logging configured - Level: {log_level}, Environment: {environment}")
