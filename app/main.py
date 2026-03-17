@@ -161,6 +161,14 @@ async def root_get():
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
+@app.get("/vendor/tonconnect/tonconnect-ui.css", include_in_schema=False)
+async def tonconnect_vendor_css():
+    """Redirect vendor CSS requests to CDN to avoid 404 errors when TonConnect auto-loads CSS."""
+    return RedirectResponse(url="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css", status_code=302)
+@app.get("/vendor/tonconnect/tonconnect-ui.min.css", include_in_schema=False)
+async def tonconnect_vendor_min_css():
+    """Redirect vendor minified CSS requests to CDN."""
+    return RedirectResponse(url="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css", status_code=302)
 @app.get("/tonconnect-manifest.json", include_in_schema=False)
 async def tonconnect_manifest(request: Request):
     import json
@@ -309,6 +317,11 @@ if os.path.isdir(webapp_path):
         if os.path.isdir(static_path):
             app.mount("/static", StaticFiles(directory=static_path), name="static")
             logger.info(f"Mounted static assets at /static")
+            # Add /vendor mount for TonConnect auto-loading CSS from relative paths
+            vendor_path = os.path.join(static_path, "vendor")
+            if os.path.isdir(vendor_path):
+                app.mount("/vendor", StaticFiles(directory=vendor_path), name="vendor")
+                logger.info(f"Mounted vendor assets at /vendor")
     except Exception as e:
         logger.warning(f"Failed to mount /static directory: {e}")
 else:
