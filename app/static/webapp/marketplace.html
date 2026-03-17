@@ -2,12 +2,13 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1, minimal-ui">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="GiftedForge NFT Platform">
+  <meta name="apple-mobile-web-app-title" content="GiftedForge">
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="NFT Marketplace - Browse, buy, and sell premium digital assets">
+  <meta name="format-detection" content="telephone=no">
   <title>Marketplace - GiftedForge NFT Platform</title>
 
   <!-- Telegram WebApp SDK -->
@@ -60,6 +61,9 @@
       overflow-x: hidden;
       overflow-y: auto;
       margin: 0;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .container {
@@ -94,9 +98,10 @@
       gap: 10px;
       background: var(--bg-secondary);
       border-radius: 24px;
-      padding: 12px 16px;
+      padding: 14px 16px;
       border: 1.5px solid var(--border-light);
       transition: all 200ms ease;
+      min-height: 44px;
     }
 
     .search-wrapper:focus-within {
@@ -105,8 +110,8 @@
     }
 
     .search-wrapper svg {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       color: var(--text-tertiary);
       flex-shrink: 0;
     }
@@ -115,10 +120,11 @@
       flex: 1;
       background: transparent;
       border: none;
-      font-size: 15px;
+      font-size: 16px;
       color: var(--text-primary);
       outline: none;
       font-weight: 500;
+      -webkit-appearance: none;
     }
 
     #search-input::placeholder {
@@ -142,7 +148,7 @@
     }
 
     .category-tab {
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 20px;
       background: transparent;
       border: 1px solid var(--border-light);
@@ -153,6 +159,10 @@
       transition: all 200ms ease;
       font-weight: 600;
       letter-spacing: -0.3px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      -webkit-appearance: none;
     }
 
     .category-tab:hover {
@@ -338,7 +348,7 @@
     }
 
     .nft-action {
-      padding: 8px 12px;
+      padding: 10px 14px;
       background: transparent;
       color: var(--text-secondary);
       border: 1.5px solid var(--border-light);
@@ -348,6 +358,10 @@
       cursor: pointer;
       transition: all 200ms ease;
       white-space: nowrap;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      -webkit-appearance: none;
     }
 
     .nft-action:hover {
@@ -396,6 +410,73 @@
         max-width: 100%;
         border-radius: 0;
         box-shadow: none;
+      }
+
+      .marketplace-container {
+        padding: 12px 8px;
+        gap: 12px;
+      }
+
+      .nft-card {
+        border-radius: 16px;
+      }
+
+      .nft-image {
+        border-radius: 16px 16px 0 0;
+      }
+
+      .nft-info {
+        padding: 12px 10px;
+      }
+
+      .nft-name {
+        font-size: 14px;
+      }
+
+      .nft-creator {
+        font-size: 12px;
+      }
+
+      .nft-price {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding-bottom: 120px;
+      }
+
+      .search-section {
+        padding: 12px 16px;
+      }
+
+      .search-wrapper {
+        padding: 12px 14px;
+        border-radius: 20px;
+      }
+
+      .marketplace-container {
+        padding: 10px 6px;
+        gap: 10px;
+      }
+
+      .nft-image {
+        aspect-ratio: 1;
+      }
+
+      .nft-info {
+        padding: 10px 8px;
+        gap: 6px;
+      }
+
+      .nft-footer {
+        gap: 6px;
+      }
+
+      .nft-action {
+        padding: 8px 10px;
+        font-size: 12px;
       }
     }
   </style>
@@ -565,16 +646,23 @@
   </div>
 
   <script type="module">
-    // Mock listings for initial display - shows before authentication
+    // Premium animated Telegram stickers and GIFs - Professional collectibles
     const mockListings = [
-      { id: 1, name: 'Digital Sunset', creator_name: '@artist_001', price: 150, category: 'trending', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Beautiful digital sunset artwork' },
-      { id: 2, name: 'Cosmic Dream', creator_name: '@artist_002', price: 200, category: 'art', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: 'Abstract cosmic themed NFT' },
-      { id: 3, name: 'Game Avatar', creator_name: '@gamer_001', price: 100, category: 'gaming', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', description: 'Unique gaming avatar' },
-      { id: 4, name: 'Nature Vibes', creator_name: '@nature_lover', price: 180, category: 'art', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', description: 'Nature inspired collection' },
-      { id: 5, name: 'Retro Game NFT', creator_name: '@retro_dev', price: 120, category: 'gaming', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Retro gaming collectible' },
-      { id: 6, name: 'Neon Lights', creator_name: '@designer_001', price: 160, category: 'trending', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', description: 'Neon aesthetic art piece' },
-      { id: 7, name: 'Ocean Wave', creator_name: '@ocean_art', price: 140, category: 'art', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', description: 'Serene ocean wave artwork' },
-      { id: 8, name: 'Fire Dragon', creator_name: '@fantasy_art', price: 250, category: 'gaming', gradient: 'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)', description: 'Legendary fire dragon NFT' },
+      { id: 1, name: 'Dancing Cat Premium', creator_name: '@AnimatedStickers', price: 89, category: 'trending', image_url: 'https://media.giphy.com/media/Cmr1OMoNVe9e7jmn4h/giphy.gif', description: 'Hilarious animated dancing cat pack' },
+      { id: 2, name: 'Neon Glow Hearts', creator_name: '@PremiumGifts', price: 120, category: 'art', image_url: 'https://media.giphy.com/media/3o85xIO33l7RlmLR20/giphy.gif', description: 'Glowing neon heart animations' },
+      { id: 3, name: 'Fire Blaze Effect', creator_name: '@DynamicEffects', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/iFhF8Yw8EbFMWG8xwl/giphy.gif', description: 'Premium fire and flame animation pack' },
+      { id: 4, name: 'Cosmic Stars Pack', creator_name: '@CelestialArts', price: 110, category: 'art', image_url: 'https://media.giphy.com/media/4N5N9WCvLDsuXfbLmL/giphy.gif', description: 'Twinkling cosmic stars collection' },
+      { id: 5, name: 'Rainbow Confetti', creator_name: '@CelebrationPacks', price: 75, category: 'trending', image_url: 'https://media.giphy.com/media/G5efLpXFVlEzC/giphy.gif', description: 'Animated rainbow confetti effect' },
+      { id: 6, name: 'Lightning Strikes', creator_name: '@StormyStickers', price: 105, category: 'art', image_url: 'https://media.giphy.com/media/sDcQt6znqX3Du/giphy.gif', description: 'Electric thunder strike animation' },
+      { id: 7, name: 'Flying Butterfly', creator_name: '@NatureGems', price: 85, category: 'trending', image_url: 'https://media.giphy.com/media/3oKIPf3C7HqqYWtsRG/giphy.gif', description: 'Premium fluttering butterfly animation' },
+      { id: 8, name: 'Golden Crown', creator_name: '@RoyalCollection', price: 150, category: 'art', image_url: 'https://media.giphy.com/media/3oEduKAZnH1pUMbEic/giphy.gif', description: 'Shimmering golden crown sticker' },
+      { id: 9, name: 'Spinning Diamond', creator_name: '@TreasureVault', price: 140, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMk3uz0TyRjDJW/giphy.gif', description: 'Sparkling rotating diamond gem' },
+      { id: 10, name: 'Dreamy Angels', creator_name: '@HeavenlyArts', price: 125, category: 'art', image_url: 'https://media.giphy.com/media/l3vRg6gWvKwVP14Ck/giphy.gif', description: 'Ethereal angel wings animation' },
+      { id: 11, name: 'Neon Pulse', creator_name: '@FuturisticDesigns', price: 100, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZtpgLoDLJ8WNR92/giphy.gif', description: 'Pulsing neon light effects' },
+      { id: 12, name: 'Aurora Borealis', creator_name: '@NorthernLights', price: 130, category: 'art', image_url: 'https://media.giphy.com/media/3ohzdBuGgRLEb5gO9W/giphy.gif', description: 'Beautiful dancing northern lights' },
+      { id: 13, name: 'Fountain Fireworks', creator_name: '@PyrotechnicsHub', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMXr1EJS0B6yha/giphy.gif', description: 'Explosive fireworks fountain animation' },
+      { id: 14, name: 'Hologram Tech', creator_name: '@FutureTech', price: 145, category: 'art', image_url: 'https://media.giphy.com/media/3o6Zt6KHxJTbXCnSvu/giphy.gif', description: 'Futuristic holographic sticker pack' },
+      { id: 15, name: 'Rainbow Wave', creator_name: '@ColorfulArts', price: 80, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZsYq8d0MRG3zVAA/giphy.gif', description: 'Flowing rainbow wave animation' },
     ];
 
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
