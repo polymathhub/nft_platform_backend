@@ -7,6 +7,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GiftedForge">
   <meta name="theme-color" content="#ffffff">
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/webapp/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png">
   <meta name="description" content="NFT Marketplace - Browse, buy, and sell premium digital assets">
   <meta name="format-detection" content="telephone=no">
   <title>Marketplace - GiftedForge NFT Platform</title>
@@ -953,6 +956,75 @@
     } else {
       initializeApp();
     }
+
+    // ============ SERVICE WORKER REGISTRATION ============
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/webapp/sw.js', { scope: '/webapp/' })
+          .then((reg) => console.log('SW registered for marketplace'))
+          .catch((err) => console.warn('SW registration failed:', err));
+      });
+    }
+
+    // ============ COOKIE & CACHE MANAGEMENT ============
+    const CookieUtils = {
+      set(name, value, days = 365) {
+        const date = new Date();
+        date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+        document.cookie = `${name}=${encodeURIComponent(value)}; expires=${date.toUTCString()}; path=/; SameSite=Lax`;
+      },
+      get(name) {
+        const nameEQ = `${name}=`;
+        return document.cookie.split(';')
+          .map(c => c.trim())
+          .find(c => c.startsWith(nameEQ))
+          ?.substring(nameEQ.length) || null;
+      },
+      saveViewState() {
+        const state = {
+          category: state.currentCategory,
+          tab: state.currentTab,
+          favorites: Array.from(state.favorites),
+          timestamp: new Date().getTime()
+        };
+        this.set('marketplace_state', JSON.stringify(state), 7);
+      }
+    };
+
+    // Auto-save view state every 30 seconds
+    setInterval(() => CookieUtils.saveViewState(), 30000);
+
+    // Lazy load offscreen images
+    if ('IntersectionObserver' in window) {
+      const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              img.removeAttribute('data-src');
+              imageObserver.unobserve(img);
+            }
+          }
+        });
+      }, { rootMargin: '50px' });
+
+      // Apply to all nft images
+      setTimeout(() => {
+        document.querySelectorAll('img[data-src]').forEach(img => {
+          imageObserver.observe(img);
+        });
+      }, 500);
+    }
+
+    // Performance tracking
+    window.addEventListener('load', () => {
+      if (performance.timing) {
+        const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+        CookieUtils.set('marketplace_load_time', loadTime, 1);
+        if (loadTime < 2000) console.log('⚡ Marketplace load time: ' + loadTime + 'ms');
+      }
+    });
   </script>
   <script src="navbar.js"></script>
   <!-- Load Shared Navbar Component -->

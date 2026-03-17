@@ -144,14 +144,24 @@ app.add_middleware(
 )
 
 @app.middleware("http")
-async def disable_static_caching(request: Request, call_next):
+async def optimize_static_caching(request: Request, call_next):
     response = await call_next(request)
     try:
         path = request.url.path or ""
-        if path.startswith("/webapp/") or path.startswith("/static/"):
+        # Cache static assets aggressively (1 year)
+        if path.endswith(('.js', '.css', '.woff', '.woff2', '.ttf', '.eot', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico')):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["ETag"] = f'"{hash(path)}"'
+        # Cache HTML but revalidate on each visit
+        elif path.startswith("/webapp/") and path.endswith('.html'):
+            response.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+            response.headers["Pragma"] = "cache"
+        # Don't cache API responses
+        elif path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
-            response.headers["Expires"] = "0"
+        # Add compression support
+        response.headers["Vary"] = "Accept-Encoding"
     except Exception:
         pass
     return response
