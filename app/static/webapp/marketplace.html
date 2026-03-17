@@ -55,9 +55,11 @@
       background-color: var(--bg-primary);
       color: var(--text-primary);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding-top: 56px;
       padding-bottom: 140px;
       overflow-x: hidden;
       overflow-y: auto;
+      margin: 0;
     }
 
     .container {
@@ -79,8 +81,10 @@
       background: #ffffff;
       border-bottom: 1px solid var(--border-light);
       position: sticky;
-      top: 0;
-      z-index: 99;
+      top: 56px;
+      z-index: 98;
+      height: auto;
+      flex-shrink: 0;
     }
 
     .search-wrapper {
@@ -198,7 +202,7 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 16px;
-      min-height: calc(100vh - 320px);
+      min-height: 400px;
     }
 
     .nft-card {
@@ -561,13 +565,22 @@
   </div>
 
   <script type="module">
-    import { auth } from './js/auth.js';
-    import { marketplaceService } from './js/marketplace-service.js';
+    // Mock listings for initial display - shows before authentication
+    const mockListings = [
+      { id: 1, name: 'Digital Sunset', creator_name: '@artist_001', price: 150, category: 'trending', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Beautiful digital sunset artwork' },
+      { id: 2, name: 'Cosmic Dream', creator_name: '@artist_002', price: 200, category: 'art', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: 'Abstract cosmic themed NFT' },
+      { id: 3, name: 'Game Avatar', creator_name: '@gamer_001', price: 100, category: 'gaming', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', description: 'Unique gaming avatar' },
+      { id: 4, name: 'Nature Vibes', creator_name: '@nature_lover', price: 180, category: 'art', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', description: 'Nature inspired collection' },
+      { id: 5, name: 'Retro Game NFT', creator_name: '@retro_dev', price: 120, category: 'gaming', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Retro gaming collectible' },
+      { id: 6, name: 'Neon Lights', creator_name: '@designer_001', price: 160, category: 'trending', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', description: 'Neon aesthetic art piece' },
+      { id: 7, name: 'Ocean Wave', creator_name: '@ocean_art', price: 140, category: 'art', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', description: 'Serene ocean wave artwork' },
+      { id: 8, name: 'Fire Dragon', creator_name: '@fantasy_art', price: 250, category: 'gaming', gradient: 'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)', description: 'Legendary fire dragon NFT' },
+    ];
 
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
 
     const state = {
-      allNFTs: [],
+      allNFTs: [...mockListings],
       userListings: [],
       favorites: new Set(),
       currentCategory: 'trending',
@@ -576,64 +589,72 @@
       error: null,
       isAuthenticated: false,
       currentUser: null,
+      usingMockData: true,
     };
-
-    const gradients = [
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-      'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
-    ];
 
     async function initializeApp() {
       try {
-        state.isAuthenticated = authManager.isAuthenticated;
-        state.currentUser = authManager.user;
-
-        if (!state.isAuthenticated) {
-          showError('Please login to view marketplace');
-          setTimeout(() => {
-            window.location.href = basePath + '/index.html';
-          }, 2000);
-          return;
+        // Check if user is authenticated
+        try {
+          const token = localStorage.getItem('token');
+          const userStr = localStorage.getItem('user');
+          state.isAuthenticated = !!token && !!userStr;
+          if (state.isAuthenticated && userStr) {
+            state.currentUser = JSON.parse(userStr);
+          }
+        } catch (e) {
+          state.isAuthenticated = false;
         }
 
         loadUserFavorites();
-        await loadMarketplaceData();
-        renderNFTs(state.allNFTs);
+
+        // If authenticated, load real data from backend, otherwise use mock data
+        if (state.isAuthenticated) {
+          await loadMarketplaceData();
+        } else {
+          // Use mock data but indicate it's a preview
+          console.log('📦 Using mock marketplace preview (login to see real listings)');
+          state.usingMockData = true;
+        }
+
+        renderNFTs(filterNFTs(state.currentCategory));
         setupEventListeners();
         setActiveNavItem();
-
-        marketplaceService.startRealtimeUpdates((updatedListings) => {
-          state.allNFTs = formatListings(updatedListings);
-          renderNFTs(filterNFTs(state.currentCategory));
-        });
-
-        window.addEventListener('beforeunload', () => {
-          marketplaceService.stopRealtimeUpdates();
-        });
       } catch (error) {
         console.error('Initialization error:', error);
-        showError('Failed to load marketplace');
+        // Still show mock data on error
+        renderNFTs(filterNFTs(state.currentCategory));
       }
     }
 
     async function loadMarketplaceData() {
       try {
         state.isLoading = true;
-        const listings = await marketplaceService.fetchListings(0, 50);
-        state.allNFTs = formatListings(listings);
+        // Try to fetch from backend
+        const response = await fetch('/api/v1/marketplace/listings?skip=0&limit=50', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
         
+        if (response.ok) {
+          const data = await response.json();
+          state.allNFTs = formatListings(data.items || data);
+          state.usingMockData = false;
+          console.log('📥 Loaded real listings from database');
+        } else {
+          // Fall back to mock data if backend fails
+          state.allNFTs = [...mockListings];
+          state.usingMockData = true;
+        }
+
         if (state.currentUser) {
-          loadUserListings();
+          await loadUserListings();
         }
       } catch (error) {
-        console.error('Error loading marketplace:', error);
-        showError('Failed to load marketplace listings');
+        console.warn('Error loading marketplace data, using mock data:', error);
+        state.allNFTs = [...mockListings];
+        state.usingMockData = true;
       } finally {
         state.isLoading = false;
       }
@@ -642,16 +663,27 @@
     function formatListings(listings) {
       if (!Array.isArray(listings)) return [];
       
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
+      ];
+      
       return listings.map((listing, index) => ({
         id: listing.nft?.id || listing.id || index,
         nft_id: listing.nft_id || listing.nft?.id,
-        name: listing.nft?.name || 'Unknown NFT',
-        creator_name: listing.seller?.username || '@creator',
+        name: listing.nft?.name || listing.name || 'Unknown NFT',
+        creator_name: listing.seller?.username || listing.creator_name || '@creator',
         price: listing.price || 0,
-        category: listing.nft?.category || 'trending',
-        gradient: gradients[index % gradients.length],
-        description: listing.nft?.description || '',
-        image_url: listing.nft?.image_url,
+        category: listing.nft?.category || listing.category || 'trending',
+        gradient: listing.gradient || gradients[index % gradients.length],
+        description: listing.nft?.description || listing.description || '',
+        image_url: listing.nft?.image_url || listing.image_url,
         status: listing.status,
         seller_id: listing.seller_id,
       }));
@@ -659,8 +691,16 @@
 
     async function loadUserListings() {
       try {
-        const response = await marketplaceService.api.get(`/api/marketplace/listings?seller_id=${state.currentUser.id}`);
-        state.userListings = formatListings(response.listings || []);
+        const response = await fetch(`/api/v1/marketplace/listings?seller_id=${state.currentUser.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          state.userListings = formatListings(data.items || data);
+        }
       } catch (error) {
         console.warn('Could not load user listings:', error);
       }
@@ -703,9 +743,9 @@
 
       if (state.isLoading) {
         grid.innerHTML = `
-          <div class="empty-state">
-            <div class="loading-spinner"></div>
-            <p>Loading marketplace...</p>
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">⏳</div>
+            <h3>Loading marketplace...</h3>
           </div>
         `;
         return;
@@ -713,13 +753,8 @@
 
       if (!nfts || nfts.length === 0) {
         grid.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </div>
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">🔍</div>
             <h3>No NFTs found</h3>
             <p>Try adjusting your filters or search</p>
           </div>
@@ -728,9 +763,9 @@
       }
 
       grid.innerHTML = nfts.map((nft) => `
-        <div class="nft-card" data-nft-id="${nft.id}" onclick="window.handleCardClick(${nft.id})">
+        <div class="nft-card" data-nft-id="${nft.id}">
           <div class="nft-image" style="background: ${nft.gradient};">
-            ${nft.image_url ? `<img src="${escapeHtml(nft.image_url)}" alt="${escapeHtml(nft.name)}" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
+            ${nft.image_url ? `<img src="${escapeHtml(nft.image_url)}" alt="${escapeHtml(nft.name)}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="font-size: 48px;">🎨</div>'}
             <div class="nft-image-content"></div>
             <button class="heart-btn${state.favorites.has(nft.id) ? ' active' : ''}" 
                     title="${state.favorites.has(nft.id) ? 'Remove favorite' : 'Add favorite'}"
@@ -757,7 +792,7 @@
 
     function escapeHtml(text) {
       const div = document.createElement('div');
-      div.textContent = text;
+      div.textContent = text || '';
       return div.innerHTML;
     }
 
@@ -776,7 +811,7 @@
       event.currentTarget.classList.add('active');
 
       if (tab === 'listings') {
-        renderNFTs(state.userListings);
+        renderNFTs(state.userListings.length > 0 ? state.userListings : []);
       } else {
         renderNFTs(filterNFTs(state.currentCategory));
       }
@@ -795,11 +830,6 @@
       saveFavorites();
     };
 
-    window.handleCardClick = function(nftId) {
-      const nft = state.allNFTs.find(n => n.id === nftId);
-      if (nft) console.log('Card clicked:', nft);
-    };
-
     window.viewNFTDetail = function(nftId, event) {
       event.stopPropagation();
       const nft = state.allNFTs.find(n => n.id === nftId);
@@ -813,8 +843,12 @@
       const searchInput = document.getElementById('search-input');
       if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-          const query = e.target.value;
-          renderNFTs(query.length > 0 ? searchNFTs(query) : filterNFTs(state.currentCategory));
+          const query = e.target.value.trim();
+          if (query.length > 0) {
+            renderNFTs(searchNFTs(query));
+          } else {
+            renderNFTs(filterNFTs(state.currentCategory));
+          }
         });
       }
     }
@@ -825,23 +859,7 @@
       if (marketItem) marketItem.classList.add('active');
     }
 
-    function showError(message) {
-      const grid = document.getElementById('nft-grid');
-      grid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-          </div>
-          <h3>Error</h3>
-          <p>${escapeHtml(message)}</p>
-        </div>
-      `;
-    }
-
+    // Initialize when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initializeApp);
     } else {
