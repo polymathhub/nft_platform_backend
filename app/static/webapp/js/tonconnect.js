@@ -12,13 +12,30 @@ class TonConnectManager {
     this.isReady = false;
     this.wallet = null;
     this.listeners = new Map();
+    this.initPromise = null;  // Track initialization promise for race condition handling
+    this.modalQueue = [];      // Queue for modal requests while initializing
+    this.initializationAborted = false;
   }
 
   /**
    * Initialize TonConnect UI independently
    * Can be called at any time without marketplace dependencies
+   * Returns: Promise that resolves when initialization completes
    */
-  async initialize(options = {}) {
+  initialize(options = {}) {
+    // Return existing promise if already initializing/initialized
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    
+    this.initPromise = this._performInitialization(options);
+    return this.initPromise;
+  }
+
+  /**
+   * Actual initialization logic (private)
+   */
+  async _performInitialization(options = {}) {
     try {
       // Check if TonConnect library is loaded
       if (typeof TonConnectUI === 'undefined') {
@@ -65,10 +82,20 @@ class TonConnectManager {
         detail: { ready: true }
       }));
 
+      // After successful initialization, process any queued modal requests
+      this._processModalQueue();
+      
       return true;
     } catch (error) {
       console.error('❌ TonConnect initialization failed:', error);
       this.isReady = false;
+      this.initializationAborted = true;
+      
+      // Reject any queued modal requests
+      this.modalQueue.forEach(({ reject }) => {
+        reject(new Error('TonConnect initialization failed: ' + error.message));
+      });
+      this.modalQueue = [];
       
       // Emit error event
       window.dispatchEvent(new CustomEvent('tonconnect:error', {
@@ -77,6 +104,27 @@ class TonConnectManager {
       
       return false;
     }
+  }
+
+  /**
+   * Process any modal requests that were queued during initialization
+   * @private
+   */
+  _processModalQueue() {
+    if (this.modalQueue.length === 0) return;
+    
+    console.log(`📬 Processing ${this.modalQueue.length} queued modal requests...`);
+    const queue = [...this.modalQueue];
+    this.modalQueue = [];
+    
+    queue.forEach(async ({ resolve, reject }) => {
+      try {
+        const result = await this.openModal();
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   /**
@@ -97,7 +145,7 @@ class TonConnectManager {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const manifest = await response.json();
+         const manifest = await response.json();
         
         if (!manifest.url) {
           throw new Error('Manifest missing "url" field');
@@ -143,10 +191,38 @@ class TonConnectManager {
 
   /**
    * Open TON Connect modal for wallet selection
+   * Handles race condition by queuing requests if still initializing
    */
   async openModal() {
+    // If still initializing, queue the request
+    if (this.initPromise && !this.isReady) {
+      console.log('⏳ TonConnect still initializing... Queueing modal request');
+      return new Promise((resolve, reject) => {
+        this.modalQueue.push({ resolve, reject });
+        // Wait for initialization to complete before retrying
+        this.initPromise.then(() => {
+          if (this.isReady) {
+            console.log('✅ Initialization complete, opening queued modal...');
+            this.openModal().then(resolve).catch(reject);
+          } else {
+            reject(new Error('TonConnect initialization failed'));
+          }
+        }).catch(reject);
+      });
+    }
+    
+    // If not initialized at all, try initializing first
+    if (!this.isReady && !this.tonConnectUI) {
+      console.log('🔌 TonConnect not initialized, attempting initialization...');
+      const initialized = await this.initialize();
+      if (!initialized) {
+        throw new Error('Failed to initialize TonConnect');
+      }
+    }
+    
+    // Now open the modal
     if (!this.isReady || !this.tonConnectUI) {
-      throw new Error('TonConnect is not ready');
+      throw new Error('TonConnect is not ready - initialization may have failed');
     }
 
     try {
@@ -154,7 +230,7 @@ class TonConnectManager {
       const result = await this.tonConnectUI.openModal();
       
       if (!result || !result.account || !result.account.address) {
-        console.log('❌ User cancelled connection');
+        console.log('❌ User cancelled connection or no wallet selected');
         return null;
       }
 
@@ -162,7 +238,7 @@ class TonConnectManager {
       this.wallet = result;
       return result;
     } catch (error) {
-      console.error('Error opening modal:', error);
+      console.error('❌ Error opening modal:', error);
       throw error;
     }
   }
@@ -229,6 +305,21 @@ class TonConnectManager {
       console.error('Error sending transaction:', error);
       throw error;
     }
+  }
+
+  /**
+   * Wait for initialization to complete (helper for other modules)
+   */
+  async waitForReady() {
+    if (this.isReady) return true;
+    if (this.initializationAborted) return false;
+    
+    if (this.initPromise) {
+      return await this.initPromise;
+    }
+    
+    // No initialization in progress, try initializing
+    return await this.initialize();
   }
 
   /**
