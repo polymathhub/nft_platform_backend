@@ -19,14 +19,17 @@
   <style>
     :root {
       --bg-primary: #ffffff;
-      --bg-secondary: #f8f9fa;
+      --bg-secondary: #f5f5f7;
       --text-primary: #1a1a1a;
-      --text-secondary: #7d8fa3;
-      --text-tertiary: #a8b5c4;
-      --border-light: #e8eef7;
-      --color-primary: #5856d6;
+      --text-secondary: #666666;
+      --text-tertiary: #a0a0a0;
+      --border-light: #e0e0e0;
+      --color-primary: #1a1a1a;
       --color-accent: #d946ef;
-      --color-dark: #1a1a2e;
+      --color-dark: #000000;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
       --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     }
 
@@ -50,9 +53,11 @@
     }
 
     .container {
-      max-width: 428px;
+      max-width: 1200px;
       margin: 0 auto;
       width: 100%;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Header */
@@ -60,12 +65,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
+      padding: 16px 24px;
       background: white;
       border-bottom: 1px solid var(--border-light);
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: var(--shadow-sm);
     }
 
     .detail-header button {
@@ -78,10 +84,15 @@
       justify-content: center;
       color: var(--text-primary);
       border-radius: 8px;
-      transition: all 200ms ease;
+      transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .detail-header button:active {
+      background: var(--bg-secondary);
+      transform: scale(0.96);
+    }
+
+    .detail-header button:hover {
       background: var(--bg-secondary);
     }
 
@@ -95,25 +106,45 @@
       text-align: center;
       font-size: 16px;
       font-weight: 600;
+      letter-spacing: -0.3px;
     }
 
-    /* NFT Image Section */
+    /* Premium Layout Container */
+    .nft-detail-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      padding: 60px 48px;
+      align-items: start;
+      min-height: calc(100vh - 80px);
+      width: 100%;
+    }
+
+    /* NFT Image Section - LEFT COLUMN */
     .nft-image-section {
       width: 100%;
       aspect-ratio: 1;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #1a1a1a;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
+      position: sticky;
+      top: 80px;
       overflow: hidden;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .nft-image-section.loading {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
     }
 
     .nft-image-section::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
       pointer-events: none;
     }
 
@@ -126,121 +157,151 @@
       align-items: center;
       justify-content: center;
       font-size: 120px;
+      color: rgba(255, 255, 255, 0.8);
     }
 
     .heart-button {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: 20px;
+      right: 20px;
       width: 48px;
       height: 48px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
       border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 10;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transition: all 200ms ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .heart-button:active {
-      transform: scale(1.1);
+      transform: scale(1.15);
+    }
+
+    .heart-button:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
     }
 
     .heart-button svg {
-      width: 24px;
-      height: 24px;
-      stroke: #ff4444;
+      width: 22px;
+      height: 22px;
+      stroke: #ff3b30;
       stroke-width: 2;
       fill: none;
       transition: all 200ms ease;
     }
 
     .heart-button.active svg {
-      fill: #ff4444;
+      fill: #ff3b30;
+      stroke: #ff3b30;
     }
 
-    /* Details Section */
+    /* Details Section - RIGHT COLUMN */
     .details-section {
-      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .nft-header-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .nft-title {
-      font-size: 28px;
+      font-size: 36px;
       font-weight: 700;
       color: var(--text-primary);
-      margin-bottom: 8px;
+      letter-spacing: -0.6px;
+      line-height: 1.2;
+      margin-bottom: 0;
     }
 
     .nft-creator-info {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 24px;
+      gap: 12px;
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
     }
 
     .creator-avatar {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: var(--color-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 700;
+      flex-shrink: 0;
     }
 
     .creator-details h3 {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-primary);
+      letter-spacing: -0.2px;
     }
 
     .creator-details p {
       font-size: 12px;
       color: var(--text-secondary);
+      margin-top: 2px;
+      font-weight: 400;
     }
 
     /* Price and Actions */
     .price-section {
-      background: var(--bg-secondary);
-      padding: 16px;
-      border-radius: 16px;
-      margin-bottom: 24px;
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 24px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-light);
     }
 
     .price-info {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
     }
 
     .price-label {
       font-size: 12px;
       color: var(--text-secondary);
       font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
     }
 
     .price-value {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 40px;
       font-weight: 700;
-      color: var(--color-primary);
+      color: var(--text-primary);
+      letter-spacing: -0.8px;
     }
 
     .price-value svg, .price-value img {
-      width: 24px;
-      height: 24px;
+      width: 32px;
+      height: 32px;
       flex-shrink: 0;
       object-fit: contain;
     }
@@ -248,99 +309,134 @@
     .price-usd {
       font-size: 14px;
       color: var(--text-secondary);
+      font-weight: 400;
+      margin-top: 4px;
     }
 
     .action-buttons {
       display: flex;
+      flex-direction: column;
       gap: 12px;
+      margin-top: 8px;
     }
 
     .btn {
-      flex: 1;
-      padding: 14px;
+      padding: 16px;
       border: none;
-      border-radius: 12px;
-      font-size: 16px;
+      border-radius: 10px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 200ms ease;
+      transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      letter-spacing: -0.2px;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--color-primary);
       color: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     }
 
     .btn-primary:active {
       transform: scale(0.98);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-primary:hover {
+      background: #333333;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     }
 
     .btn-secondary {
       background: white;
       color: var(--text-primary);
-      border: 1.5px solid var(--border-light);
+      border: 1px solid var(--border-light);
+      box-shadow: none;
     }
 
     .btn-secondary:active {
       background: var(--bg-secondary);
+      transform: scale(0.98);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-primary);
+      background: var(--bg-secondary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
     /* Description */
     .description-section {
-      margin-bottom: 24px;
+      margin-bottom: 0;
+      margin-top: 12px;
     }
 
     .section-title {
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
+      letter-spacing: -0.2px;
     }
 
     .section-content {
       font-size: 14px;
       color: var(--text-secondary);
-      line-height: 1.6;
+      line-height: 1.8;
+      font-weight: 400;
     }
 
     /* Stats */
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 24px;
+      gap: 16px;
+      margin-bottom: 0;
     }
 
     .stat-card {
       background: var(--bg-secondary);
       padding: 16px;
-      border-radius: 12px;
+      border-radius: 10px;
+      border: none;
+      text-align: center;
     }
 
     .stat-label {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-secondary);
       font-weight: 500;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
     }
 
     .stat-value {
       font-size: 18px;
       font-weight: 700;
       color: var(--text-primary);
+      letter-spacing: -0.3px;
     }
 
     /* Tabs */
     .tabs {
       display: flex;
-      gap: 24px;
+      gap: 32px;
       border-bottom: 1px solid var(--border-light);
       margin-bottom: 20px;
-      position: sticky;
-      top: 60px;
-      background: white;
-      padding: 0 20px;
-      z-index: 50;
+      margin-top: 24px;
+      position: relative;
+    }
+
+    .tabs::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--color-primary);
+      transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .tab {
@@ -349,20 +445,24 @@
       border: none;
       cursor: pointer;
       color: var(--text-secondary);
-      font-size: 14px;
-      font-weight: 600;
-      border-bottom: 3px solid transparent;
-      transition: all 200ms ease;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.1px;
+      transition: all 150ms ease;
+      position: relative;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
     }
 
     .tab.active {
       color: var(--text-primary);
-      border-bottom-color: var(--color-primary);
     }
 
     .tab-content {
       display: none;
-      animation: fadeIn 300ms ease-out;
+      animation: fadeIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .tab-content.active {
@@ -372,9 +472,11 @@
     @keyframes fadeIn {
       from {
         opacity: 0;
+        transform: translateY(8px);
       }
       to {
         opacity: 1;
+        transform: translateY(0);
       }
     }
 
@@ -382,28 +484,31 @@
     .attributes-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      padding: 0 20px 20px;
+      gap: 16px;
     }
 
     .attribute-item {
       background: var(--bg-secondary);
-      padding: 14px;
-      border-radius: 12px;
+      padding: 16px;
+      border-radius: 10px;
+      border: none;
       text-align: center;
     }
 
     .attribute-label {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-secondary);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-weight: 500;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
     }
 
     .attribute-value {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
       color: var(--text-primary);
+      letter-spacing: -0.2px;
     }
 
     .rarity-badge {
@@ -412,19 +517,87 @@
       background: var(--color-primary);
       color: white;
       border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-top: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 6px;
+      letter-spacing: 0.1px;
     }
 
     .bottom-padding {
       padding-bottom: 40px;
     }
 
+    /* Mobile Responsive */
+    @media (max-width: 1200px) {
+      .nft-detail-wrapper {
+        gap: 40px;
+        padding: 40px 32px;
+      }
+
+      .nft-image-section {
+        top: 60px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .nft-detail-wrapper {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        padding: 32px 24px;
+        min-height: auto;
+      }
+
+      .nft-image-section {
+        position: relative;
+        top: 0;
+      }
+
+      .nft-title {
+        font-size: 32px;
+      }
+    }
+
     @media (max-width: 768px) {
       .container {
         max-width: 100%;
-        border-radius: 0;
+      }
+
+      .detail-header {
+        padding: 12px 16px;
+      }
+
+      .nft-detail-wrapper {
+        gap: 24px;
+        padding: 24px 16px;
+      }
+
+      .nft-image-section {
+        border-radius: 16px;
+      }
+
+      .nft-title {
+        font-size: 24px;
+      }
+
+      .details-section {
+        gap: 16px;
+      }
+
+      .price-section {
+        padding: 0;
+      }
+
+      .action-buttons {
+        width: 100%;
+      }
+
+      .btn {
+        padding: 14px;
+        font-size: 14px;
+      }
+
+      .stats-grid {
+        gap: 12px;
       }
     }
   </style>
@@ -450,151 +623,203 @@
   </header>
 
   <div class="container">
-    <!-- NFT Image -->
-    <div class="nft-image-section" id="nftImageSection">
-      <div class="nft-image-content">
-        <!-- Content will be set by gradient -->
-      </div>
-      <button class="heart-button" id="heartBtn" onclick="toggleLike()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Details -->
-    <div class="details-section">
-      <!-- Title and Creator -->
-      <div class="nft-title" id="nftTitle">NFT Title</div>
-      <div class="nft-creator-info">
-        <div class="creator-avatar" id="creatorAvatar">A</div>
-        <div class="creator-details">
-          <h3 id="creatorName">Creator Name</h3>
-          <p>Creator</p>
-        </div>
-      </div>
-
-      <!-- Price Section -->
-      <div class="price-section">
-        <div class="price-info">
-          <div class="price-label">Price</div>
-          <div class="price-value">
-            <img src="https://image2url.com/r2/default/images/1772945017985-1d8c21e6-fe95-4fda-82a5-6e93cf6e0f28.png" alt="Telegram Stars" style="width: 24px; height: 24px; object-fit: contain;">
-            <span id="nftPrice">0</span>
+    <!-- Premium Two-Column Layout -->
+    <div class="nft-detail-wrapper">
+      <!-- Left Column: NFT Image -->
+      <div>
+        <div class="nft-image-section loading" id="nftImageSection">
+          <div class="nft-image-content">
+            <!-- Content will be set by gradient -->
           </div>
-          <div class="price-usd" id="nftPriceUSD">≈ $0</div>
-        </div>
-        <div class="action-buttons">
-          <button class="btn btn-primary" onclick="buyNow()">Buy Now</button>
-          <button class="btn btn-secondary" onclick="makeOffer()">Make Offer</button>
+          <button class="heart-button" id="heartBtn" onclick="toggleLike()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab active" onclick="switchTab('details', event)">Details</button>
-        <button class="tab" onclick="switchTab('offers', event)">Offers</button>
-        <button class="tab" onclick="switchTab('history', event)">History</button>
-      </div>
-
-      <!-- Tab Content -->
-      <div id="detailsTab" class="tab-content active">
-        <!-- Description -->
-        <div class="description-section" style="padding: 0 20px;">
-          <div class="section-title">Description</div>
-          <div class="section-content" id="nftDescription">
-            No description available
-          </div>
-        </div>
-
-        <!-- Stats -->
-        <div style="padding: 0 20px; margin-bottom: 24px;">
-          <div class="section-title" style="margin-bottom: 12px;">Stats</div>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Rarity Score</div>
-              <div class="stat-value">8.5/10</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Owners</div>
-              <div class="stat-value" id="ownerCount">1</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Collection</div>
-              <div class="stat-value">Limited</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Edition</div>
-              <div class="stat-value" id="editionNumber">1/1</div>
+      <!-- Right Column: Details -->
+      <div class="details-section">
+        <!-- Header Info -->
+        <div class="nft-header-info">
+          <div class="nft-title" id="nftTitle">NFT Title</div>
+          <div class="nft-creator-info">
+            <div class="creator-avatar" id="creatorAvatar">A</div>
+            <div class="creator-details">
+              <h3 id="creatorName">Creator Name</h3>
+              <p>Creator</p>
             </div>
           </div>
         </div>
 
-        <!-- Attributes -->
-        <div class="attributes-grid">
-          <div class="attribute-item">
-            <div class="attribute-label">Type</div>
-            <div class="attribute-value">Digital Art</div>
-            <div class="rarity-badge">15%</div>
+        <!-- Price Section -->
+        <div class="price-section">
+          <div class="price-info">
+            <div class="price-label">Price</div>
+            <div class="price-value">
+              <img src="https://image2url.com/r2/default/images/1772945017985-1d8c21e6-fe95-4fda-82a5-6e93cf6e0f28.png" alt="Telegram Stars" style="width: 24px; height: 24px; object-fit: contain;">
+              <span id="nftPrice">0</span>
+            </div>
+            <div class="price-usd" id="nftPriceUSD">≈ $0</div>
           </div>
-          <div class="attribute-item">
-            <div class="attribute-label">Blockchain</div>
-            <div class="attribute-value">Ethereum</div>
-            <div class="rarity-badge">22%</div>
+          <div class="action-buttons">
+            <button class="btn btn-primary" onclick="buyNow()">Buy Now</button>
+            <button class="btn btn-secondary" onclick="makeOffer()">Make Offer</button>
           </div>
         </div>
-      </div>
 
-      <div id="offersTab" class="tab-content" style="padding: 0 20px;">
-        <div class="empty-state">
-          <p style="text-align: center; color: var(--text-secondary);">No active offers at the moment</p>
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('details', event)">Details</button>
+          <button class="tab" onclick="switchTab('offers', event)">Offers</button>
+          <button class="tab" onclick="switchTab('history', event)">History</button>
         </div>
-      </div>
 
-      <div id="historyTab" class="tab-content" style="padding: 0 20px;">
-        <div class="empty-state">
-          <p style="text-align: center; color: var(--text-secondary);">No transaction history available</p>
+        <!-- Tab Content -->
+        <div id="detailsTab" class="tab-content active">
+          <!-- Description -->
+          <div class="description-section">
+            <div class="section-title">Description</div>
+            <div class="section-content" id="nftDescription">
+              No description available
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div style="margin-bottom: 24px;">
+            <div class="section-title" style="margin-bottom: 12px;">Stats</div>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Rarity Score</div>
+                <div class="stat-value">8.5/10</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Owners</div>
+                <div class="stat-value" id="ownerCount">1</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Collection</div>
+                <div class="stat-value">Limited</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Edition</div>
+                <div class="stat-value" id="editionNumber">1/1</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attributes -->
+          <div class="attributes-grid">
+            <div class="attribute-item">
+              <div class="attribute-label">Type</div>
+              <div class="attribute-value">Digital Art</div>
+              <div class="rarity-badge">15%</div>
+            </div>
+            <div class="attribute-item">
+              <div class="attribute-label">Blockchain</div>
+              <div class="attribute-value">Ethereum</div>
+              <div class="rarity-badge">22%</div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="bottom-padding"></div>
+        <div id="offersTab" class="tab-content">
+          <div class="empty-state">
+            <p style="text-align: center; color: var(--text-secondary);">No active offers at the moment</p>
+          </div>
+        </div>
+
+        <div id="historyTab" class="tab-content">
+          <div class="empty-state">
+            <p style="text-align: center; color: var(--text-secondary);">No transaction history available</p>
+          </div>
+        </div>
+
+        <div class="bottom-padding"></div>
+      </div>
     </div>
   </div>
 
   <script>
+    // Mock listings data
+    const mockListings = [
+      { id: 1, name: 'Dancing Cat Premium', creator_name: '@AnimatedStickers', price: 89, category: 'trending', image_url: 'https://media.giphy.com/media/Cmr1OMoNVe9e7jmn4h/giphy.gif', description: 'Hilarious animated dancing cat pack' },
+      { id: 2, name: 'Neon Glow Hearts', creator_name: '@PremiumGifts', price: 120, category: 'art', image_url: 'https://media.giphy.com/media/3o85xIO33l7RlmLR20/giphy.gif', description: 'Glowing neon heart animations' },
+      { id: 3, name: 'Fire Blaze Effect', creator_name: '@DynamicEffects', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/iFhF8Yw8EbFMWG8xwl/giphy.gif', description: 'Premium fire and flame animation pack' },
+      { id: 4, name: 'Cosmic Stars Pack', creator_name: '@CelestialArts', price: 110, category: 'art', image_url: 'https://media.giphy.com/media/4N5N9WCvLDsuXfbLmL/giphy.gif', description: 'Twinkling cosmic stars collection' },
+      { id: 5, name: 'Rainbow Confetti', creator_name: '@CelebrationPacks', price: 75, category: 'trending', image_url: 'https://media.giphy.com/media/G5efLpXFVlEzC/giphy.gif', description: 'Animated rainbow confetti effect' },
+      { id: 6, name: 'Lightning Strikes', creator_name: '@StormyStickers', price: 105, category: 'art', image_url: 'https://media.giphy.com/media/sDcQt6znqX3Du/giphy.gif', description: 'Electric thunder strike animation' },
+      { id: 7, name: 'Flying Butterfly', creator_name: '@NatureGems', price: 85, category: 'trending', image_url: 'https://media.giphy.com/media/3oKIPf3C7HqqYWtsRG/giphy.gif', description: 'Premium fluttering butterfly animation' },
+      { id: 8, name: 'Golden Crown', creator_name: '@RoyalCollection', price: 150, category: 'art', image_url: 'https://media.giphy.com/media/3oEduKAZnH1pUMbEic/giphy.gif', description: 'Shimmering golden crown sticker' },
+      { id: 9, name: 'Spinning Diamond', creator_name: '@TreasureVault', price: 140, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMk3uz0TyRjDJW/giphy.gif', description: 'Sparkling rotating diamond gem' },
+      { id: 10, name: 'Dreamy Angels', creator_name: '@HeavenlyArts', price: 125, category: 'art', image_url: 'https://media.giphy.com/media/l3vRg6gWvKwVP14Ck/giphy.gif', description: 'Ethereal angel wings animation' },
+      { id: 11, name: 'Neon Pulse', creator_name: '@FuturisticDesigns', price: 100, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZtpgLoDLJ8WNR92/giphy.gif', description: 'Pulsing neon light effects' },
+      { id: 12, name: 'Aurora Borealis', creator_name: '@NorthernLights', price: 130, category: 'art', image_url: 'https://media.giphy.com/media/3ohzdBuGgRLEb5gO9W/giphy.gif', description: 'Beautiful dancing northern lights' },
+      { id: 13, name: 'Fountain Fireworks', creator_name: '@PyrotechnicsHub', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMXr1EJS0B6yha/giphy.gif', description: 'Explosive fireworks fountain animation' },
+      { id: 14, name: 'Hologram Tech', creator_name: '@FutureTech', price: 145, category: 'art', image_url: 'https://media.giphy.com/media/3o6Zt6KHxJTbXCnSvu/giphy.gif', description: 'Futuristic holographic sticker pack' },
+      { id: 15, name: 'Rainbow Wave', creator_name: '@ColorfulArts', price: 80, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZsYq8d0MRG3zVAA/giphy.gif', description: 'Flowing rainbow wave animation' },
+    ];
+
     let nft = null;
     let isLiked = false;
+    let isProcessing = false;
+
+    function getNFTIdFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
 
     function initNFTDetail() {
-      const nftData = localStorage.getItem('selectedNFT');
-      if (nftData) {
-        nft = JSON.parse(nftData);
-        renderNFTDetail();
+      const nftId = getNFTIdFromURL();
+      if (nftId) {
+        // Find NFT from mock listings
+        nft = mockListings.find(item => item.id === parseInt(nftId));
+        if (nft) {
+          renderNFTDetail();
+        } else {
+          showError('NFT not found');
+        }
       }
     }
 
     function renderNFTDetail() {
       if (!nft) return;
 
-      // Set background image
+      // Display actual product image
       const imageSection = document.getElementById('nftImageSection');
-      imageSection.style.background = nft.gradient;
+      const imageContent = imageSection.querySelector('.nft-image-content');
+      
+      if (nft.image_url) {
+        // Create actual image element
+        imageContent.innerHTML = `<img src="${nft.image_url}" alt="${nft.name}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 20px;">`;
+        imageSection.classList.remove('loading');
+      } else {
+        // Fallback: show emoji/placeholder
+        imageContent.textContent = '🎨';
+        imageSection.classList.add('loading');
+      }
 
       // Set title and info
-      document.getElementById('nftTitle').textContent = nft.name;
-      document.getElementById('nftPrice').textContent = nft.price;
-      document.getElementById('nftPriceUSD').textContent = `≈ $${(nft.price * 0.01).toFixed(2)}`;
-      document.getElementById('nftDescription').textContent = nft.description;
+      document.getElementById('nftTitle').textContent = nft.name || 'NFT Title';
+      document.getElementById('nftPrice').textContent = nft.price || '0';
+      document.getElementById('nftPriceUSD').textContent = `≈ $${((nft.price || 0) * 0.01).toFixed(2)}`;
+      document.getElementById('nftDescription').textContent = nft.description || 'No description available';
 
       // Creator name
-      const cleanCreatorName = nft.creator_name.replace('@', '');
+      const creatorName = nft.creator_name || 'Unknown';
+      const cleanCreatorName = creatorName.replace('@', '');
       document.getElementById('creatorName').textContent = cleanCreatorName;
-      document.getElementById('creatorAvatar').textContent = cleanCreatorName.charAt(0).toUpperCase();
+      document.getElementById('creatorAvatar').textContent = (cleanCreatorName.charAt(0) || 'A').toUpperCase();
 
       // Load favorite status
       const favorites = JSON.parse(localStorage.getItem('marketplace_favorites') || '[]');
       isLiked = favorites.includes(nft.id);
       updateHeartButton();
+    }
+
+    function showError(message) {
+      alert('Error: ' + message);
     }
 
     function toggleLike() {
@@ -637,16 +862,117 @@
       
       // Show selected tab
       const tabId = tabName + 'Tab';
-      document.getElementById(tabId).classList.add('active');
+      const tabElement = document.getElementById(tabId);
+      if (tabElement) {
+        tabElement.classList.add('active');
+      }
       event.currentTarget.classList.add('active');
     }
 
     function buyNow() {
-      alert(`Purchase initiated for ${nft.name}\n\nPrice: ${nft.price} Telegram Stars`);
+      if (!nft) return;
+      
+      if (isProcessing) return;
+      isProcessing = true;
+
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to purchase NFTs');
+        isProcessing = false;
+        return;
+      }
+
+      try {
+        // Send purchase request to backend
+        const purchaseData = {
+          nft_id: nft.id,
+          amount: nft.price,
+          currency: 'STARS'
+        };
+
+        fetch('/api/v1/marketplace/purchase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(purchaseData)
+        })
+        .then(response => {
+          if (response.ok) {
+            alert(`✅ Purchase successful!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars`);
+            // Optionally refresh or redirect
+            setTimeout(() => {
+              window.history.back();
+            }, 1500);
+          } else {
+            response.json().then(data => {
+              alert(`Purchase failed: ${data.detail || 'Unknown error'}`);
+            });
+          }
+          isProcessing = false;
+        })
+        .catch(error => {
+          alert(`Error: ${error.message}`);
+          isProcessing = false;
+        });
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+        isProcessing = false;
+      }
     }
 
     function makeOffer() {
-      alert(`Make an offer for ${nft.name}`);
+      if (!nft) return;
+
+      const offerPrice = prompt(`Make an offer for "${nft.name}"\n\nMinimum price: ${nft.price} Stars\n\nEnter your offer amount:`, nft.price);
+      
+      if (!offerPrice || isNaN(offerPrice)) return;
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to make offers');
+        return;
+      }
+
+      if (isProcessing) return;
+      isProcessing = true;
+
+      try {
+        const offerData = {
+          nft_id: nft.id,
+          offer_amount: parseFloat(offerPrice),
+          currency: 'STARS',
+          expires_in_days: 7
+        };
+
+        fetch('/api/v1/marketplace/offer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(offerData)
+        })
+        .then(response => {
+          if (response.ok) {
+            alert(`✅ Offer submitted!\n\nYour offer of ${offerPrice} Stars for "${nft.name}" has been submitted.`);
+          } else {
+            response.json().then(data => {
+              alert(`Offer failed: ${data.detail || 'Unknown error'}`);
+            });
+          }
+          isProcessing = false;
+        })
+        .catch(error => {
+          alert(`Error: ${error.message}`);
+          isProcessing = false;
+        });
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+        isProcessing = false;
+      }
     }
 
     function goBack() {
