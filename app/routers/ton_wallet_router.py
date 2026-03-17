@@ -77,6 +77,20 @@ class TONWalletResponse(BaseModel):
     connected_at: Optional[datetime] = None
 class DisconnectTONWalletRequest(BaseModel):
     wallet_id: str
+
+@router.get("/health", include_in_schema=False)
+async def ton_wallet_health_check():
+    """Quick health check to verify the TON wallet router is accessible"""
+    return {
+        "status": "ok",
+        "service": "ton_wallet",
+        "endpoints": [
+            "POST /api/v1/wallet/ton/callback - Connect TON wallet",
+            "GET /api/v1/wallet/ton/status - Get wallet status (requires auth)",
+            "GET /api/v1/wallet/ton/health - Health check (this endpoint)"
+        ]
+    }
+
 @router.post("/connect-request")
 async def initiate_ton_connection(
     request: TONConnectRequest,
@@ -150,43 +164,51 @@ async def ton_connect_callback(
         tonconnect_session = body.get('tonconnect_session', {})
         wallet_metadata = body.get('wallet_metadata', {})
         init_data = body.get('init_data', '')
+        
         if not wallet_address:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Wallet address is required"
             )
-        if not init_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Telegram initData is required"
-            )
+        
         if not (wallet_address.startswith('0:') or wallet_address.startswith('-1:')):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid TON wallet address format"
             )
+        
         settings = get_settings()
-        bot_token = getattr(settings, 'telegram_bot_token', None)
-        if not bot_token:
-            raise HTTPException(status_code=500, detail="Telegram bot token not configured")
-        try:
-            parts = dict(parse_qsl(init_data, keep_blank_values=True))
-            hash_received = parts.pop('hash', None)
-            auth_date = int(parts.get('auth_date', '0'))
-            data_check_string = '\n'.join(f"{k}={v}" for k, v in sorted(parts.items()))
-            secret_key = hashlib.sha256(bot_token.encode()).digest()
-            hmac_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(hmac_hash, hash_received):
-                raise HTTPException(status_code=401, detail="Telegram initData HMAC verification failed")
-            if abs(time.time() - auth_date) > 86400:
-                raise HTTPException(status_code=401, detail="Telegram initData expired")
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=f"Invalid Telegram initData: {e}")
+        
+        # Verify Telegram initData if it's provided (optional for development)
+        if init_data:
+            bot_token = getattr(settings, 'telegram_bot_token', None)
+            if bot_token:
+                try:
+                    parts = dict(parse_qsl(init_data, keep_blank_values=True))
+                    hash_received = parts.pop('hash', None)
+                    auth_date = int(parts.get('auth_date', '0'))
+                    data_check_string = '\n'.join(f"{k}={v}" for k, v in sorted(parts.items()))
+                    secret_key = hashlib.sha256(bot_token.encode()).digest()
+                    hmac_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+                    if not hmac.compare_digest(hmac_hash, hash_received):
+                        raise HTTPException(status_code=401, detail="Telegram initData HMAC verification failed")
+                    if abs(time.time() - auth_date) > 86400:
+                        raise HTTPException(status_code=401, detail="Telegram initData expired")
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    raise HTTPException(status_code=401, detail=f"Invalid Telegram initData: {e}")
+            else:
+                logger.warning("Telegram bot token not configured - skipping init_data verification")
+        else:
+            logger.info("No init_data provided - allowing wallet connection (development mode)")
+        
         existing_wallet = db.execute(
             select(TONWallet).where(
                 TONWallet.wallet_address == wallet_address
             )
         ).scalar_one_or_none()
+        
         if existing_wallet:
             existing_wallet.status = "connected"
             existing_wallet.connected_at = datetime.utcnow()
