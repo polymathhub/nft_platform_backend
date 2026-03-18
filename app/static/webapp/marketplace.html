@@ -650,29 +650,11 @@
   </div>
 
   <script type="module">
-    // Premium animated Telegram stickers and GIFs - Professional collectibles
-    const mockListings = [
-      { id: 1, name: 'Dancing Cat Premium', creator_name: '@AnimatedStickers', price: 89, category: 'trending', image_url: 'https://media.giphy.com/media/Cmr1OMoNVe9e7jmn4h/giphy.gif', description: 'Hilarious animated dancing cat pack' },
-      { id: 2, name: 'Neon Glow Hearts', creator_name: '@PremiumGifts', price: 120, category: 'art', image_url: 'https://media.giphy.com/media/3o85xIO33l7RlmLR20/giphy.gif', description: 'Glowing neon heart animations' },
-      { id: 3, name: 'Fire Blaze Effect', creator_name: '@DynamicEffects', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/iFhF8Yw8EbFMWG8xwl/giphy.gif', description: 'Premium fire and flame animation pack' },
-      { id: 4, name: 'Cosmic Stars Pack', creator_name: '@CelestialArts', price: 110, category: 'art', image_url: 'https://media.giphy.com/media/4N5N9WCvLDsuXfbLmL/giphy.gif', description: 'Twinkling cosmic stars collection' },
-      { id: 5, name: 'Rainbow Confetti', creator_name: '@CelebrationPacks', price: 75, category: 'trending', image_url: 'https://media.giphy.com/media/G5efLpXFVlEzC/giphy.gif', description: 'Animated rainbow confetti effect' },
-      { id: 6, name: 'Lightning Strikes', creator_name: '@StormyStickers', price: 105, category: 'art', image_url: 'https://media.giphy.com/media/sDcQt6znqX3Du/giphy.gif', description: 'Electric thunder strike animation' },
-      { id: 7, name: 'Flying Butterfly', creator_name: '@NatureGems', price: 85, category: 'trending', image_url: 'https://media.giphy.com/media/3oKIPf3C7HqqYWtsRG/giphy.gif', description: 'Premium fluttering butterfly animation' },
-      { id: 8, name: 'Golden Crown', creator_name: '@RoyalCollection', price: 150, category: 'art', image_url: 'https://media.giphy.com/media/3oEduKAZnH1pUMbEic/giphy.gif', description: 'Shimmering golden crown sticker' },
-      { id: 9, name: 'Spinning Diamond', creator_name: '@TreasureVault', price: 140, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMk3uz0TyRjDJW/giphy.gif', description: 'Sparkling rotating diamond gem' },
-      { id: 10, name: 'Dreamy Angels', creator_name: '@HeavenlyArts', price: 125, category: 'art', image_url: 'https://media.giphy.com/media/l3vRg6gWvKwVP14Ck/giphy.gif', description: 'Ethereal angel wings animation' },
-      { id: 11, name: 'Neon Pulse', creator_name: '@FuturisticDesigns', price: 100, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZtpgLoDLJ8WNR92/giphy.gif', description: 'Pulsing neon light effects' },
-      { id: 12, name: 'Aurora Borealis', creator_name: '@NorthernLights', price: 130, category: 'art', image_url: 'https://media.giphy.com/media/3ohzdBuGgRLEb5gO9W/giphy.gif', description: 'Beautiful dancing northern lights' },
-      { id: 13, name: 'Fountain Fireworks', creator_name: '@PyrotechnicsHub', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMXr1EJS0B6yha/giphy.gif', description: 'Explosive fireworks fountain animation' },
-      { id: 14, name: 'Hologram Tech', creator_name: '@FutureTech', price: 145, category: 'art', image_url: 'https://media.giphy.com/media/3o6Zt6KHxJTbXCnSvu/giphy.gif', description: 'Futuristic holographic sticker pack' },
-      { id: 15, name: 'Rainbow Wave', creator_name: '@ColorfulArts', price: 80, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZsYq8d0MRG3zVAA/giphy.gif', description: 'Flowing rainbow wave animation' },
-    ];
-
+    // Marketplace - Real listings only from backend
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
 
     const state = {
-      allNFTs: [...mockListings],
+      allNFTs: [],
       userListings: [],
       favorites: new Set(),
       currentCategory: 'trending',
@@ -681,7 +663,7 @@
       error: null,
       isAuthenticated: false,
       currentUser: null,
-      usingMockData: true,
+      usingMockData: false,
     };
 
     async function initializeApp() {
@@ -693,6 +675,15 @@
           state.isAuthenticated = !!token && !!userStr;
           if (state.isAuthenticated && userStr) {
             state.currentUser = JSON.parse(userStr);
+            // Update userName element with real user data
+            let displayName = state.currentUser?.username || state.currentUser?.first_name || 'User';
+            if (displayName.startsWith('@')) {
+              displayName = displayName.substring(1);
+            }
+            const userNameEl = document.getElementById('userName');
+            if (userNameEl) {
+              userNameEl.textContent = displayName;
+            }
           }
         } catch (e) {
           state.isAuthenticated = false;
@@ -700,13 +691,15 @@
 
         loadUserFavorites();
 
-        // If authenticated, load real data from backend, otherwise use mock data
+        // Load real data from backend
         if (state.isAuthenticated) {
           await loadMarketplaceData();
         } else {
-          // Use mock data but indicate it's a preview
-          console.log('📦 Using mock marketplace preview (login to see real listings)');
-          state.usingMockData = true;
+          console.log('Please login to view marketplace listings');
+          setTimeout(() => {
+            window.location.href = '/webapp/dashboard.html';
+          }, 2000);
+          return;
         }
 
         renderNFTs(filterNFTs(state.currentCategory));
@@ -714,7 +707,6 @@
         setActiveNavItem();
       } catch (error) {
         console.error('Initialization error:', error);
-        // Still show mock data on error
         renderNFTs(filterNFTs(state.currentCategory));
       }
     }
@@ -722,7 +714,7 @@
     async function loadMarketplaceData() {
       try {
         state.isLoading = true;
-        // Try to fetch from backend
+        // Fetch real listings from backend
         const response = await fetch('/api/v1/marketplace/listings?skip=0&limit=50', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -732,21 +724,18 @@
         if (response.ok) {
           const data = await response.json();
           state.allNFTs = formatListings(data.items || data);
-          state.usingMockData = false;
-          console.log(' Loaded real listings from database');
+          console.log('Loaded real listings from database');
         } else {
-          // Fall back to mock data if backend fails
-          state.allNFTs = [...mockListings];
-          state.usingMockData = true;
+          throw new Error(`Backend returned ${response.status}`);
         }
 
         if (state.currentUser) {
           await loadUserListings();
         }
       } catch (error) {
-        console.warn('Error loading marketplace data, using mock data:', error);
-        state.allNFTs = [...mockListings];
-        state.usingMockData = true;
+        console.error('Error loading marketplace data:', error);
+        state.error = 'Failed to load marketplace listings. Please try again.';
+        state.allNFTs = [];
       } finally {
         state.isLoading = false;
       }

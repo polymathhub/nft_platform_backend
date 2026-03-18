@@ -1035,9 +1035,20 @@
         }
 
         const user = auth.getUser();
-        const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User';
+        // Display username from Telegram or backend, fallback to first name
+        let displayName = user?.username || user?.firstName || user?.name?.split(' ')[0] || 'User';
+        // Remove @ symbol if present from Telegram username
+        if (displayName.startsWith('@')) {
+          displayName = displayName.substring(1);
+        }
         
-        document.getElementById('user-name').textContent = firstName;
+        document.getElementById('user-name').textContent = displayName;
+        
+        // Update all userName elements throughout the page with real user data
+        const userNameElements = document.querySelectorAll('#userName');
+        userNameElements.forEach(el => {
+          el.textContent = displayName;
+        });
         
         return true;
       } catch (error) {

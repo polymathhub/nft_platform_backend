@@ -759,25 +759,6 @@
       });
     };
 
-    // Mock listings data
-    const mockListings = [
-      { id: 1, name: 'Dancing Cat Premium', creator_name: '@AnimatedStickers', price: 89, category: 'trending', image_url: 'https://media.giphy.com/media/Cmr1OMoNVe9e7jmn4h/giphy.gif', description: 'Hilarious animated dancing cat pack' },
-      { id: 2, name: 'Neon Glow Hearts', creator_name: '@PremiumGifts', price: 120, category: 'art', image_url: 'https://media.giphy.com/media/3o85xIO33l7RlmLR20/giphy.gif', description: 'Glowing neon heart animations' },
-      { id: 3, name: 'Fire Blaze Effect', creator_name: '@DynamicEffects', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/iFhF8Yw8EbFMWG8xwl/giphy.gif', description: 'Premium fire and flame animation pack' },
-      { id: 4, name: 'Cosmic Stars Pack', creator_name: '@CelestialArts', price: 110, category: 'art', image_url: 'https://media.giphy.com/media/4N5N9WCvLDsuXfbLmL/giphy.gif', description: 'Twinkling cosmic stars collection' },
-      { id: 5, name: 'Rainbow Confetti', creator_name: '@CelebrationPacks', price: 75, category: 'trending', image_url: 'https://media.giphy.com/media/G5efLpXFVlEzC/giphy.gif', description: 'Animated rainbow confetti effect' },
-      { id: 6, name: 'Lightning Strikes', creator_name: '@StormyStickers', price: 105, category: 'art', image_url: 'https://media.giphy.com/media/sDcQt6znqX3Du/giphy.gif', description: 'Electric thunder strike animation' },
-      { id: 7, name: 'Flying Butterfly', creator_name: '@NatureGems', price: 85, category: 'trending', image_url: 'https://media.giphy.com/media/3oKIPf3C7HqqYWtsRG/giphy.gif', description: 'Premium fluttering butterfly animation' },
-      { id: 8, name: 'Golden Crown', creator_name: '@RoyalCollection', price: 150, category: 'art', image_url: 'https://media.giphy.com/media/3oEduKAZnH1pUMbEic/giphy.gif', description: 'Shimmering golden crown sticker' },
-      { id: 9, name: 'Spinning Diamond', creator_name: '@TreasureVault', price: 140, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMk3uz0TyRjDJW/giphy.gif', description: 'Sparkling rotating diamond gem' },
-      { id: 10, name: 'Dreamy Angels', creator_name: '@HeavenlyArts', price: 125, category: 'art', image_url: 'https://media.giphy.com/media/l3vRg6gWvKwVP14Ck/giphy.gif', description: 'Ethereal angel wings animation' },
-      { id: 11, name: 'Neon Pulse', creator_name: '@FuturisticDesigns', price: 100, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZtpgLoDLJ8WNR92/giphy.gif', description: 'Pulsing neon light effects' },
-      { id: 12, name: 'Aurora Borealis', creator_name: '@NorthernLights', price: 130, category: 'art', image_url: 'https://media.giphy.com/media/3ohzdBuGgRLEb5gO9W/giphy.gif', description: 'Beautiful dancing northern lights' },
-      { id: 13, name: 'Fountain Fireworks', creator_name: '@PyrotechnicsHub', price: 95, category: 'trending', image_url: 'https://media.giphy.com/media/3ohzdMXr1EJS0B6yha/giphy.gif', description: 'Explosive fireworks fountain animation' },
-      { id: 14, name: 'Hologram Tech', creator_name: '@FutureTech', price: 145, category: 'art', image_url: 'https://media.giphy.com/media/3o6Zt6KHxJTbXCnSvu/giphy.gif', description: 'Futuristic holographic sticker pack' },
-      { id: 15, name: 'Rainbow Wave', creator_name: '@ColorfulArts', price: 80, category: 'trending', image_url: 'https://media.giphy.com/media/3o6ZsYq8d0MRG3zVAA/giphy.gif', description: 'Flowing rainbow wave animation' },
-    ];
-
     let nft = null;
     let isLiked = false;
     let isProcessing = false;
@@ -787,15 +768,33 @@
       return params.get('id');
     }
 
-    function initNFTDetail() {
+    async function initNFTDetail() {
       const nftId = getNFTIdFromURL();
       if (nftId) {
-        // Find NFT from mock listings
-        nft = mockListings.find(item => item.id === parseInt(nftId));
-        if (nft) {
-          renderNFTDetail();
-        } else {
-          showError('NFT not found');
+        try {
+          // Fetch real NFT data from backend
+          const token = localStorage.getItem('token');
+          if (!token) {
+            showNotification('Authentication Required', 'Please login to view NFT details', 'error');
+            setTimeout(() => window.location.href = '/webapp/dashboard.html', 2000);
+            return;
+          }
+
+          const response = await fetch(`/api/v1/marketplace/listings/${nftId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            nft = await response.json();
+            renderNFTDetail();
+          } else {
+            showNotification('NFT Not Found', `Unable to load NFT with ID ${nftId}`, 'error');
+          }
+        } catch (error) {
+          console.error('Error loading NFT:', error);
+          showNotification('Error', 'Failed to load NFT details', 'error');
         }
       }
     }
