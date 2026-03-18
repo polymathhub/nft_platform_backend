@@ -414,7 +414,7 @@ class NavbarController {
       localStorage.removeItem('user');
       localStorage.removeItem('notifications');
       const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
-      window.location.href = basePath + '/index.html';
+      window.location.href = basePath + '/dashboard.html';
     }
   }
 }

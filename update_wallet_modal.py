@@ -1,5 +1,5 @@
 import re
-with open('app/static/webapp/index.html', 'r', encoding='utf-16') as f:
+with open('app/static/webapp/dashboard.html', 'r', encoding='utf-16') as f:
     content = f.read()
 if "// Step 3: Try Telegram auto-login if inside Telegram" in content:
     print("Removing Telegram auto-login from Step 3...")
@@ -16,6 +16,6 @@ if re.search(pattern, content, re.DOTALL):
 else:
     print("Could not find setupConnectButton function with regex")
     print("File may have different formatting")
-with open('app/static/webapp/index.html', 'w', encoding='utf-16') as f:
+with open('app/static/webapp/dashboard.html', 'w', encoding='utf-16') as f:
     f.write(content)
 print("File updated successfully!")

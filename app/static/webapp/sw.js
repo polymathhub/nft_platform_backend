@@ -12,7 +12,7 @@ const IMAGE_CACHE = `gifted-forge-images-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
   '/',
   '/webapp/',
-  '/webapp/index.html',
+  '/webapp/dashboard.html',
   '/webapp/marketplace.html',
   '/webapp/dashboard.html',
   '/webapp/profile.html',

@@ -167,7 +167,7 @@ async def optimize_static_caching(request: Request, call_next):
     return response
 @app.get("/")
 async def root_get():
-    return RedirectResponse(url="/webapp/", status_code=301)
+    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
@@ -339,4 +339,4 @@ else:
     logger.error(f"  This will cause 404 errors for CSS/JS files")
 @app.get("/", include_in_schema=False)
 async def redirect_to_webapp():
-    return RedirectResponse(url="/webapp/", status_code=301)
+    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
