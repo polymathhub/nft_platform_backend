@@ -340,3 +340,7 @@ else:
 @app.get("/", include_in_schema=False)
 async def redirect_to_webapp():
     return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+
+@app.get("/webapp/", include_in_schema=False)
+async def redirect_webapp_root():
+    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
