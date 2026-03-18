@@ -9,7 +9,7 @@
 ```
 Migration name length: 36 chars
 Column size limit: 32 chars
-⚠️ EXCEEDS LIMIT BY 4 CHARACTERS
+EXCEEDS LIMIT BY 4 CHARACTERS
 ```
 
 ## Solution
@@ -29,10 +29,10 @@ python comprehensive_migration_fix.py
 ```
 
 This script will:
-1. ✅ Check the current migration state
-2. ✅ Expand the `alembic_version.version_num` column to VARCHAR(128)
-3. ✅ Run all pending migrations (including the new migration 012)
-4. ✅ Report success/failure
+1. Check the current migration state
+2. Expand the `alembic_version.version_num` column to VARCHAR(128)
+3. Run all pending migrations (including the new migration 012)
+4. Report success/failure
 
 #### Option 2: Manual Fix
 
@@ -125,11 +125,11 @@ alembic upgrade head
 ### Design Decisions
 
 The new migration 012:
-- ✅ Uses standard Alembic ALTER COLUMN syntax
-- ✅ Is idempotent (safe to run multiple times)
-- ✅ Maintains backward compatibility
-- ✅ Allows future longer migration names
-- ✅ Includes proper upgrade/downgrade functions
+- Uses standard Alembic ALTER COLUMN syntax
+- Is idempotent (safe to run multiple times)
+- Maintains backward compatibility
+- Allows future longer migration names
+- Includes proper upgrade/downgrade functions
 
 ### Troubleshooting
 

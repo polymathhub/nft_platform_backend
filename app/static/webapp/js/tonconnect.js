@@ -38,14 +38,14 @@ class TonConnectManager {
     try {
       // Check if TonConnect library is loaded
       if (typeof TonConnectUI === 'undefined') {
-        console.error('❌ TonConnect UI SDK NOT loaded. typeof TonConnectUI:', typeof TonConnectUI);
+        console.error('TonConnect UI SDK NOT loaded. typeof TonConnectUI:', typeof TonConnectUI);
         console.log('Window keys containing "ton":', Object.keys(window).filter(k => k.toLowerCase().includes('ton')));
         this.isReady = false;
         return false;
       }
 
-      console.log('✅ TonConnectUI library found:', typeof TonConnectUI);
-      console.log('🔌 Initializing TON Connect (Independent)...');
+      console.log('TonConnectUI library found:', typeof TonConnectUI);
+      console.log('Initializing TON Connect (Independent)...');
 
       // Create root element if needed
       let rootElement = document.getElementById('tonconnect-button');
@@ -63,7 +63,7 @@ class TonConnectManager {
         return false;
       }
 
-      console.log('✓ Manifest valid:', manifestValidation.url);
+      console.log('Manifest valid:', manifestValidation.url);
 
       // Initialize TonConnect UI
       console.log('Instantiating TonConnectUI with config:', {
@@ -76,14 +76,14 @@ class TonConnectManager {
         buttonRootId: 'tonconnect-button'
       });
       
-      console.log('✅ TonConnectUI instance created:', this.tonConnectUI);
+      console.log('TonConnectUI instance created:', this.tonConnectUI);
 
       // Setup event listeners
       this.setupEventListeners();
 
       this.isInitialized = true;
       this.isReady = true;
-      console.log('✅ TonConnect initialized successfully - isReady:', this.isReady);
+      console.log('TonConnect initialized successfully - isReady:', this.isReady);
 
       // Emit custom event for other modules
       window.dispatchEvent(new CustomEvent('tonconnect:initialized', {
@@ -121,7 +121,7 @@ class TonConnectManager {
   _processModalQueue() {
     if (this.modalQueue.length === 0) return;
     
-    console.log(` Processing ${this.modalQueue.length} queued modal requests...`);
+    console.log(`Processing ${this.modalQueue.length} queued modal requests...`);
     const queue = [...this.modalQueue];
     this.modalQueue = [];
     
@@ -144,29 +144,29 @@ class TonConnectManager {
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`📄 Manifest validation attempt ${attempt}/${retries}...`);
+        console.log(`Manifest validation attempt ${attempt}/${retries}...`);
         const response = await fetch(manifestUrl, { 
           method: 'GET',
           cache: 'no-cache'
         });
         
-        console.log(`📄 Manifest response status: ${response.status}`);
+        console.log(`Manifest response status: ${response.status}`);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const manifest = await response.json();
-        console.log('📄 Manifest parsed:', manifest);
+        console.log('Manifest parsed:', manifest);
         
         if (!manifest.url) {
           throw new Error('Manifest missing "url" field');
         }
         
-        console.log('✅ TonConnect manifest valid:', manifest.url);
+        console.log('TonConnect manifest valid:', manifest.url);
         return { success: true, url: manifest.url };
       } catch (error) {
-        console.error(`❌ Manifest validation attempt ${attempt}/${retries} failed:`, error.message, error);
+        console.error(`Manifest validation attempt ${attempt}/${retries} failed:`, error.message, error);
         
         if (attempt < retries) {
           await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 100)); // exponential backoff
@@ -188,14 +188,14 @@ class TonConnectManager {
     if (!this.tonConnectUI) return;
 
     // Listen for wallet status changes
-    this.tonConnectUI.onStatusChange((wallet) => {
+        this.tonConnectUI.onStatusChange((wallet) => {
       if (wallet) {
         this.wallet = wallet;
-        console.log(' Wallet connected:', wallet.account?.address);
+            console.log('Wallet connected:', wallet.account?.address);
         this.emit('wallet:connected', { wallet });
       } else {
         this.wallet = null;
-        console.log('🔌 Wallet disconnected');
+            console.log('Wallet disconnected');
         this.emit('wallet:disconnected', {});
       }
     });
@@ -225,7 +225,7 @@ class TonConnectManager {
     
     // If not initialized at all, try initializing first
     if (!this.isReady && !this.tonConnectUI) {
-      console.log('🔌 TonConnect not initialized, attempting initialization...');
+      console.log('TonConnect not initialized, attempting initialization...');
       const initialized = await this.initialize();
       if (!initialized) {
         throw new Error('Failed to initialize TonConnect');
@@ -238,7 +238,7 @@ class TonConnectManager {
     }
 
     try {
-      console.log('🎯 About to call tonConnectUI.openModal()...');
+      console.log('About to call tonConnectUI.openModal()...');
       console.log('tonConnectUI state:', {
         exists: !!this.tonConnectUI,
         hasOpenModal: !!this.tonConnectUI?.openModal,
@@ -247,18 +247,18 @@ class TonConnectManager {
       
       const result = await this.tonConnectUI.openModal();
       
-      console.log('🎯 openModal returned, result:', result);
+      console.log('openModal returned, result:', result);
       
       if (!result || !result.account || !result.account.address) {
-        console.log('❌ User cancelled connection or no wallet selected');
+        console.log('User cancelled connection or no wallet selected');
         return null;
       }
 
-      console.log('✅ Wallet selected:', result.account.address);
+      console.log('Wallet selected:', result.account.address);
       this.wallet = result;
       return result;
     } catch (error) {
-      console.error('❌ Error opening modal:', error, error.stack);
+      console.error('Error opening modal:', error, error.stack);
       throw error;
     }
   }
@@ -293,7 +293,7 @@ class TonConnectManager {
     try {
       await this.tonConnectUI.disconnect();
       this.wallet = null;
-      console.log('🔌 Wallet disconnected');
+      console.log('Wallet disconnected');
       this.emit('wallet:disconnected', {});
     } catch (error) {
       console.error('Error disconnecting wallet:', error);

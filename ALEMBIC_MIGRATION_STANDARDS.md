@@ -10,12 +10,12 @@
 
 This document establishes production-grade standards for all Alembic migrations in the NFT Platform Backend. These standards ensure:
 
-- ✅ **Async Safety**: Full compatibility with asyncpg and async SQLAlchemy 2.0+
-- ✅ **PostgreSQL Compliance**: Proper dialect handling and type safety
-- ✅ **Idempotency**: Migrations can be run/rolled back multiple times safely
-- ✅ **Reliability**: No DuplicateObjectError or AssertionError exceptions
-- ✅ **Maintainability**: Clear documentation, logging, and explicit naming
-- ✅ **Production Readiness**: Enterprise-grade error handling and robustness
+- **Async Safety**: Full compatibility with asyncpg and async SQLAlchemy 2.0+
+- **PostgreSQL Compliance**: Proper dialect handling and type safety
+- **Idempotency**: Migrations can be run/rolled back multiple times safely
+- **Reliability**: No DuplicateObjectError or AssertionError exceptions
+- **Maintainability**: Clear documentation, logging, and explicit naming
+- **Production Readiness**: Enterprise-grade error handling and robustness
 
 ---
 
@@ -23,7 +23,7 @@ This document establishes production-grade standards for all Alembic migrations 
 
 The following migrations have been refactored to meet all production standards:
 
-### ✅ Migration 009: add_notifications_table
+### Migration 009: add_notifications_table
 - **Status**: Production Ready
 - **Features**: 
   - Safe ENUM creation with PostgreSQL DO block
@@ -31,7 +31,7 @@ The following migrations have been refactored to meet all production standards:
   - Full logging at each step
   - Named constraints and indexes
 
-### ✅ Migration 010: add_ton_wallet_and_stars
+### Migration 010: add_ton_wallet_and_stars
 - **Status**: Production Ready
 - **Features**:
   - Async-safe boolean/numeric defaults (sa.literal())
@@ -39,7 +39,7 @@ The following migrations have been refactored to meet all production standards:
   - postgresql_comment= on all indexes
   - Comprehensive error handling in downgrade
 
-### ✅ Migration 008: add_referral_system
+### Migration 008: add_referral_system
 - **Status**: Production Ready
 - **Features**:
   - sa.literal() for all defaults
@@ -47,7 +47,7 @@ The following migrations have been refactored to meet all production standards:
   - Detailed documentation and logging
   - Proper cascade handling
 
-### ✅ Migration 011: refactor_notifications_with_enum
+### Migration 011: refactor_notifications_with_enum
 - **Status**: Production Ready
 - **Features**:
   - Safe ENUM handling
@@ -60,7 +60,7 @@ The following migrations have been refactored to meet all production standards:
 
 ### 1. Async-Safe Defaults
 
-**❌ WRONG:**
+**WRONG:**
 ```python
 sa.Column('is_active', sa.Boolean(), server_default='true')
 sa.Column('amount', sa.Float(), server_default='0.0')

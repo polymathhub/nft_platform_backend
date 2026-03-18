@@ -801,8 +801,8 @@
         imageContent.innerHTML = `<img src="${nft.image_url}" alt="${nft.name}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 20px;">`;
         imageSection.classList.remove('loading');
       } else {
-        // Fallback: show emoji/placeholder
-        imageContent.textContent = '🎨';
+        // Fallback: show placeholder
+        imageContent.textContent = '';
         imageSection.classList.add('loading');
       }
 
@@ -908,9 +908,9 @@
           }
         }
 
-        console.log('🛒 Initiating purchase transaction for:', nft.name);
+        console.log('Initiating purchase transaction for:', nft.name);
         const walletAddress = tonConnect.getWalletAddress();
-        console.log('💰 Wallet address:', walletAddress);
+        console.log('Wallet address:', walletAddress);
 
         // Step 1: Prepare purchase data
         const purchaseData = {
@@ -922,7 +922,7 @@
         };
 
         // Step 2: Request transaction from backend (creates transaction to sign)
-        console.log('📤 Requesting transaction from backend...');
+        console.log('Requesting transaction from backend...');
         let txResponse = await fetch('/api/v1/marketplace/purchase', {
           method: 'POST',
           headers: {
@@ -938,7 +938,7 @@
         }
 
         const txData = await txResponse.json();
-        console.log('📋 Transaction data received from backend:', txData);
+        console.log('Transaction data received from backend:', txData);
 
         // Step 3: Create transaction object for wallet to sign
         // For Telegram Stars, you would construct a transaction based on backend response
@@ -951,14 +951,14 @@
         };
 
         if (txData.messages && txData.messages.length > 0) {
-          console.log('⚡ Sending transaction to wallet for signing...');
+          console.log('Sending transaction to wallet for signing...');
           
           // Step 4: Ask wallet to sign and send transaction
           const signedTx = await tonConnect.sendTransaction(transaction);
-          console.log('✅ Transaction signed by wallet:', signedTx);
+          console.log('Transaction signed by wallet:', signedTx);
 
           // Step 5: Verify the transaction with backend
-          console.log('🔐 Verifying signed transaction with backend...');
+          console.log('Verifying signed transaction with backend...');
           const verifyResponse = await fetch('/api/v1/marketplace/verify-purchase', {
             method: 'POST',
             headers: {
@@ -979,9 +979,9 @@
           }
 
           const verifyData = await verifyResponse.json();
-          console.log('🎉 Purchase verified:', verifyData);
+          console.log('Purchase verified:', verifyData);
           
-          alert(`✅ Purchase successful!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars\n\nTransaction: ${verifyData.transaction_id || 'confirmed'}`);
+          alert(`Purchase successful!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars\n\nTransaction: ${verifyData.transaction_id || 'confirmed'}`);
           setTimeout(() => {
             window.history.back();
           }, 1500);
@@ -989,15 +989,15 @@
         } else {
           // No blockchain transaction needed (Telegram Stars backend handles it)
           // Backend completed the purchase directly
-          alert(`✅ Purchase successful!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars`);
+          alert(`Purchase successful!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars`);
           setTimeout(() => {
             window.history.back();
           }, 1500);
         }
 
       } catch (error) {
-        console.error('❌ Purchase error:', error);
-        alert(`❌ Purchase failed:\n\n${error.message}`);
+        console.error('Purchase error:', error);
+        alert(`Purchase failed:\n\n${error.message}`);
       } finally {
         isProcessing = false;
       }
@@ -1037,7 +1037,7 @@
           }
         }
 
-        console.log('💬 Creating offer for:', nft.name);
+        console.log('Creating offer for:', nft.name);
         const walletAddress = tonConnect.getWalletAddress();
 
         const offerData = {
@@ -1049,7 +1049,7 @@
           offer_escrow: parseFloat(offerPrice) / 2  // Optional: escrow amount (10% of offer)
         };
 
-        console.log('📤 Submitting offer:', offerData);
+        console.log('Submitting offer:', offerData);
         const response = await fetch('/api/v1/marketplace/offer', {
           method: 'POST',
           headers: {
@@ -1065,11 +1065,11 @@
         }
 
         const responseData = await response.json();
-        console.log('✅ Offer submitted:', responseData);
+        console.log('Offer submitted:', responseData);
 
         // If backend returns a transaction to sign (for escrow)
         if (responseData.transaction_for_signing) {
-          console.log('🔐 Signing escrow transaction...');
+          console.log('Signing escrow transaction...');
           try {
             const signedEscrow = await tonConnect.sendTransaction(responseData.transaction_for_signing);
             console.log('✅ Escrow transaction signed:', signedEscrow);
@@ -1078,12 +1078,12 @@
           }
         }
 
-        alert(`✅ Offer submitted!\n\nYour offer of ${offerPrice} Stars for "${nft.name}" has been submitted.\n\nCreator will review your offer.`);
+        alert(`Offer submitted!\n\nYour offer of ${offerPrice} Stars for "${nft.name}" has been submitted.\n\nCreator will review your offer.`);
         isProcessing = false;
 
       } catch (error) {
-        console.error('❌ Offer error:', error);
-        alert(`❌ Offer failed:\n\n${error.message}`);
+        console.error('Offer error:', error);
+        alert(`Offer failed:\n\n${error.message}`);
         isProcessing = false;
       }
     }

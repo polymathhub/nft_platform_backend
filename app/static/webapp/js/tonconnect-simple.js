@@ -12,21 +12,21 @@ class TonConnectManager {
   async initialize() {
     try {
       if (typeof TonConnectUI === 'undefined') {
-        console.error('❌ TonConnectUI not loaded');
+        console.error('TonConnectUI not loaded');
         return false;
       }
 
-      console.log('🔌 Initializing TonConnect...');
+      console.log('Initializing TonConnect...');
       
       this.tonConnectUI = new TonConnectUI({
         manifestUrl: '/tonconnect-manifest.json'
       });
 
       this.isReady = true;
-      console.log('✅ TonConnect ready');
+      console.log('TonConnect ready');
       return true;
     } catch (error) {
-      console.error('❌ TonConnect init error:', error);
+      console.error('TonConnect init error:', error);
       return false;
     }
   }
@@ -37,19 +37,19 @@ class TonConnectManager {
     }
 
     try {
-      console.log('🎨 Opening wallet modal...');
+    console.log('Opening wallet modal...');
       const result = await this.tonConnectUI.openModal();
       
       if (result?.account?.address) {
         this.wallet = result;
-        console.log('✅ Wallet connected:', result.account.address);
+        console.log('Wallet connected:', result.account.address);
         return result;
       }
       
-      console.log('❌ No wallet selected');
+      console.log('No wallet selected');
       return null;
     } catch (error) {
-      console.error('❌ Modal error:', error);
+      console.error('Modal error:', error);
       throw error;
     }
   }

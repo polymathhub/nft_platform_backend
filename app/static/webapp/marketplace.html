@@ -833,10 +833,10 @@
     function renderNFTs(nfts) {
       const grid = document.getElementById('nft-grid');
 
-      if (state.isLoading) {
+        if (state.isLoading) {
         grid.innerHTML = `
           <div class="empty-state" style="grid-column: 1 / -1;">
-            <div class="empty-state-icon">⏳</div>
+            <div class="empty-state-icon"></div>
             <h3>Loading marketplace...</h3>
           </div>
         `;
@@ -846,7 +846,7 @@
       if (!nfts || nfts.length === 0) {
         grid.innerHTML = `
           <div class="empty-state" style="grid-column: 1 / -1;">
-            <div class="empty-state-icon">🔍</div>
+            <div class="empty-state-icon"></div>
             <h3>No NFTs found</h3>
             <p>Try adjusting your filters or search</p>
           </div>
@@ -857,7 +857,7 @@
       grid.innerHTML = nfts.map((nft) => `
         <div class="nft-card" data-nft-id="${nft.id}">
           <div class="nft-image" style="background: ${nft.gradient};">
-            ${nft.image_url ? `<img src="${escapeHtml(nft.image_url)}" alt="${escapeHtml(nft.name)}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="font-size: 48px;">🎨</div>'}
+            ${nft.image_url ? `<img src="${escapeHtml(nft.image_url)}" alt="${escapeHtml(nft.name)}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="font-size: 48px;"></div>'}
             <div class="nft-image-content"></div>
             <button class="heart-btn${state.favorites.has(nft.id) ? ' active' : ''}" 
                     title="${state.favorites.has(nft.id) ? 'Remove favorite' : 'Add favorite'}"
