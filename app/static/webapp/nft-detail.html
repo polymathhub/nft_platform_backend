@@ -744,9 +744,20 @@
   <script type="module">
     // Import TON Connect for transaction signing
     import { tonConnect } from './js/tonconnect.js';
+    import { Toast } from './js/components.js';
     
     // Expose to global scope for inline handlers
     window.tonConnect = tonConnect;
+
+    // Helper function to show notifications
+    window.showNotification = (title, message, type = 'info') => {
+      Toast.show({
+        title,
+        description: message,
+        type,
+        duration: 3000
+      });
+    };
 
     // Mock listings data
     const mockListings = [
@@ -885,15 +896,14 @@
         // Check if user is authenticated
         const token = localStorage.getItem('token');
         if (!token) {
-          alert('Please connect your wallet to purchase NFTs');
+          showNotification('Wallet Required', 'Please connect your wallet to purchase NFTs', 'warning');
           isProcessing = false;
           return;
         }
 
         // Check if wallet is connected
         if (!tonConnect.isConnected()) {
-          alert('Please connect your TON wallet first');
-          // Try to open wallet connection modal
+          showNotification('Wallet Not Connected', 'Please connect your TON wallet first', 'warning');
           const ready = await tonConnect.waitForReady();
           if (ready) {
             const result = await tonConnect.openModal();
@@ -902,7 +912,7 @@
               return;
             }
           } else {
-            alert('Wallet connection not available');
+            showNotification('Connection Failed', 'Wallet connection not available', 'error');
             isProcessing = false;
             return;
           }
@@ -997,7 +1007,7 @@
 
       } catch (error) {
         console.error('Purchase error:', error);
-        alert(`Purchase failed:\n\n${error.message}`);
+        showNotification('Purchase Failed', error.message || 'Unknown error occurred', 'error');
       } finally {
         isProcessing = false;
       }
@@ -1012,7 +1022,7 @@
 
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please connect your wallet to make offers');
+        showNotification('Wallet Required', 'Please connect your wallet to make offers', 'warning');
         return;
       }
 
@@ -1022,7 +1032,7 @@
       try {
         // Check if wallet is connected
         if (!tonConnect.isConnected()) {
-          alert('Please connect your TON wallet to make offers');
+          showNotification('Wallet Not Connected', 'Please connect your TON wallet to make offers', 'warning');
           const ready = await tonConnect.waitForReady();
           if (ready) {
             const result = await tonConnect.openModal();
@@ -1031,7 +1041,7 @@
               return;
             }
           } else {
-            alert('Wallet connection not available');
+            showNotification('Connection Failed', 'Wallet connection not available', 'error');
             isProcessing = false;
             return;
           }

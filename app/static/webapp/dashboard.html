@@ -834,7 +834,7 @@
     <div class="quick-actions">
       <h2 class="section-title">Quick Actions</h2>
       <div class="actions-grid">
-        <div class="action-card" onclick="navigate('/wallet')">
+        <div class="action-card" id="createWalletBtn" onclick="handleCreateWallet(event)">
           <div class="action-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 0l4.24-4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08 0l4.24 4.24"></path></svg>
           </div>
@@ -1089,6 +1089,76 @@
   <script type="module">
     // Import page initialization for consistent user greeting across pages
     import PageInitializer from './js/page-init.js';
+    import { tonConnect } from './js/tonconnect.js';
+    import { Toast } from './js/components.js';
+
+    // Setup wallet connection handler
+    window.handleCreateWallet = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      try {
+        // Initialize TonConnect if needed
+        if (!tonConnect.isReady) {
+          console.log('Initializing TonConnect...');
+          const initialized = await tonConnect.initialize();
+          if (!initialized) {
+            Toast.show({
+              title: 'Error',
+              description: 'Failed to initialize wallet connection',
+              type: 'error',
+              duration: 3000
+            });
+            return;
+          }
+        }
+
+        // Check if already connected
+        if (tonConnect.isConnected()) {
+          Toast.show({
+            title: 'Already Connected',
+            description: 'Your TON wallet is already connected',
+            type: 'info',
+            duration: 2000
+          });
+          return;
+        }
+
+        // Open wallet modal
+        console.log('Opening wallet selection modal...');
+        const result = await tonConnect.openModal();
+
+        if (result && result.account) {
+          console.log('Wallet connected successfully:', result.account.address);
+          Toast.show({
+            title: 'Wallet Connected',
+            description: 'Your TON wallet has been connected successfully',
+            type: 'success',
+            duration: 3000
+          });
+        } else {
+          console.log('Wallet connection cancelled');
+        }
+      } catch (error) {
+        console.error('Error connecting wallet:', error);
+        Toast.show({
+          title: 'Connection Error',
+          description: error.message || 'Failed to connect wallet',
+          type: 'error',
+          duration: 3000
+        });
+      }
+    };
+
+    // Pre-initialize TonConnect on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('Dashboard loaded, pre-initializing TonConnect...');
+      try {
+        await tonConnect.initialize();
+      } catch (error) {
+        console.error('Failed to pre-initialize TonConnect:', error);
+      }
+    });
   </script>
   <script src="navbar.js"></script>
   <!-- Load Shared Navbar Component -->
