@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png">
   <meta name="description" content="NFT Marketplace - Browse, buy, and sell premium digital assets">
   <meta name="format-detection" content="telephone=no">
-  <title>Marketplace - GiftedForge NFT Platform</title>
+  <title>Marketplace for GiftedForge NFT Platform</title>
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -32,7 +32,7 @@
       --color-accent: #d946ef;
       --color-dark: #1a1a2e;
       
-      --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-purple: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
       --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
       --gradient-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
       --gradient-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
@@ -235,13 +235,13 @@
     }
 
     .nft-card:hover {
-      box-shadow: 0 12px 28px rgba(88, 86, 214, 0.15);
-      border-color: rgba(88, 86, 214, 0.2);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+      border-color: rgba(0, 0, 0, 0.1);
     }
 
     .nft-image {
       width: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #1a1a1a;
       aspect-ratio: 1.15;
       display: flex;
       align-items: center;
@@ -250,13 +250,14 @@
       position: relative;
       overflow: hidden;
       border-radius: 20px 20px 0 0;
+      color: rgba(255, 255, 255, 0.8);
     }
 
     .nft-image::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
       pointer-events: none;
     }
 
@@ -296,14 +297,14 @@
     .nft-image .heart-btn svg {
       width: 20px;
       height: 20px;
-      stroke: #ff4444;
+      stroke: #ff3b30;
       stroke-width: 2;
       fill: none;
       transition: all 200ms ease;
     }
 
     .nft-image .heart-btn.active svg {
-      fill: #ff4444;
+      fill: #ff3b30;
     }
 
     .nft-info {
@@ -489,7 +490,7 @@
   <!-- TOP HEADER -->
   <header class="app-header">
     <div class="header-container">
-      <!-- Brand -->
+      <!-- Brandname-->
       <div class="header-brand">
         <img src="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png" alt="GiftedForge" class="brand-logo">
       </div>
@@ -732,7 +733,7 @@
           const data = await response.json();
           state.allNFTs = formatListings(data.items || data);
           state.usingMockData = false;
-          console.log('📥 Loaded real listings from database');
+          console.log(' Loaded real listings from database');
         } else {
           // Fall back to mock data if backend fails
           state.allNFTs = [...mockListings];
@@ -755,7 +756,7 @@
       if (!Array.isArray(listings)) return [];
       
       const gradients = [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
         'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
         'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
@@ -991,7 +992,7 @@
       }
     };
 
-    // Auto-save view state every 30 seconds
+    // automatically save pictures for 30 secs 
     setInterval(() => CookieUtils.saveViewState(), 30000);
 
     // Lazy load offscreen images
@@ -1009,7 +1010,7 @@
         });
       }, { rootMargin: '50px' });
 
-      // Apply to all nft images
+      // Apply to all nft images whatsoever
       setTimeout(() => {
         document.querySelectorAll('img[data-src]').forEach(img => {
           imageObserver.observe(img);
@@ -1017,7 +1018,7 @@
       }, 500);
     }
 
-    // Performance tracking
+    // Performance tracking for the marketplace 
     window.addEventListener('load', () => {
       if (performance.timing) {
         const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;

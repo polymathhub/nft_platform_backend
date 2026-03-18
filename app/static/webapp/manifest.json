@@ -21,6 +21,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ],
   "icons": [
@@ -33,14 +39,6 @@
       "src": "https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png",
       "sizes": "512x512",
       "type": "image/png"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
     }
   ],
   "shortcuts": [
