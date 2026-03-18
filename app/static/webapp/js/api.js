@@ -23,6 +23,12 @@ class APIClient {
         ...headers,
       };
 
+      // Add Authorization header if token exists
+      const token = localStorage.getItem('token');
+      if (token && !skipAuth) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(url, {
         method,
         headers: requestHeaders,

@@ -65,16 +65,36 @@ export class UnifiedAuthManager {
   }
 
   /**
-   * Restore session from backend
+   * Restore session from backend and localStorage
    */
   async restoreSession() {
     try {
+      // First check localStorage for cached user and token
+      const cachedUser = localStorage.getItem('user');
+      const cachedToken = localStorage.getItem('token');
+      
+      if (cachedUser && cachedToken) {
+        try {
+          this.user = JSON.parse(cachedUser);
+          this.isAuthenticated = true;
+          console.log('Session restored from localStorage');
+          this.dispatchEvent('auth:initialized', { user: this.user });
+          return;
+        } catch (e) {
+          console.log('Failed to parse cached user');
+        }
+      }
+      
+      // If no cache, try to restore from backend
       const profile = await api.get(endpoints.unifiedAuth.profile);
       this.setUser(profile);
-      console.log('Session restored');
+      console.log('Session restored from backend');
       this.dispatchEvent('auth:initialized', { user: this.user });
     } catch (error) {
       console.log('No active session');
+      // Clear invalid session data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     }
   }
 
@@ -95,6 +115,8 @@ export class UnifiedAuthManager {
       this.user = null;
       this.isAuthenticated = false;
       this.authMethod = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       return;
     }
 
@@ -104,6 +126,8 @@ export class UnifiedAuthManager {
       username: String(userData.username || ''),
       avatar: userData.avatar ? String(userData.avatar) : null,
       telegramId: userData.telegram_id ? String(userData.telegram_id) : null,
+      first_name: userData.first_name || userData.firstName || null,
+      telegram_username: userData.telegram_username || null,
       tonWalletAddress: userData.ton_wallet_address ? String(userData.ton_wallet_address) : null,
       role: String(userData.user_role || 'user'),
       createdAt: userData.created_at ? new Date(userData.created_at) : new Date(),
@@ -111,6 +135,27 @@ export class UnifiedAuthManager {
     };
 
     this.isAuthenticated = true;
+    
+    // Store user in localStorage for persistence across page reloads
+    localStorage.setItem('user', JSON.stringify(this.user));
+  }
+
+  /**
+   * Store authentication token
+   */
+  setToken(token) {
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }
+
+  /**
+   * Get stored token
+   */
+  getToken() {
+    return localStorage.getItem('token');
   }
 
   /**
@@ -132,7 +177,11 @@ export class UnifiedAuthManager {
         username: this.tg.initDataUnsafe?.user?.username,
       });
 
+      // Store user and token
       this.setUser(response.user);
+      if (response.tokens && response.tokens.access_token) {
+        this.setToken(response.tokens.access_token);
+      }
       this.authMethod = 'telegram';
       
       Toast.success('Logged in with Telegram!');
@@ -178,7 +227,11 @@ export class UnifiedAuthManager {
         wallet_info: walletInfo,
       });
 
+      // Store user and token
       this.setUser(response.user);
+      if (response.tokens && response.tokens.access_token) {
+        this.setToken(response.tokens.access_token);
+      }
       this.authMethod = 'ton_wallet';
       
       Toast.success('Connected TON wallet!');

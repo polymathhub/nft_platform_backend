@@ -934,8 +934,27 @@
 
 
   <script type="module">
-    import { auth } from './js/auth.js';
+    import { UnifiedAuthManager } from './js/unified-auth.js';
     import { api, endpoints } from './js/api.js';
+
+    // Initialize unified auth manager (handles Telegram auth automatically)
+    const authManager = new UnifiedAuthManager();
+    window.authManager = authManager;
+
+    // Auto-trigger Telegram login if available and not authenticated yet
+    async function initializeTelegramAuth() {
+      try {
+        if (window.Telegram?.WebApp?.initData && !localStorage.getItem('token')) {
+          console.log('Telegram WebApp detected, initiating auto-login...');
+          await authManager.onTelegramLogin({});
+        }
+      } catch (error) {
+        console.log('Telegram auto-login unavailable, user may login manually');
+      }
+    }
+
+    // Call this on page load
+    initializeTelegramAuth();
 
     // Dashboard Activity Manager
     class ActivityManager {
@@ -1029,14 +1048,21 @@
     // Check authentication
     async function ensureAuthenticated() {
       try {
-        if (!auth.isLoggedIn()) {
+        // Wait for auth to be initialized (max 3 seconds)
+        let maxWait = 30;
+        while (!authManager.isAuthenticated && maxWait > 0) {
+          await new Promise(r => setTimeout(r, 100));
+          maxWait--;
+        }
+
+        if (!authManager.isAuthenticated) {
           window.location.href = '/';
           return false;
         }
 
-        const user = auth.getUser();
+        const user = authManager.user;
         // Display username from Telegram or backend, fallback to first name
-        let displayName = user?.username || user?.firstName || user?.name?.split(' ')[0] || 'User';
+        let displayName = user?.username || user?.first_name || user?.telegram_username || 'User';
         // Remove @ symbol if present from Telegram username
         if (displayName.startsWith('@')) {
           displayName = displayName.substring(1);
@@ -1161,13 +1187,18 @@
       }
     };
 
-    // Pre-initialize TonConnect on page load
+    // Pre-initialize TonConnect and ensure auth on page load
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('Dashboard loaded, pre-initializing TonConnect...');
+      console.log('Dashboard loaded, checking authentication...');
       try {
+        // Ensure user is authenticated
+        await ensureAuthenticated();
+        
+        // Pre-initialize TonConnect
+        console.log('Pre-initializing TonConnect...');
         await tonConnect.initialize();
       } catch (error) {
-        console.error('Failed to pre-initialize TonConnect:', error);
+        console.error('Dashboard initialization error:', error);
       }
     });
   </script>

@@ -168,12 +168,6 @@ async def optimize_static_caching(request: Request, call_next):
 @app.get("/")
 async def root_get():
     return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
-
-@app.get("/webapp/", include_in_schema=False)
-async def redirect_webapp_root():
-    """Redirect /webapp/ directory requests to dashboard."""
-    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
-
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
@@ -317,6 +311,16 @@ app.include_router(notification_router, prefix="/api")
 app.include_router(payment_router)
 app.include_router(referrals_router)
 app.include_router(stars_payment_router)
+
+# Define route handlers BEFORE mounts so they have priority
+@app.get("/", include_in_schema=False)
+async def redirect_to_webapp():
+    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+
+@app.get("/webapp/", include_in_schema=False)
+async def redirect_webapp_root():
+    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+
 logger.info(f"Checking web app static directory: {webapp_path}")
 if os.path.isdir(webapp_path):
     import glob

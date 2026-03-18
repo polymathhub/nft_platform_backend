@@ -668,15 +668,33 @@
 
     async function initializeApp() {
       try {
+        // Wait for auth manager to be available (max 5 seconds)
+        let maxWait = 50;
+        while (!window.authManager && maxWait > 0) {
+          await new Promise(r => setTimeout(r, 100));
+          maxWait--;
+        }
+
+        const authManager = window.authManager;
+        if (!authManager) {
+          throw new Error('Auth manager not available');
+        }
+
         // Check if user is authenticated
         try {
-          const token = localStorage.getItem('token');
-          const userStr = localStorage.getItem('user');
-          state.isAuthenticated = !!token && !!userStr;
-          if (state.isAuthenticated && userStr) {
-            state.currentUser = JSON.parse(userStr);
+          // Wait for auth to be initialized (max 3 seconds)
+          let authWait = 30;
+          while (!authManager.isAuthenticated && authWait > 0) {
+            await new Promise(r => setTimeout(r, 100));
+            authWait--;
+          }
+
+          if (authManager.isAuthenticated && authManager.user) {
+            state.isAuthenticated = true;
+            state.currentUser = authManager.user;
+            
             // Update userName element with real user data
-            let displayName = state.currentUser?.username || state.currentUser?.first_name || 'User';
+            let displayName = state.currentUser?.username || state.currentUser?.first_name || state.currentUser?.telegram_username || 'User';
             if (displayName.startsWith('@')) {
               displayName = displayName.substring(1);
             }
@@ -686,6 +704,7 @@
             }
           }
         } catch (e) {
+          console.log('Auth check failed:', e);
           state.isAuthenticated = false;
         }
 
