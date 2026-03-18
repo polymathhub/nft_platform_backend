@@ -1,8 +1,4 @@
-/**
- * Unified Authentication Manager
- * Handles both TON Wallet (via TonConnect) and Telegram authentication
- * Provides consistent error handling, button state management, and validation
- */
+
 
 import { api, endpoints } from './api.js';
 import { Toast } from './components.js';
@@ -50,10 +46,11 @@ export class UnifiedAuthManager {
     try {
       // Check if TonConnect UI library is available
       if (typeof TonConnectUI !== 'undefined') {
+        const manifestUrl = (function(){ try { return new URL('/tonconnect-manifest.json', window.location.href).href } catch(e){ return (window.location && window.location.origin ? window.location.origin.replace(/\/+$/,'') : '') + '/tonconnect-manifest.json' } })();
         this.tonConnectUI = new TonConnectUI({
-          manifestUrl: '/tonconnect-manifest.json',
+          manifestUrl,
         });
-        console.log('TonConnect UI initialized');
+        console.log('TonConnect UI initialized, manifestUrl:', manifestUrl);
         
         // Setup TonConnect event listeners
         this.tonConnectUI.onStatusChange((wallet) => {

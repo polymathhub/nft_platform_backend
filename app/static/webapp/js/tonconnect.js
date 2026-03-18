@@ -15,6 +15,15 @@ class TonConnectManager {
     this.initializationAborted = false;
   }
 
+  getManifestUrl() {
+    try {
+      return new URL('/tonconnect-manifest.json', window.location.href).href;
+    } catch (e) {
+      const origin = window.location && window.location.origin ? window.location.origin : '';
+      return (origin ? origin.replace(/\/+$/,'') : '') + '/tonconnect-manifest.json';
+    }
+  }
+
   /**
    * Initialize TonConnect UI independently
    * Can be called at any time without marketplace dependencies
@@ -66,13 +75,14 @@ class TonConnectManager {
       console.log('Manifest valid:', manifestValidation.url);
 
       // Initialize TonConnect UI
+      const manifestUrl = this.getManifestUrl();
       console.log('Instantiating TonConnectUI with config:', {
-        manifestUrl: '/tonconnect-manifest.json',
+        manifestUrl,
         buttonRootId: 'tonconnect-button'
       });
       
       this.tonConnectUI = new TonConnectUI({
-        manifestUrl: '/tonconnect-manifest.json',
+        manifestUrl,
         buttonRootId: 'tonconnect-button'
       });
       
@@ -140,7 +150,7 @@ class TonConnectManager {
    * @private
    */
   async validateManifest(retries = 3) {
-    const manifestUrl = '/tonconnect-manifest.json';
+    const manifestUrl = this.getManifestUrl();
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {

@@ -9,6 +9,15 @@ class TonConnectManager {
     this.wallet = null;
   }
 
+  getManifestUrl() {
+    try {
+      return new URL('/tonconnect-manifest.json', window.location.href).href;
+    } catch (e) {
+      const origin = window.location && window.location.origin ? window.location.origin : '';
+      return (origin ? origin.replace(/\/+$/,'') : '') + '/tonconnect-manifest.json';
+    }
+  }
+
   async initialize() {
     try {
       if (typeof TonConnectUI === 'undefined') {
@@ -19,7 +28,7 @@ class TonConnectManager {
       console.log('Initializing TonConnect...');
       
       this.tonConnectUI = new TonConnectUI({
-        manifestUrl: '/tonconnect-manifest.json'
+        manifestUrl: this.getManifestUrl()
       });
 
       this.isReady = true;
