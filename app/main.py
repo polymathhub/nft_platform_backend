@@ -168,6 +168,12 @@ async def optimize_static_caching(request: Request, call_next):
 @app.get("/")
 async def root_get():
     return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+
+@app.get("/webapp/", include_in_schema=False)
+async def redirect_webapp_root():
+    """Redirect /webapp/ directory requests to dashboard."""
+    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
@@ -337,10 +343,3 @@ if os.path.isdir(webapp_path):
 else:
     logger.error(f"Web app static directory NOT FOUND at {webapp_path}")
     logger.error(f"  This will cause 404 errors for CSS/JS files")
-@app.get("/", include_in_schema=False)
-async def redirect_to_webapp():
-    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
-
-@app.get("/webapp/", include_in_schema=False)
-async def redirect_webapp_root():
-    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
