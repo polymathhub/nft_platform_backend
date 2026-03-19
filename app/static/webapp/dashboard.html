@@ -640,7 +640,7 @@
 
     <!-- Welcome Section -->
     <div class="welcome-section" style="text-align: left;">
-      <p class="welcome-text">Welcome back, <span id="user-name">Guest</span></p>
+      <p class="welcome-text">Welcome back, <span id="user-name"></span></p>
     </div>
 
     <!-- Balance Card -->
@@ -730,34 +730,12 @@
     <div class="collection-section">
       <div class="section-header">
         <h2 class="section-title" style="margin: 0;">Your Collection</h2>
-        <a href="/marketplace">View All</a>
+        <a href="/webapp/marketplace.html">View All</a>
       </div>
-      <div class="collection-grid">
-        <div class="nft-card" onclick="navigate('/marketplace/nft/1')">
-          <div class="nft-image" style="background: linear-gradient(135deg, #f0e5ff 0%, #e8d9ff 100%); display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="2" style="width: 32px; height: 32px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          </div>
-          <div class="nft-info">
-            <div class="nft-name">Liquid #01</div>
-            <div class="nft-meta">
-              <span class="nft-creator">2 SOL</span>
-              <span class="nft-price">floor 2.3</span>
-            </div>
-          </div>
-          <button class="nft-button">View More</button>
-        </div>
-        <div class="nft-card" onclick="navigate('/marketplace/nft/2')">
-          <div class="nft-image" style="background: linear-gradient(135deg, #f0e5ff 0%, #e8d9ff 100%); display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="2" style="width: 32px; height: 32px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          </div>
-          <div class="nft-info">
-            <div class="nft-name">Neon Dreams</div>
-            <div class="nft-meta">
-              <span class="nft-creator">1 SOL</span>
-              <span class="nft-price">floor 1.9</span>
-            </div>
-          </div>
-          <button class="nft-button">View More</button>
+      <div class="collection-grid" id="user-nfts-container">
+        <!-- Real NFTs will be loaded here from backend -->
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-tertiary);">
+          <p>No NFTs yet. Start collecting or <a href="/webapp/mint.html" style="color: #5856d6; text-decoration: none; font-weight: 600;">mint your first NFT</a></p>
         </div>
       </div>
     </div>
@@ -1009,15 +987,29 @@
     // Initialize activity manager
     const activityManager = new ActivityManager(api, endpoints);
 
-    // Initialize dashboard
+    // Initialize dashboard - display user info and load activity
     async function initDashboard() {
-      const isAuthenticated = await ensureAuthenticated();
-      if (isAuthenticated) {
-        activityManager.loadRecentActivity();
+      try {
+        // Display user info when available (non-blocking)
+        displayUserInfo();
+        
+        // Load recent activity if API is available
+        try {
+          activityManager.loadRecentActivity();
+        } catch (error) {
+          console.warn('Could not load activity:', error);
+        }
+      } catch (error) {
+        console.error('Dashboard init error:', error);
       }
     }
 
-    initDashboard();
+    // Call dashboard initialization when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDashboard);
+    } else {
+      initDashboard();
+    }
   </script>
   <script type="module">
     // Import page initialization for consistent user greeting across pages

@@ -380,14 +380,14 @@
 
     <!-- Welcome Section -->
     <div class="welcome-section">
-      <p class="welcome-text">Welcome back, <span id="user-name">Guest</span></p>
+      <p class="welcome-text">Welcome back, <span id="user-name"></span></p>
     </div>
 
     <!-- Profile Card -->
     <div class="profile-card">
       <div class="profile-avatar" id="profile-avatar-image" style="background-size: cover; background-position: center;">👤</div>
-      <div class="profile-name" id="profile-name">Guest User</div>
-      <div class="profile-username" id="profile-username">@guest</div>
+      <div class="profile-name" id="profile-name"></div>
+      <div class="profile-username" id="profile-username"></div>
 
       <div class="profile-stats">
         <div class="stat">
@@ -499,7 +499,7 @@
       <div class="menu-item" style="flex-direction: column; align-items: flex-start;">
         <div class="menu-item-label" style="width: 100%;">
           <div class="menu-item-title">Connected TON Wallet</div>
-          <div class="menu-item-desc" id="wallet-address" style="word-break: break-all;">0x742d35Cc6634C0532925a3b844Bc155e90c36aB4</div>
+          <div class="menu-item-desc" id="wallet-address" style="word-break: break-all;">Not connected</div>
         </div>
         <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); width: 100%;">
           <button onclick="copyWalletAddress()" style="flex: 1; padding: var(--space-sm) var(--space-md); background: var(--bg-primary); color: var(--color-primary); border: 1px solid var(--color-primary); border-radius: var(--radius-md); cursor: pointer; font-size: var(--font-size-xs); font-weight: 600; transition: all var(--transition-fast);" onmouseover="this.style.background='var(--color-primary)'; this.style.color='white';" onmouseout="this.style.background='var(--bg-primary)'; this.style.color='var(--color-primary)';">
