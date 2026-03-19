@@ -49,7 +49,7 @@ self.addEventListener('install', (event) => {
               }, Promise.resolve());
           });
       })
-      .then(() => self.skipWaiting())
+      // REMOVED skipWaiting() - prevents aggressive takeover causing violent refreshes
   );
 });
 
@@ -67,7 +67,8 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
+    // REMOVED clients.claim() - prevents forcing new SW on existing clients
   );
 });
 
@@ -143,21 +144,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 4: HTML pages - Stale while revalidate
+  // Strategy 4: HTML pages - Cache first strategy
+  // CHANGED from 'stale-while-revalidate' to 'cache-first'
+  // This prevents background network requests that cause violent page refreshes
   if (request.destination === 'document' || url.pathname.endsWith('.html')) {
     event.respondWith(
       caches.match(request)
         .then((cached) => {
-          const fetchPromise = fetch(request)
+          // Return cached HTML immediately without background fetch
+          if (cached) {
+            return cached;
+          }
+          // Only fetch from network if not in cache
+          return fetch(request)
             .then((response) => {
               if (response.ok && request.method === 'GET') {
                 caches.open(CACHE_NAME).then((c) => c.put(request, response.clone()));
               }
               return response;
             })
-            .catch(() => cached);
-          
-          return cached ? cached : fetchPromise;
+            .catch(() => createOfflineResponse());
         })
     );
     return;
@@ -191,8 +197,11 @@ function createOfflineResponse() {
 }
 
 // Handle messages from clients
+// DISABLED: Removed skipWaiting to prevent aggressive SW takeover
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+    // Intentionally NOT calling skipWaiting()
+    // New SW updates wait until user closes/reopens app
+    console.log('[SW] Update available - will activate on next app visit');
   }
 });
