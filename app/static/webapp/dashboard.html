@@ -905,9 +905,17 @@
       });
     });
 
-    // Initialize dashboard - NO protective auth checks
+    // Initialize dashboard - Prevent multiple initializations with guard flag
     const activityManager = new ActivityManager(api, endpoints);
+    let dashboardInitialized = false;
+    
     async function initDashboard() {
+      if (dashboardInitialized) {
+        console.log('[Dashboard] Already initialized, skipping');
+        return;
+      }
+      dashboardInitialized = true;
+
       try {
         displayUserInfo(); // Non-blocking user display
         try {
@@ -920,8 +928,9 @@
       }
     }
 
+    // Execute initialization immediately
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initDashboard);
+      document.addEventListener('DOMContentLoaded', initDashboard, { once: true });
     } else {
       initDashboard();
     }
@@ -990,24 +999,15 @@
       }
     };
 
-    // Initialize dashboard on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      console.log('Dashboard loaded');
+    // Module-level initialization: TonConnect pre-initialization (runs once per load)
+    (async () => {
       try {
-        // Display user info if available
-        await displayUserInfo();
-        
-        // Pre-initialize TonConnect
-        console.log('Initializing TonConnect...');
-        try {
-          await tonConnect.initialize();
-        } catch (e) {
-          console.warn('TonConnect initialization failed:', e);
-        }
-      } catch (error) {
-        console.error('Dashboard initialization error:', error);
+        console.log('[Dashboard] Pre-initializing TonConnect...');
+        await tonConnect.initialize();
+      } catch (e) {
+        console.warn('[Dashboard] TonConnect initialization failed:', e);
       }
-    });
+    })();
   </script>
   <script src="navbar.js"></script>
   <!-- Load Shared Navbar Component -->

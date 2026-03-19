@@ -940,20 +940,31 @@
       if (marketItem) marketItem.classList.add('active');
     }
 
-    // Initialize when DOM is ready
+    // Initialize when DOM is ready - with guard to prevent multiple runs
+    let appInitialized = false;
+    
+    async function safeInitializeApp() {
+      if (appInitialized) {
+        console.log('[Marketplace] Already initialized, skipping');
+        return;
+      }
+      appInitialized = true;
+      await initializeApp();
+    }
+    
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeApp);
+      document.addEventListener('DOMContentLoaded', safeInitializeApp, { once: true });
     } else {
-      initializeApp();
+      safeInitializeApp();
     }
 
     // ============ SERVICE WORKER REGISTRATION ============
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/webapp/sw.js', { scope: '/webapp/' })
-          .then((reg) => console.log('SW registered for marketplace'))
-          .catch((err) => console.warn('SW registration failed:', err));
-      });
+    // Register only once, preventing re-registration on page reloads
+    if ('serviceWorker' in navigator && !window.swRegistered) {
+      window.swRegistered = true;
+      navigator.serviceWorker.register('/webapp/sw.js', { scope: '/webapp/' })
+        .then((reg) => console.log('[SW] Registered for marketplace'))
+        .catch((err) => console.warn('[SW] Registration failed:', err));
     }
 
     // ============ COOKIE & CACHE MANAGEMENT ============
@@ -986,8 +997,9 @@
     // Reduces network calls and UI jank in Telegram Mini App
     window.addEventListener('beforeunload', () => CookieUtils.saveViewState());
 
-    // Lazy load offscreen images
-    if ('IntersectionObserver' in window) {
+    // Lazy load offscreen images - Setup only once
+    if ('IntersectionObserver' in window && !window.imageLazyLoadSetup) {
+      window.imageLazyLoadSetup = true;
       const imageObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -1001,7 +1013,7 @@
         });
       }, { rootMargin: '50px' });
 
-      // Apply to all nft images whatsoever
+      // Apply to all nft images
       setTimeout(() => {
         document.querySelectorAll('img[data-src]').forEach(img => {
           imageObserver.observe(img);
@@ -1009,14 +1021,17 @@
       }, 500);
     }
 
-    // Performance tracking for the marketplace 
-    window.addEventListener('load', () => {
-      if (performance.timing) {
-        const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-        CookieUtils.set('marketplace_load_time', loadTime, 1);
-        if (loadTime < 2000) console.log('⚡ Marketplace load time: ' + loadTime + 'ms');
-      }
-    });
+    // Performance tracking - Run only once per page load
+    if (!window.perfTracked) {
+      window.perfTracked = true;
+      window.addEventListener('load', () => {
+        if (performance.timing) {
+          const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+          CookieUtils.set('marketplace_load_time', loadTime, 1);
+          if (loadTime < 2000) console.log('⚡ Marketplace load time: ' + loadTime + 'ms');
+        }
+      }, { once: true });
+    }
   </script>
   <script src="navbar.js"></script>
   <!-- Load Shared Navbar Component -->

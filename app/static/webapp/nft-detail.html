@@ -1105,7 +1105,14 @@
       alert('Menu options would go here');
     }
 
-    window.addEventListener('DOMContentLoaded', initNFTDetail);
+    // Initialize only once to prevent multiple API calls
+    let nftDetailInitialized = false;
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!nftDetailInitialized) {
+        nftDetailInitialized = true;
+        initNFTDetail();
+      }
+    }, { once: true });
   </script>
 
   <script src="navbar.js"></script>
