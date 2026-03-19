@@ -686,7 +686,8 @@
         console.log('NFT created:', mintResponse);
         alert(`✨ ${mediaType === 'gif' ? '🎬' : mediaType === 'video' ? '🎥' : '🖼️'} NFT "${formData.name}" created!\n\nTransaction: ${mintResponse.transaction_hash || 'Processing...'}`);
         
-        setTimeout(() => navigate('/dashboard'), 2000);
+        // Navigate immediately instead of setTimeout delay
+        navigate('/dashboard');
 
       } catch (error) {
         console.error('Minting failed:', error);

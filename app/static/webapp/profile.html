@@ -643,7 +643,10 @@
       if (confirm('Disconnect your wallet? You will need to reconnect to access the app.')) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/webapp/dashboard.html';
+        // Check if already on dashboard to prevent unnecessary redirect
+        if (window.location.pathname !== '/webapp/dashboard.html') {
+          window.location.href = '/webapp/dashboard.html';
+        }
       }
     };
 

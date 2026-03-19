@@ -229,9 +229,10 @@ class AuthManager {
    */
   async requireAuth() {
     if (!this.isAuthenticated) {
-      // Redirect to login page
-      window.location.href = '/login';
-      throw new Error('Authentication required. Redirecting to login...');
+      // Redirect to login page - use dashboard instead as primary entry
+      const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
+      window.location.href = `${basePath}/dashboard.html`;
+      throw new Error('Authentication required. Redirecting to dashboard...');
     }
     return true;
   }

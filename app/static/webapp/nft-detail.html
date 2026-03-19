@@ -776,7 +776,8 @@
           const token = localStorage.getItem('token');
           if (!token) {
             showNotification('Authentication Required', 'Please login to view NFT details', 'error');
-            setTimeout(() => window.location.href = '/webapp/dashboard.html', 2000);
+            // Immediate redirect instead of setTimeout
+            window.location.href = '/webapp/dashboard.html';
             return;
           }
 

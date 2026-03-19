@@ -228,7 +228,9 @@ export function createAuthMethodSelector() {
   const emailBtn = container.querySelector('#email-login-btn');
   if (emailBtn) {
     emailBtn.addEventListener('click', () => {
-      window.location.href = '/login';
+      // Route to dashboard for email login (or create dedicated login page)
+      const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
+      window.location.href = `${basePath}/dashboard.html`;
     });
   }
 

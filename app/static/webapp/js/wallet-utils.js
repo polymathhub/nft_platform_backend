@@ -100,12 +100,6 @@ class WalletUtils {
    */
   navigateToWalletIfNeeded() {
     if (this.tonConnect && !this.tonConnect.isConnected()) {
-      Toast.show({
-        title: 'Wallet Required',
-        description: 'Please connect your wallet first.',
-        type: 'info',
-        duration: 2000
-      });
       window.location.href = '/webapp/wallet.html';
       return true;
     }

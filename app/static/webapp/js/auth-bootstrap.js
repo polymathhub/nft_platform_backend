@@ -99,11 +99,9 @@ function setupGlobalAuthListeners(authManager) {
     logoutHandlerActive = true;
     console.log('[AUTH] Logout detected, redirecting to dashboard...');
     
-    // Graceful redirect to dashboard (now the home page)
+    // Immediate redirect to dashboard (no setTimeout delay to prevent refresh loops)
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
-    setTimeout(() => {
-      window.location.href = `${basePath}/dashboard.html`;
-    }, 500);
+    window.location.href = `${basePath}/dashboard.html`;
   });
 
   // Handle auth errors
