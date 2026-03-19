@@ -857,9 +857,15 @@
 
 
   <script type="module">
-    import { auth } from './js/auth.js';
+    import { UnifiedAuthManager } from './js/unified-auth.js';
     import { api, endpoints } from './js/api.js';
     import { tonConnect } from './js/tonconnect.js';
+
+    // Initialize auth manager for this page if not already done
+    if (!window.authManager) {
+      window.authManager = new UnifiedAuthManager();
+    }
+    const authManager = window.authManager;
 
     // ========== TON WALLET INTEGRATION ==========
     class TONWalletUI {
@@ -1090,14 +1096,40 @@
       }
     }
 
-    // Ensure authenticated
-    if (!auth.isLoggedIn()) {
-      window.location.href = '/';
+    // Ensure authenticated - wait for auth to be initialized
+    async function ensureAuthenticated() {
+      let authWait = 50;
+      while (!authManager.isAuthenticated && authWait > 0) {
+        const cachedToken = localStorage.getItem('token');
+        const cachedUser = localStorage.getItem('user');
+        if (cachedToken && cachedUser) {
+          try {
+            authManager.user = JSON.parse(cachedUser);
+            authManager.isAuthenticated = true;
+            break;
+          } catch (e) {
+            console.log('Failed to parse cached user');
+          }
+        }
+        await new Promise(r => setTimeout(r, 100));
+        authWait--;
+      }
+
+      if (!authManager.isAuthenticated) {
+        window.location.href = '/webapp/dashboard.html';
+        return false;
+      }
+      return true;
     }
 
-    const user = auth.getUser();
-    const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User';
-    document.getElementById('user-name').textContent = firstName;
+    // Initialize authentication
+    (async () => {
+      if (!await ensureAuthenticated()) return;
+
+      const user = authManager.user;
+      const firstName = user?.first_name || user?.username?.split(' ')[0] || 'User';
+      document.getElementById('user-name').textContent = firstName;
+    })();
 
     // Global functions
     window.navigate = (path) => window.location.href = path;
@@ -1123,11 +1155,8 @@
       }
     };
     
-    // Initialize wallet manager
-    const walletManager = new WalletManager(api, endpoints);
-    
-    // Load wallet data
-    walletManager.loadWallets();
+    // Initialize TON wallet UI
+    const tonWallet = new TONWalletUI();
     
     // Set active nav item on click
     document.querySelectorAll('.nav-item').forEach(item => {

@@ -534,12 +534,39 @@
 
 
   <script type="module">
-    import { auth } from './js/auth.js';
+    import { UnifiedAuthManager } from './js/unified-auth.js';
     import { api, endpoints } from './js/api.js';
 
-    // Ensure authenticated
-    if (!auth.isLoggedIn()) {
-      window.location.href = '/';
+    // Initialize auth manager for this page if not already done
+    if (!window.authManager) {
+      window.authManager = new UnifiedAuthManager();
+    }
+    const authManager = window.authManager;
+
+    // Ensure authenticated - wait for auth to be initialized
+    async function ensureAuthenticated() {
+      let authWait = 50;
+      while (!authManager.isAuthenticated && authWait > 0) {
+        const cachedToken = localStorage.getItem('token');
+        const cachedUser = localStorage.getItem('user');
+        if (cachedToken && cachedUser) {
+          try {
+            authManager.user = JSON.parse(cachedUser);
+            authManager.isAuthenticated = true;
+            break;
+          } catch (e) {
+            console.log('Failed to parse cached user');
+          }
+        }
+        await new Promise(r => setTimeout(r, 100));
+        authWait--;
+      }
+
+      if (!authManager.isAuthenticated) {
+        window.location.href = '/webapp/dashboard.html';
+        return false;
+      }
+      return true;
     }
 
     // State for form data
@@ -559,6 +586,11 @@
         this.classList.add('active');
       });
     });
+
+    // Initialize authentication on page load
+    (async () => {
+      await ensureAuthenticated();
+    })();
 
     window.handleImageUpload = (event) => {
       const file = event.target.files[0];

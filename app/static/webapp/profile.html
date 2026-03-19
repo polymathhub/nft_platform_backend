@@ -582,25 +582,58 @@
 
 
   <script type="module">
-    import { auth } from '/webapp/js/auth.js';
+    import { UnifiedAuthManager } from '/webapp/js/unified-auth.js';
     import { api, endpoints } from '/webapp/js/api.js';
 
-    // Ensure authenticated
-    if (!auth.isLoggedIn()) {
-      window.location.href = '/';
+    // Initialize auth manager for this page if not already done
+    if (!window.authManager) {
+      window.authManager = new UnifiedAuthManager();
+    }
+    const authManager = window.authManager;
+
+    // Ensure authenticated - wait for auth to be initialized
+    async function ensureAuthenticated() {
+      let authWait = 50;
+      while (!authManager.isAuthenticated && authWait > 0) {
+        const cachedToken = localStorage.getItem('token');
+        const cachedUser = localStorage.getItem('user');
+        if (cachedToken && cachedUser) {
+          try {
+            authManager.user = JSON.parse(cachedUser);
+            authManager.isAuthenticated = true;
+            break;
+          } catch (e) {
+            console.log('Failed to parse cached user');
+          }
+        }
+        await new Promise(r => setTimeout(r, 100));
+        authWait--;
+      }
+
+      if (!authManager.isAuthenticated) {
+        window.location.href = '/webapp/dashboard.html';
+        return false;
+      }
+      return true;
     }
 
-    const user = auth.getUser();
-    document.getElementById('profile-name').textContent = user?.name || 'User';
-    document.getElementById('profile-username').textContent = '@' + (user?.username || 'username');
+    // Wait for auth and initialize
+    (async () => {
+      if (!await ensureAuthenticated()) return;
+
+      const user = authManager.user;
+      document.getElementById('profile-name').textContent = user?.username || 'User';
+      document.getElementById('profile-username').textContent = '@' + (user?.telegram_username?.replace('@', '') || user?.username || 'username');
+    })();
 
     // Global functions
     window.navigate = (path) => window.location.href = path;
     
     window.disconnectWallet = async () => {
       if (confirm('Disconnect your wallet? You will need to reconnect to access the app.')) {
-        await auth.logout();
-        window.location.href = '/';
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/webapp/dashboard.html';
       }
     };
 

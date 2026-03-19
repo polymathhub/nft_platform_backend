@@ -650,8 +650,16 @@
   </div>
 
   <script type="module">
+    import { UnifiedAuthManager } from './js/unified-auth.js';
+    
     // Marketplace - Real listings only from backend
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
+
+    // Initialize auth manager for this page if not already done
+    if (!window.authManager) {
+      window.authManager = new UnifiedAuthManager();
+    }
+    const authManager = window.authManager;
 
     const state = {
       allNFTs: [],
@@ -668,59 +676,60 @@
 
     async function initializeApp() {
       try {
-        // Wait for auth manager to be available (max 5 seconds)
-        let maxWait = 50;
-        while (!window.authManager && maxWait > 0) {
+        // Wait for auth to be initialized (max 5 seconds)
+        let authWait = 50;
+        while (!authManager.isAuthenticated && authWait > 0) {
+          // Check if there's a cached user and token
+          const cachedToken = localStorage.getItem('token');
+          const cachedUser = localStorage.getItem('user');
+          if (cachedToken && cachedUser) {
+            try {
+              authManager.user = JSON.parse(cachedUser);
+              authManager.isAuthenticated = true;
+              console.log('Restored user from cache');
+              break;
+            } catch (e) {
+              console.log('Failed to parse cached user');
+            }
+          }
           await new Promise(r => setTimeout(r, 100));
-          maxWait--;
+          authWait--;
         }
 
-        const authManager = window.authManager;
-        if (!authManager) {
-          throw new Error('Auth manager not available');
-        }
-
-        // Check if user is authenticated
-        try {
-          // Wait for auth to be initialized (max 3 seconds)
-          let authWait = 30;
-          while (!authManager.isAuthenticated && authWait > 0) {
-            await new Promise(r => setTimeout(r, 100));
-            authWait--;
+        if (authManager.isAuthenticated && authManager.user) {
+          state.isAuthenticated = true;
+          state.currentUser = authManager.user;
+          
+          // Update userName element with real user data
+          let displayName = state.currentUser?.username || state.currentUser?.first_name || state.currentUser?.telegram_username || 'User';
+          if (displayName.startsWith('@')) {
+            displayName = displayName.substring(1);
           }
-
-          if (authManager.isAuthenticated && authManager.user) {
-            state.isAuthenticated = true;
-            state.currentUser = authManager.user;
-            
-            // Update userName element with real user data
-            let displayName = state.currentUser?.username || state.currentUser?.first_name || state.currentUser?.telegram_username || 'User';
-            if (displayName.startsWith('@')) {
-              displayName = displayName.substring(1);
-            }
-            const userNameEl = document.getElementById('userName');
-            if (userNameEl) {
-              userNameEl.textContent = displayName;
-            }
+          const userNameEl = document.getElementById('userName');
+          if (userNameEl) {
+            userNameEl.textContent = displayName;
           }
-        } catch (e) {
-          console.log('Auth check failed:', e);
-          state.isAuthenticated = false;
-        }
-
-        loadUserFavorites();
-
-        // Load real data from backend
-        if (state.isAuthenticated) {
-          await loadMarketplaceData();
         } else {
-          console.log('Please login to view marketplace listings');
+          // Not authenticated - show login message and redirect
+          console.log('Not authenticated, redirecting to dashboard');
+          const msgEl = document.querySelector('.empty-state');
+          if (msgEl) {
+            msgEl.innerHTML = `
+              <div style="text-align: center; padding: 40px;">
+                <h2>Login Required</h2>
+                <p>Please login to view marketplace listings</p>
+                <p>Redirecting to dashboard...</p>
+              </div>
+            `;
+          }
           setTimeout(() => {
             window.location.href = '/webapp/dashboard.html';
           }, 2000);
           return;
         }
 
+        loadUserFavorites();
+        await loadMarketplaceData();
         renderNFTs(filterNFTs(state.currentCategory));
         setupEventListeners();
         setActiveNavItem();

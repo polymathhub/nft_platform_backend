@@ -941,20 +941,46 @@
     const authManager = new UnifiedAuthManager();
     window.authManager = authManager;
 
-    // Auto-trigger Telegram login if available and not authenticated yet
+    // Auto-trigger Telegram login if available and not already authenticated
     async function initializeTelegramAuth() {
       try {
-        if (window.Telegram?.WebApp?.initData && !localStorage.getItem('token')) {
+        // Wait a bit for auth manager to be ready
+        await new Promise(r => setTimeout(r, 300));
+        
+        // Check if already authenticated
+        if (authManager.isAuthenticated) {
+          console.log('User already authenticated');
+          return;
+        }
+        
+        // Check if we have a cached token/user
+        const cachedToken = localStorage.getItem('token');
+        const cachedUser = localStorage.getItem('user');
+        if (cachedToken && cachedUser) {
+          try {
+            authManager.user = JSON.parse(cachedUser);
+            authManager.isAuthenticated = true;
+            console.log('User restored from cache');
+            return;
+          } catch (e) {
+            console.log('Invalid cache, proceeding with Telegram login');
+          }
+        }
+        
+        // Check if Telegram WebApp is available
+        if (window.Telegram?.WebApp?.initData) {
           console.log('Telegram WebApp detected, initiating auto-login...');
           await authManager.onTelegramLogin({});
+        } else {
+          console.log('Not in Telegram WebApp context');
         }
       } catch (error) {
-        console.log('Telegram auto-login unavailable, user may login manually');
+        console.error('Telegram auth error:', error);
       }
     }
 
-    // Call this on page load
-    initializeTelegramAuth();
+    // Call on next tick to ensure auth manager is ready
+    setTimeout(initializeTelegramAuth, 100);
 
     // Dashboard Activity Manager
     class ActivityManager {
