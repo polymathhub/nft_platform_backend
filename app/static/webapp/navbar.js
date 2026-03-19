@@ -5,6 +5,12 @@
 
 class NavbarController {
   constructor() {
+    // Guard against multiple initializations
+    if (window.navbarControllerInstance) {
+      console.warn('[Navbar] NavbarController already exists, returning existing instance');
+      return window.navbarControllerInstance;
+    }
+    
     this.profileBtn = document.getElementById('profileBtn');
     this.notificationBtn = document.getElementById('notificationBtn');
     this.profileDropdown = document.getElementById('profileDropdown');
@@ -27,8 +33,14 @@ class NavbarController {
     this.notificationPollInterval = null;
     this.userDataPollInterval = null;
     this.telegramSyncInterval = null;
+
+    // Mark that this instance has been set up
+    this.setupComplete = false;
     
     this.init();
+    
+    // Store instance to prevent re-creation
+    window.navbarControllerInstance = this;
   }
 
   init() {
@@ -119,6 +131,13 @@ class NavbarController {
   }
 
   setupEventListeners() {
+    // Guard against multiple listener attachments
+    if (this.listenersAttached) {
+      console.log('[Navbar] Event listeners already attached, skipping');
+      return;
+    }
+    this.listenersAttached = true;
+
     // Profile dropdown
     if (this.profileBtn) {
       this.profileBtn.addEventListener('click', (e) => {
@@ -216,7 +235,7 @@ class NavbarController {
       // Then fetch latest from API
       const token = localStorage.getItem('token');
       if (token) {
-        fetch('/api/user/profile', {
+        fetch('/api/v1/auth/profile', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => {
@@ -224,8 +243,8 @@ class NavbarController {
           return res.json();
         })
         .then(data => {
-          if (data && data.data) {
-            const user = data.data;
+          if (data && (data.data || data)) {
+            const user = data.data || data;
             localStorage.setItem('user', JSON.stringify(user));
             this.updateUserUI(user);
           }
@@ -291,15 +310,29 @@ class NavbarController {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        // Not authenticated, show empty or cached notifications
         this.displayLocalNotifications();
         return;
       }
 
-      // Fetch from API
-      fetch('/api/notifications', {
+      // Try to fetch notifications from API
+      // Note: If notifications endpoint doesn't exist, gracefully fall back to local
+      const possibleEndpoints = [
+        '/api/v1/notifications',
+        '/api/notifications'
+      ];
+      
+      // Try first endpoint
+      fetch(possibleEndpoints[0], {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
+        // If 404, endpoint doesn't exist - fall back to local
+        if (res.status === 404) {
+          console.warn('[Navbar] Notifications endpoint not found, using local cache');
+          this.displayLocalNotifications();
+          return null;
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
@@ -314,7 +347,7 @@ class NavbarController {
         }
       })
       .catch(err => {
-        console.error('Error fetching notifications from API:', err);
+        console.warn('[Navbar] Error fetching notifications, using local cache:', err.message);
         // Fall back to localStorage
         this.displayLocalNotifications();
       });
@@ -499,12 +532,19 @@ class NavbarController {
  * Initialize when DOM is ready
  */
 document.addEventListener('DOMContentLoaded', () => {
+  // Prevent multiple initializations of navbar
+  if (window.navbarControllerInitialized) {
+    console.log('[Navbar] Already initialized, skipping');
+    return;
+  }
+  window.navbarControllerInitialized = true;
+
   // Ensure navbar exists
   const header = document.querySelector('.app-header');
   if (header) {
     window.navbarController = new NavbarController();
   }
-});
+}, { once: true });
 
 /**
  * Add notification

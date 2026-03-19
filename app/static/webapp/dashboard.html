@@ -862,10 +862,14 @@
     // Display user info - NO redirects, graceful degradation
     async function displayUserInfo() {
       try {
-        const authManager = await waitForAuth();
+        // Fetch auth status with timeout to prevent hanging
+        const authStatus = await Promise.race([
+          waitForAuth(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 3000))
+        ]);
         
-        if (authManager?.user) {
-          const user = authManager.user;
+        if (authStatus?.user) {
+          const user = authStatus.user;
           let displayName = user?.username || user?.first_name || user?.telegram_username || 'User';
           if (displayName.startsWith('@')) {
             displayName = displayName.substring(1);
@@ -877,7 +881,12 @@
           });
         }
       } catch (error) {
-        console.warn('User info display error:', error);
+        console.warn('User not authenticated or auth timeout:', error.message);
+        // Show default "Guest" or placeholder
+        document.getElementById('user-name').textContent = 'Guest';
+        document.querySelectorAll('#userName').forEach(el => {
+          el.textContent = 'Guest';
+        });
       }
     }
 
