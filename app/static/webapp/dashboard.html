@@ -944,42 +944,41 @@
     // Auto-trigger Telegram login if available and not already authenticated
     async function initializeTelegramAuth() {
       try {
-        // Wait a bit for auth manager to be ready
-        await new Promise(r => setTimeout(r, 300));
-        
         // Check if already authenticated
         if (authManager.isAuthenticated) {
-          console.log('User already authenticated');
+          console.log('Already authenticated, skipping Telegram auto-login');
           return;
         }
         
-        // Check if we have a cached token/user
+        // Check if we have a cached session
         const cachedToken = localStorage.getItem('token');
         const cachedUser = localStorage.getItem('user');
         if (cachedToken && cachedUser) {
           try {
             authManager.user = JSON.parse(cachedUser);
             authManager.isAuthenticated = true;
-            console.log('User restored from cache');
+            console.log('Restored session from cache');
             return;
           } catch (e) {
-            console.log('Invalid cache, proceeding with Telegram login');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
           }
         }
         
-        // Check if Telegram WebApp is available
-        if (window.Telegram?.WebApp?.initData) {
-          console.log('Telegram WebApp detected, initiating auto-login...');
-          await authManager.onTelegramLogin({});
-        } else {
+        // Only attempt Telegram login if running in Telegram WebApp
+        if (!window.Telegram?.WebApp?.initData) {
           console.log('Not in Telegram WebApp context');
+          return;
         }
+        
+        // Don't auto-trigger login - wait for user action
+        console.log('Ready for Telegram login (awaiting user action)');
       } catch (error) {
-        console.error('Telegram auth error:', error);
+        console.error('Telegram auth initialization error:', error);
       }
     }
 
-    // Call on next tick to ensure auth manager is ready
+    // Call on next tick
     setTimeout(initializeTelegramAuth, 100);
 
     // Dashboard Activity Manager
@@ -1071,42 +1070,42 @@
       }
     }
 
-    // Check authentication
-    async function ensureAuthenticated() {
+    // Display user info when available - never redirect
+    async function displayUserInfo() {
       try {
-        // Wait for auth to be initialized (max 3 seconds)
-        let maxWait = 30;
+        // Wait briefly for auth to be initialized (max 2 seconds)
+        let maxWait = 20;
         while (!authManager.isAuthenticated && maxWait > 0) {
+          // Check cache as fallback
+          const cachedUser = localStorage.getItem('user');
+          if (cachedUser) {
+            try {
+              authManager.user = JSON.parse(cachedUser);
+              authManager.isAuthenticated = true;
+              break;
+            } catch (e) {
+              // Cache is invalid
+            }
+          }
           await new Promise(r => setTimeout(r, 100));
           maxWait--;
         }
 
-        if (!authManager.isAuthenticated) {
-          window.location.href = '/';
-          return false;
+        if (authManager.user) {
+          const user = authManager.user;
+          let displayName = user?.username || user?.first_name || user?.telegram_username || 'User';
+          if (displayName.startsWith('@')) {
+            displayName = displayName.substring(1);
+          }
+          
+          document.getElementById('user-name').textContent = displayName;
+          const userNameElements = document.querySelectorAll('#userName');
+          userNameElements.forEach(el => {
+            el.textContent = displayName;
+          });
         }
-
-        const user = authManager.user;
-        // Display username from Telegram or backend, fallback to first name
-        let displayName = user?.username || user?.first_name || user?.telegram_username || 'User';
-        // Remove @ symbol if present from Telegram username
-        if (displayName.startsWith('@')) {
-          displayName = displayName.substring(1);
-        }
-        
-        document.getElementById('user-name').textContent = displayName;
-        
-        // Update all userName elements throughout the page with real user data
-        const userNameElements = document.querySelectorAll('#userName');
-        userNameElements.forEach(el => {
-          el.textContent = displayName;
-        });
-        
-        return true;
       } catch (error) {
-        console.error('Auth error:', error);
-        window.location.href = '/';
-        return false;
+        console.error('Error displaying user info:', error);
       }
     }
 
@@ -1213,16 +1212,20 @@
       }
     };
 
-    // Pre-initialize TonConnect and ensure auth on page load
+    // Initialize dashboard on page load
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('Dashboard loaded, checking authentication...');
+      console.log('Dashboard loaded');
       try {
-        // Ensure user is authenticated
-        await ensureAuthenticated();
+        // Display user info if available
+        await displayUserInfo();
         
         // Pre-initialize TonConnect
-        console.log('Pre-initializing TonConnect...');
-        await tonConnect.initialize();
+        console.log('Initializing TonConnect...');
+        try {
+          await tonConnect.initialize();
+        } catch (e) {
+          console.warn('TonConnect initialization failed:', e);
+        }
       } catch (error) {
         console.error('Dashboard initialization error:', error);
       }

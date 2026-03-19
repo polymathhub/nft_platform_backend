@@ -1096,40 +1096,41 @@
       }
     }
 
-    // Ensure authenticated - wait for auth to be initialized
+    // Ensure authenticated - with graceful fallback
     async function ensureAuthenticated() {
-      let authWait = 50;
-      while (!authManager.isAuthenticated && authWait > 0) {
+      try {
+        // Quick cache check first
         const cachedToken = localStorage.getItem('token');
         const cachedUser = localStorage.getItem('user');
         if (cachedToken && cachedUser) {
           try {
             authManager.user = JSON.parse(cachedUser);
             authManager.isAuthenticated = true;
-            break;
+            return true;
           } catch (e) {
-            console.log('Failed to parse cached user');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
           }
         }
-        await new Promise(r => setTimeout(r, 100));
-        authWait--;
-      }
 
-      if (!authManager.isAuthenticated) {
-        window.location.href = '/webapp/dashboard.html';
+        // Wait briefly for auth manager
+        let authWait = 20;
+        while (!authManager.isAuthenticated && authWait > 0) {
+          await new Promise(r => setTimeout(r, 100));
+          authWait--;
+        }
+
+        // If still not authenticated, show in preview mode (don't redirect)
+        if (!authManager.isAuthenticated) {
+          console.log('Wallet: preview mode (no authentication)');
+          return false;
+        }
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
         return false;
       }
-      return true;
     }
-
-    // Initialize authentication
-    (async () => {
-      if (!await ensureAuthenticated()) return;
-
-      const user = authManager.user;
-      const firstName = user?.first_name || user?.username?.split(' ')[0] || 'User';
-      document.getElementById('user-name').textContent = firstName;
-    })();
 
     // Global functions
     window.navigate = (path) => window.location.href = path;
@@ -1157,6 +1158,16 @@
     
     // Initialize TON wallet UI
     const tonWallet = new TONWalletUI();
+    
+    // Initialize user display
+    (async () => {
+      await ensureAuthenticated();
+      if (authManager.user) {
+        const user = authManager.user;
+        const firstName = user?.first_name || user?.username?.split(' ')[0] || 'User';
+        document.getElementById('user-name').textContent = firstName;
+      }
+    })();
     
     // Set active nav item on click
     document.querySelectorAll('.nav-item').forEach(item => {

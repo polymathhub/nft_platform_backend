@@ -676,31 +676,38 @@
 
     async function initializeApp() {
       try {
-        // Wait for auth to be initialized (max 5 seconds)
-        let authWait = 50;
-        while (!authManager.isAuthenticated && authWait > 0) {
-          // Check if there's a cached user and token
-          const cachedToken = localStorage.getItem('token');
-          const cachedUser = localStorage.getItem('user');
-          if (cachedToken && cachedUser) {
-            try {
-              authManager.user = JSON.parse(cachedUser);
-              authManager.isAuthenticated = true;
-              console.log('Restored user from cache');
-              break;
-            } catch (e) {
-              console.log('Failed to parse cached user');
-            }
+        // Try to restore from cache first
+        const cachedToken = localStorage.getItem('token');
+        const cachedUser = localStorage.getItem('user');
+        
+        if (cachedToken && cachedUser) {
+          try {
+            state.currentUser = JSON.parse(cachedUser);
+            state.isAuthenticated = true;
+            console.log('Using cached user');
+          } catch (e) {
+            console.log('Invalid cache, clearing');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
           }
+        }
+        
+        // Wait briefly for auth manager to initialize
+        let authWait = 20;
+        while (!authManager.isAuthenticated && authWait > 0 && !state.isAuthenticated) {
           await new Promise(r => setTimeout(r, 100));
           authWait--;
         }
 
-        if (authManager.isAuthenticated && authManager.user) {
+        if (!state.isAuthenticated && !authManager.isAuthenticated) {
+          // Not authenticated - show limited preview mode
+          console.log('Marketplace in preview mode (no auth)');
+        } else if (authManager.isAuthenticated && authManager.user) {
           state.isAuthenticated = true;
           state.currentUser = authManager.user;
-          
-          // Update userName element with real user data
+        }
+        
+        if (state.currentUser) {
           let displayName = state.currentUser?.username || state.currentUser?.first_name || state.currentUser?.telegram_username || 'User';
           if (displayName.startsWith('@')) {
             displayName = displayName.substring(1);
@@ -709,27 +716,14 @@
           if (userNameEl) {
             userNameEl.textContent = displayName;
           }
-        } else {
-          // Not authenticated - show login message and redirect
-          console.log('Not authenticated, redirecting to dashboard');
-          const msgEl = document.querySelector('.empty-state');
-          if (msgEl) {
-            msgEl.innerHTML = `
-              <div style="text-align: center; padding: 40px;">
-                <h2>Login Required</h2>
-                <p>Please login to view marketplace listings</p>
-                <p>Redirecting to dashboard...</p>
-              </div>
-            `;
-          }
-          setTimeout(() => {
-            window.location.href = '/webapp/dashboard.html';
-          }, 2000);
-          return;
         }
 
         loadUserFavorites();
-        await loadMarketplaceData();
+        if (state.isAuthenticated) {
+          await loadMarketplaceData();
+        } else {
+          console.log('Showing marketplace preview without authentication');
+        }
         renderNFTs(filterNFTs(state.currentCategory));
         setupEventListeners();
         setActiveNavItem();
