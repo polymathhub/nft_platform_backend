@@ -58,20 +58,20 @@ class NavbarController {
   }
 
   startRealtimeSync() {
-    // Refresh notifications every 5 seconds
+    // Only load notifications on-demand, no aggressive polling
+    // Refresh notifications every 30 seconds (much less aggressive)
     this.notificationPollInterval = setInterval(() => {
       this.loadNotifications(true);
-    }, 5000);
+    }, 30000);
 
-    // Refresh user data every 10 seconds
+    // Refresh user data every 60 seconds (was 10s, too aggressive for mini app)
     this.userDataPollInterval = setInterval(() => {
       this.loadUserData();
-    }, 10000);
+    }, 60000);
 
-    // Check Telegram WebApp for real-time user updates
-    this.telegramSyncInterval = setInterval(() => {
-      this.syncTelegramProfile();
-    }, 3000);
+    // Remove aggressive Telegram sync (was 3s, causing constant updates)
+    // Only sync when needed, not continuously
+    // this.telegramSyncInterval removed - too aggressive
   }
 
   syncTelegramProfile() {
@@ -99,7 +99,7 @@ class NavbarController {
   stopRealtimeSync() {
     if (this.notificationPollInterval) clearInterval(this.notificationPollInterval);
     if (this.userDataPollInterval) clearInterval(this.userDataPollInterval);
-    if (this.telegramSyncInterval) clearInterval(this.telegramSyncInterval);
+    // Telegram sync removed - no longer used
   }
 
   detectCurrentPage() {

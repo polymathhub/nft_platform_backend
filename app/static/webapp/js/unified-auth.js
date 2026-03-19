@@ -69,7 +69,7 @@ export class UnifiedAuthManager {
    */
   async restoreSession() {
     try {
-      // First check localStorage for cached user and token
+      // First check localStorage for cached user and token (fastest)
       const cachedUser = localStorage.getItem('user');
       const cachedToken = localStorage.getItem('token');
       
@@ -77,24 +77,59 @@ export class UnifiedAuthManager {
         try {
           this.user = JSON.parse(cachedUser);
           this.isAuthenticated = true;
-          console.log('Session restored from localStorage');
+          console.log('Session restored from localStorage (cached)');
           this.dispatchEvent('auth:initialized', { user: this.user });
+          
+          // Validate token in background (non-blocking)
+          this.validateSessionInBackground();
           return;
         } catch (e) {
           console.log('Failed to parse cached user');
         }
       }
       
-      // If no cache, try to restore from backend
-      const profile = await api.get(endpoints.unifiedAuth.profile);
-      this.setUser(profile);
-      console.log('Session restored from backend');
-      this.dispatchEvent('auth:initialized', { user: this.user });
+      // If no cache, try to restore from backend (slower)
+      // But use Promise.race with a short timeout to avoid hanging
+      try {
+        const profile = await Promise.race([
+          api.get(endpoints.unifiedAuth.profile),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session restore timeout')), 5000)
+          )
+        ]);
+        this.setUser(profile);
+        console.log('Session restored from backend');
+        this.dispatchEvent('auth:initialized', { user: this.user });
+      } catch (error) {
+        // Backend call failed or timed out, that's OK
+        console.log('No active session found');
+        this.dispatchEvent('auth:initialized', { user: null });
+      }
     } catch (error) {
-      console.log('No active session');
+      console.error('Session restoration error:', error);
       // Clear invalid session data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      this.dispatchEvent('auth:initialized', { user: null });
+    }
+  }
+
+  /**
+   * Validate session in background without blocking
+   */
+  async validateSessionInBackground() {
+    try {
+      const profile = await api.get(endpoints.unifiedAuth.profile);
+      this.setUser(profile);
+      console.log('Session validated successfully');
+    } catch (error) {
+      // If validation fails, clear cache for next time
+      console.warn('Session validation failed:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      this.user = null;
+      this.isAuthenticated = false;
+      this.dispatchEvent('auth:invalid');
     }
   }
 
@@ -187,10 +222,8 @@ export class UnifiedAuthManager {
       Toast.success('Logged in with Telegram!');
       this.dispatchEvent('auth:login_telegram', { user: this.user });
       
-      // Redirect to dashboard after successful login
-      setTimeout(() => {
-        window.location.href = '/webapp/dashboard.html';
-      }, 1000);
+      // Don't force redirect - let the app handle navigation
+      // Pages will update UI based on auth:login_telegram event
       
       return this.user;
     } catch (error) {
@@ -237,10 +270,8 @@ export class UnifiedAuthManager {
       Toast.success('Connected TON wallet!');
       this.dispatchEvent('auth:login_ton', { user: this.user });
       
-      // Redirect to dashboard
-      setTimeout(() => {
-        window.location.href = '/webapp/dashboard.html';
-      }, 1000);
+      // Don't force redirect - let the app handle navigation
+      // Pages will update UI based on auth:login_ton event
       
       return this.user;
     } catch (error) {
@@ -317,14 +348,14 @@ export class UnifiedAuthManager {
       this.user = null;
       this.isAuthenticated = false;
       this.authMethod = null;
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
 
       Toast.success('Logged out');
       this.dispatchEvent('auth:logout');
 
-      // Redirect to login
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      // Don't force redirect - let pages handle logout gracefully
+      // Pages can listen to auth:logout event to update UI
     } catch (error) {
       console.error('Logout error:', error);
       Toast.error('Failed to logout');
