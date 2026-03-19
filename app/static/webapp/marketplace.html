@@ -650,15 +650,12 @@
   </div>
 
   <script type="module">
-    import { UnifiedAuthManager } from './js/unified-auth.js';
+    import { initializeAuthSystem } from './js/auth-bootstrap.js';
     
     // Marketplace - Real listings only from backend
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
 
-    // Initialize auth manager for this page if not already done
-    if (!window.authManager) {
-      window.authManager = new UnifiedAuthManager();
-    }
+    // Use global auth manager (initialized by bootstrap)
     const authManager = window.authManager;
 
     const state = {
@@ -676,29 +673,10 @@
 
     async function initializeApp() {
       try {
-        // Try to restore from cache first
-        const cachedToken = localStorage.getItem('token');
-        const cachedUser = localStorage.getItem('user');
+        // Initialize global auth system
+        await initializeAuthSystem();
         
-        if (cachedToken && cachedUser) {
-          try {
-            state.currentUser = JSON.parse(cachedUser);
-            state.isAuthenticated = true;
-            console.log('Using cached user');
-          } catch (e) {
-            console.log('Invalid cache, clearing');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-          }
-        }
-        
-        // Wait briefly for auth manager to initialize
-        let authWait = 20;
-        while (!authManager.isAuthenticated && authWait > 0 && !state.isAuthenticated) {
-          await new Promise(r => setTimeout(r, 100));
-          authWait--;
-        }
-
+        // Use auth manager state (already initialized globally)
         if (!state.isAuthenticated && !authManager.isAuthenticated) {
           // Not authenticated - show limited preview mode
           console.log('Marketplace in preview mode (no auth)');
@@ -1003,8 +981,10 @@
       }
     };
 
-    // automatically save pictures for 30 secs 
-    setInterval(() => CookieUtils.saveViewState(), 30000);
+    // DISABLED: Automatic state saving every 30 secs caused unnecessary refreshes
+    // Now saves only when page unloads or user manually triggers it
+    // Reduces network calls and UI jank in Telegram Mini App
+    window.addEventListener('beforeunload', () => CookieUtils.saveViewState());
 
     // Lazy load offscreen images
     if ('IntersectionObserver' in window) {

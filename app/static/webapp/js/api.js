@@ -92,7 +92,7 @@ class APIClient {
 
   async refreshToken() {
     try {
-      const response = await fetch(new URL('/api/auth/refresh', this.baseURL), {
+      const response = await fetch(new URL('/api/v1/auth/refresh', this.baseURL), {
         method: 'POST',
         credentials: 'include',
       });
@@ -163,13 +163,13 @@ export const api = new APIClient();
 export const endpoints = {
   // Auth - Standard endpoints
   auth: {
-    login: '/api/auth/login',
-    register: '/api/auth/register',
-    logout: '/api/auth/logout',
-    refresh: '/api/auth/refresh',
-    profile: '/api/auth/profile',
-    oauthGoogle: '/api/auth/oauth/google',
-    oauthTwitter: '/api/auth/oauth/twitter',
+    login: '/api/v1/auth/login',
+    register: '/api/v1/auth/register',
+    logout: '/api/v1/auth/logout',
+    refresh: '/api/v1/auth/refresh',
+    profile: '/api/v1/auth/profile',
+    oauthGoogle: '/api/v1/auth/oauth/google',
+    oauthTwitter: '/api/v1/auth/oauth/twitter',
   },
 
   // Unified Auth - Telegram & TON Wallet

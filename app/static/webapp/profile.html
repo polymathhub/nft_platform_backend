@@ -582,13 +582,13 @@
 
 
   <script type="module">
-    import { UnifiedAuthManager } from '/webapp/js/unified-auth.js';
+    import { initializeAuthSystem } from '/webapp/js/auth-bootstrap.js';
     import { api, endpoints } from '/webapp/js/api.js';
 
-    // Initialize auth manager for this page if not already done
-    if (!window.authManager) {
-      window.authManager = new UnifiedAuthManager();
-    }
+    // Initialize global auth system immediately (before any page code)
+    await initializeAuthSystem();
+
+    // Use global auth manager (initialized by bootstrap)
     const authManager = window.authManager;
 
     // Ensure authenticated - with graceful fallback

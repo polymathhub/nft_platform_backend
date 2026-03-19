@@ -16,12 +16,9 @@ class PageInitializer {
    */
   static async initializePage() {
     try {
-      // Ensure user is authenticated
-      if (!auth.isLoggedIn()) {
-        console.warn('User not authenticated, redirecting to login');
-        window.location.href = '/';
-        return false;
-      }
+      // Allow graceful fallback - no aggressive redirects
+      // Pages should degrade gracefully, not redirect
+      console.log('Page initialization started (graceful auth)');
 
       // Update user name in welcome section
       this.updateWelcomeGreeting();
@@ -32,7 +29,7 @@ class PageInitializer {
       return true;
     } catch (error) {
       console.error('Page initialization error:', error);
-      window.location.href = '/';
+      // Graceful error handling - do not redirect
       return false;
     }
   }
@@ -161,11 +158,8 @@ class PageInitializer {
       this.updateWelcomeGreeting();
     });
 
-    // Redirect on logout
-    window.addEventListener('auth:logout', () => {
-      console.log('User logged out, redirecting to login');
-      window.location.href = '/';
-    });
+    // NOTE: auth:logout is handled globally in auth-bootstrap.js
+    // Do NOT add duplicate listener here to avoid double-redirects
 
     // Handle auth errors
     window.addEventListener('auth:error', (event) => {

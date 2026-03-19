@@ -857,14 +857,14 @@
 
 
   <script type="module">
-    import { UnifiedAuthManager } from './js/unified-auth.js';
+    import { initializeAuthSystem } from './js/auth-bootstrap.js';
     import { api, endpoints } from './js/api.js';
     import { tonConnect } from './js/tonconnect.js';
 
-    // Initialize auth manager for this page if not already done
-    if (!window.authManager) {
-      window.authManager = new UnifiedAuthManager();
-    }
+    // Initialize global auth system immediately (before any page code)
+    await initializeAuthSystem();
+
+    // Use global auth manager (initialized by bootstrap)
     const authManager = window.authManager;
 
     // ========== TON WALLET INTEGRATION ==========

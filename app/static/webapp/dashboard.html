@@ -784,51 +784,8 @@
 
   <script type="module">
     import { UnifiedAuthManager } from './js/unified-auth.js';
+    import { waitForAuth } from './js/auth-bootstrap.js';
     import { api, endpoints } from './js/api.js';
-
-    // Initialize unified auth manager (handles Telegram auth automatically)
-    const authManager = new UnifiedAuthManager();
-    window.authManager = authManager;
-
-    // Auto-trigger Telegram login if available and not already authenticated
-    async function initializeTelegramAuth() {
-      try {
-        // Check if already authenticated
-        if (authManager.isAuthenticated) {
-          console.log('Already authenticated, skipping Telegram auto-login');
-          return;
-        }
-        
-        // Check if we have a cached session
-        const cachedToken = localStorage.getItem('token');
-        const cachedUser = localStorage.getItem('user');
-        if (cachedToken && cachedUser) {
-          try {
-            authManager.user = JSON.parse(cachedUser);
-            authManager.isAuthenticated = true;
-            console.log('Restored session from cache');
-            return;
-          } catch (e) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-          }
-        }
-        
-        // Only attempt Telegram login if running in Telegram WebApp
-        if (!window.Telegram?.WebApp?.initData) {
-          console.log('Not in Telegram WebApp context');
-          return;
-        }
-        
-        // Don't auto-trigger login - wait for user action
-        console.log('Ready for Telegram login (awaiting user action)');
-      } catch (error) {
-        console.error('Telegram auth initialization error:', error);
-      }
-    }
-
-    // Call on next tick
-    setTimeout(initializeTelegramAuth, 100);
 
     // Dashboard Activity Manager
     class ActivityManager {
@@ -837,22 +794,15 @@
         this.endpoints = endpoints;
       }
 
-      /**
-       * Load recent transactions and render them
-       */
       async loadRecentActivity() {
         try {
           const response = await this.api.get(this.endpoints.dashboard.recentTransactions);
           this.renderActivity(response.transactions || []);
         } catch (error) {
           console.warn('Failed to load activity:', error);
-          // Keep existing mock data as fallback
         }
       }
 
-      /**
-       * Transform transaction data to activity item UI
-       */
       getActivityIcon(transactionType) {
         const icons = {
           'mint': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
@@ -863,9 +813,6 @@
         return icons[transactionType.toLowerCase()] || icons.transfer;
       }
 
-      /**
-       * Get badge color based on transaction type
-       */
       getActivityBadge(transactionType) {
         const badges = {
           'mint': `<div class="activity-badge pink">MINTED</div>`,
@@ -876,9 +823,6 @@
         return badges[transactionType.toLowerCase()] || `<div class="activity-badge pink">${transactionType.toUpperCase()}</div>`;
       }
 
-      /**
-       * Format timestamp to relative time
-       */
       formatTime(timestamp) {
         const date = new Date(timestamp);
         const now = new Date();
@@ -896,14 +840,10 @@
         return date.toLocaleDateString();
       }
 
-      /**
-       * Render activity items to DOM
-       */
       renderActivity(transactions) {
         const activityList = document.querySelector('.activity-list');
         if (!activityList || transactions.length === 0) return;
 
-        // Keep last 3 transactions
         activityList.innerHTML = transactions.slice(0, 3).map(tx => `
           <div class="activity-item">
             <div class="activity-icon">
@@ -919,28 +859,12 @@
       }
     }
 
-    // Display user info when available - never redirect
+    // Display user info - NO redirects, graceful degradation
     async function displayUserInfo() {
       try {
-        // Wait briefly for auth to be initialized (max 2 seconds)
-        let maxWait = 20;
-        while (!authManager.isAuthenticated && maxWait > 0) {
-          // Check cache as fallback
-          const cachedUser = localStorage.getItem('user');
-          if (cachedUser) {
-            try {
-              authManager.user = JSON.parse(cachedUser);
-              authManager.isAuthenticated = true;
-              break;
-            } catch (e) {
-              // Cache is invalid
-            }
-          }
-          await new Promise(r => setTimeout(r, 100));
-          maxWait--;
-        }
-
-        if (authManager.user) {
+        const authManager = await waitForAuth();
+        
+        if (authManager?.user) {
           const user = authManager.user;
           let displayName = user?.username || user?.first_name || user?.telegram_username || 'User';
           if (displayName.startsWith('@')) {
@@ -948,20 +872,17 @@
           }
           
           document.getElementById('user-name').textContent = displayName;
-          const userNameElements = document.querySelectorAll('#userName');
-          userNameElements.forEach(el => {
+          document.querySelectorAll('#userName').forEach(el => {
             el.textContent = displayName;
           });
         }
       } catch (error) {
-        console.error('Error displaying user info:', error);
+        console.warn('User info display error:', error);
       }
     }
 
     // Navigation
-    window.navigate = function(path) {
-      window.location.href = path;
-    };
+    window.navigate = (path) => window.location.href = path;
 
     // Copy balance to clipboard
     window.copyBalance = function() {
@@ -984,16 +905,11 @@
       });
     });
 
-    // Initialize activity manager
+    // Initialize dashboard - NO protective auth checks
     const activityManager = new ActivityManager(api, endpoints);
-
-    // Initialize dashboard - display user info and load activity
     async function initDashboard() {
       try {
-        // Display user info when available (non-blocking)
-        displayUserInfo();
-        
-        // Load recent activity if API is available
+        displayUserInfo(); // Non-blocking user display
         try {
           activityManager.loadRecentActivity();
         } catch (error) {
@@ -1004,7 +920,6 @@
       }
     }
 
-    // Call dashboard initialization when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initDashboard);
     } else {

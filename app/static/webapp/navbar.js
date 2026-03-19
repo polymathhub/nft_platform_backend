@@ -58,20 +58,16 @@ class NavbarController {
   }
 
   startRealtimeSync() {
-    // Only load notifications on-demand, no aggressive polling
-    // Refresh notifications every 30 seconds (much less aggressive)
-    this.notificationPollInterval = setInterval(() => {
-      this.loadNotifications(true);
-    }, 30000);
-
-    // Refresh user data every 60 seconds (was 10s, too aggressive for mini app)
-    this.userDataPollInterval = setInterval(() => {
-      this.loadUserData();
-    }, 60000);
-
-    // Remove aggressive Telegram sync (was 3s, causing constant updates)
-    // Only sync when needed, not continuously
-    // this.telegramSyncInterval removed - too aggressive
+    // DISABLED: No aggressive polling - causes unnecessary refreshes
+    // All data is now loaded on-demand when user interacts with UI
+    // This prevents constant re-renders and battery drain in Telegram Mini App
+    
+    // To load fresh data, users can:
+    // - Manually refresh/open notification panel
+    // - Click navbar items to trigger fresh loads
+    // - App loads data on page focus automatically via browser APIs
+    
+    console.log('[Navbar] Real-time sync disabled - using on-demand loading only');
   }
 
   syncTelegramProfile() {
@@ -97,9 +93,8 @@ class NavbarController {
   }
 
   stopRealtimeSync() {
-    if (this.notificationPollInterval) clearInterval(this.notificationPollInterval);
-    if (this.userDataPollInterval) clearInterval(this.userDataPollInterval);
-    // Telegram sync removed - no longer used
+    // No-op: All polling intervals have been disabled
+    console.log('[Navbar] Real-time sync already stopped (no intervals)');
   }
 
   detectCurrentPage() {

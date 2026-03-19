@@ -75,10 +75,11 @@ class MarketplaceService {
   }
 
   startRealtimeUpdates(onUpdate) {
-    this.updateInterval = setInterval(async () => {
-      const updatedListings = await this.fetchListings(0, 50);
-      if (onUpdate) onUpdate(updatedListings);
-    }, 5000);
+    // DISABLED: Was fetching listings every 5 seconds - WAY too aggressive
+    // This caused constant network requests and UI refreshes
+    // Marketplace now loads only when user navigates to the page or manually refreshes
+    console.log('[Marketplace] Real-time updates disabled - using on-demand loading');
+    // No interval set - call fetchListings() manually when needed instead
   }
 
   stopRealtimeUpdates() {

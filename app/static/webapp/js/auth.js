@@ -18,14 +18,18 @@ class AuthManager {
         const profile = await api.get(endpoints.auth.profile);
         this.setUser(profile);
         this.dispatchEvent('auth:initialized', { user: this.user });
-        console.log('✅ Session restored');
+        console.log('Session restored');
         return;
       } catch (error) {
-        console.log('📝 No session found');
+        console.log('No session found - this is normal on first load');
+        // Do NOT call logout on init error - it causes unwanted redirects
+        // Just mark as uninitialized and let app recover gracefully
       }
     } catch (error) {
-      console.error('Auth initialization error:', error);
-      this.logout();
+      console.error('Auth initialization error (graceful fallback):', error);
+      // Do NOT call logout() here - it causes forced redirects in Telegram
+      // Instead, mark auth as initialized but not authenticated
+      this.dispatchEvent('auth:initialized', { user: null });
     }
   }
 
@@ -38,7 +42,7 @@ class AuthManager {
       this.tg.setHeaderColor('#0f0f1a');
       this.tg.setBackgroundColor('#0f0f1a');
 
-      console.log('✅ Telegram UI initialized');
+      console.log('Telegram UI initialized');
       this.dispatchEvent('telegram:ready', { tg: this.tg });
     }
   }
@@ -93,7 +97,7 @@ class AuthManager {
 
       this.setUser(response.user);
       this.dispatchEvent('auth:login', { user: this.user });
-      console.log('✅ Login successful');
+      console.log(' Login successful');
 
       return this.user;
     } catch (error) {
@@ -127,7 +131,7 @@ class AuthManager {
 
       this.setUser(response.user);
       this.dispatchEvent('auth:register', { user: this.user });
-      console.log('✅ Registration successful');
+      console.log('Registration successful');
 
       return this.user;
     } catch (error) {
