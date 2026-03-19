@@ -81,6 +81,7 @@ class PageInitializer {
 
     // Set active nav item based on current page
     navItems.forEach(item => {
+      // Remove previous active state
       item.classList.remove('active');
 
       // Get href or data-page attribute
@@ -91,14 +92,19 @@ class PageInitializer {
         item.classList.add('active');
       }
 
-      // Also handle click events for manual navigation
-      item.addEventListener('click', function() {
-        // Don't prevent default, just update active state
-        if (!this.href) return; // Links will naturally navigate
+      // Only add listener if haven't already (use data-listener-attached flag)
+      if (!item.hasAttribute('data-listener-attached')) {
+        item.addEventListener('click', function(e) {
+          // Don't prevent default, just update active state
+          if (!this.href) return; // Links will naturally navigate
+          
+          navItems.forEach(i => i.classList.remove('active'));
+          this.classList.add('active');
+        });
         
-        navItems.forEach(i => i.classList.remove('active'));
-        this.classList.add('active');
-      });
+        // Mark as already having listener attached
+        item.setAttribute('data-listener-attached', 'true');
+      }
     });
   }
 

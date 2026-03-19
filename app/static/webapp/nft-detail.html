@@ -1107,7 +1107,7 @@
 
     // Initialize only once to prevent multiple API calls
     let nftDetailInitialized = false;
-    window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
       if (!nftDetailInitialized) {
         nftDetailInitialized = true;
         initNFTDetail();

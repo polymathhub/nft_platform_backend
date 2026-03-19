@@ -21,9 +21,16 @@ class TelegramAuthManager {
       const storedUser = localStorage.getItem('user');
       
       if (this.token && storedUser) {
-        this.user = JSON.parse(storedUser);
-        console.log('Existing session found:', this.user.username);
-        return { authenticated: true, user: this.user };
+        try {
+          this.user = JSON.parse(storedUser);
+          console.log('Existing session found:', this.user.username);
+          return { authenticated: true, user: this.user };
+        } catch (parseError) {
+          console.error('Invalid stored user data:', parseError);
+          // Clear corrupted data
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+        }
       }
 
       // Check if running in Telegram
@@ -140,7 +147,16 @@ class TelegramAuthManager {
       const telegramUser = this.tg.initDataUnsafe?.user;
       if (!telegramUser) return;
 
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      let storedUser = {};
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          storedUser = JSON.parse(userStr);
+        }
+      } catch (parseError) {
+        console.error('Invalid stored user data:', parseError);
+        localStorage.removeItem('user');
+      }
       
       // Update stored profile with latest Telegram data
       const updatedUser = {

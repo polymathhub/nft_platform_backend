@@ -154,8 +154,8 @@ class NavbarController {
       });
     }
 
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', (e) => {
+    // Close dropdowns when clicking outside - use event delegation
+    const closeDropdownsHandler = (e) => {
       if (!e.target.closest('.profile-btn') && !e.target.closest('#profileDropdown')) {
         if (this.profileDropdown) {
           this.profileDropdown.classList.remove('active');
@@ -166,7 +166,11 @@ class NavbarController {
           this.notificationDropdown.classList.remove('active');
         }
       }
-    });
+    };
+    
+    // Store handler for cleanup
+    this.closeDropdownsHandler = closeDropdownsHandler;
+    document.addEventListener('click', closeDropdownsHandler);
 
     // Logout button
     if (this.logoutBtn) {
@@ -182,12 +186,17 @@ class NavbarController {
       });
     }
 
-    // Nav items click handler
+    // Nav items click handler - store for potential cleanup
+    const navItemHandler = (item, e) => {
+      this.navItems.forEach(navItem => navItem.classList.remove('active'));
+      item.classList.add('active');
+    };
+    
+    this.navItemHandlers = [];
     this.navItems.forEach(item => {
-      item.addEventListener('click', (e) => {
-        this.navItems.forEach(navItem => navItem.classList.remove('active'));
-        item.classList.add('active');
-      });
+      const handler = (e) => navItemHandler(item, e);
+      item.addEventListener('click', handler);
+      this.navItemHandlers.push({ item, handler });
     });
   }
 
@@ -210,20 +219,26 @@ class NavbarController {
         fetch('/api/user/profile', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
         .then(data => {
-          if (data.data) {
+          if (data && data.data) {
             const user = data.data;
             localStorage.setItem('user', JSON.stringify(user));
             this.updateUserUI(user);
           }
         })
-        .catch(err => console.error('Error fetching user profile:', err));
+        .catch(err => {
+          console.error('Error fetching user profile:', err);
+          // Fail silently - use cached data
+        });
       }
 
       // Check for Telegram WebApp user
       if (window.Telegram && window.Telegram.WebApp) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
         if (tgUser && tgUser.photo_url) {
           this.updateUserUI({
             ...user,
@@ -284,14 +299,19 @@ class NavbarController {
       fetch('/api/notifications', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        const notifications = data.data || data.notifications || [];
-        
-        // Store in localStorage for offline access
-        localStorage.setItem('notifications', JSON.stringify(notifications));
-        
-        this.displayNotifications(notifications);
+        if (data && (data.data || data.notifications)) {
+          const notifications = data.data || data.notifications || [];
+          
+          // Store in localStorage for offline access
+          localStorage.setItem('notifications', JSON.stringify(notifications));
+          
+          this.displayNotifications(notifications);
+        }
       })
       .catch(err => {
         console.error('Error fetching notifications from API:', err);
@@ -315,29 +335,62 @@ class NavbarController {
 
     // Update notification list
     if (this.notificationList) {
+      this.notificationList.innerHTML = '';
+      
       if (notifications.length === 0) {
-        this.notificationList.innerHTML = '<div class="empty-notification">No notifications</div>';
+        const empty = document.createElement('div');
+        empty.className = 'empty-notification';
+        empty.textContent = 'No notifications';
+        this.notificationList.appendChild(empty);
       } else {
-        this.notificationList.innerHTML = notifications.map((notif, index) => {
-          const isRead = notif.read || notif.is_read;
+        notifications.forEach((notif, index) => {
+          const item = document.createElement('div');
+          item.className = `notification-item ${(notif.read || notif.is_read) ? 'read' : 'unread'}`;
+          item.id = `notif-${notif.id || index}`;
+          item.setAttribute('data-id', notif.id || index);
+          
           const title = notif.title || notif.subject || 'Notification';
           const description = notif.description || notif.message || notif.body || '';
           const timestamp = notif.timestamp || notif.created_at || new Date().toISOString();
+          const isRead = notif.read || notif.is_read;
           
-          return `
-            <div class="notification-item ${isRead ? 'read' : 'unread'}" data-id="${notif.id || index}">
-              <div class="notification-icon">
-                <div class="notification-dot ${isRead ? 'read' : 'unread'}"></div>
-              </div>
-              <div class="notification-content">
-                <div class="notification-title">${this.escapeHtml(title)}</div>
-                <div class="notification-description">${this.escapeHtml(description)}</div>
-                <div class="notification-time">${this.formatTime(timestamp)}</div>
-              </div>
-              <button class="notification-delete-btn" data-id="${notif.id || index}" onclick="event.stopPropagation(); window.navbarController && window.navbarController.deleteNotification('${notif.id || index}')">×</button>
-            </div>
-          `;
-        }).join('');
+          // Build using createElement to prevent XSS
+          const icon = document.createElement('div');
+          icon.className = 'notification-icon';
+          const dot = document.createElement('div');
+          dot.className = `notification-dot ${isRead ? 'read' : 'unread'}`;
+          icon.appendChild(dot);
+          
+          const content = document.createElement('div');
+          content.className = 'notification-content';
+          const titleEl = document.createElement('div');
+          titleEl.className = 'notification-title';
+          titleEl.textContent = title;
+          const descEl = document.createElement('div');
+          descEl.className = 'notification-description';
+          descEl.textContent = description;
+          const timeEl = document.createElement('div');
+          timeEl.className = 'notification-time';
+          timeEl.textContent = this.formatTime(timestamp);
+          
+          content.appendChild(titleEl);
+          content.appendChild(descEl);
+          content.appendChild(timeEl);
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'notification-delete-btn';
+          deleteBtn.textContent = '×';
+          deleteBtn.setAttribute('data-id', notif.id || index);
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteNotification(notif.id || index);
+          });
+          
+          item.appendChild(icon);
+          item.appendChild(content);
+          item.appendChild(deleteBtn);
+          this.notificationList.appendChild(item);
+        });
       }
     }
   }
@@ -366,8 +419,16 @@ class NavbarController {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res;
+        })
         .then(() => this.loadNotifications(true))
-        .catch(err => console.error('Error deleting notification:', err));
+        .catch(err => {
+          console.error('Error deleting notification:', err);
+          // Try to reload from API to sync state
+          this.loadNotifications(true);
+        });
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -398,6 +459,26 @@ class NavbarController {
     } catch (error) {
       return 'Recently';
     }
+  }
+
+  /**
+   * Cleanup method - remove all event listeners
+   */
+  cleanup() {
+    if (this.closeDropdownsHandler) {
+      document.removeEventListener('click', this.closeDropdownsHandler);
+    }
+    
+    if (this.navItemHandlers) {
+      this.navItemHandlers.forEach(({ item, handler }) => {
+        item.removeEventListener('click', handler);
+      });
+    }
+
+    // Clear intervals if any
+    if (this.notificationPollInterval) clearInterval(this.notificationPollInterval);
+    if (this.userDataPollInterval) clearInterval(this.userDataPollInterval);
+    if (this.telegramSyncInterval) clearInterval(this.telegramSyncInterval);
   }
 
   /**

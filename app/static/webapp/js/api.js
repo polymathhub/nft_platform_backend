@@ -135,8 +135,17 @@ class APIClient {
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
+      const headers = {};
+      
+      // Add Authorization header if token exists
+      const token = localStorage.getItem('token');
+      if (token && !options.skipAuth) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
+        headers: headers,
         body: formData,
         signal: controller.signal,
         credentials: 'include',
@@ -151,6 +160,9 @@ class APIClient {
       return await response.json();
     } catch (error) {
       clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${timeout}ms`);
+      }
       throw error;
     }
   }
