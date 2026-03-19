@@ -34,9 +34,10 @@ class UserIdentityResponse(BaseModel):
     id: str
     username: str
     email: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    telegram_id: Optional[str] = None
+    telegram_username: Optional[str] = None
     is_verified: bool
     user_role: str
     created_at: datetime

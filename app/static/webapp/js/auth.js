@@ -96,6 +96,15 @@ class AuthManager {
       }
 
       this.setUser(response.user);
+      
+      // Store tokens (both access and refresh) if provided in response
+      if (response.tokens) {
+        localStorage.setItem('token', response.tokens.access_token);
+        if (response.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', response.tokens.refresh_token);
+        }
+      }
+      
       this.dispatchEvent('auth:login', { user: this.user });
       console.log(' Login successful');
 
@@ -130,6 +139,15 @@ class AuthManager {
       }
 
       this.setUser(response.user);
+      
+      // Store tokens (both access and refresh) if provided in response
+      if (response.tokens) {
+        localStorage.setItem('token', response.tokens.access_token);
+        if (response.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', response.tokens.refresh_token);
+        }
+      }
+      
       this.dispatchEvent('auth:register', { user: this.user });
       console.log('Registration successful');
 
@@ -190,6 +208,11 @@ class AuthManager {
       this.isAuthenticated = false;
       this.userRole = null;
 
+      // Clear all stored auth data
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+
       if (this.tokenRefreshInterval) {
         clearInterval(this.tokenRefreshInterval);
       }
@@ -225,14 +248,13 @@ class AuthManager {
   }
 
   /**
-   * Require authentication - redirect to login if not authenticated
+   * Require authentication - throw error if not authenticated
+   * Pages handle the error gracefully, WITHOUT redirects
    */
   async requireAuth() {
     if (!this.isAuthenticated) {
-      // Redirect to login page - use dashboard instead as primary entry
-      const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
-      window.location.href = `${basePath}/dashboard.html`;
-      throw new Error('Authentication required. Redirecting to dashboard...');
+      // Don't redirect - let pages handle gracefully
+      throw new Error('Authentication required');
     }
     return true;
   }

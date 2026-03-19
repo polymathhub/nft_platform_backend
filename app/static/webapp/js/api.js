@@ -92,13 +92,44 @@ class APIClient {
 
   async refreshToken() {
     try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      
+      // If no refresh token is available, can't refresh
+      if (!refreshToken) {
+        console.warn('No refresh token available');
+        return false;
+      }
+
       const response = await fetch(new URL('/api/v1/auth/refresh', this.baseURL), {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+        }),
         credentials: 'include',
       });
 
       if (response.ok) {
+        const data = await response.json();
+        
+        // Update stored tokens with new access token and refresh token
+        if (data.access_token) {
+          localStorage.setItem('token', data.access_token);
+        }
+        if (data.refresh_token) {
+          localStorage.setItem('refresh_token', data.refresh_token);
+        }
+        
         return true;
+      }
+
+      // If 401/403, logout since token is invalid
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        window.dispatchEvent(new CustomEvent('auth:logout'));
       }
 
       return false;

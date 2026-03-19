@@ -181,6 +181,8 @@ if (document.readyState === 'loading') {
     PageInitializer.initializePage();
     PageInitializer.setupNavigateFunction();
     PageInitializer.setupAuthListeners();
+    // Safety net: ensure body is always visible
+    if (document.body) document.body.style.display = '';
   });
 } else {
   // DOM already loaded
@@ -188,6 +190,8 @@ if (document.readyState === 'loading') {
   PageInitializer.initializePage();
   PageInitializer.setupNavigateFunction();
   PageInitializer.setupAuthListeners();
+  // Safety net: ensure body is always visible
+  if (document.body) document.body.style.display = '';
 }
 
 export default PageInitializer;

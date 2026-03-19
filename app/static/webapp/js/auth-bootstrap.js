@@ -85,24 +85,22 @@ export async function initializeAuthSystem() {
  * Setup global event listeners for auth changes
  */
 function setupGlobalAuthListeners(authManager) {
-  // Handle logout event - redirect to dashboard gracefully
-  // Only setup once to avoid duplicate redirects
-  let logoutHandlerActive = false;
+  // Handle logout event - DON'T redirect, just clear state
+  // Let pages handle logout gracefully via auth:logout event
+  let logoutHandled = false;
   
   window.addEventListener('auth:logout', () => {
-    // Prevent multiple logout handlers from triggering multiple redirects
-    if (logoutHandlerActive) {
-      console.warn('[AUTH] Logout already in progress, ignoring duplicate logout event');
+    // Only process once per app session
+    if (logoutHandled) {
+      console.log('[AUTH] Logout already handled');
       return;
     }
     
-    logoutHandlerActive = true;
-    console.log('[AUTH] Logout detected, redirecting to dashboard...');
-    
-    // Immediate redirect to dashboard (no setTimeout delay to prevent refresh loops)
-    const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
-    window.location.href = `${basePath}/dashboard.html`;
-  });
+    logoutHandled = true;
+    console.log('[AUTH] Logout event fired - pages will handle UI updates');
+    // Do NOT redirect - let each page decide how to handle logout
+    // This prevents aggressive redirects and refresh loops
+  }, { once: true });
 
   // Handle auth errors
   window.addEventListener('auth:error', (e) => {

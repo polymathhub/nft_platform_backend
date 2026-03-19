@@ -33,23 +33,57 @@ class UnifiedUserService:
         try:
             telegram_id = identity.telegram_id
             if not telegram_id:
+                logger.error("Missing Telegram ID in identity")
                 return None, "Missing Telegram ID"
+            
+            logger.info(f"[Telegram Auth] Looking up user by telegram_id={telegram_id}")
             result = await db.execute(
                 select(User).where(User.telegram_id == telegram_id)
             )
             existing_user = result.scalar_one_or_none()
+            
             if existing_user:
+                # Update existing user with latest Telegram data
+                logger.info(f"[Telegram Auth] Found existing user: {existing_user.id}")
+                updated = False
+                
+                # Update full_name if provided
                 if identity.first_name or identity.last_name:
-                    existing_user.full_name = f"{identity.first_name or ''} {identity.last_name or ''}".strip()
+                    new_full_name = f"{identity.first_name or ''} {identity.last_name or ''}".strip()
+                    if new_full_name and existing_user.full_name != new_full_name:
+                        existing_user.full_name = new_full_name
+                        logger.info(f"[Telegram Auth] Updated full_name to: {new_full_name}")
+                        updated = True
+                
+                # Update telegram_username if changed
+                if identity.telegram_username and existing_user.telegram_username != identity.telegram_username:
+                    existing_user.telegram_username = identity.telegram_username
+                    logger.info(f"[Telegram Auth] Updated telegram_username to: {identity.telegram_username}")
+                    updated = True
+                
+                # Update avatar_url if provided
+                if identity.avatar_url and existing_user.avatar_url != identity.avatar_url:
+                    existing_user.avatar_url = identity.avatar_url
+                    logger.info(f"[Telegram Auth] Updated avatar_url")
+                    updated = True
+                
+                if updated:
                     existing_user.updated_at = datetime.utcnow()
                     db.add(existing_user)
                     await db.commit()
-                logger.info(f"Telegram user found: {existing_user.id}")
+                    logger.info(f"[Telegram Auth] User updated: {existing_user.id}")
+                
                 return existing_user, None
+            
+            # Create new Telegram user
             user_id = uuid.uuid4()
-            username = identity.telegram_username or f"tg_{telegram_id}"
+            # USERNAME GENERATION FIX: Use telegram_username if available, else fallback to tg_ID
+            username = identity.telegram_username.strip() if identity.telegram_username else f"tg_{telegram_id}"
             email = f"telegram_{telegram_id}@giftedforge.local"
             full_name = f"{identity.first_name or ''} {identity.last_name or ''}".strip()
+            
+            logger.warning(f"[Telegram Auth] Creating new user - username='{username}' (from_telegram={bool(identity.telegram_username)}) | telegram_id={telegram_id} | email={email} | full_name={full_name}")
+            
             new_user = User(
                 id=user_id,
                 telegram_id=telegram_id,
@@ -58,6 +92,7 @@ class UnifiedUserService:
                 email=email,
                 hashed_password=hash_password(uuid.uuid4().hex),
                 full_name=full_name or None,
+                avatar_url=identity.avatar_url,  # Store avatar URL from Telegram
                 user_role="user",
                 is_verified=True,
                 created_at=datetime.utcnow(),
@@ -65,11 +100,13 @@ class UnifiedUserService:
             )
             db.add(new_user)
             await db.commit()
-            logger.info(f"New Telegram user created: {new_user.id} (telegram_id={telegram_id})")
+            await db.refresh(new_user)  # Refresh to ensure all fields loaded
+            # VERIFICATION LOG: Confirm all user fields were saved correctly
+            logger.warning(f"[Telegram Auth] ✓ User SAVED to DB - id={new_user.id} | telegram_id={new_user.telegram_id} | username='{new_user.username}' | email={new_user.email} | full_name='{new_user.full_name}' | verified={new_user.is_verified}")
             return new_user, None
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error creating Telegram user: {e}", exc_info=True)
+            logger.error(f"[Telegram Auth] Error creating Telegram user: {e}", exc_info=True)
             return None, str(e)
     @staticmethod
     async def _get_or_create_ton_user(

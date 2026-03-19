@@ -9,6 +9,20 @@
   <meta name="theme-color" content="#0a0a14">
   <title>Dashboard - GiftedForge</title>
 
+  <!-- Global error handler to prevent going blank -->
+  <script>
+    window.addEventListener('error', (event) => {
+      console.error('[Global] Uncaught error:', event.error);
+      // Ensure page stays visible on error
+      if (document.body) document.body.style.display = '';
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[Global] Unhandled promise rejection:', event.reason);
+      // Ensure page stays visible on error
+      if (document.body) document.body.style.display = '';
+    });
+  </script>
+
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- TON Connect UI -->
@@ -783,7 +797,6 @@
 
 
   <script type="module">
-    import { UnifiedAuthManager } from './js/unified-auth.js';
     import { waitForAuth } from './js/auth-bootstrap.js';
     import { api, endpoints } from './js/api.js';
 
@@ -864,8 +877,8 @@
       try {
         // Fetch auth status with timeout to prevent hanging
         const authStatus = await Promise.race([
-          waitForAuth(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 3000))
+          waitForAuth(5000),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 6000))
         ]);
         
         if (authStatus?.user) {
@@ -875,15 +888,24 @@
             displayName = displayName.substring(1);
           }
           
-          document.getElementById('user-name').textContent = displayName;
+          const userNameEl = document.getElementById('user-name');
+          if (userNameEl) userNameEl.textContent = displayName;
+          
           document.querySelectorAll('#userName').forEach(el => {
             el.textContent = displayName;
           });
+          console.log('[Dashboard] User greeting updated:', displayName);
+        } else {
+          console.log('[Dashboard] No user authenticated - showing guest');\n          document.getElementById('user-name').textContent = 'Guest';
+          document.querySelectorAll('#userName').forEach(el => {
+            el.textContent = 'Guest';
+          });
         }
       } catch (error) {
-        console.warn('User not authenticated or auth timeout:', error.message);
-        // Show default "Guest" or placeholder
-        document.getElementById('user-name').textContent = 'Guest';
+        console.warn('[Dashboard] User not authenticated or auth timeout:', error.message);
+        // Show default "Guest" - graceful fallback
+        const userNameEl = document.getElementById('user-name');
+        if (userNameEl) userNameEl.textContent = 'Guest';
         document.querySelectorAll('#userName').forEach(el => {
           el.textContent = 'Guest';
         });
@@ -924,18 +946,21 @@
         return;
       }
       dashboardInitialized = true;
+      console.log('[Dashboard] Starting initialization...');
 
       try {
+        // Ensure page is visible
+        if (document.body) document.body.style.display = '';
+        
         displayUserInfo(); // Non-blocking user display
         try {
           activityManager.loadRecentActivity();
         } catch (error) {
-          console.warn('Could not load activity:', error);
+          console.warn('[Dashboard] Could not load activity:', error);
         }
-      } catch (error) {
-        console.error('Dashboard init error:', error);
-      }
-    }
+        console.log('[Dashboard] Initialization complete');\n      } catch (error) {
+        console.error('[Dashboard] Init error:', error);\n        // Graceful error handling - page still shows content
+        if (document.body) document.body.style.display = '';\n      }\n    }
 
     // Execute initialization immediately
     if (document.readyState === 'loading') {

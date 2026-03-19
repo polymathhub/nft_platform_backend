@@ -114,16 +114,24 @@ class UnifiedSecurityService:
         try:
             data = UnifiedSecurityService.parse_initdata(init_data_str)
             if not data:
+                logger.warning("Failed to parse initData")
                 return None
             user_json = data.get("user")
             user_data = UnifiedSecurityService.parse_user_data(user_json) or {}
             telegram_id = str(user_data.get("id") or data.get("id", ""))
-            telegram_username = user_data.get("username") or data.get("username", "")
+            # USERNAME EXTRACTION FIX: Prioritize user_data.username over fallback
+            telegram_username = user_data.get("username") or data.get("username", "") or ""
+            telegram_username = telegram_username.strip() if telegram_username else ""
             first_name = user_data.get("first_name") or data.get("first_name", "")
             last_name = user_data.get("last_name") or data.get("last_name", "")
+            photo_url = user_data.get("photo_url") or data.get("photo_url")  # Extract avatar from Telegram
+            
             if not telegram_id:
                 logger.warning("No Telegram ID found in initData")
                 return None
+            
+            logger.info(f"[Security] Extracted Telegram identity: id={telegram_id}, username='{telegram_username}' (present={bool(telegram_username)}), first_name={first_name}, photo_url={'<set>' if photo_url else '<none>'}")
+            
             return IdentityData(
                 source=InitDataSource.TELEGRAM,
                 user_id=telegram_id,
@@ -132,6 +140,7 @@ class UnifiedSecurityService:
                 telegram_username=telegram_username,
                 first_name=first_name,
                 last_name=last_name,
+                avatar_url=photo_url,  # Store Telegram photo as avatar
                 auth_date=int(data.get("auth_date", "0")),
                 hash=data.get("hash"),
             )

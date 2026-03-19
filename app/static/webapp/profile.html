@@ -582,8 +582,8 @@
 
 
   <script type="module">
-    import { initializeAuthSystem } from '/webapp/js/auth-bootstrap.js';
-    import { api, endpoints } from '/webapp/js/api.js';
+    import { initializeAuthSystem } from './js/auth-bootstrap.js';
+    import { api, endpoints } from './js/api.js';
 
     // Initialize global auth system immediately (before any page code)
     await initializeAuthSystem();
@@ -1064,7 +1064,7 @@
 
   <script type="module">
     // Import page initialization for consistent user greeting across pages
-    import PageInitializer from '/webapp/js/page-init.js';
+    import PageInitializer from './js/page-init.js';
   </script>  <script src="navbar.js"></script>
   <!-- Load Shared Navbar Component -->
 </body>
