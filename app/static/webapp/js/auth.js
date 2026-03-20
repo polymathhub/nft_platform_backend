@@ -1,5 +1,11 @@
 import { api, endpoints } from './api.js';
 
+/**
+ * AuthManager - Handles user authentication
+ * 
+ * CRITICAL: Async initialization is deferred, not run in constructor.
+ * This prevents unhandled promise rejections during app startup.
+ */
 class AuthManager {
   constructor() {
     this.user = null;
@@ -7,43 +13,103 @@ class AuthManager {
     this.userRole = null;
     this.tokenRefreshInterval = null;
     this.tg = null;
-    this.initializeAuth();
+    this.initPromise = null;
+    this.initCompleted = false;
+    
+    // SAFE: Initialize Telegram UI synchronously (no async operations)
+    this.initTelegramUI();
+    
+    // Deferred: Auth restoration starts on-demand or via initializeAuth()
+    // NOT in constructor to prevent unhandled rejections
   }
 
-  async initializeAuth() {
+  /**
+   * Initialize Telegram UI (synchronous, safe)
+   * @private
+   */
+  initTelegramUI() {
     try {
-      this.initTelegramUI();
+      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+        this.tg = window.Telegram.WebApp;
+        
+        // Safe Telegram configuration
+        if (this.tg.expand) this.tg.expand();
+        if (this.tg.isClosingConfirmationEnabled !== undefined) {
+          this.tg.isClosingConfirmationEnabled = true;
+        }
+        if (this.tg.setHeaderColor) this.tg.setHeaderColor('#0f0f1a');
+        if (this.tg.setBackgroundColor) this.tg.setBackgroundColor('#0f0f1a');
 
-      try {
-        const profile = await api.get(endpoints.auth.profile);
-        this.setUser(profile);
-        this.dispatchEvent('auth:initialized', { user: this.user });
-        console.log('Session restored');
-        return;
-      } catch (error) {
-        console.log('No session found - this is normal on first load');
-        // Do NOT call logout on init error - it causes unwanted redirects
-        // Just mark as uninitialized and let app recover gracefully
+        console.log('[Auth] Telegram UI initialized');
+        this.dispatchEvent('telegram:ready', { tg: this.tg });
       }
     } catch (error) {
-      console.error('Auth initialization error (graceful fallback):', error);
-      // Do NOT call logout() here - it causes forced redirects in Telegram
-      // Instead, mark auth as initialized but not authenticated
-      this.dispatchEvent('auth:initialized', { user: null });
+      console.warn('[Auth] Telegram initialization failed (non-critical):', error.message);
     }
   }
 
-  initTelegramUI() {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      this.tg = window.Telegram.WebApp;
-      
-      this.tg.expand();
-      this.tg.isClosingConfirmationEnabled = true;
-      this.tg.setHeaderColor('#0f0f1a');
-      this.tg.setBackgroundColor('#0f0f1a');
+  /**
+   * Initialize authentication (async, deferred from constructor)
+   * Call this when you need to restore session from API
+   * Safe: Errors are caught and don't cause redirects
+   * 
+   * @returns {Promise<boolean>} true if session restored, false otherwise
+   */
+  async initializeAuth() {
+    // Prevent multiple concurrent initializations
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
-      console.log('Telegram UI initialized');
-      this.dispatchEvent('telegram:ready', { tg: this.tg });
+    if (this.initCompleted) {
+      return true;
+    }
+
+    this.initPromise = this._performInit();
+    return this.initPromise;
+  }
+
+  /**
+   * Actual initialization logic (private)
+   * @private
+   */
+  async _performInit() {
+    try {
+      console.log('[Auth] Starting session restoration...');
+
+      // Try to restore session from API
+      try {
+        const profile = await api.get(endpoints.auth.profile);
+        if (profile) {
+          this.setUser(profile);
+          console.log('[Auth] Session restored successfully');
+          this.dispatchEvent('auth:initialized', { user: this.user });
+          this.initCompleted = true;
+          return true;
+        }
+      } catch (error) {
+        // 401 or 403: No valid session
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log('[Auth] No valid session found (expected on first load)');
+        } else {
+          console.warn('[Auth] Session restoration failed:', error.message);
+        }
+        // Do NOT call logout() here - it causes unwanted redirects
+      }
+
+      // No session restored, but that's OK - app can work with guest access
+      this.user = null;
+      this.isAuthenticated = false;
+      this.dispatchEvent('auth:initialized', { user: null });
+      this.initCompleted = true;
+      return false;
+
+    } catch (error) {
+      console.error('[Auth] Unexpected error during initialization:', error);
+      // Graceful fallback - mark as initialized but not authenticated
+      this.dispatchEvent('auth:initialized', { user: null });
+      this.initCompleted = true;
+      return false;
     }
   }
   /**
@@ -172,14 +238,19 @@ class AuthManager {
    * Returns null if not in Telegram context
    */
   getTelegramData() {
-    if (!this.tg) return null;
+    try {
+      if (!this.tg) return null;
 
-    return {
-      initData: this.tg?.initData || null,
-      initDataUnsafe: this.tg?.initDataUnsafe || null,
-      user: this.tg?.initDataUnsafe?.user || null,
-      isBot: this.tg?.initDataUnsafe?.user?.is_bot || false,
-    };
+      return {
+        initData: this.tg?.initData || null,
+        initDataUnsafe: this.tg?.initDataUnsafe || null,
+        user: this.tg?.initDataUnsafe?.user || null,
+        isBot: this.tg?.initDataUnsafe?.user?.is_bot || false,
+      };
+    } catch (error) {
+      console.warn('[Auth] Error getting Telegram data:', error);
+      return null;
+    }
   }
 
   /**
@@ -194,16 +265,21 @@ class AuthManager {
   }
 
   /**
-   * Logout user and close Telegram app
+   * Logout user
+   * Safe: Never throws, always completes
    */
   async logout() {
     try {
       if (this.isAuthenticated) {
-        await api.post(endpoints.auth.logout, {});
+        try {
+          await api.post(endpoints.auth.logout, {});
+        } catch (error) {
+          console.warn('[Auth] Logout API call failed (non-critical):', error);
+          // Continue with local logout even if API fails
+        }
       }
-    } catch (error) {
-      console.error('Logout error:', error);
     } finally {
+      // ALWAYS perform local cleanup
       this.user = null;
       this.isAuthenticated = false;
       this.userRole = null;
@@ -215,11 +291,6 @@ class AuthManager {
 
       if (this.tokenRefreshInterval) {
         clearInterval(this.tokenRefreshInterval);
-      }
-
-      // Close Telegram app if available
-      if (this.tg && this.tg.close) {
-        this.tg.close();
       }
 
       this.dispatchEvent('auth:logout');
@@ -271,24 +342,32 @@ class AuthManager {
    * Set user theme preference
    */
   setTheme(theme) {
-    if (!['light', 'dark', 'auto'].includes(theme)) return;
-    localStorage.setItem('theme', theme);
-    this.applyTheme(theme);
+    try {
+      if (!['light', 'dark', 'auto'].includes(theme)) return;
+      localStorage.setItem('theme', theme);
+      this.applyTheme(theme);
+    } catch (error) {
+      console.warn('[Auth] Theme setting failed:', error);
+    }
   }
 
   /**
    * Apply theme to document
    */
   applyTheme(theme) {
-    const html = document.documentElement;
-    if (theme === 'dark') {
-      html.setAttribute('data-theme', 'dark');
-    } else if (theme === 'light') {
-      html.setAttribute('data-theme', 'light');
-    } else {
-      // Auto - respect system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    try {
+      const html = document.documentElement;
+      if (theme === 'dark') {
+        html.setAttribute('data-theme', 'dark');
+      } else if (theme === 'light') {
+        html.setAttribute('data-theme', 'light');
+      } else {
+        // Auto - respect system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+    } catch (error) {
+      console.warn('[Auth] Theme application failed:', error);
     }
   }
 
@@ -297,7 +376,11 @@ class AuthManager {
    * @private
    */
   dispatchEvent(eventName, detail = {}) {
-    window.dispatchEvent(new CustomEvent(eventName, { detail }));
+    try {
+      window.dispatchEvent(new CustomEvent(eventName, { detail }));
+    } catch (error) {
+      console.warn('[Auth] Event dispatch failed:', eventName, error);
+    }
   }
 
   /**
@@ -334,6 +417,15 @@ class AuthManager {
    */
   getRole() {
     return this.userRole || 'guest';
+  }
+
+  /**
+   * Wait for initialization to complete
+   * Useful for checking if session was restored
+   */
+  async waitForInit() {
+    if (this.initCompleted) return true;
+    return await this.initializeAuth();
   }
 }
 
