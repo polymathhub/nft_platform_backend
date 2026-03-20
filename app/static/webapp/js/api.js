@@ -95,43 +95,18 @@ class APIClient {
       const refreshToken = localStorage.getItem('refresh_token');
       
       // If no refresh token is available, can't refresh
+      // For Telegram auth, we don't use refresh tokens - just re-authenticate
       if (!refreshToken) {
-        console.warn('No refresh token available');
+        console.warn('No refresh token available - Telegram auth will re-authenticate');
         return false;
       }
 
-      const response = await fetch(new URL('/api/v1/auth/refresh', this.baseURL), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-        }),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Update stored tokens with new access token and refresh token
-        if (data.access_token) {
-          localStorage.setItem('token', data.access_token);
-        }
-        if (data.refresh_token) {
-          localStorage.setItem('refresh_token', data.refresh_token);
-        }
-        
-        return true;
-      }
-
-      // If 401/403, logout since token is invalid
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-        window.dispatchEvent(new CustomEvent('auth:logout'));
-      }
-
+      // Note: Production endpoint /api/v1/auth/refresh may not exist yet
+      // Fallback: Trigger re-authentication event instead
+      console.warn('[API] Token refresh requested but endpoint not implemented');
+      console.warn('[API] For Telegram Mini App, restart authentication via Telegram');
+      
+      window.dispatchEvent(new CustomEvent('auth:refresh-needed'));
       return false;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -208,9 +183,9 @@ export const endpoints = {
   auth: {
     login: '/api/v1/auth/login',
     register: '/api/v1/auth/register',
-    logout: '/api/v1/auth/logout',
-    refresh: '/api/v1/auth/refresh',
-    profile: '/api/v1/auth/profile',
+    logout: '/api/user/logout',  // FIXED: Use correct logout endpoint
+    refresh: null,  // NOTE: Not implemented - Telegram auth re-authenticates instead
+    profile: '/api/user/me',  // FIXED: Use /api/user/me which actually exists
     oauthGoogle: '/api/v1/auth/oauth/google',
     oauthTwitter: '/api/v1/auth/oauth/twitter',
   },
@@ -220,8 +195,8 @@ export const endpoints = {
     telegramLogin: '/api/v1/auth/telegram/login',
     tonLogin: '/api/v1/auth/ton/login',
     linkWallet: '/api/v1/auth/link-wallet',
-    profile: '/api/v1/auth/profile',
-    logout: '/api/v1/auth/logout',
+    profile: '/api/user/me',  // FIXED: Use /api/user/me endpoint that exists
+    logout: '/api/user/logout',  // FIXED: Use correct logout endpoint
   },
 
   // Users

@@ -30,6 +30,7 @@ from app.routers import (
     unified_auth_router,
     me_router,
 )
+from app.routers.auth_profile_router import router as auth_profile_router
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 from app.routers.image_router import router as image_router
@@ -294,6 +295,7 @@ app.include_router(
     tags=["telegram-compat-2"]
 )
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(auth_profile_router)  # NEW: Unified /api/auth/profile endpoints
 app.include_router(unified_auth_router)
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
