@@ -75,29 +75,31 @@ class AuthManager {
    */
   async _performInit() {
     try {
-      console.log('[Auth] Starting session restoration...');
+      console.log('[Auth] Starting Telegram Mini App authentication...');
 
-      // Try to restore session from API
-      try {
-        const profile = await api.get(endpoints.auth.profile);
-        if (profile) {
-          this.setUser(profile);
-          console.log('[Auth] Session restored successfully');
-          this.dispatchEvent('auth:initialized', { user: this.user });
-          this.initCompleted = true;
-          return true;
-        }
-      } catch (error) {
-        // 401 or 403: No valid session
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          console.log('[Auth] No valid session found (expected on first load)');
-        } else {
-          console.warn('[Auth] Session restoration failed:', error.message);
-        }
-        // Do NOT call logout() here - it causes unwanted redirects
+      // For Telegram Mini App, authenticate via Telegram initData
+      if (this.tg && this.tg.initData) {
+        return await this._authenticateWithTelegram();
       }
 
-      // No session restored, but that's OK - app can work with guest access
+      // Fallback: Try to restore session from existing token
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const profile = await api.get(endpoints.unifiedAuth.profile);
+          if (profile) {
+            this.setUser(profile);
+            console.log('[Auth] Session restored from existing token');
+            this.dispatchEvent('auth:initialized', { user: this.user });
+            this.initCompleted = true;
+            return true;
+          }
+        }
+      } catch (error) {
+        console.warn('[Auth] Failed to restore session:', error.message);
+      }
+
+      // No session - that's OK for guest access
       this.user = null;
       this.isAuthenticated = false;
       this.dispatchEvent('auth:initialized', { user: null });
@@ -106,9 +108,63 @@ class AuthManager {
 
     } catch (error) {
       console.error('[Auth] Unexpected error during initialization:', error);
-      // Graceful fallback - mark as initialized but not authenticated
       this.dispatchEvent('auth:initialized', { user: null });
       this.initCompleted = true;
+      return false;
+    }
+  }
+
+  /**
+   * Authenticate using Telegram Mini App initData
+   * This is the primary auth method for Telegram apps
+   * @private
+   */
+  async _authenticateWithTelegram() {
+    try {
+      if (!this.tg?.initData) {
+        console.warn('[Auth] No Telegram initData available');
+        return false;
+      }
+
+      console.log('[Auth] Authenticating with Telegram initData...');
+
+      // Send Telegram initData to backend for verification
+      const response = await fetch(endpoints.unifiedAuth.telegramLogin, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ init_data: this.tg.initData })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.warn('[Auth] Telegram authentication failed:', error);
+        return false;
+      }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.user) {
+        console.warn('[Auth] Invalid Telegram response:', data);
+        return false;
+      }
+
+      // Store tokens
+      if (data.tokens?.access) {
+        localStorage.setItem('token', data.tokens.access);
+        if (data.tokens.refresh) {
+          localStorage.setItem('refresh_token', data.tokens.refresh);
+        }
+      }
+
+      // Set user
+      this.setUser(data.user);
+      console.log('[Auth] Telegram authentication successful:', data.user.username);
+      this.dispatchEvent('auth:initialized', { user: this.user });
+      this.initCompleted = true;
+      return true;
+
+    } catch (error) {
+      console.error('[Auth] Telegram authentication error:', error);
       return false;
     }
   }
