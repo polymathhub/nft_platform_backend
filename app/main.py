@@ -28,6 +28,7 @@ from app.routers import (
     ton_wallet_router,
     stars_marketplace_router,
     unified_auth_router,
+    me_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -306,6 +307,7 @@ app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(ton_wallet_router)
 app.include_router(stars_marketplace_router)
 app.include_router(user_router, prefix="/api")
+app.include_router(me_router)
 app.include_router(notification_router, prefix="/api")
 app.include_router(payment_router)
 app.include_router(referrals_router)

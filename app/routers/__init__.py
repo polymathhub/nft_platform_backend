@@ -14,6 +14,7 @@ from app.routers.dashboard_router import router as dashboard_router
 from app.routers.user_router import router as user_router
 from app.routers.ton_wallet_router import router as ton_wallet_router
 from app.routers.stars_marketplace_router import router as stars_marketplace_router
+from app.routers.me_router import router as me_router
 __all__ = [
     "auth_router",
     "unified_auth_router",
@@ -28,6 +29,7 @@ __all__ = [
     "referrals_router",
     "stars_payment_router",
     "dashboard_router",
+    "me_router",
     "user_router",
     "ton_wallet_router",
     "stars_marketplace_router",

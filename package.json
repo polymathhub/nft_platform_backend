@@ -2,10 +2,8 @@
   "name": "nft_platform_backend-main",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js"
   },
   "devDependencies": {
     "eslint": "^8.57.1"

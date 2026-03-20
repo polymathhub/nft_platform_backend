@@ -202,7 +202,7 @@ class APIClient {
 // Global API instance
 export const api = new APIClient();
 
-// Namespace for API endpoints
+// Namespace for API 
 export const endpoints = {
   // Auth - Standard endpoints
   auth: {
