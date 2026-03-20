@@ -9,7 +9,7 @@
  * - Gracefully handle fetch errors without forcing app reload.
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v2.0.0';
 const CACHE_NAME = `gifted-forge-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `gifted-forge-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `gifted-forge-images-${CACHE_VERSION}`;

@@ -84,28 +84,59 @@ export class UnifiedAuthManager {
    */
   async restoreSession() {
     try {
-      // First check localStorage for cached user and token (fastest)
+      // FIRST: Try Telegram authentication (primary for Telegram Mini App)
+      if (this.tg && this.tg.initData) {
+        console.log('[Auth] Attempting Telegram authentication...');
+        try {
+          const response = await fetch(endpoints.unifiedAuth.telegramLogin, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: this.tg.initData })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.user) {
+              // Store tokens
+              if (data.tokens?.access) {
+                this.accessToken = data.tokens.access;
+                localStorage.setItem('token', data.tokens.access);
+                if (data.tokens.refresh) {
+                  this.refreshToken = data.tokens.refresh;
+                  localStorage.setItem('refresh_token', data.tokens.refresh);
+                }
+              }
+              
+              this.setUser(data.user);
+              this.authMethod = 'telegram';
+              console.log('[Auth] Telegram authentication successful');
+              this.dispatchEvent('auth:initialized', { user: this.user });
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn('[Auth] Telegram authentication failed:', error.message);
+        }
+      }
+
+      // FALLBACK: Check localStorage for cached user and token
       const cachedUser = localStorage.getItem('user');
       const cachedToken = localStorage.getItem('token');
       
       if (cachedUser && cachedToken) {
         try {
           this.user = JSON.parse(cachedUser);
+          this.accessToken = cachedToken;
           this.isAuthenticated = true;
           console.log('[Auth] Session restored from localStorage (cached)');
           this.dispatchEvent('auth:initialized', { user: this.user });
-          
-          // REMOVED: validateSessionInBackground() was causing aggressive refresh loops
-          // The cached session is sufficient for immediate use
-          // Backend validation happens only on user action, not on every page load
           return;
         } catch (e) {
           console.log('[Auth] Failed to parse cached user');
         }
       }
       
-      // If no cache, try to restore from backend (slower)
-      // But use Promise.race with a short timeout to avoid hanging
+      // FINAL FALLBACK: Try to restore from backend with timeout
       try {
         const profile = await Promise.race([
           api.get(endpoints.unifiedAuth.profile),
