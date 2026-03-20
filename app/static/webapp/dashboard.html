@@ -521,36 +521,6 @@
   <link rel="stylesheet" href="navbar.css?v=2.7">
 </head>
 <body>
-  <!-- Critical: Force service worker update on page load -->
-  <script>
-    (async () => {
-      if ('serviceWorker' in navigator) {
-        try {
-          // Check for updates
-          const registration = await navigator.serviceWorker.getRegistration('/webapp/sw.js');
-          if (registration) {
-            // Check for updates
-            await registration.update();
-            console.log('[SW] Checked for updates');
-            
-            // If waiting service worker exists, activate it
-            if (registration.waiting) {
-              console.log('[SW] Waiting SW found, forcing activation');
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              
-              // Reload page after SW activates
-              window.addEventListener('controllerchange', () => {
-                console.log('[SW] Controller changed, reloading page to apply updates');
-                window.location.reload();
-              });
-            }
-          }
-        } catch (error) {
-          console.warn('[SW] Update check failed (non-critical):', error);
-        }
-      }
-    })();
-  </script>
   <!-- TOP HEADER -->
   <header class="app-header">
     <div class="header-container">
