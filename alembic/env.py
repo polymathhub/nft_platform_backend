@@ -23,12 +23,6 @@ def get_url():
             "DATABASE_URL is required for migrations. "
             "Set it in .env file or as environment variable."
         )
-    masked_url = url
-    if '@' in url:
-        scheme, rest = url.split('://', 1)
-        creds, host = rest.rsplit('@', 1)
-        masked_url = f"{scheme}://***@{host}"
-    print(f"[Alembic] Using database URL: {masked_url}")
     return url 
 target_metadata = Base.metadata
 def run_migrations_offline():

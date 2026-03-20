@@ -1,6 +1,10 @@
 FROM python:3.11-slim
 
-# System dependencies
+LABEL maintainer="NFT Platform Team"
+LABEL version="1.0"
+LABEL description="Production-ready FastAPI backend for NFT Platform"
+
+# System dependencies (minimal for production)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc libpq-dev curl && \
     rm -rf /var/lib/apt/lists/*
@@ -8,30 +12,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set workdir
 WORKDIR /app
 
-# Install Python dependencies first (for Docker cache)
+# Install Python dependencies first (for Docker layer caching)
+# This layer only rebuilds if requirements.txt changes
 COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt
 
-
-# Copy the entire application code (including entrypoint script)
-COPY . .
+# Copy application code AFTER dependencies
+# This is cheaper to rebuild than the pip layer
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini .
+COPY entrypoint.sh .
+COPY scripts ./scripts
 
 # Set entrypoint script permissions
 RUN chmod +x /app/entrypoint.sh && \
-    ln -s /app/entrypoint.sh /entrypoint.sh
+    chmod +x /app/scripts/check_syntax.py
 
-# Create non-root user and set ownership
+# Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 
 USER appuser
 
-# Railway sets PORT env var dynamically, default to 8000 for local development
+# Dynamic PORT from environment (Railway, Heroku, etc.)
 ENV PORT=8000
+ENV WORKERS=4
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:$PORT/health', timeout=5).read()" || exit 1
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]

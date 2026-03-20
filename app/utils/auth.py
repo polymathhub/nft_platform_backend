@@ -13,17 +13,17 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db_session),
 ) -> User:
     if not credentials or not credentials.credentials:
-        logger.warning(f\"[Auth] Missing credentials in request\")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=\"unauthorized\")
+        logger.warning("[Auth] Missing credentials in request")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
     token = credentials.credentials
     user_id = AuthService.verify_token(token)
     if not user_id:
-        logger.warning(f\"[Auth] Invalid/expired token\")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=\"invalid token\")
+        logger.warning("[Auth] Invalid/expired token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        logger.error(f\"[Auth] User not found: user_id={user_id}\")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=\"user not found\")
-    logger.debug(f\"[Auth] ✓ Current user resolved: id={user.id} username={user.username} email={user.email}\")
+        logger.error(f"[Auth] User not found: user_id={user_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+    logger.debug(f"[Auth] Current user resolved: id={user.id} username={user.username} email={user.email}")
     return user
