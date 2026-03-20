@@ -3,7 +3,6 @@ import { api, endpoints } from './api.js';
 class MarketplaceService {
   constructor() {
     this.listings = [];
-    this.updateInterval = null;
     this.wsConnection = null;
   }
 
@@ -75,18 +74,14 @@ class MarketplaceService {
   }
 
   startRealtimeUpdates(onUpdate) {
-    // DISABLED: Was fetching listings every 5 seconds - WAY too aggressive
-    // This caused constant network requests and UI refreshes
-    // Marketplace now loads only when user navigates to the page or manually refreshes
-    console.log('[Marketplace] Real-time updates disabled - using on-demand loading');
-    // No interval set - call fetchListings() manually when needed instead
+    // DISABLED: Real-time polling is disabled to prevent constant network requests
+    // Use fetchListings() directly when manual refresh is needed
+    console.log('[Marketplace] Real-time updates disabled');
   }
 
   stopRealtimeUpdates() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
+    // DISABLED: No update intervals to stop
+    console.log('[Marketplace] Real-time updates already stopped');
   }
 
   connectWebSocket(onMessage) {
@@ -118,7 +113,7 @@ class MarketplaceService {
       };
     } catch (error) {
       console.error('Error connecting WebSocket:', error);
-      this.startRealtimeUpdates(onMessage);
+      // WebSocket failed - marketplace now uses on-demand loading via UI refresh
     }
   }
 

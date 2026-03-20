@@ -28,11 +28,6 @@ class NavbarController {
     
     this.navItems = document.querySelectorAll('.nav-item');
     this.currentPage = this.detectCurrentPage();
-    
-    // Real-time polling intervals
-    this.notificationPollInterval = null;
-    this.userDataPollInterval = null;
-    this.telegramSyncInterval = null;
 
     // Mark that this instance has been set up
     this.setupComplete = false;
@@ -507,11 +502,6 @@ class NavbarController {
         item.removeEventListener('click', handler);
       });
     }
-
-    // Clear intervals if any
-    if (this.notificationPollInterval) clearInterval(this.notificationPollInterval);
-    if (this.userDataPollInterval) clearInterval(this.userDataPollInterval);
-    if (this.telegramSyncInterval) clearInterval(this.telegramSyncInterval);
   }
 
   /**

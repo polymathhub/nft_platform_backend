@@ -11,7 +11,6 @@ class AuthManager {
     this.user = null;
     this.isAuthenticated = false;
     this.userRole = null;
-    this.tokenRefreshInterval = null;
     this.tg = null;
     this.initPromise = null;
     this.initCompleted = false;
@@ -344,10 +343,6 @@ class AuthManager {
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-
-      if (this.tokenRefreshInterval) {
-        clearInterval(this.tokenRefreshInterval);
-      }
 
       this.dispatchEvent('auth:logout');
     }
