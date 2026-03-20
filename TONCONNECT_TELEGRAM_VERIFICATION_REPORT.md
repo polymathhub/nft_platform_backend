@@ -12,7 +12,7 @@ Your NFT Platform Backend is **fully configured** for TonConnect integration in 
 
 ## ✅ VERIFIED COMPONENTS
 
-### 1. **Frontend Implementation** - `app/static/webapp/index.html`
+### 1. **Frontend Implementation** - `app/static/webapp/dashboard.html`
 
 #### SDK Loading
 - **Telegram WebApp SDK**: Loaded from `https://telegram.org/js/telegram-web-app.js`
@@ -231,7 +231,7 @@ ELSE (new wallet):
 ### 8. **Static File Serving**
 
 ✅ **Frontend Files:**
-- `index.html` → Entry point, wallet connection
+- `dashboard.html` → Entry point, wallet connection
 - `dashboard.html` → Post-login page (exists, token-verified)
 - `marketplace.html` → NFT marketplace
 - Other pages → wallet.html, profile.html, mint.html, etc.
@@ -243,7 +243,7 @@ ELSE (new wallet):
 
 ✅ **Routing:**
 - `/` → Redirects to `/webapp/`
-- `/webapp/` → Serves index.html
+- `/webapp/` → Serves dashboard.html
 - `/tonconnect-manifest.json` → Served by backend
 - `/vendor/tonconnect/` → CSS redirects to CDN
 
@@ -286,7 +286,7 @@ ELSE (new wallet):
    - Sets `initData` with user verification
    - Passes `startParam` if configured
 
-3. **Frontend (index.html) Loads**
+3. **Frontend (dashboard.html) Loads**
    - Expands WebApp to full screen
    - Pre-loads TonConnect library from CDN
    - Shows "Connect TON Wallet" and "Explore Marketplace" buttons
@@ -390,7 +390,7 @@ application.add_handler(CommandHandler("start", start))
 
 ### Local Development
 - [ ] Run backend: `python main.py` or `uvicorn app.main:app --reload`
-- [ ] Test index.html at `http://localhost:8000/webapp/`
+- [ ] Test dashboard.html at `http://localhost:8000/webapp/dashboard.html`
 - [ ] Verify manifest at `http://localhost:8000/tonconnect-manifest.json`
 - [ ] Check console logs for TonConnect loading
 - [ ] Test error cases (wrong address format, network errors)
@@ -429,7 +429,7 @@ application.add_handler(CommandHandler("start", start))
 1. Check unpkg.com availability: `curl https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.js`
 2. Increase timeout in `waitForTonConnect(30000)` for slow networks
 3. Check browser console for JavaScript errors
-4. Try alternative CDN in index.html script src
+4. Try alternative CDN in dashboard.html or other page script src
 
 ### Issue: Manifest Returns Wrong Origin
 **Causes:**

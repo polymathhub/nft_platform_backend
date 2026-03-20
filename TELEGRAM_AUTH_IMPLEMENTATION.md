@@ -5,7 +5,7 @@ Implemented comprehensive Telegram authentication system with full profile displ
 
 ## Implementation Details
 
-### 1. Frontend Authentication Flow (index.html)
+### 1. Frontend Authentication Flow (dashboard.html)
 
 **Telegram Login Handler Enhancement:**
 - Captures complete Telegram user data including `photo_url` (display picture)
@@ -93,7 +93,7 @@ telegramAuth.isAuthenticated()       // Check auth status
 
 **Step 1: User Opens Webapp**
 ```
-Telegram → index.html (landing page)
+Telegram → dashboard.html (landing page)
 ↓
 Check token in localStorage
 ↓
@@ -329,7 +329,7 @@ setInterval(async () => {
 ## Files Modified/Created
 
 ### Modified Files
-1. `app/static/webapp/index.html`
+1. `app/static/webapp/dashboard.html` (main entry point)
    - Enhanced Telegram auth handler to save full user profile
    - Added user data merging with Telegram WebApp data
 

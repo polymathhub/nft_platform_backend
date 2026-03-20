@@ -48,16 +48,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         if request.url.path.startswith("/api/"):
             if request.method == "GET":
-                if any(path in request.url.path for path in [
-                    "/webapp/dashboard-data",
-                    "/webapp/init",
-                    "/health",
-                    "/nft/",
-                    "/wallet/",
-                    "/marketplace/listings"
-                ]):
-                    response.headers["Cache-Control"] = "public, max-age=60"
-                    response.headers["ETag"] = getattr(response, '_etag', None) or ""
+                # No caching for API GET requests - always fetch fresh data
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
             else:
                 response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
                 response.headers["Pragma"] = "no-cache"
@@ -86,8 +78,9 @@ class RelaxedSecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'; form-action 'self'"
         )
         response.headers["Content-Security-Policy"] = csp
-        if request.url.path.startswith("/api/") and request.method == "GET":
-            response.headers["Cache-Control"] = "public, max-age=60"
+        # No aggressive caching for API endpoints - ensure fresh data always
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         return response
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:

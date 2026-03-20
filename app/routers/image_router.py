@@ -156,7 +156,7 @@ async def proxy_image(
                         "Access-Control-Allow-Methods": "GET, OPTIONS",
                         "Access-Control-Allow-Headers": "Content-Type, Authorization",
                         "X-Content-Type-Options": "nosniff",
-                        "Cache-Control": "public, max-age=3600",
+                        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
                         "X-Frame-Options": "DENY",
                     }
                 )

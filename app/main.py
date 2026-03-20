@@ -148,17 +148,15 @@ async def optimize_static_caching(request: Request, call_next):
     response = await call_next(request)
     try:
         path = request.url.path or ""
-        # Cache static assets aggressively (1 year)
+        # Cache static assets with reasonable expiration (30 days) - browser cache, CDN cache
         if path.endswith(('.js', '.css', '.woff', '.woff2', '.ttf', '.eot', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico')):
-            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-            response.headers["ETag"] = f'"{hash(path)}"'
-        # Cache HTML but revalidate on each visit
+            response.headers["Cache-Control"] = "public, max-age=2592000"
+        # Cache HTML with no forced revalidation - let browser use stale cache while revalidating in background
         elif path.startswith("/webapp/") and path.endswith('.html'):
-            response.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
-            response.headers["Pragma"] = "cache"
-        # Don't cache API responses
+            response.headers["Cache-Control"] = "public, max-age=3600"
+        # Don't cache API responses - always fresh from server
         elif path.startswith("/api/"):
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
         # Add compression support
         response.headers["Vary"] = "Accept-Encoding"

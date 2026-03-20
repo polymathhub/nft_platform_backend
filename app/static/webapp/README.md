@@ -8,7 +8,7 @@ Built at Apple engineering standards: secure, scalable, performant, and maintain
 
 ```
 /webapp
-├── index.html              # Landing page
+├── dashboard.html          # Main landing page / entry point
 ├── login.html              # Authentication (email + OAuth)
 ├── register.html           # User registration
 ├── dashboard.html          # User portfolio & home
@@ -282,7 +282,7 @@ python -m uvicorn app.main:app --reload
 ```bash
 # Navigate to frontend directory
 open http://localhost:8000/
-# or navigate directly: index.html
+# or navigate directly: dashboard.html
 ```
 
 ### 3. Using the System

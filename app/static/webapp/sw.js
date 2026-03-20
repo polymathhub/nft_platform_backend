@@ -144,26 +144,49 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 4: HTML pages - Cache first strategy
-  // CHANGED from 'stale-while-revalidate' to 'cache-first'
-  // This prevents background network requests that cause violent page refreshes
+  // Strategy 4: HTML pages - Network first (always refresh auth-sensitive pages)
+  // Authentication pages and dashboard pages must be fresh to ensure correct session state
   if (request.destination === 'document' || url.pathname.endsWith('.html')) {
+    // Skip service worker caching for authentication-sensitive pages
+    if (url.pathname.includes('auth') || 
+        url.pathname.includes('login') || 
+        url.pathname.includes('dashboard') ||
+        url.pathname.includes('wallet') ||
+        url.pathname.includes('profile') ||
+        url.pathname === '/' ||
+        url.pathname === '/webapp/' ||
+        url.pathname === '/webapp/dashboard.html') {
+      // Network first for sensitive pages - always check server first
+      event.respondWith(
+        fetch(request)
+          .then((response) => {
+            if (response.ok && request.method === 'GET') {
+              caches.open(RUNTIME_CACHE).then((c) => c.put(request, response.clone()));
+            }
+            return response;
+          })
+          .catch(() => {
+            return caches.match(request)
+              .then((cached) => cached || createOfflineResponse());
+          })
+      );
+      return;
+    }
+    // For non-sensitive HTML pages, use stale-while-revalidate pattern
     event.respondWith(
       caches.match(request)
         .then((cached) => {
-          // Return cached HTML immediately without background fetch
-          if (cached) {
-            return cached;
-          }
-          // Only fetch from network if not in cache
-          return fetch(request)
+          const fetchPromise = fetch(request)
             .then((response) => {
               if (response.ok && request.method === 'GET') {
                 caches.open(CACHE_NAME).then((c) => c.put(request, response.clone()));
               }
               return response;
             })
-            .catch(() => createOfflineResponse());
+            .catch(() => null);
+          
+          // Return cached version immediately, fetch fresh one in background
+          return cached || fetchPromise || createOfflineResponse();
         })
     );
     return;
