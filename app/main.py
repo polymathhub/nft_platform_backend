@@ -112,14 +112,27 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     )
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "Internal server error",
-            "status_code": 500,
-        }
-    )
+    # SECURITY: Don't expose internal errors in production
+    if settings.debug:
+        # In debug mode, provide full error details for developers
+        logger.error(f"Unhandled exception: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": str(exc),
+                "status_code": 500,
+            }
+        )
+    else:
+        # In production, only log the error and return generic message
+        logger.error(f"Unhandled exception: {type(exc).__name__}", exc_info=False)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "status_code": 500,
+            }
+        )
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(RequestSizeLimitMiddleware)
@@ -135,6 +148,14 @@ import os
 webapp_path = os.path.join(os.path.dirname(__file__), "static", "webapp")
 static_path = os.path.join(os.path.dirname(__file__), "static")
 cors_origins = settings.allowed_origins.copy() if settings.allowed_origins else []
+# SECURITY: Ensure no wildcard origins when credentials are allowed
+# Wildcard + credentials = CORS vulnerability allowing credential theft
+if "*" in cors_origins:
+    logger.error("SECURITY: Wildcard CORS origin ('*') with credentials allowed - removing wildcard for security")
+    cors_origins = [o for o in cors_origins if o != "*"]
+if any("*" in origin for origin in cors_origins if isinstance(origin, str) and origin != "*"):
+    logger.warning("SECURITY: Subdomain wildcard in CORS origins with credentials - review configuration for CORS attacks")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,

@@ -95,9 +95,9 @@ export class UnifiedAuthManager {
           console.log('[Auth] Session restored from localStorage (cached)');
           this.dispatchEvent('auth:initialized', { user: this.user });
           
-          // Validate token in background (non-blocking)
-          // This is CRITICAL: refresh the session from backend to ensure it's still valid
-          setTimeout(() => this.validateSessionInBackground(), 500);
+          // REMOVED: validateSessionInBackground() was causing aggressive refresh loops
+          // The cached session is sufficient for immediate use
+          // Backend validation happens only on user action, not on every page load
           return;
         } catch (e) {
           console.log('[Auth] Failed to parse cached user');
@@ -131,21 +131,27 @@ export class UnifiedAuthManager {
   }
 
   /**
-   * Validate session in background without blocking
+   * Validate session only when explicitly needed (user action)
+   * NOT on page load - which causes aggressive refresh loops
    */
-  async validateSessionInBackground() {
+  async validateSessionOnDemand() {
     try {
       const profile = await api.get(endpoints.unifiedAuth.profile);
       this.setUser(profile);
-      console.log('[Auth] Session validated successfully in background');
+      console.log('[Auth] Session validated successfully (on-demand)');
+      return true;
     } catch (error) {
-      // If validation fails, clear cache for next time
-      console.warn('[Auth] Session validation failed in background:', error.message);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      this.user = null;
-      this.isAuthenticated = false;
-      this.dispatchEvent('auth:invalid');
+      // Validation failed, but don't auto-logout on every error
+      console.warn('[Auth] Session validation failed (on-demand):', error.message);
+      // Only clear if it's a 401 (unauthorized), not network errors
+      if (error.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        this.user = null;
+        this.isAuthenticated = false;
+        this.dispatchEvent('auth:invalid');
+      }
+      return false;
     }
   }
 

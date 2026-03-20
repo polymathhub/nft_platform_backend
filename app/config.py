@@ -142,7 +142,8 @@ class Settings(BaseSettings):
     commission_wallet_trc20: str = Field(default="0x892b8ba9c9566f22217e74d661d95eff56aa2ba6")
     commission_wallet_erc20: str = Field(default="0x892b8ba9c9566f22217e74d661d95eff56aa2ba6")
     commission_wallet_solana: str = Field(default="3PFSpY3MeLXVxzJT7KY8AVSjG99v3dQnDjNwH6msYoAg")
-    admin_password: str = Field(default="Firdavs")
+    # SECURITY: Admin password MUST be set via environment variable - no default
+    admin_password: str = Field(...)
     cors_allow_headers: list[str] = Field(default=[
         "Content-Type",
         "Authorization",
