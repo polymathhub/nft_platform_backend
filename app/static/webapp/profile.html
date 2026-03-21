@@ -978,7 +978,14 @@
   <script type="module">
     // Import page initialization for consistent user greeting across pages
     import PageInitializer from './js/page-init.js';
-  </script>  <script src="navbar.js"></script>
+  </script>
+  <script src="navbar.js?v=CACHE_BUST"></script>
+  <script>
+    // Replace cache-bust placeholder with timestamp
+    document.querySelectorAll('script[src*="?v=CACHE_BUST"]').forEach(script => {
+      script.src = script.src.replace('CACHE_BUST', Date.now());
+    });
+  </script>
   <!-- Load Shared Navbar Component -->
 </body>
 </html>

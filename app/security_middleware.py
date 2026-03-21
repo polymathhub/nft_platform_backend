@@ -120,3 +120,24 @@ class DirectoryListingBlockMiddleware(BaseHTTPMiddleware):
                 )
         response = await call_next(request)
         return response
+
+
+class StaticFilesNoCacheMiddleware(BaseHTTPMiddleware):
+    """
+    Ensure static files (HTML, JS, CSS) served from /webapp have no-cache headers.
+    This prevents browser caching of stale code that could reference old auth endpoints.
+    """
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        
+        # Apply no-cache headers to HTML, JS, and CSS files under /webapp
+        path = request.url.path.lower()
+        if path.startswith("/webapp"):
+            if path.endswith(('.html', '.js', '.css')):
+                # Prevent caching of static assets
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+                logger.debug(f"[No-Cache] Applied to static file: {path}")
+        
+        return response

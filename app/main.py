@@ -37,6 +37,7 @@ from app.security_middleware import (
     RequestBodyCachingMiddleware,
     RequestSizeLimitMiddleware,
     RelaxedSecurityHeadersMiddleware,
+    StaticFilesNoCacheMiddleware,
 )
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -137,6 +138,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(RequestSizeLimitMiddleware)
+app.add_middleware(StaticFilesNoCacheMiddleware)  # Ensure static files have no-cache headers
 try:
     if getattr(settings, 'environment', '').lower() == 'production':
         app.add_middleware(RelaxedSecurityHeadersMiddleware)
