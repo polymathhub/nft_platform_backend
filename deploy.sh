@@ -19,7 +19,14 @@ APP_USER="nft_app"
 APP_DIR="/home/nft_app/nft_platform"
 DB_NAME="nft_db"
 DB_USER="nft_user"
-DB_PASSWORD="GiftedForge"
+# ✅ SECURITY: Use environment variable or generate secure password
+DB_PASSWORD="${DATABASE_PASSWORD:-$(openssl rand -base64 32)}"
+
+# Warn if using generated password
+if [ -z "$DATABASE_PASSWORD" ]; then
+    echo -e "${BLUE}[WARNING] DATABASE_PASSWORD not set. Generated random password.${NC}"
+    echo -e "${BLUE}Save this password securely: $DB_PASSWORD${NC}"
+fi
 
 # Step 1: Update system
 echo -e "${BLUE}[1/8] Updating system packages...${NC}"

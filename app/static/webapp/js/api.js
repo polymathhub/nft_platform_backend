@@ -13,13 +13,6 @@ import { telegramFetch, telegramApi } from './telegram-fetch.js';
  * Used by marketplace, wallet, profile, and mint pages
  */
 const endpoints = {
-  // User endpoints
-  auth: {
-    profile: '/api/auth/profile',
-    check: '/api/auth/check',
-    logout: '/api/auth/logout',
-  },
-  
   // V1 API endpoints (Telegram-authenticated)
   me: '/api/v1/me',
   user: {
@@ -30,22 +23,35 @@ const endpoints = {
   
   // NFT Management
   nft: {
-    list: '/api/v1/nft/list',
-    create: '/api/v1/nft/mint',
-    get: (id) => `/api/v1/nft/${id}`,
-    update: (id) => `/api/v1/nft/${id}`,
-    delete: (id) => `/api/v1/nft/${id}`,
-    transfer: (id) => `/api/v1/nft/${id}/transfer`,
-    burn: (id) => `/api/v1/nft/${id}/burn`,
+    list: '/api/v1/nfts',
+    collection: '/api/v1/nfts/user/collection',
+    create: '/api/v1/nfts/mint',
+    mint: '/api/v1/nfts/mint',
+    get: (id) => `/api/v1/nfts/${id}`,
+    details: (id) => `/api/v1/nfts/${id}`,
+    update: (id) => `/api/v1/nfts/${id}`,
+    delete: (id) => `/api/v1/nfts/${id}`,
+    transfer: (id) => `/api/v1/nfts/${id}/transfer`,
+    burn: (id) => `/api/v1/nfts/${id}/burn`,
+    lock: (id) => `/api/v1/nfts/${id}/lock`,
+    unlock: (id) => `/api/v1/nfts/${id}/unlock`,
   },
   
   // Marketplace
   marketplace: {
-    list: '/api/v1/marketplace',
+    list: '/api/v1/marketplace/listings',
     listings: '/api/v1/marketplace/listings',
-    buy: (listingId) => `/api/v1/marketplace/listings/${listingId}/buy-now`,
-    offer: (listingId) => `/api/v1/marketplace/listings/${listingId}/offer`,
+    active: '/api/v1/marketplace/listings',
+    userListings: '/api/v1/marketplace/listings/user',
     create: '/api/v1/marketplace/listings',
+    cancel: (listingId) => `/api/v1/marketplace/listings/${listingId}/cancel`,
+    buy: (listingId) => `/api/v1/marketplace/listings/${listingId}/buy-now`,
+    buyNow: (listingId) => `/api/v1/marketplace/listings/${listingId}/buy-now`,
+    offer: (listingId) => `/api/v1/marketplace/listings/${listingId}/offer`,
+    makeOffer: (listingId) => `/api/v1/marketplace/listings/${listingId}/offer`,
+    acceptOffer: (offerId) => `/api/v1/marketplace/offers/${offerId}/accept`,
+    rejectOffer: (offerId) => `/api/v1/marketplace/offers/${offerId}/reject`,
+    offers: (listingId) => `/api/v1/marketplace/listings/${listingId}/offers`,
   },
   
   // Wallet Management
@@ -78,9 +84,13 @@ const endpoints = {
   
   // Payments
   payment: {
-    create: '/api/payment/create',
-    verify: '/api/payment/verify',
-    status: (id) => `/api/payment/${id}/status`,
+    balance: '/api/v1/payments/balance',
+    history: '/api/v1/payments/history',
+    create: '/api/v1/payments/deposit',
+    initiate: '/api/v1/payments/initiate-deposit',
+    confirm: '/api/v1/payments/deposit-confirm',
+    verify: '/api/v1/payments/verify',
+    status: (id) => `/api/v1/payments/${id}/status`,
   },
 };
 

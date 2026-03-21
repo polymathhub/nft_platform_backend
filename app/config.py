@@ -25,11 +25,10 @@ class Settings(BaseSettings):
             v = os.getenv("DATABASE_URL")
             if not v:
                 raise ValueError(
-                    "DATABASE_URL is set to literal '${DATABASE_URL}' in .env or config. "
-                    "Either:\n"
-                    "  1. Set DATABASE_URL in .env to actual value (e.g., postgresql+asyncpg://user:pass@host/db)\n"
-                    "  2. Or set the DATABASE_URL environment variable before starting the app\n"
-                    "Example: export DATABASE_URL='postgresql+asyncpg://nft_user:GiftedForge@5.252.155.82:5432/nft_db'"
+                    "DATABASE_URL is not configured properly. "
+                    "Set it in .env file or as environment variable.\n"
+                    "Format: postgresql+asyncpg://user:password@hostname:5432/database_name\n"
+                    "Contact your system administrator for the correct database URL."
                 )
         if not v:
             raise ValueError(
@@ -106,15 +105,23 @@ class Settings(BaseSettings):
         app_url = info.data.get('app_url')
         if app_url:
             origins.append(app_url)
-        localhost_origins = [
-            "http://localhost",
-            "http://localhost:3000",
-            "http://localhost:8000",
-            "http://127.0.0.1",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:8000",
-        ]
-        origins.extend(localhost_origins)
+        
+        # ✅ SECURITY FIX: Only add localhost in development environments
+        environment = info.data.get('environment', 'development')
+        if environment.lower() in ('development', 'dev', 'local'):
+            localhost_origins = [
+                "http://localhost",
+                "http://localhost:3000",
+                "http://localhost:8000",
+                "http://127.0.0.1",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:8000",
+            ]
+            origins.extend(localhost_origins)
+        else:
+            # ✅ In production/staging, remove any localhost origins
+            origins = [o for o in origins if 'localhost' not in o.lower() and '127.0.0.1' not in o]
+        
         seen = set()
         unique_origins = []
         for origin in origins:

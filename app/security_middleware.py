@@ -37,14 +37,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://telegram.org https://*.telegram.org; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' https://telegram.org https://*.telegram.org; "
+            "style-src 'self' https://fonts.googleapis.com; "
+            "style-src-attr 'none'; "
+            "script-src-attr 'none'; "
             "img-src 'self' data: https: blob:; "
-            "font-src 'self' data:; "
-            "connect-src 'self' https: https://*.telegram.org; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
+            "connect-src 'self' https: https://*.telegram.org wss:; "
             "frame-ancestors 'self' https://*.telegram.org; "
             "base-uri 'self'; "
-            "form-action 'self'"
+            "form-action 'self'; "
+            "object-src 'none'"
         )
         if request.url.path.startswith("/api/"):
             if request.method == "GET":
