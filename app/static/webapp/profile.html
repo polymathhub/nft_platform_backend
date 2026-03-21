@@ -591,21 +591,34 @@
     // Use global auth manager (initialized by bootstrap)
     const authManager = window.authManager;
 
-    // Ensure authenticated - with graceful fallback
+    // Ensure authenticated - with graceful fallback using Telegram auth
     async function ensureAuthenticated() {
       try {
-        // Quick cache check first
-        const cachedToken = localStorage.getItem('token');
-        const cachedUser = localStorage.getItem('user');
-        if (cachedToken && cachedUser) {
-          try {
-            authManager.user = JSON.parse(cachedUser);
+        // Check if we have Telegram initData
+        const initData = window.Telegram?.WebApp?.initData;
+        if (!initData) {
+          console.log('Profile: no Telegram initData - preview mode');
+          return false;
+        }
+
+        // Try to fetch current user from Telegram-authenticated endpoint
+        try {
+          const response = await fetch('/api/v1/me', {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
+            },
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            authManager.user = userData.data || userData;
             authManager.isAuthenticated = true;
             return true;
-          } catch (e) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
           }
+        } catch (e) {
+          console.warn('Failed to fetch /api/v1/me:', e);
         }
 
         // Wait briefly for auth manager
@@ -641,8 +654,21 @@
     
     window.disconnectWallet = async () => {
       if (confirm('Disconnect your wallet? You will need to reconnect to access the app.')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Call logout endpoint if needed
+        try {
+          const initData = window.Telegram?.WebApp?.initData;
+          if (initData) {
+            await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': initData
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Logout request failed:', e);
+        }
         // Check if already on dashboard to prevent unnecessary redirect
         if (window.location.pathname !== '/webapp/dashboard.html') {
           window.location.href = '/webapp/dashboard.html';

@@ -142,6 +142,10 @@ const telegramApi = {
 };
 
 // Export for use in other scripts
+// Export for CommonJS
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { telegramFetch, telegramApi };
 }
+
+// Export for ES6 modules
+export { telegramFetch, telegramApi };

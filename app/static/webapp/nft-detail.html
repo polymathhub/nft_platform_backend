@@ -772,18 +772,21 @@
       const nftId = getNFTIdFromURL();
       if (nftId) {
         try {
-          // Fetch real NFT data from backend
-          const token = localStorage.getItem('token');
-          if (!token) {
-            showNotification('Authentication Required', 'Please login to view NFT details', 'error');
+          // Check for Telegram authentication
+          const initData = window.Telegram?.WebApp?.initData;
+          if (!initData) {
+            showNotification('Authentication Required', 'Please open this app from Telegram', 'error');
             // Immediate redirect instead of setTimeout
-            window.location.href = '/webapp/dashboard.html';
+            setTimeout(() => {
+              window.location.href = '/webapp/dashboard.html';
+            }, 2000);
             return;
           }
 
           const response = await fetch(`/api/v1/marketplace/listings/${nftId}`, {
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
             }
           });
 
@@ -893,10 +896,10 @@
       isProcessing = true;
 
       try {
-        // Check if user is authenticated
-        const token = localStorage.getItem('token');
-        if (!token) {
-          showNotification('Wallet Required', 'Please connect your wallet to purchase NFTs', 'warning');
+        // Check if user is authenticated via Telegram
+        const initData = window.Telegram?.WebApp?.initData;
+        if (!initData) {
+          showNotification('Wallet Required', 'Please open this app from Telegram to purchase NFTs', 'warning');
           isProcessing = false;
           return;
         }
@@ -1020,9 +1023,9 @@
       
       if (!offerPrice || isNaN(offerPrice)) return;
 
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showNotification('Wallet Required', 'Please connect your wallet to make offers', 'warning');
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        showNotification('Wallet Required', 'Please open this app from Telegram to make offers', 'warning');
         return;
       }
 

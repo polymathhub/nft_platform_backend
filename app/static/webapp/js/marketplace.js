@@ -73,12 +73,13 @@ class MarketplaceManager {
   /**
    * Check if user is authenticated (optional)
    * Needed for authenticated marketplace operations (buy, offer, etc.)
+   * Uses Telegram WebApp initData for authentication
    */
   isUserAuthenticated() {
-    // Check if user has valid token
+    // Check if user has valid Telegram WebApp initData
     try {
-      const token = localStorage.getItem('token');
-      return !!token;
+      const initData = window.Telegram?.WebApp?.initData;
+      return !!initData;
     } catch {
       return false;
     }

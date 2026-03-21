@@ -1,10 +1,9 @@
 /**
  * Page Initialization Module
  * Handles consistent page setup across all pages (welcome greeting, auth checks, etc.)
+ * Uses Telegram WebApp initData for authentication (stateless, no JWT tokens)
  * @module js/page-init
  */
-
-import { auth } from './auth.js';
 
 class PageInitializer {
   /**
@@ -20,8 +19,8 @@ class PageInitializer {
       // Pages should degrade gracefully, not redirect
       console.log('Page initialization started (graceful auth)');
 
-      // Update user name in welcome section
-      this.updateWelcomeGreeting();
+      // Update user name in welcome section (uses Telegram initData)
+      await this.updateWelcomeGreeting();
       
       // Setup navigation active states
       this.setupNavigation();
@@ -36,31 +35,70 @@ class PageInitializer {
 
   /**
    * Update welcome greeting with user's first name
+   * Fetches user from /api/v1/me endpoint using Telegram auth
    * Handles both single and multiple user name elements
    * @private
    */
-  static updateWelcomeGreeting() {
-    const user = auth.getUser();
-    
-    // Get first name from various possible fields
-    let firstName = 'Guest';
-    
-    if (user) {
-      // Try different name field variations
-      firstName = user.firstName 
-        || user.first_name 
-        || (user.name && user.name.split(' ')[0])
-        || user.username
-        || 'Guest';
+  static async updateWelcomeGreeting() {
+    try {
+      // Try to fetch current user from Telegram-authenticated endpoint
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        // No Telegram data available - use Guest
+        const userNameElements = document.querySelectorAll('#user-name');
+        userNameElements.forEach(element => {
+          element.textContent = 'Guest';
+        });
+        return;
+      }
+
+      const response = await fetch('/api/v1/me', {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': initData
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to fetch user from /api/v1/me:', response.status);
+        const userNameElements = document.querySelectorAll('#user-name');
+        userNameElements.forEach(element => {
+          element.textContent = 'Guest';
+        });
+        return;
+      }
+
+      const userData = await response.json();
+      
+      // Get first name from various possible fields
+      let firstName = 'Guest';
+      
+      if (userData.data || userData) {
+        const user = userData.data || userData;
+        firstName = user.firstName 
+          || user.first_name 
+          || (user.name && user.name.split(' ')[0])
+          || user.username
+          || user.telegram_id
+          || 'Guest';
+      }
+
+      // Update all elements with id="user-name" (supports multiple on same page)
+      const userNameElements = document.querySelectorAll('#user-name');
+      userNameElements.forEach(element => {
+        element.textContent = firstName;
+      });
+
+      console.log(`✅ Welcome greeting updated: Hello ${firstName}`);
+    } catch (error) {
+      console.warn('updateWelcomeGreeting error:', error);
+      // Fallback to Guest if anything goes wrong
+      const userNameElements = document.querySelectorAll('#user-name');
+      userNameElements.forEach(element => {
+        element.textContent = 'Guest';
+      });
     }
-
-    // Update all elements with id="user-name" (supports multiple on same page)
-    const userNameElements = document.querySelectorAll('#user-name');
-    userNameElements.forEach(element => {
-      element.textContent = firstName;
-    });
-
-    console.log(`✅ Welcome greeting updated: Hello ${firstName}`);
   }
 
   /**

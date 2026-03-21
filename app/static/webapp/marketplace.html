@@ -715,10 +715,13 @@
       try {
         state.isLoading = true;
         // Fetch real listings from backend
+        const initData = window.Telegram?.WebApp?.initData;
+        const headers = { 'Content-Type': 'application/json' };
+        if (initData) {
+          headers['X-Telegram-Init-Data'] = initData;
+        }
         const response = await fetch('/api/v1/marketplace/listings?skip=0&limit=50', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          headers
         });
         
         if (response.ok) {
@@ -772,10 +775,13 @@
 
     async function loadUserListings() {
       try {
+        const initData = window.Telegram?.WebApp?.initData;
+        const headers = { 'Content-Type': 'application/json' };
+        if (initData) {
+          headers['X-Telegram-Init-Data'] = initData;
+        }
         const response = await fetch(`/api/v1/marketplace/listings?seller_id=${state.currentUser.id}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+          headers
         });
         
         if (response.ok) {
