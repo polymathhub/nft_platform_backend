@@ -79,19 +79,17 @@ class NavbarController {
 
   syncTelegramProfile() {
     try {
+      // Use authManager (set by auth-bootstrap-telegram.js) as base user object
+      const user = window.authManager?.user || {};
+      
       if (window.Telegram && window.Telegram.WebApp) {
         const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-        if (tgUser) {
-          const user = JSON.parse(localStorage.getItem('user')) || {};
-          
-          // Update if Telegram photo exists
-          if (tgUser.photo_url) {
-            this.updateUserUI({
-              ...user,
-              avatar_url: tgUser.photo_url,
-              username: tgUser.first_name || user.username || 'User'
-            });
-          }
+        if (tgUser && tgUser.photo_url) {
+          this.updateUserUI({
+            ...user,
+            avatar_url: tgUser.photo_url,
+            username: tgUser.first_name || user.username || 'User'
+          });
         }
       }
     } catch (error) {
@@ -221,10 +219,24 @@ class NavbarController {
 
   loadUserData() {
     try {
-      // Fetch latest user data from /api/v1/me (uses Telegram initData header)
-      this.fetchUserFromAPI();
+      // Check if authManager is already initialized
+      if (window.authManager?.user) {
+        this.updateUserUIFromAuthManager();
+        this.syncTelegramProfile();
+        return;
+      }
 
-      // Also sync with Telegram WebApp user data for avatar/name
+      // If authManager still initializing, wait for auth:initialized event
+      if (window.addEventListener) {
+        const handleAuthInit = () => {
+          this.updateUserUIFromAuthManager();
+          this.syncTelegramProfile();
+          window.removeEventListener('auth:initialized', handleAuthInit);
+        };
+        window.addEventListener('auth:initialized', handleAuthInit);
+      }
+
+      // Fallback: Read directly from Telegram WebApp for avatar and display name
       if (window.Telegram && window.Telegram.WebApp) {
         const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
         if (tgUser && tgUser.photo_url) {
@@ -239,35 +251,14 @@ class NavbarController {
     }
   }
 
-  async fetchUserFromAPI() {
+  updateUserUIFromAuthManager() {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
-      if (!initData) {
-        console.log('[Navbar] No Telegram initData - not authenticated');
-        return;
-      }
-
-      const response = await fetch('/api/v1/me', {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        console.warn(`[Navbar] User fetch failed: ${response.status}`);
-        return;
-      }
-
-      const user = await response.json();
+      const user = window.authManager?.user;
       if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
         this.updateUserUI(user);
       }
-    } catch (err) {
-      console.error('[Navbar] Error fetching user profile:', err);
-      // Fail silently - use cached data
+    } catch (error) {
+      console.error('[Navbar] Error updating UI from authManager:', error);
     }
   }
 
