@@ -35,53 +35,28 @@ class PageInitializer {
 
   /**
    * Update welcome greeting with user's first name
-   * Fetches user from /api/v1/me endpoint using Telegram auth
-   * Handles both single and multiple user name elements
+   * Uses in-memory authManager user data (no API call)
+   * Falls back to Telegram WebApp data if needed
    * @private
    */
   static async updateWelcomeGreeting() {
     try {
-      // Try to fetch current user from Telegram-authenticated endpoint
-      const initData = window.Telegram?.WebApp?.initData;
-      if (!initData) {
-        // No Telegram data available - use Guest
-        const userNameElements = document.querySelectorAll('#user-name');
-        userNameElements.forEach(element => {
-          element.textContent = 'Guest';
-        });
-        return;
-      }
-
-      const response = await fetch('/api/v1/me', {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to fetch user from /api/v1/me:', response.status);
-        const userNameElements = document.querySelectorAll('#user-name');
-        userNameElements.forEach(element => {
-          element.textContent = 'Guest';
-        });
-        return;
-      }
-
-      const userData = await response.json();
-      
-      // Get first name from various possible fields
       let firstName = 'Guest';
-      
-      if (userData.data || userData) {
-        const user = userData.data || userData;
-        firstName = user.firstName 
-          || user.first_name 
+
+      // First priority: Use authManager user (already loaded in memory)
+      if (window.authManager?.isAuthenticated && window.authManager?.user) {
+        const user = window.authManager.user;
+        firstName = user.first_name 
+          || user.firstName 
           || (user.name && user.name.split(' ')[0])
           || user.username
           || user.telegram_id
           || 'Guest';
+      }
+      // Fallback: Use Telegram WebApp data directly
+      else if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        firstName = tgUser.first_name || tgUser.username || 'Guest';
       }
 
       // Update all elements with id="user-name" (supports multiple on same page)
@@ -98,6 +73,8 @@ class PageInitializer {
       userNameElements.forEach(element => {
         element.textContent = 'Guest';
       });
+    }
+  }
     }
   }
 

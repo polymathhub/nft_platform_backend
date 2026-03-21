@@ -341,8 +341,8 @@ class NavbarController {
       if (data && (data.data || data.notifications)) {
         const notifications = data.data || data.notifications || [];
         
-        // Store in localStorage for offline access
-        localStorage.setItem('notifications', JSON.stringify(notifications));
+        // Cache in memory (session-only, not persistent)
+        window.notificationCache = notifications;
         
         this.displayNotifications(notifications);
       }
@@ -426,7 +426,8 @@ class NavbarController {
 
   displayLocalNotifications() {
     try {
-      const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
+      // Use in-memory cache instead of localStorage
+      const notifications = window.notificationCache || [];
       this.displayNotifications(notifications);
     } catch (error) {
       console.error('Error displaying local notifications:', error);
@@ -523,13 +524,15 @@ class NavbarController {
   }
 
   /**
-   * Handle logout
+   * Handle logout (stateless - just clear client state and redirect)
    */
   handleLogout() {
     if (confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('notifications');
+      // Clear in-memory auth state
+      if (window.authManager) {
+        window.authManager.logout();
+      }
+      // Redirect to dashboard (stateless system will prompt Telegram auth again if needed)
       const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
       window.location.href = basePath + '/dashboard.html';
     }
@@ -555,23 +558,27 @@ document.addEventListener('DOMContentLoaded', () => {
 }, { once: true });
 
 /**
- * Add notification
+ * In-memory notification cache (session-only, not persistent)
+ */
+window.notificationCache = [];
+
+/**
+ * Add notification (stores in session memory, not localStorage)
  * Usage: addNotification({ title: 'NFT Sale', description: 'Your NFT sold for 5 ETH' })
  */
 function addNotification(notification) {
   try {
-    const notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-    notifications.unshift({
+    // Add to in-memory cache only
+    window.notificationCache.unshift({
       ...notification,
       timestamp: new Date().toISOString(),
       read: false
     });
 
-    // Keep only last 50 notifications
-    notifications.splice(50);
+    // Keep only last 50 notifications in memory
+    window.notificationCache.splice(50);
 
-    localStorage.setItem('notifications', JSON.stringify(notifications));
-
+    // Trigger UI update if navbar is initialized
     if (window.navbarController) {
       window.navbarController.loadNotifications();
     }
@@ -581,11 +588,11 @@ function addNotification(notification) {
 }
 
 /**
- * Clear all notifications
+ * Clear all notifications (session memory only)
  */
 function clearAllNotifications() {
   try {
-    localStorage.removeItem('notifications');
+    window.notificationCache = [];
     if (window.navbarController) {
       window.navbarController.loadNotifications();
     }

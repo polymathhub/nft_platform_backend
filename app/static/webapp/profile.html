@@ -654,12 +654,12 @@
     
     window.disconnectWallet = async () => {
       if (confirm('Disconnect your wallet? You will need to reconnect to access the app.')) {
-        // Call logout endpoint if needed
+        // Call logout endpoint (stateless - no-op on backend, clears client state)
         try {
           const initData = window.Telegram?.WebApp?.initData;
           if (initData) {
-            await fetch('/api/auth/logout', {
-              method: 'POST',
+            await fetch('/api/v1/me/logout', {
+              method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
                 'X-Telegram-Init-Data': initData
