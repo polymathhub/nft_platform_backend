@@ -1,235 +1,287 @@
 /**
- * Telegram Authentication Module
- * Handles Telegram user authentication, profile data capture, and storage
- * Works seamlessly for anyone accessing the webapp via Telegram
+ * Telegram WebApp Authentication Manager - REWRITTEN
+ * 
+ * NEW DESIGN: Session-based authentication using Telegram initData
+ * - No localStorage tokens
+ * - No Bearer headers
+ * - Uses httpOnly cookies for session management
+ * - Backend validates initData using HMAC-SHA256
+ * 
+ * Flow:
+ * 1. App loads → script auto-initializes
+ * 2. Reads window.Telegram.WebApp.initData
+ * 3. POSTs initData to /api/auth/telegram
+ * 4. Backend validates + sets session cookie
+ * 5. All requests use credentials: 'include' for cookie-based auth
  */
 
 class TelegramAuthManager {
   constructor() {
-    this.tg = window.Telegram?.WebApp || null;
     this.user = null;
-    this.token = null;
+    this.isAuthenticated = false;
+    this.isInitializing = false;
+    this.initPromise = null;
   }
 
   /**
-   * Initialize Telegram auth and check for existing session
+   * Main initialization: Get Telegram initData and authenticate with backend
    */
-  async initialize() {
+  async init() {
+    // Prevent multiple simultaneous init attempts
+    if (this.isInitializing) {
+      return this.initPromise;
+    }
+
+    if (this.isAuthenticated) {
+      console.log('[TelegramAuth] Already authenticated, skipping init');
+      return this.user;
+    }
+
+    this.isInitializing = true;
+    this.initPromise = this._performInit();
+
     try {
-      // Check if user is already authenticated
-      this.token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      if (this.token && storedUser) {
-        try {
-          this.user = JSON.parse(storedUser);
-          console.log('Existing session found:', this.user.username);
-          return { authenticated: true, user: this.user };
-        } catch (parseError) {
-          console.error('Invalid stored user data:', parseError);
-          // Clear corrupted data
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-        }
-      }
-
-      // Check if running in Telegram
-      if (!this.tg) {
-        console.log('Not running in Telegram environment');
-        return { authenticated: false };
-      }
-
-      // Get Telegram user data
-      this.user = this.tg.initDataUnsafe?.user;
-      if (!this.user) {
-        console.warn('No Telegram user data available');
-        return { authenticated: false };
-      }
-
-      return { authenticated: false, telegramUser: this.user };
-    } catch (error) {
-      console.error('Error initializing Telegram auth:', error);
-      return { authenticated: false, error };
+      const user = await this.initPromise;
+      return user;
+    } finally {
+      this.isInitializing = false;
     }
   }
 
-  /**
-   * Authenticate with backend using Telegram initData
-   */
-  async authenticateWithBackend() {
-    try {
-      if (!this.tg?.initData) {
-        throw new Error('Telegram data not available');
-      }
+  async _performInit() {
+    console.log('[TelegramAuth] Initializing Telegram authentication...');
 
-      const response = await fetch('/api/v1/auth/telegram/login', {
+    // Step 1: Ensure Telegram WebApp SDK is available
+    if (!window.Telegram?.WebApp) {
+      console.error('[TelegramAuth] Telegram WebApp SDK not available');
+      this._showErrorPage(
+        'Telegram WebApp Not Available',
+        'This application must be opened from Telegram. Please open it via the bot.',
+        'ERROR_NO_TELEGRAM'
+      );
+      throw new Error('Telegram WebApp SDK not available');
+    }
+
+    // Step 2: Get initData from Telegram
+    const initData = window.Telegram.WebApp.initData;
+
+    if (!initData) {
+      console.error('[TelegramAuth] No initData from Telegram WebApp');
+      this._showErrorPage(
+        'Authentication Failed',
+        'Could not obtain Telegram authentication data. Please try reopening the app.',
+        'ERROR_NO_INIT_DATA'
+      );
+      throw new Error('No initData from Telegram WebApp');
+    }
+
+    console.log('[TelegramAuth] Got initData from Telegram WebApp, authenticating with server...');
+
+    // Step 3: Send initData to backend for validation
+    try {
+      const response = await fetch('/api/auth/telegram', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ init_data: this.tg.initData })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ init_data: initData }),
+        credentials: 'include', // IMPORTANT: Include cookies for session
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Auth failed (${response.status})`);
+        const bodyText = await response.text().catch(() => '');
+        console.error(
+          `[TelegramAuth] Backend returned ${response.status}: ${bodyText}`
+        );
+        this._showErrorPage(
+          'Authentication Failed',
+          `Server validation failed (${response.status}). Please try again.`,
+          `ERROR_SERVER_${response.status}`
+        );
+        throw new Error(
+          `Server returned ${response.status}: ${bodyText}`
+        );
       }
 
       const data = await response.json();
-      
-      if (!data.token || !data.user) {
-        throw new Error('Invalid response from server');
+
+      if (!data.success || !data.user) {
+        console.error('[TelegramAuth] Server response missing user data');
+        this._showErrorPage(
+          'Authentication Failed',
+          'Server returned invalid response. Please try again.',
+          'ERROR_INVALID_RESPONSE'
+        );
+        throw new Error('Server response missing user data');
       }
 
-      // Store authentication data
-      this.token = data.token;
-      localStorage.setItem('token', this.token);
+      // Step 4: Store user data in memory only (NO localStorage)
+      this.user = data.user;
+      this.isAuthenticated = true;
 
-      // Enrich user data with Telegram profile photo
-      const telegramUser = this.tg.initDataUnsafe?.user || {};
-      const userProfile = {
-        ...data.user,
-        avatar_url: data.user.avatar_url || telegramUser.photo_url || '',
-        telegram_username: data.user.telegram_username || telegramUser.username || '',
-        full_name: data.user.full_name || `${telegramUser.first_name || ''} ${telegramUser.last_name || ''}`.trim() || 'User',
-        username: data.user.username || telegramUser.first_name || 'User',
-        email: data.user.email || '',
-        telegram_id: telegramUser.id
-      };
+      console.log(
+        `[TelegramAuth] ✓ Authenticated | id=${this.user.id} | username=${this.user.username}`
+      );
 
-      localStorage.setItem('user', JSON.stringify(userProfile));
-      this.user = userProfile;
+      // Step 5: Dispatch ready event for app initialization
+      window.dispatchEvent(
+        new CustomEvent('auth:ready', {
+          detail: { user: this.user },
+        })
+      );
 
-      return { success: true, user: userProfile };
+      return this.user;
     } catch (error) {
-      console.error('Backend authentication error:', error);
-      return { success: false, error: error.message };
+      console.error('[TelegramAuth] Authentication error:', error);
+
+      // Only show error page if not already shown
+      if (!document.getElementById('error-page')) {
+        this._showErrorPage(
+          'Authentication Error',
+          error.message || 'An unexpected error occurred.',
+          'ERROR_UNEXPECTED'
+        );
+      }
+
+      throw error;
     }
   }
 
   /**
-   * Check if user is authenticated
-   */
-  isAuthenticated() {
-    return !!(this.token && this.user);
-  }
-
-  /**
-   * Get current user profile
+   * Get currently authenticated user
    */
   getUser() {
     return this.user;
   }
 
   /**
-   * Get authentication token
+   * Check if user is logged in
    */
-  getToken() {
-    return this.token;
+  isLoggedIn() {
+    return this.isAuthenticated && !!this.user;
   }
 
   /**
-   * Logout and clear session
+   * Logout: Clear session on server and local state
    */
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    this.token = null;
-    this.user = null;
-    return true;
-  }
-
-  /**
-   * Sync profile with Telegram real-time updates
-   */
-  syncWithTelegram() {
+  async logout() {
     try {
-      if (!this.tg) return;
-
-      const telegramUser = this.tg.initDataUnsafe?.user;
-      if (!telegramUser) return;
-
-      let storedUser = {};
-      try {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          storedUser = JSON.parse(userStr);
-        }
-      } catch (parseError) {
-        console.error('Invalid stored user data:', parseError);
-        localStorage.removeItem('user');
-      }
-      
-      // Update stored profile with latest Telegram data
-      const updatedUser = {
-        ...storedUser,
-        // Always prefer Telegram's latest photo
-        avatar_url: telegramUser.photo_url || storedUser.avatar_url,
-        // Update username and name if they changed
-        telegram_username: telegramUser.username || storedUser.telegram_username,
-        full_name: storedUser.full_name || `${telegramUser.first_name || ''} ${telegramUser.last_name || ''}`.trim()
-      };
-
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      this.user = updatedUser;
-    } catch (error) {
-      console.warn('Error syncing with Telegram:', error);
-    }
-  }
-
-  /**
-   * Get user's profile picture URL
-   */
-  getProfilePictureUrl() {
-    if (!this.user) return null;
-    
-    // Priority: telegram photo > stored avatar > none
-    const telegramUser = this.tg?.initDataUnsafe?.user;
-    return telegramUser?.photo_url || this.user.avatar_url || null;
-  }
-
-  /**
-   * Get user's display name
-   */
-  getDisplayName() {
-    if (!this.user) return 'Guest';
-    return this.user.full_name || this.user.username || this.user.email?.split('@')[0] || 'User';
-  }
-
-  /**
-   * Get user's initial for avatar
-   */
-  getInitial() {
-    const name = this.getDisplayName();
-    return name.charAt(0).toUpperCase();
-  }
-
-  /**
-   * Pre-fetch profile data before redirecting
-   */
-  async prefetchProfileData() {
-    try {
-      if (!this.token) return null;
-
-      const response = await fetch('/api/v1/auth/profile', {
-        headers: { 'Authorization': `Bearer ${this.token}` }
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
       });
 
-      if (!response.ok) return null;
-
-      const data = await response.json();
-      const apiUser = data.data || data;
-
-      // Merge with existing user data
-      const mergedUser = { ...this.user, ...apiUser };
-      localStorage.setItem('user', JSON.stringify(mergedUser));
-      this.user = mergedUser;
-
-      return mergedUser;
+      if (!response.ok) {
+        console.warn(`[TelegramAuth] Logout response: ${response.status}`);
+      } else {
+        console.log('[TelegramAuth] Logout successful');
+      }
     } catch (error) {
-      console.warn('Error prefetching profile data:', error);
-      return null;
+      console.error('[TelegramAuth] Logout error:', error);
+    } finally {
+      // Clear local state (server already cleared httpOnly cookie)
+      this.user = null;
+      this.isAuthenticated = false;
+      window.dispatchEvent(new CustomEvent('auth:logged-out'));
     }
+  }
+
+  /**
+   * Show error overlay page (blocks further interaction)
+   * This prevents any interaction if auth fails
+   */
+  _showErrorPage(title, message, errorCode) {
+    const html = `
+      <div id="error-page" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      ">
+        <div style="
+          text-align: center;
+          color: white;
+          padding: 40px 20px;
+          max-width: 500px;
+        ">
+          <div style="
+            font-size: 48px;
+            margin-bottom: 20px;
+          ">⚠️</div>
+          <h1 style="
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+          ">${title}</h1>
+          <p style="
+            font-size: 16px;
+            margin: 0 0 30px 0;
+            opacity: 0.9;
+            line-height: 1.6;
+          ">${message}</p>
+          <button onclick="location.reload()" style="
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+          " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            Reload App
+          </button>
+          <p style="
+            font-size: 12px;
+            margin-top: 30px;
+            opacity: 0.6;
+          ">Error Code: <code style="
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+          ">${errorCode}</code></p>
+        </div>
+      </div>
+    `;
+
+    document.body.innerHTML = html;
+    document.body.style.overflow = 'hidden';
+    document.body.style.margin = '0';
   }
 }
 
-// Export as singleton
-export const telegramAuth = new TelegramAuthManager();
+// Create global singleton instance
+window.telegramAuth = new TelegramAuthManager();
+
+// Auto-initialize when DOM is ready
+console.log('[TelegramAuth] Script loaded');
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    // Small delay to ensure all resources are loaded
+    setTimeout(() => {
+      window.telegramAuth
+        .init()
+        .catch((error) => {
+          console.error('[TelegramAuth] Auto-init failed:', error);
+        });
+    }, 100);
+  });
+} else {
+  // DOM already ready
+  setTimeout(() => {
+    window.telegramAuth
+      .init()
+      .catch((error) => {
+        console.error('[TelegramAuth] Auto-init failed:', error);
+      });
+  }, 100);
+}

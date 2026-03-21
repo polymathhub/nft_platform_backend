@@ -4,13 +4,21 @@ class APIClient {
     this.defaultTimeout = 30000;
   }
 
+  /**
+   * Make a request with credentials (session cookie included automatically)
+   * 
+   * AUTHENTICATION NOTE:
+   * - No Bearer tokens (old system removed)
+   * - Uses httpOnly session cookies set by server on /api/auth/telegram
+   * - credentials: 'include' automatically sends cookies
+   * - If 401 received, session expired - user must re-authenticate via Telegram
+   */
   async request(endpoint, options = {}) {
     const {
       method = 'GET',
       headers = {},
       body = null,
       timeout = this.defaultTimeout,
-      skipAuth = false,
     } = options;
 
     const url = new URL(endpoint, this.baseURL);
@@ -23,33 +31,30 @@ class APIClient {
         ...headers,
       };
 
-      // Add Authorization header if token exists
-      const token = localStorage.getItem('token');
-      if (token && !skipAuth) {
-        requestHeaders['Authorization'] = `Bearer ${token}`;
-      }
+      // NOTE: No Bearer token injection here
+      // Session cookie is sent automatically via credentials: 'include'
 
       const response = await fetch(url, {
         method,
         headers: requestHeaders,
         body: body ? JSON.stringify(body) : null,
         signal: controller.signal,
-        credentials: 'include',
+        credentials: 'include', // IMPORTANT: Send session cookie
       });
 
       clearTimeout(timeoutId);
 
-      // Handle 401 (unauthorized) - attempt token refresh
-      if (response.status === 401 && !skipAuth) {
-        const refreshed = await this.refreshToken();
-        if (refreshed) {
-          return this.request(endpoint, { ...options, skipAuth: true });
-        }
-        window.dispatchEvent(new CustomEvent('auth:logout'));
-        throw new Error('Authentication failed');
-      }
-
       if (!response.ok) {
+        // 401 means session expired - requires re-authentication
+        if (response.status === 401) {
+          console.warn('[API] Session expired (401) - user must re-authenticate');
+          window.dispatchEvent(
+            new CustomEvent('auth:expired', {
+              detail: { endpoint, method },
+            })
+          );
+        }
+
         const error = await this.handleErrorResponse(response);
         throw error;
       }
@@ -90,30 +95,6 @@ class APIClient {
     return error;
   }
 
-  async refreshToken() {
-    try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      // If no refresh token is available, can't refresh
-      // For Telegram auth, we don't use refresh tokens - just re-authenticate
-      if (!refreshToken) {
-        console.warn('No refresh token available - Telegram auth will re-authenticate');
-        return false;
-      }
-
-      // Note: Production endpoint /api/v1/auth/refresh may not exist yet
-      // Fallback: Trigger re-authentication event instead
-      console.warn('[API] Token refresh requested but endpoint not implemented');
-      console.warn('[API] For Telegram Mini App, restart authentication via Telegram');
-      
-      window.dispatchEvent(new CustomEvent('auth:refresh-needed'));
-      return false;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      return false;
-    }
-  }
-
   async get(endpoint, options = {}) {
     return this.request(endpoint, { ...options, method: 'GET' });
   }
@@ -141,20 +122,13 @@ class APIClient {
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const headers = {};
+      // NOTE: No Authorization header for uploads - session cookie handles auth
       
-      // Add Authorization header if token exists
-      const token = localStorage.getItem('token');
-      if (token && !options.skipAuth) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
       const response = await fetch(url, {
         method: 'POST',
-        headers: headers,
         body: formData,
         signal: controller.signal,
-        credentials: 'include',
+        credentials: 'include', // IMPORTANT: Send session cookie
       });
 
       clearTimeout(timeoutId);
@@ -177,26 +151,36 @@ class APIClient {
 // Global API instance
 export const api = new APIClient();
 
-// Namespace for API 
+/**
+ * API Endpoint Reference
+ * 
+ * AUTHENTICATION (NEW SYSTEM):
+ * - POST /api/auth/telegram - Authenticate using Telegram initData
+ * - GET /api/auth/profile - Get current user profile (requires session)
+ * - GET /api/auth/me - Get current user (alternative endpoint)
+ * - POST /api/auth/logout - Logout and clear session
+ * 
+ * Session is managed via httpOnly cookie set by server.
+ * No Bearer tokens. No refresh tokens.
+ */
 export const endpoints = {
-  // Auth - Standard endpoints
+  // Auth - Telegram WebApp Only (NEW SYSTEM)
   auth: {
-    login: '/api/v1/auth/login',
-    register: '/api/v1/auth/register',
-    logout: '/api/user/logout',  // FIXED: Use correct logout endpoint
-    refresh: null,  // NOTE: Not implemented - Telegram auth re-authenticates instead
-    profile: '/api/user/me',  // FIXED: Use /api/user/me which actually exists
-    oauthGoogle: '/api/v1/auth/oauth/google',
-    oauthTwitter: '/api/v1/auth/oauth/twitter',
+    telegram: '/api/auth/telegram',  // POST: Authenticate with Telegram initData
+    profile: '/api/auth/profile',     // GET: Get current user profile
+    me: '/api/auth/me',               // GET: Alternative profile endpoint
+    logout: '/api/auth/logout',       // POST: Logout and clear session
+    check: '/api/auth/check',         // GET: Check if auth is available
   },
 
-  // Unified Auth - Telegram & TON Wallet
-  unifiedAuth: {
-    telegramLogin: '/api/v1/auth/telegram/login',
-    tonLogin: '/api/v1/auth/ton/login',
-    linkWallet: '/api/v1/auth/link-wallet',
-    profile: '/api/user/me',  // FIXED: Use /api/user/me endpoint that exists
-    logout: '/api/user/logout',  // FIXED: Use correct logout endpoint
+  // Legacy auth endpoints (deprecated - kept for backward compatibility only)
+  // NOTE: These no longer work. Use /api/auth/* endpoints instead.
+  authLegacy: {
+    login: '/api/v1/auth/login',                 // DEPRECATED
+    register: '/api/v1/auth/register',           // DEPRECATED
+    refresh: null,                               // REMOVED: Not needed with Telegram auth
+    oauthGoogle: '/api/v1/auth/oauth/google',   // DEPRECATED
+    oauthTwitter: '/api/v1/auth/oauth/twitter', // DEPRECATED
   },
 
   // Users

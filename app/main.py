@@ -14,6 +14,7 @@ from app.utils.startup import setup_telegram_webhook, auto_migrate
 import redis.asyncio as redis
 from app.routers import (
     auth_router,
+    telegram_auth_router,
     wallet_router,
     nft_router,
     notification_router,
@@ -295,6 +296,7 @@ app.include_router(
     tags=["telegram-compat-2"]
 )
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(telegram_auth_router, prefix="/api/auth")  # NEW: Telegram-based auth
 app.include_router(auth_profile_router)  # NEW: Unified /api/auth/profile endpoints
 app.include_router(unified_auth_router)
 app.include_router(wallet_router, prefix="/api/v1")
