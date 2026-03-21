@@ -45,12 +45,8 @@ class NavbarController {
     // Initialize with "P" placeholder
     this.initializeProfilePlaceholder();
     
-    // Then load actual data
-    this.loadUserData();
-    this.loadNotifications();
-    
-    // Start real-time polling
-    this.startRealtimeSync();
+    // NOTE: All data loading is now on-demand, triggered by user interaction only
+    // No automatic API calls on initialization - navbar is a passive UI component
   }
 
   initializeProfilePlaceholder() {
@@ -138,6 +134,10 @@ class NavbarController {
         this.toggleDropdown(this.profileDropdown);
         if (this.notificationDropdown) {
           this.notificationDropdown.classList.remove('active');
+        }
+        // Load user data only when profile dropdown is opened (on-demand)
+        if (this.profileDropdown?.classList.contains('active')) {
+          this.loadUserData();
         }
       });
     }

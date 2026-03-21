@@ -983,7 +983,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'X-Telegram-Init-Data': initData
           },
           body: JSON.stringify(purchaseData)
         });
@@ -1019,7 +1019,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'X-Telegram-Init-Data': initData
             },
             body: JSON.stringify({
               nft_id: nft.id,
@@ -1110,7 +1110,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'X-Telegram-Init-Data': initData
           },
           body: JSON.stringify(offerData)
         });
