@@ -79,20 +79,16 @@ class NavbarController {
 
   syncTelegramProfile() {
     try {
-      if (window.Telegram && window.Telegram.WebApp) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-        if (tgUser) {
-          const user = JSON.parse(localStorage.getItem('user')) || {};
-          
-          // Update if Telegram photo exists
-          if (tgUser.photo_url) {
-            this.updateUserUI({
-              ...user,
-              avatar_url: tgUser.photo_url,
-              username: tgUser.first_name || user.username || 'User'
-            });
-          }
-        }
+      // Use authManager as the source of truth (memory-only, no localStorage)
+      const baseUser = window.authManager?.user || {};
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+
+      if (tgUser && tgUser.photo_url) {
+        this.updateUserUI({
+          ...baseUser,
+          avatar_url: tgUser.photo_url,
+          username: tgUser.first_name || baseUser.username || 'User'
+        });
       }
     } catch (error) {
       // Silently fail - Telegram might not be available
@@ -221,53 +217,45 @@ class NavbarController {
 
   loadUserData() {
     try {
-      // Fetch latest user data from /api/v1/me (uses Telegram initData header)
-      this.fetchUserFromAPI();
-
-      // Also sync with Telegram WebApp user data for avatar/name
-      if (window.Telegram && window.Telegram.WebApp) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-        if (tgUser && tgUser.photo_url) {
-          this.updateUserUI({
-            avatar_url: tgUser.photo_url,
-            username: tgUser.first_name || 'User'
-          });
-        }
+      // Primary: use authManager (set by auth-bootstrap-telegram.js) - no API call needed
+      if (window.authManager?.user) {
+        console.log('[Navbar] Loading user from authManager');
+        this.updateUserUI(window.authManager.user);
+        return;
       }
+
+      // Secondary: if authManager is still initializing, wait for the event
+      if (window.authManager && !window.authManager.isInitialized) {
+        console.log('[Navbar] authManager not yet initialized - waiting for auth:initialized event');
+        window.addEventListener('auth:initialized', (e) => {
+          if (e.detail?.user) {
+            this.updateUserUI(e.detail.user);
+          } else {
+            // Fall back to Telegram WebApp data directly
+            this._applyTelegramWebAppUser();
+          }
+        }, { once: true });
+        return;
+      }
+
+      // Fallback: read directly from Telegram WebApp initDataUnsafe (no API call)
+      this._applyTelegramWebAppUser();
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('[Navbar] Error loading user data:', error);
     }
   }
 
-  async fetchUserFromAPI() {
+  _applyTelegramWebAppUser() {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
-      if (!initData) {
-        console.log('[Navbar] No Telegram initData - not authenticated');
-        return;
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser) {
+        this.updateUserUI({
+          avatar_url: tgUser.photo_url || null,
+          username: tgUser.first_name || tgUser.username || 'User'
+        });
       }
-
-      const response = await fetch('/api/v1/me', {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        console.warn(`[Navbar] User fetch failed: ${response.status}`);
-        return;
-      }
-
-      const user = await response.json();
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-        this.updateUserUI(user);
-      }
-    } catch (err) {
-      console.error('[Navbar] Error fetching user profile:', err);
-      // Fail silently - use cached data
+    } catch (error) {
+      // Silently fail - Telegram may not be available
     }
   }
 
