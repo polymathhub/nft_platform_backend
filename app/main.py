@@ -296,7 +296,7 @@ app.include_router(
 # ✅ TELEGRAM-ONLY AUTH (No JWT)
 app.include_router(telegram_auth_router, prefix="/api/auth")
 app.include_router(unified_auth_router)
-app.include_router(me_v1_router)  # ✅ NEW: /api/v1/me endpoint (Telegram stateless auth)
+app.include_router(me_v1_router, prefix="/api")  # ✅ NEW: /api/v1/me endpoint (Telegram stateless auth)
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
 app.include_router(notification_router, prefix="/api/v1")
