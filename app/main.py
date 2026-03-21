@@ -13,7 +13,6 @@ from app.utils.logger import configure_logging
 from app.utils.startup import setup_telegram_webhook, auto_migrate
 import redis.asyncio as redis
 from app.routers import (
-    auth_router,
     telegram_auth_router,
     wallet_router,
     nft_router,
@@ -29,9 +28,7 @@ from app.routers import (
     ton_wallet_router,
     stars_marketplace_router,
     unified_auth_router,
-    me_router,
 )
-from app.routers.auth_profile_router import router as auth_profile_router
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 from app.routers.image_router import router as image_router
@@ -295,9 +292,8 @@ app.include_router(
     prefix="/api/telegram",
     tags=["telegram-compat-2"]
 )
-app.include_router(auth_router, prefix="/api/v1")
-app.include_router(telegram_auth_router, prefix="/api/auth")  # NEW: Telegram-based auth
-app.include_router(auth_profile_router)  # NEW: Unified /api/auth/profile endpoints
+# ✅ TELEGRAM-ONLY AUTH (No JWT)
+app.include_router(telegram_auth_router, prefix="/api/auth")
 app.include_router(unified_auth_router)
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
@@ -311,7 +307,6 @@ app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(ton_wallet_router)
 app.include_router(stars_marketplace_router)
 app.include_router(user_router, prefix="/api")
-app.include_router(me_router)
 app.include_router(notification_router, prefix="/api")
 app.include_router(payment_router)
 app.include_router(referrals_router)

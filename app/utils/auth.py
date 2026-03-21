@@ -1,61 +1,50 @@
+"""
+TELEGRAM-ONLY AUTHENTICATION (Stateless)
+=========================================
+
+This module is deprecated - all JWT/Bearer token logic has been removed.
+
+The system now uses only Telegram WebApp initData verification:
+- Every request can include Telegram initData in headers or body
+- No persistent user sessions
+- No Bearer tokens
+- No refresh tokens
+
+For authentication details, see:
+- app.routers.telegram_auth_router (POST /api/auth/telegram/login)
+- app.routers.unified_auth_router (full Telegram auth flow)
+"""
+
 import logging
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from app.database import get_db_session
-from app.services.auth_service import AuthService
-from app.models import User
-from typing import Optional
 
 logger = logging.getLogger(__name__)
-bearer_scheme = HTTPBearer(auto_error=False)
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db_session),
-) -> User:
-    if not credentials or not credentials.credentials:
-        logger.warning("[Auth] Missing credentials in request")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
-    token = credentials.credentials
-    user_id = AuthService.verify_token(token)
-    if not user_id:
-        logger.warning("[Auth] Invalid/expired token")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        logger.error(f"[Auth] User not found: user_id={user_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
-    logger.debug(f"[Auth] Current user resolved: id={user.id} username={user.username} email={user.email}")
-    return user
+# ============================================================================
+# DEPRECATED: All functions below are no longer used
+# Kept for backward compatibility only
+# ============================================================================
 
-
-async def get_current_user_optional(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db_session),
-) -> Optional[User]:
+async def get_current_user(*args, **kwargs):
     """
-    Optional authentication - returns user if authenticated, None otherwise
-    Never raises 401 Unauthorized
-    Useful for endpoints that work with or without authentication
+    ❌ DEPRECATED - JWT tokens removed
+    
+    This function is no longer used. Use Telegram authentication instead.
+    
+    See: app.routers.telegram_auth_router.py
     """
-    if not credentials or not credentials.credentials:
-        return None
+    raise NotImplementedError(
+        "JWT authentication has been removed. Use Telegram WebApp initData instead. "
+        "See /api/v1/auth/telegram/login endpoint."
+    )
+
+
+async def get_current_user_optional(*args, **kwargs):
+    """
+    ❌ DEPRECATED - JWT tokens removed
     
-    token = credentials.credentials
-    user_id = AuthService.verify_token(token)
-    
-    if not user_id:
-        return None
-    
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        return None
-    
-    logger.debug(f"[Auth] Optional user resolved: id={user.id} username={user.username}")
-    return user
+    This function is no longer used. Use Telegram authentication instead.
+    """
+    raise NotImplementedError(
+        "JWT authentication has been removed. Use Telegram WebApp initData instead."
+    )
 

@@ -1099,19 +1099,6 @@
     // Ensure authenticated - with graceful fallback
     async function ensureAuthenticated() {
       try {
-        // Quick cache check first
-        const cachedToken = localStorage.getItem('token');
-        const cachedUser = localStorage.getItem('user');
-        if (cachedToken && cachedUser) {
-          try {
-            authManager.user = JSON.parse(cachedUser);
-            authManager.isAuthenticated = true;
-            return true;
-          } catch (e) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-          }
-        }
 
         // Wait briefly for auth manager
         let authWait = 20;
