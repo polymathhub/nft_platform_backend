@@ -1,4 +1,3 @@
-from app.routers.auth_router import router as auth_router
 from app.routers.unified_auth_router import router as unified_auth_router
 from app.routers.telegram_auth_router import router as telegram_auth_router
 from app.routers.wallet_router import router as wallet_router
@@ -15,9 +14,9 @@ from app.routers.dashboard_router import router as dashboard_router
 from app.routers.user_router import router as user_router
 from app.routers.ton_wallet_router import router as ton_wallet_router
 from app.routers.stars_marketplace_router import router as stars_marketplace_router
-from app.routers.me_router import router as me_router
+from app.routers.me_v1_router import router as me_v1_router
+
 __all__ = [
-    "auth_router",
     "unified_auth_router",
     "telegram_auth_router",
     "wallet_router",
@@ -31,7 +30,7 @@ __all__ = [
     "referrals_router",
     "stars_payment_router",
     "dashboard_router",
-    "me_router",
+    "me_v1_router",
     "user_router",
     "ton_wallet_router",
     "stars_marketplace_router",

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GiftedForge NFT Platform">
   <meta name="theme-color" content="#0a0a14">
-  <title>Dashboard - GiftedForge</title>
+  <title>Dashboard GiftedForge</title>
 
   <!-- Global error handler to prevent going blank -->
   <script>
@@ -225,6 +225,7 @@
 
     .stat-content {
       flex: 1;
+      
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -797,19 +798,18 @@
 
 
   <script type="module">
-    import { waitForAuth } from './js/auth-bootstrap.js';
-    import { api, endpoints } from './js/api.js';
+    import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
+    import { telegramApi } from './js/telegram-fetch.js';
 
     // Dashboard Activity Manager
     class ActivityManager {
-      constructor(api, endpoints) {
-        this.api = api;
-        this.endpoints = endpoints;
+      constructor(telegramApi) {
+        this.telegramApi = telegramApi;
       }
 
       async loadRecentActivity() {
         try {
-          const response = await this.api.get(this.endpoints.dashboard.recentTransactions);
+          const response = await this.telegramApi.get('/api/v1/dashboard/recent-transactions');
           this.renderActivity(response.transactions || []);
         } catch (error) {
           console.warn('Failed to load activity:', error);
@@ -875,15 +875,12 @@
     // Display user info - NO redirects, graceful degradation
     async function displayUserInfo() {
       try {
-        // Fetch auth status with timeout to prevent hanging
-        const authStatus = await Promise.race([
-          waitForAuth(5000),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 6000))
-        ]);
+        // Wait for auth initialization
+        const authManager = await initializeAuthSystem();
         
-        if (authStatus?.user) {
-          const user = authStatus.user;
-          let displayName = user?.username || user?.first_name || user?.telegram_username || 'User';
+        if (authManager?.user) {
+          const user = authManager.user;
+          let displayName = user?.username || user?.full_name || user?.first_name || 'User';
           if (displayName.startsWith('@')) {
             displayName = displayName.substring(1);
           }
@@ -937,7 +934,7 @@
     });
 
     // Initialize dashboard - Prevent multiple initializations with guard flag
-    const activityManager = new ActivityManager(api, endpoints);
+    const activityManager = new ActivityManager(telegramApi);
     let dashboardInitialized = false;
     
     async function initDashboard() {

@@ -92,8 +92,10 @@ async def ensure_enum_types(database_url: str) -> bool:
             logger.info(f"  Connected to PostgreSQL database: {db_name}")
             for enum_name, enum_values in ENUM_TYPES.items():
                 try:
+                    # Check if enum type already exists
                     result = await conn.execute(
                         text(
+                            "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = :enum_name AND typtype = 'e')"
                         ),
                         {"enum_name": enum_name},
                     )

@@ -221,48 +221,53 @@ class NavbarController {
 
   loadUserData() {
     try {
-      // First try to get from localStorage
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user) {
-        this.updateUserUI(user);
-      }
+      // Fetch latest user data from /api/v1/me (uses Telegram initData header)
+      this.fetchUserFromAPI();
 
-      // Then fetch latest from API
-      const token = localStorage.getItem('token');
-      if (token) {
-        fetch('/api/v1/auth/profile', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json();
-        })
-        .then(data => {
-          if (data && (data.data || data)) {
-            const user = data.data || data;
-            localStorage.setItem('user', JSON.stringify(user));
-            this.updateUserUI(user);
-          }
-        })
-        .catch(err => {
-          console.error('Error fetching user profile:', err);
-          // Fail silently - use cached data
-        });
-      }
-
-      // Check for Telegram WebApp user
+      // Also sync with Telegram WebApp user data for avatar/name
       if (window.Telegram && window.Telegram.WebApp) {
         const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
         if (tgUser && tgUser.photo_url) {
           this.updateUserUI({
-            ...user,
             avatar_url: tgUser.photo_url,
-            username: tgUser.first_name || user?.username || 'User'
+            username: tgUser.first_name || 'User'
           });
         }
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+  }
+
+  async fetchUserFromAPI() {
+    try {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        console.log('[Navbar] No Telegram initData - not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/v1/me', {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': initData
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.warn(`[Navbar] User fetch failed: ${response.status}`);
+        return;
+      }
+
+      const user = await response.json();
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+        this.updateUserUI(user);
+      }
+    } catch (err) {
+      console.error('[Navbar] Error fetching user profile:', err);
+      // Fail silently - use cached data
     }
   }
 
@@ -303,51 +308,56 @@ class NavbarController {
 
   loadNotifications(silent = false) {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        // Not authenticated, show empty or cached notifications
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        console.log('[Navbar] No Telegram initData - using local notifications');
         this.displayLocalNotifications();
         return;
       }
 
-      // Try to fetch notifications from API
-      // Note: If notifications endpoint doesn't exist, gracefully fall back to local
-      const possibleEndpoints = [
-        '/api/v1/notifications',
-        '/api/notifications'
-      ];
-      
-      // Try first endpoint
-      fetch(possibleEndpoints[0], {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      .then(res => {
-        // If 404, endpoint doesn't exist - fall back to local
-        if (res.status === 404) {
-          console.warn('[Navbar] Notifications endpoint not found, using local cache');
-          this.displayLocalNotifications();
-          return null;
-        }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        if (data && (data.data || data.notifications)) {
-          const notifications = data.data || data.notifications || [];
-          
-          // Store in localStorage for offline access
-          localStorage.setItem('notifications', JSON.stringify(notifications));
-          
-          this.displayNotifications(notifications);
-        }
-      })
-      .catch(err => {
-        console.warn('[Navbar] Error fetching notifications, using local cache:', err.message);
-        // Fall back to localStorage
-        this.displayLocalNotifications();
-      });
+      this.fetchNotificationsFromAPI();
     } catch (error) {
       console.error('Error loading notifications:', error);
+      this.displayLocalNotifications();
+    }
+  }
+
+  async fetchNotificationsFromAPI() {
+    try {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) return;
+
+      const response = await fetch('/api/v1/notifications', {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': initData
+        },
+        credentials: 'include'
+      });
+
+      // If 404, endpoint doesn't exist - fall back to local
+      if (response.status === 404) {
+        console.warn('[Navbar] Notifications endpoint not found, using local cache');
+        this.displayLocalNotifications();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data && (data.data || data.notifications)) {
+        const notifications = data.data || data.notifications || [];
+        
+        // Store in localStorage for offline access
+        localStorage.setItem('notifications', JSON.stringify(notifications));
+        
+        this.displayNotifications(notifications);
+      }
+    } catch (err) {
+      console.warn('[Navbar] Error fetching notifications, using local cache:', err.message);
+      // Fall back to localStorage
       this.displayLocalNotifications();
     }
   }
@@ -441,25 +451,42 @@ class NavbarController {
 
   deleteNotification(id) {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        fetch(`/api/notifications/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res;
-        })
-        .then(() => this.loadNotifications(true))
-        .catch(err => {
-          console.error('Error deleting notification:', err);
-          // Try to reload from API to sync state
-          this.loadNotifications(true);
-        });
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        console.log('[Navbar] No Telegram initData - cannot delete notification');
+        return;
       }
+
+      this.deleteNotificationFromAPI(id);
     } catch (error) {
       console.error('Error deleting notification:', error);
+    }
+  }
+
+  async deleteNotificationFromAPI(id) {
+    try {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) return;
+
+      const response = await fetch(`/api/v1/notifications/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': initData
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      // Reload notifications to sync state
+      this.loadNotifications(true);
+    } catch (err) {
+      console.error('[Navbar] Error deleting notification:', err);
+      // Try to reload from API to sync state
+      this.loadNotifications(true);
     }
   }
 
