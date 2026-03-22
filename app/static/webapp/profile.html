@@ -584,6 +584,10 @@
   <script type="module">
     import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
     import { api, endpoints } from './js/api.js';
+    import { TelegramUtils } from './js/telegram-utils.js';
+
+    // Expose to window for navbar.js to access
+    window.TelegramUtils = TelegramUtils;
 
     // Initialize global auth system immediately (before any page code)
     await initializeAuthSystem();
@@ -594,8 +598,14 @@
     // Ensure authenticated - with graceful fallback using Telegram auth
     async function ensureAuthenticated() {
       try {
-        // Check if we have Telegram initData
-        const initData = window.Telegram?.WebApp?.initData;
+        // Wait for Telegram to be ready
+        const isReady = await TelegramUtils.waitForTelegram(2000);
+        if (!isReady) {
+          console.log('Profile: Telegram not ready - preview mode');
+          return false;
+        }
+
+        const initData = TelegramUtils.getInitData();
         if (!initData) {
           console.log('Profile: no Telegram initData - preview mode');
           return false;

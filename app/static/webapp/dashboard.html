@@ -871,6 +871,10 @@
     import { telegramApi } from './js/telegram-fetch.js';
     import { tonConnect } from './js/tonconnect.js';
     import { Toast } from './js/components.js';
+    import { TelegramUtils } from './js/telegram-utils.js';
+
+    // Expose to window for navbar.js to access
+    window.TelegramUtils = TelegramUtils;
 
     /**
      * Activity Manager - Load and display recent transactions

@@ -651,6 +651,10 @@
 
   <script type="module">
     import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
+    import { TelegramUtils } from './js/telegram-utils.js';
+
+    // Expose to window for navbar.js to access
+    window.TelegramUtils = TelegramUtils;
     
     // Marketplace - Real listings only from backend
     const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';

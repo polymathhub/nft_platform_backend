@@ -579,6 +579,10 @@
   <script type="module">
     import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
     import { api, endpoints } from './js/api.js';
+    import { TelegramUtils } from './js/telegram-utils.js';
+
+    // Expose to window for navbar.js to access
+    window.TelegramUtils = TelegramUtils;
 
     // Initialize global auth system immediately (before any page code)
     await initializeAuthSystem();

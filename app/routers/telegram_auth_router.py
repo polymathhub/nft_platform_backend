@@ -17,6 +17,7 @@ import logging
 from typing import Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.database import get_db_session
 from app.models import User
 from app.services.auth_service import AuthService
@@ -270,17 +271,63 @@ async def logout(
 
 @router.get("/profile", response_model=dict)
 async def get_profile(
-    current_user: User = Depends(get_current_user_from_session),
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """
     Get current user profile.
-    Requires valid session (no Bearer token needed).
+    
+    Supports TWO authentication methods:
+    1. Session-based (legacy): Requires session_id cookie
+    2. Stateless (new): Requires X-Telegram-Init-Data header
+    
+    This endpoint acts as a bridge for backwards compatibility.
     """
-    return {
-        "success": True,
-        "user": UserResponse.model_validate(current_user),
-        "message": "Profile retrieved successfully"
-    }
+    from app.utils.telegram_security import verify_telegram_data
+    from typing import Optional
+    
+    # Try method 1: Session-based auth (legacy)
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        user_id = _get_user_from_session(session_id)
+        if user_id:
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if user:
+                logger.debug(f"[Auth] GET /profile - session user: id={user.id} username={user.username}")
+                return {
+                    "success": True,
+                    "user": UserResponse.model_validate(user),
+                    "message": "Profile retrieved successfully (session-based)"
+                }
+    
+    # Try method 2: Stateless Telegram auth (new)
+    x_telegram_init_data: Optional[str] = request.headers.get("x-telegram-init-data")
+    if x_telegram_init_data:
+        try:
+            telegram_user = verify_telegram_data(x_telegram_init_data, settings.telegram_bot_token)
+            if telegram_user and telegram_user.get('telegram_id'):
+                telegram_id = str(telegram_user.get('telegram_id'))
+                result = await db.execute(
+                    select(User).where(User.telegram_id == telegram_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    logger.debug(f"[Auth] GET /profile - stateless user: id={user.id} telegram_id={telegram_id}")
+                    return {
+                        "success": True,
+                        "user": UserResponse.model_validate(user),
+                        "message": "Profile retrieved successfully (stateless)"
+                    }
+        except Exception as e:
+            logger.warning(f"[Auth] Telegram verification failed in /profile: {e}")
+    
+    # Neither auth method worked
+    logger.warning("[Auth] GET /profile - no valid auth method found")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated - provide session cookie or X-Telegram-Init-Data header"
+    )
 
 
 @router.get("/me", response_model=dict)

@@ -299,7 +299,10 @@ class NavbarController {
 
   loadNotifications(silent = false) {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
+      // Get initData safely
+      const getInitData = () => window.Telegram?.WebApp?.initData || null;
+      const initData = getInitData();
+      
       if (!initData) {
         console.log('[Navbar] No Telegram initData - using local notifications');
         this.displayLocalNotifications();
@@ -315,7 +318,10 @@ class NavbarController {
 
   async fetchNotificationsFromAPI() {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
+      // Get initData safely
+      const getInitData = () => window.Telegram?.WebApp?.initData || null;
+      const initData = getInitData();
+      
       if (!initData) return;
 
       const response = await fetch('/api/v1/notifications', {

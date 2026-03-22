@@ -788,9 +788,11 @@
     // Import TON Connect for transaction signing
     import { tonConnect } from './js/tonconnect.js';
     import { Toast } from './js/components.js';
+    import { TelegramUtils } from './js/telegram-utils.js';
     
-    // Expose to global scope for inline handlers
+    // Expose to global scope for navbar.js
     window.tonConnect = tonConnect;
+    window.TelegramUtils = TelegramUtils;
 
     // Helper function to show notifications
     window.showNotification = (title, message, type = 'info') => {
@@ -815,14 +817,21 @@
       const nftId = getNFTIdFromURL();
       if (nftId) {
         try {
-          // Check for Telegram authentication
-          const initData = window.Telegram?.WebApp?.initData;
-          if (!initData) {
+          // Wait for Telegram to be ready (with timeout)
+          const isReady = await TelegramUtils.waitForTelegram(3000);
+          if (!isReady) {
+            console.warn('[NFT-Detail] Telegram not ready after timeout');
             showNotification('Authentication Required', 'Please open this app from Telegram', 'error');
-            // Immediate redirect instead of setTimeout
+            // Only redirect if Telegram is still not ready
             setTimeout(() => {
               window.location.href = '/webapp/dashboard.html';
             }, 2000);
+            return;
+          }
+
+          const initData = TelegramUtils.getInitData();
+          if (!initData) {
+            showNotification('Authentication Required', 'Telegram session expired', 'error');
             return;
           }
 
@@ -940,7 +949,7 @@
 
       try {
         // Check if user is authenticated via Telegram
-        const initData = window.Telegram?.WebApp?.initData;
+        const initData = TelegramUtils.getInitData();
         if (!initData) {
           showNotification('Wallet Required', 'Please open this app from Telegram to purchase NFTs', 'warning');
           isProcessing = false;
@@ -1066,7 +1075,7 @@
       
       if (!offerPrice || isNaN(offerPrice)) return;
 
-      const initData = window.Telegram?.WebApp?.initData;
+      const initData = TelegramUtils.getInitData();
       if (!initData) {
         showNotification('Wallet Required', 'Please open this app from Telegram to make offers', 'warning');
         return;
