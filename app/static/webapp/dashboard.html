@@ -27,6 +27,8 @@
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- NEW: Production-Grade Auth System -->
+  <script src="js/auth-system.js"></script>
   <!-- TON Connect UI -->
   <script src="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <link href="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.css" rel="stylesheet" />
@@ -887,51 +889,30 @@
      * Display Telegram user info (no API calls needed)
      * Uses Telegram WebApp identity directly from initDataUnsafe
      */
+    /**
+     * Display Telegram user info with proper fallbacks
+     * Uses AuthSystem which handles authentication properly
+     */
     function displayTelegramUserInfo() {
       try {
-        let user = null;
-        let source = '';
-
-        // TRY 1: authManager (has localStorage fallback built-in)
-        if (window.authManager && window.authManager.user) {
-          user = window.authManager.user;
-          source = 'authManager';
-        }
-        // TRY 2: Telegram WebApp initDataUnsafe
-        else if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-          user = window.Telegram.WebApp.initDataUnsafe.user;
-          source = 'Telegram.WebApp';
-        }
-        // TRY 3: localStorage fallback (direct)
-        else {
-          try {
-            const cachedUser = localStorage.getItem('app_tg_user');
-            if (cachedUser) {
-              user = JSON.parse(cachedUser);
-              source = 'localStorage';
-            }
-          } catch (e) {
-            console.warn('[Dashboard] Failed to parse cached user:', e);
-          }
-        }
-
+        // Get user from AuthSystem (which validates with backend)
+        const user = window.AuthSystem?.getUser();
+        
         if (!user || !user.id) {
-          console.log('[Dashboard] No user available - showing Guest');
+          console.log('[Dashboard] No authenticated user - showing Guest');
           document.getElementById('user-name').textContent = 'Guest';
           document.querySelectorAll('#userName').forEach(el => el.textContent = 'Guest');
           return;
         }
 
-        // Extract display name with fallbacks
+        // Display username
         const displayName = user.first_name || user.username || user.name || 'User';
-        
-        // Update username in page
         document.getElementById('user-name').textContent = displayName;
         document.querySelectorAll('#userName').forEach(el => {
           el.textContent = displayName;
         });
 
-        // Update avatar if available
+        // Display avatar if available
         if (user.photo_url) {
           const avatarElements = document.querySelectorAll('#profileAvatar, #profileAvatarLarge');
           avatarElements.forEach(el => {
@@ -942,11 +923,12 @@
           });
         }
 
-        console.log(`[Dashboard] User loaded (${source}):`, displayName);
+        console.log('[Dashboard] User info displayed:', displayName);
       } catch (error) {
-        console.warn('[Dashboard] Failed to load user:', error);
+        console.warn('[Dashboard] Failed to display user info:', error);
         document.getElementById('user-name').textContent = 'Guest';
       }
+    }
     }
 
     /**
@@ -1031,10 +1013,24 @@
         // Ensure page is visible
         if (document.body) document.body.style.display = '';
 
-        // Initialize auth system
-        await initializeAuthSystem();
+        // ✅ NEW: Wait for AuthSystem to initialize (auto-initializes on page load)
+        // This handles Telegram SDK readiness, backend auth, and caching
+        console.log('[Dashboard] Waiting for AuthSystem initialization...');
+        
+        // Wait up to 15 seconds for auth to complete
+        let authWait = 0;
+        while (!window.AuthSystem?.isInitialized && authWait < 150) {
+          await new Promise(r => setTimeout(r, 100));
+          authWait++;
+        }
+        
+        if (!window.AuthSystem?.isInitialized) {
+          console.warn('[Dashboard] AuthSystem initialization timeout');
+        } else {
+          console.log('[Dashboard] ✅ AuthSystem initialized');
+        }
 
-        // Display user info from Telegram (no API calls)
+        // Display user info (pulls from AuthSystem which has backend-verified data)
         displayTelegramUserInfo();
 
         // Load activity if available
