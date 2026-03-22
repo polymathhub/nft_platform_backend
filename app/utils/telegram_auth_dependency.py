@@ -10,7 +10,7 @@ from app.database import get_db_session
 from app.models import User
 from app.schemas.user import UserResponse
 from app.utils.telegram_init_data import verify_telegram_init_data
-# Legacy password hashing removed - Telegram-only auth is stateless
+from app.utils.security import hash_password
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
