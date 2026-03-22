@@ -40,6 +40,10 @@ class NavbarController {
     
     // Initialize with "P" placeholder
     this.initializeProfilePlaceholder();
+    // Try to initialize user from central auth module (non-blocking)
+    this.initUserFromCore().catch(err => {
+      console.warn('[Navbar] initUserFromCore failed', err);
+    });
     
     // NOTE: All data loading is now on-demand, triggered by user interaction only
     // No automatic API calls on initialization - navbar is a passive UI component
@@ -103,6 +107,37 @@ class NavbarController {
     } catch (error) {
       console.warn('[Navbar] Failed to sync profile:', error.message);
       // Silently fail - non-critical
+    }
+  }
+
+  async initUserFromCore() {
+    try {
+      // Dynamically import core auth to avoid breaking non-module pages
+      const mod = await import('./js/core/auth.js');
+      if (!mod || !mod.getCurrentUser) return;
+      const user = await mod.getCurrentUser();
+      if (!user) {
+        // still attempt to fill with Telegram SDK unsafe data
+        const tg = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tg) {
+          this.updateUserUI({
+            username: tg.first_name || tg.username || 'User',
+            avatar_url: tg.photo_url || null,
+          });
+        }
+        return;
+      }
+
+      // Map backend user shape to navbar expected fields
+      const mapped = {
+        username: user.first_name || user.username || user.full_name || 'User',
+        email: user.email || '',
+        avatar_url: user.photo_url || user.avatar_url || null,
+      };
+
+      this.updateUserUI(mapped);
+    } catch (error) {
+      console.warn('[Navbar] initUserFromCore error:', error);
     }
   }
 
@@ -337,13 +372,9 @@ class NavbarController {
       
       if (!initData) return;
 
-      const response = await fetch('/api/v1/notifications', {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData
-        },
-        credentials: 'include'
-      });
+      // Use centralized apiFetch
+      const api = await import('./js/core/api.js');
+      const response = await api.apiFetch('/api/v1/notifications', { method: 'GET' });
 
       // If 404, endpoint doesn't exist - fall back to local
       if (response.status === 404) {
@@ -476,17 +507,8 @@ class NavbarController {
 
   async deleteNotificationFromAPI(id) {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
-      if (!initData) return;
-
-      const response = await fetch(`/api/v1/notifications/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData
-        },
-        credentials: 'include'
-      });
+      const api = await import('./js/core/api.js');
+      const response = await api.apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
