@@ -65,49 +65,63 @@ async function telegramFetch(url, options = {}) {
   try {
     console.debug(`[TG Fetch] ${options.method || 'GET'} ${url}`);
     
-    const response = await fetch(fullUrl, {
-      ...options,
-      headers,
-      credentials: 'include', // Include cookies
-    });
-    
-    // Log status
-    if (!response.ok) {
-      console.warn(`[TG Fetch] ${response.status} ${response.statusText} on ${url}`);
-    }
-    
-    // Parse response
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/json')) {
-      const data = await response.json();
+    // Delegate to central apiFetch when available to ensure initData is attached
+    try {
+      const mod = await import('./core/api.js');
+      if (mod && mod.apiFetch) {
+        // apiFetch returns the fetch Response object
+        const response = await mod.apiFetch(fullUrl, { ...options, headers });
 
-      // Treat 401 as unauthenticated but not an exception to allow seamless navigation
-      if (response.status === 401) {
-        console.info('[TG Fetch] 401 Unauthorized — returning null to indicate guest user');
-        return null;
+        // If apiFetch returned a Response-like object, continue below
+        // Note: older callers expect JSON or null on 401
+        if (!response) return null;
+
+        // Reuse response handling below by assigning to local variable
+        var _response = response;
+        // Move on to generic handling with `_response`
+      } else {
+        const response = await fetch(fullUrl, { ...options, headers });
+        var _response = response;
+      }
+      const response = _response;
+
+      // Log status
+      if (!response.ok) {
+        console.warn(`[TG Fetch] ${response.status} ${response.statusText} on ${url}`);
+      }
+
+      // Parse response
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const data = await response.json();
+
+        // Treat 401 as unauthenticated but not an exception to allow seamless navigation
+        if (response.status === 401) {
+          console.info('[TG Fetch] 401 Unauthorized — returning null to indicate guest user');
+          return null;
+        }
+
+        if (!response.ok) {
+          throw {
+            status: response.status,
+            statusText: response.statusText,
+            ...data
+          };
+        }
+
+        return data;
       }
 
       if (!response.ok) {
-        throw {
-          status: response.status,
-          statusText: response.statusText,
-          ...data
-        };
+        // Non-JSON 401 -> return null, other errors still throw
+        if (response.status === 401) {
+          console.info('[TG Fetch] 401 Unauthorized (non-JSON) — returning null');
+          return null;
+        }
+        throw new Error(`${response.status} ${response.statusText}`);
       }
 
-      return data;
-    }
-    
-    if (!response.ok) {
-      // Non-JSON 401 -> return null, other errors still throw
-      if (response.status === 401) {
-        console.info('[TG Fetch] 401 Unauthorized (non-JSON) — returning null');
-        return null;
-      }
-      throw new Error(`${response.status} ${response.statusText}`);
-    }
-    
-    return response;
+      return response;
   } catch (error) {
     console.error('[TG Fetch] Error:', error.message || error);
     throw error;

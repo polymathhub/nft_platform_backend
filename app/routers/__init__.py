@@ -1,5 +1,4 @@
-from app.routers.unified_auth_router import router as unified_auth_router
-from app.routers.telegram_auth_router_v2 import router as telegram_auth_router
+# Legacy auth routers removed - repository now uses stateless Telegram auth only
 from app.routers.wallet_router import router as wallet_router
 from app.routers.nft_router import router as nft_router
 from app.routers.notification_router import router as notification_router
@@ -17,8 +16,7 @@ from app.routers.stars_marketplace_router import router as stars_marketplace_rou
 from app.routers.me_v1_router import router as me_v1_router
 
 __all__ = [
-    "unified_auth_router",
-    "telegram_auth_router",
+    # legacy auth routers removed
     "wallet_router",
     "nft_router",
     "notification_router",

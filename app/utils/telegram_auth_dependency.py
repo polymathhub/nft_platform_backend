@@ -10,7 +10,7 @@ from app.database import get_db_session
 from app.models import User
 from app.schemas.user import UserResponse
 from app.utils.telegram_init_data import verify_telegram_init_data
-from app.utils.security import hash_password
+# Legacy password hashing removed - Telegram-only auth is stateless
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -121,8 +121,8 @@ async def get_current_user(
             full_name=telegram_user.get('first_name', ''),
             telegram_id=str(telegram_id),
             telegram_username=telegram_user.get('username'),
-            # Set a placeholder hashed password to satisfy non-null DB column
-            hashed_password=hash_password("") if callable(hash_password) else "",
+            # No password for Telegram-native users (stateless). Use empty placeholder.
+            hashed_password="",
             is_active=True,
         )
         

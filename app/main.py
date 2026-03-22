@@ -13,7 +13,6 @@ from app.utils.logger import configure_logging
 from app.utils.startup import setup_telegram_webhook, auto_migrate
 import redis.asyncio as redis
 from app.routers import (
-    telegram_auth_router,
     wallet_router,
     nft_router,
     notification_router,
@@ -27,7 +26,6 @@ from app.routers import (
     user_router,
     ton_wallet_router,
     stars_marketplace_router,
-    unified_auth_router,
     me_v1_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
@@ -304,10 +302,9 @@ app.include_router(
     prefix="/api/telegram",
     tags=["telegram-compat-2"]
 )
-# ✅ TELEGRAM-ONLY AUTH (No JWT)
-app.include_router(telegram_auth_router, prefix="/api/auth")
-app.include_router(unified_auth_router)
-app.include_router(me_v1_router, prefix="/api")  # ✅ NEW: /api/v1/me endpoint (Telegram stateless auth)
+
+# Legacy auth routers removed. Using stateless Telegram auth via `me_v1_router`.
+app.include_router(me_v1_router, prefix="/api")  # telegram stateless login is here 
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
 app.include_router(notification_router, prefix="/api/v1")
