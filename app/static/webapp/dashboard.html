@@ -810,6 +810,7 @@
     import { tonConnect } from './js/tonconnect.js';
     import { Toast } from './js/components.js';
     import { TelegramUtils } from './js/telegram-utils.js';
+    import PageInitializer from './js/page-init.js';
 
     // Expose to window for navbar.js to access
     window.TelegramUtils = TelegramUtils;
@@ -888,10 +889,6 @@
     }
 
     /**
-     * Display Telegram user info (no API calls needed)
-     * Uses Telegram WebApp identity directly from initDataUnsafe
-     */
-    /**
      * Display Telegram user info with proper fallbacks
      * Uses AuthSystem which handles authentication properly
      */
@@ -935,8 +932,8 @@
 
     /**
      * Global handlers
+     * `window.navigate` is provided centrally by `page-init.js`.
      */
-    window.navigate = (path) => window.location.href = path;
 
     window.copyBalance = function() {
       const amount = document.getElementById('balance-amount').textContent;

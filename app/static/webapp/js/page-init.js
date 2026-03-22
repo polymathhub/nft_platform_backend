@@ -146,9 +146,37 @@ class PageInitializer {
    */
   static setupNavigateFunction() {
     window.navigate = function(path) {
-      // Update nav active state before navigating
-      PageInitializer.markNavActive(path);
-      window.location.href = path;
+      try {
+        const original = String(path || '');
+
+        // Allow absolute URLs, fragments and mailto links through
+        if (/^https?:\/\//i.test(original) || original.startsWith('#') || original.startsWith('mailto:')) {
+          PageInitializer.markNavActive(original);
+          window.location.href = original;
+          return;
+        }
+
+        // If already a full webapp path or an explicit html file, navigate as-is
+        if (original.startsWith('/webapp/') || original.endsWith('.html')) {
+          PageInitializer.markNavActive(original);
+          window.location.href = original;
+          return;
+        }
+
+        // Normalize short paths (e.g. '/mint', '/wallet/token/123') to /webapp/<firstSegment>.html
+        const basePath = '/webapp';
+        let p = original;
+        if (p.startsWith('/')) p = p.slice(1);
+        const parts = p.split('/').filter(Boolean);
+        const first = parts.length > 0 ? parts[0] : 'dashboard';
+        const mapped = `${basePath}/${first}.html`;
+
+        PageInitializer.markNavActive(mapped);
+        window.location.href = mapped;
+      } catch (err) {
+        // Fallback: attempt direct navigation
+        try { window.location.href = path; } catch (e) { /* ignore */ }
+      }
     };
   }
 

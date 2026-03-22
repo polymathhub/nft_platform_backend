@@ -585,7 +585,7 @@
     };
 
     // Global functions
-    window.navigate = (path) => window.location.href = path;
+    // `window.navigate` is provided by `page-init.js` (normalized to /webapp/*.html)
     
     // Set active nav item on click
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -706,6 +706,7 @@
     // Import page initialization for consistent user greeting across pages
     import PageInitializer from './js/page-init.js';
   </script>
+  
   <script src="navbar.js?v=CACHE_BUST"></script>
   <script>
     document.querySelectorAll('script[src*="?v=CACHE_BUST"]').forEach(script => {
