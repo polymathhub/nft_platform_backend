@@ -146,6 +146,27 @@ class PageInitializer {
    */
   static setupNavigateFunction() {
     window.navigate = function(path) {
+      // Redirect guard: prevent rapid repeated navigations to the same target
+      try {
+        window.__navigateGuard = window.__navigateGuard || { lastTarget: null, count: 0, lastTime: 0 };
+        const now = Date.now();
+        const target = String(path || '');
+        if (window.__navigateGuard.lastTarget === target && (now - window.__navigateGuard.lastTime) < 1500) {
+          window.__navigateGuard.count = (window.__navigateGuard.count || 0) + 1;
+        } else {
+          window.__navigateGuard.count = 1;
+          window.__navigateGuard.lastTarget = target;
+        }
+        window.__navigateGuard.lastTime = now;
+
+        // If more than 5 rapid navigations to same target, abort to avoid loops
+        if (window.__navigateGuard.count > 5) {
+          console.warn('[Navigate Guard] Aborting repeated navigation to', target);
+          return;
+        }
+      } catch (e) {
+        // ignore guard errors
+      }
       try {
         const original = String(path || '');
 
