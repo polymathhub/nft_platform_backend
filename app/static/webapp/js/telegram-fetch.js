@@ -80,7 +80,13 @@ async function telegramFetch(url, options = {}) {
     const contentType = response.headers.get('content-type');
     if (contentType?.includes('application/json')) {
       const data = await response.json();
-      
+
+      // Treat 401 as unauthenticated but not an exception to allow seamless navigation
+      if (response.status === 401) {
+        console.info('[TG Fetch] 401 Unauthorized — returning null to indicate guest user');
+        return null;
+      }
+
       if (!response.ok) {
         throw {
           status: response.status,
@@ -88,11 +94,16 @@ async function telegramFetch(url, options = {}) {
           ...data
         };
       }
-      
+
       return data;
     }
     
     if (!response.ok) {
+      // Non-JSON 401 -> return null, other errors still throw
+      if (response.status === 401) {
+        console.info('[TG Fetch] 401 Unauthorized (non-JSON) — returning null');
+        return null;
+      }
       throw new Error(`${response.status} ${response.statusText}`);
     }
     
