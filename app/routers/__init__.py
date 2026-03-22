@@ -1,5 +1,5 @@
 from app.routers.unified_auth_router import router as unified_auth_router
-from app.routers.telegram_auth_router import router as telegram_auth_router
+from app.routers.telegram_auth_router_v2 import router as telegram_auth_router
 from app.routers.wallet_router import router as wallet_router
 from app.routers.nft_router import router as nft_router
 from app.routers.notification_router import router as notification_router

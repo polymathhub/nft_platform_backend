@@ -19,7 +19,7 @@ from app.schemas.auth_unified import (
 from app.services.unified_user_service import UnifiedUserService
 from app.services.unified_token_service import UnifiedTokenService
 from app.services.security_service import UnifiedSecurityService
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.config import get_settings
 router = APIRouter(prefix="/api/v1/auth", tags=["unified-auth"])
 logger = logging.getLogger(__name__)

@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
-def verify_telegram_init_data(init_data: str, bot_token: str) -> Optional[Dict]:
+def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: int = 300) -> Optional[Dict]:
     """
     Verify Telegram WebApp initData signature and return parsed user data.
     
@@ -104,16 +104,12 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> Optional[Dict]:
             try:
                 auth_date = int(auth_date_str)
                 now = int(datetime.utcnow().timestamp())
-                
-                # Allow 24-hour window for old data (Telegram WebApp may cache initData)
-                max_age_seconds = 24 * 3600  # 24 hours
-                
+                # Use caller-provided max_age_seconds (default 5 minutes)
                 if now - auth_date > max_age_seconds:
                     logger.warning(
                         f"[Telegram] Auth data too old: {now - auth_date}s ago (max: {max_age_seconds}s)"
                     )
                     return None
-                    
                 logger.debug(f"[Telegram] Auth date valid: {now - auth_date}s old")
             except (ValueError, TypeError) as e:
                 logger.warning(f"[Telegram] Invalid auth_date: {e}")

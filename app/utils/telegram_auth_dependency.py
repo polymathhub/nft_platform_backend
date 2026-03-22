@@ -12,7 +12,7 @@ Usage:
 
 import logging
 from typing import Optional, Dict
-from fastapi import Header, HTTPException, status, Depends
+from fastapi import Header, HTTPException, status, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -27,6 +27,7 @@ settings = get_settings()
 
 
 async def get_telegram_init_data(
+    request: Request,
     x_telegram_init_data: Optional[str] = Header(None),
 ) -> Dict:
     """
@@ -40,17 +41,20 @@ async def get_telegram_init_data(
     Raises:
         HTTPException(401): If header missing or verification fails
     """
-    if not x_telegram_init_data:
-        logger.warning("[Auth] Missing X-Telegram-Init-Data header")
+    # Accept initData from header OR query parameter as fallback
+    init_data = x_telegram_init_data or request.query_params.get('init_data')
+    if not init_data:
+        logger.warning("[Auth] Missing Telegram initData (header or query)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing Telegram authentication data"
         )
-    
-    # Verify initData signature
+
+    # Verify initData signature (5 minute default window)
     telegram_user = verify_telegram_init_data(
-        x_telegram_init_data,
-        settings.telegram_bot_token
+        init_data,
+        settings.telegram_bot_token,
+        max_age_seconds=300,
     )
     
     if not telegram_user:
@@ -64,6 +68,7 @@ async def get_telegram_init_data(
 
 
 async def get_current_user(
+    request: Request,
     telegram_user: Dict = Depends(get_telegram_init_data),
     db: AsyncSession = Depends(get_db_session),
 ) -> User:
@@ -98,6 +103,11 @@ async def get_current_user(
         
         if user:
             logger.debug(f"[Auth] User found: id={user.id}, telegram_id={telegram_id}")
+            # Attach to request.state for downstream use
+            try:
+                request.state.user = user
+            except Exception:
+                pass
             return user
         
         # Auto-register new user from Telegram data
@@ -129,6 +139,10 @@ async def get_current_user(
         db.add(new_user)
         await db.flush()  # Get auto-generated ID
         await db.commit()
+        try:
+            request.state.user = new_user
+        except Exception:
+            pass
         
         logger.info(
             f"[Auth] ✅ New user registered: id={new_user.id}, "
