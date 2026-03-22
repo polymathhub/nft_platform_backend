@@ -75,21 +75,47 @@ class NavbarController {
 
   syncTelegramProfile() {
     try {
-      // Use authManager (set by auth-bootstrap-telegram.js) as base user object
-      const user = window.authManager?.user || {};
-      
-      if (window.Telegram && window.Telegram.WebApp) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-        if (tgUser && tgUser.photo_url) {
-          this.updateUserUI({
-            ...user,
-            avatar_url: tgUser.photo_url,
-            username: tgUser.first_name || user.username || 'User'
-          });
+      let user = null;
+
+      // TRY 1: authManager (includes localStorage fallback)
+      if (window.authManager?.user) {
+        user = { ...window.authManager.user };
+      }
+      // TRY 2: Telegram WebApp
+      else if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+        user = { ...window.Telegram.WebApp.initDataUnsafe.user };
+      }
+      // TRY 3: localStorage fallback (direct)
+      else {
+        try {
+          const cachedUser = localStorage.getItem('app_tg_user');
+          if (cachedUser) {
+            user = JSON.parse(cachedUser);
+          }
+        } catch (e) {
+          console.warn('[Navbar] Failed to parse cached user:', e);
         }
       }
+
+      if (!user || !user.id) {
+        console.log('[Navbar] No user available for profile sync');
+        return;
+      }
+
+      // Get photo_url from Telegram if available (always fresh from SDK)
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser && tgUser.photo_url) {
+        user.avatar_url = tgUser.photo_url;
+      }
+
+      // Ensure we have a display name
+      user.username = user.first_name || user.username || 'User';
+
+      this.updateUserUI(user);
+      console.log('[Navbar] Profile synced:', user.username);
     } catch (error) {
-      // Silently fail - Telegram might not be available
+      console.warn('[Navbar] Failed to sync profile:', error.message);
+      // Silently fail - non-critical
     }
   }
 

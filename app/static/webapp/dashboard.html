@@ -23,73 +23,7 @@
     });
   </script>
 
-  <!-- CRITICAL: Clear all caches and service workers on page load -->
-  <script>
-    (function() {
-      try {
-        // Clear all localStorage (remove old auth tokens, cached user data, etc.)
-        localStorage.clear();
-        console.log('[Cache] localStorage cleared');
-      } catch (e) {
-        console.warn('[Cache] localStorage clear failed:', e);
-      }
 
-      try {
-        // Clear all sessionStorage
-        sessionStorage.clear();
-        console.log('[Cache] sessionStorage cleared');
-      } catch (e) {
-        console.warn('[Cache] sessionStorage clear failed:', e);
-      }
-
-      // Unregister all service workers
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => {
-            registration.unregister().then(() => {
-              console.log('[Cache] Service worker unregistered:', registration);
-            }).catch(err => {
-              console.warn('[Cache] Failed to unregister service worker:', err);
-            });
-          });
-        }).catch(err => {
-          console.warn('[Cache] Failed to get service worker registrations:', err);
-        });
-      }
-
-      // Clear Cache API
-      if ('caches' in window) {
-        caches.keys().then(cacheNames => {
-          cacheNames.forEach(cacheName => {
-            caches.delete(cacheName).then(() => {
-              console.log('[Cache] Cache deleted:', cacheName);
-            });
-          });
-        }).catch(err => {
-          console.warn('[Cache] Failed to clear Cache API:', err);
-        });
-      }
-
-      // Clear IndexedDB
-      if ('indexedDB' in window) {
-        try {
-          const dbRequest = indexedDB.databases();
-          if (dbRequest && typeof dbRequest.then === 'function') {
-            dbRequest.then(dbs => {
-              dbs.forEach(db => {
-                indexedDB.deleteDatabase(db.name);
-                console.log('[Cache] IndexedDB deleted:', db.name);
-              });
-            });
-          }
-        } catch (e) {
-          console.warn('[Cache] Failed to clear IndexedDB:', e);
-        }
-      }
-
-      console.log('✅ [Cache] All caches cleared on page load');
-    })();
-  </script>
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -955,17 +889,41 @@
      */
     function displayTelegramUserInfo() {
       try {
-        // Get Telegram user data directly
-        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        if (!tgUser) {
-          console.log('[Dashboard] No Telegram user data - using Guest');
+        let user = null;
+        let source = '';
+
+        // TRY 1: authManager (has localStorage fallback built-in)
+        if (window.authManager && window.authManager.user) {
+          user = window.authManager.user;
+          source = 'authManager';
+        }
+        // TRY 2: Telegram WebApp initDataUnsafe
+        else if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+          user = window.Telegram.WebApp.initDataUnsafe.user;
+          source = 'Telegram.WebApp';
+        }
+        // TRY 3: localStorage fallback (direct)
+        else {
+          try {
+            const cachedUser = localStorage.getItem('app_tg_user');
+            if (cachedUser) {
+              user = JSON.parse(cachedUser);
+              source = 'localStorage';
+            }
+          } catch (e) {
+            console.warn('[Dashboard] Failed to parse cached user:', e);
+          }
+        }
+
+        if (!user || !user.id) {
+          console.log('[Dashboard] No user available - showing Guest');
           document.getElementById('user-name').textContent = 'Guest';
           document.querySelectorAll('#userName').forEach(el => el.textContent = 'Guest');
           return;
         }
 
-        // Extract user info from Telegram
-        const displayName = tgUser.first_name || tgUser.username || 'User';
+        // Extract display name with fallbacks
+        const displayName = user.first_name || user.username || user.name || 'User';
         
         // Update username in page
         document.getElementById('user-name').textContent = displayName;
@@ -974,19 +932,19 @@
         });
 
         // Update avatar if available
-        if (tgUser.photo_url) {
+        if (user.photo_url) {
           const avatarElements = document.querySelectorAll('#profileAvatar, #profileAvatarLarge');
           avatarElements.forEach(el => {
-            el.style.backgroundImage = `url('${tgUser.photo_url}')`;
+            el.style.backgroundImage = `url('${user.photo_url}')`;
             el.style.backgroundSize = 'cover';
             el.style.backgroundPosition = 'center';
             el.textContent = ''; // Clear placeholder
           });
         }
 
-        console.log('[Dashboard] Telegram user loaded:', displayName);
+        console.log(`[Dashboard] User loaded (${source}):`, displayName);
       } catch (error) {
-        console.warn('[Dashboard] Failed to load Telegram user:', error);
+        console.warn('[Dashboard] Failed to load user:', error);
         document.getElementById('user-name').textContent = 'Guest';
       }
     }

@@ -9,48 +9,7 @@
   <meta name="theme-color" content="#0a0a14">
   <title>Create NFT-NFT Platform</title>
 
-  <!-- CRITICAL: Clear all caches and service workers on page load -->
-  <script>
-    (function() {
-      try {
-        localStorage.clear();
-        console.log('[Cache] localStorage cleared');
-      } catch (e) {
-        console.warn('[Cache] localStorage clear failed:', e);
-      }
-      try {
-        sessionStorage.clear();
-        console.log('[Cache] sessionStorage cleared');
-      } catch (e) {
-        console.warn('[Cache] sessionStorage clear failed:', e);
-      }
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => {
-            registration.unregister().then(() => {
-              console.log('[Cache] Service worker unregistered:', registration);
-            }).catch(err => {
-              console.warn('[Cache] Failed to unregister service worker:', err);
-            });
-          });
-        }).catch(err => {
-          console.warn('[Cache] Failed to get service worker registrations:', err);
-        });
-      }
-      if ('caches' in window) {
-        caches.keys().then(cacheNames => {
-          cacheNames.forEach(cacheName => {
-            caches.delete(cacheName).then(() => {
-              console.log('[Cache] Cache deleted:', cacheName);
-            });
-          });
-        }).catch(err => {
-          console.warn('[Cache] Failed to clear Cache API:', err);
-        });
-      }
-      console.log('✅ [Cache] All caches cleared on page load');
-    })();
-  </script>
+
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
