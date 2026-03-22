@@ -56,8 +56,43 @@ def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: i
         logger.debug(f"[Telegram] Received hash: {received_hash[:16]}...")
         
         # Compare hashes (constant-time comparison to prevent timing attacks)
-        if not hmac.compare_digest(computed_hash, received_hash):
+        # Normalize hex case to avoid false negatives due to case differences
+        try:
+            ch = computed_hash.lower() if isinstance(computed_hash, str) else computed_hash
+            rh = received_hash.lower() if isinstance(received_hash, str) else received_hash
+        except Exception:
+            ch = computed_hash
+            rh = received_hash
+
+        if not hmac.compare_digest(ch, rh):
             logger.warning("[Telegram] Hash verification failed - invalid signature")
+
+            # Optional tolerant fallback for debugging/dev: return parsed user even if HMAC fails
+            # Enable by setting environment variable TELEGRAM_ALLOW_UNVERIFIED=1 or 'true'
+            try:
+                allow_unverified = str(os.getenv('TELEGRAM_ALLOW_UNVERIFIED', '')).lower() in ('1', 'true', 'yes')
+            except Exception:
+                allow_unverified = False
+
+            if allow_unverified:
+                logger.warning('[Telegram] TELEGRAM_ALLOW_UNVERIFIED enabled — returning unverified user')
+                # Attempt to parse user JSON and return it with verified=False
+                try:
+                    user_data = json.loads(data_dict.get('user') or '{}')
+                    return {
+                        'telegram_id': user_data.get('id'),
+                        'first_name': user_data.get('first_name'),
+                        'last_name': user_data.get('last_name'),
+                        'username': user_data.get('username'),
+                        'language_code': user_data.get('language_code'),
+                        'is_premium': user_data.get('is_premium', False),
+                        'photo_url': user_data.get('photo_url'),
+                        'allows_write_to_pm': user_data.get('allows_write_to_pm', False),
+                        'verified': False,
+                    }
+                except Exception as e:
+                    logger.warning(f"[Telegram] Failed to parse user for unverified fallback: {e}")
+
             return None
         
         logger.debug("[Telegram] ✅ Hash verification passed")
