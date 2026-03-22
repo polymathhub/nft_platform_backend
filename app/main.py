@@ -76,7 +76,8 @@ async def lifespan(app: FastAPI):
         else:
             logger.info("AUTO_MIGRATE disabled via environment; skipping Alembic migrations on startup.")
     except Exception as e:
-        logger.warning(f"Skipping auto_migrate due to error reading AUTO_MIGRATE: {e}")
+        logger.error(f"Auto-migration failed: {e}", exc_info=True)
+        raise
     logger.info("[Telegram] Setting up webhook...")
     await setup_telegram_webhook()
     logger.info("[Ready] App startup complete")

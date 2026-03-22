@@ -997,9 +997,6 @@
       }
     };
 
-    // DISABLED: Automatic state saving every 30 secs caused unnecessary refreshes
-    // Now saves only when page unloads or user manually triggers it
-    // Reduces network calls and UI jank in Telegram Mini App
     window.addEventListener('beforeunload', () => CookieUtils.saveViewState());
 
     // Lazy load offscreen images - Setup only once
@@ -1038,7 +1035,8 @@
       }, { once: true });
     }
   </script>
-  <script src="navbar.js?v=CACHE_BUST"></script>
+  
+  <script src="navbar.js?v=CAC    HE_BUST"></script>
   <script>
     // Replace cache-bust placeholder with timestamp
     document.querySelectorAll('script[src*="?v=CACHE_BUST"]').forEach(script => {
