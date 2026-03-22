@@ -325,12 +325,9 @@ app.include_router(referrals_router)
 app.include_router(stars_payment_router)
 
 # Define route handlers BEFORE mounts so they have priority
-@app.get("/", include_in_schema=False)
-async def redirect_to_webapp():
-    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
-
+# Serve dashboard at root; avoid redirect loops by not forcing a redirect here.
 @app.get("/webapp/", include_in_schema=False)
-async def redirect_webapp_root():
+async def webapp_root():
     # Serve dashboard directly for webapp root
     try:
         dashboard_path = os.path.join(webapp_path, 'dashboard.html')
