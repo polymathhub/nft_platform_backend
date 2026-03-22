@@ -1139,15 +1139,19 @@ async def get_or_create_telegram_user(
     user = result.scalar_one_or_none()
     if user:
         return user
-    from app.services.auth_service import AuthService
-    from app.utils.security import hash_password
-    new_user, error = await AuthService.authenticate_telegram(
-        db=db,
-        telegram_id=telegram_user.id,
-        telegram_username=telegram_user.username or f"user_{telegram_user.id}",
+    from app.services.unified_user_service import UnifiedUserService
+    from app.schemas.auth_unified import IdentityData, InitDataSource
+
+    identity = IdentityData(
+        source=InitDataSource.TELEGRAM,
+        user_id=str(telegram_user.id),
+        telegram_id=str(telegram_user.id),
+        telegram_username=telegram_user.username,
         first_name=telegram_user.first_name,
         last_name=telegram_user.last_name,
+        avatar_url=telegram_user.photo_url,
     )
+    new_user, error = await UnifiedUserService.get_or_create_user_from_identity(db, identity)
     if error:
         logger.error(f"Failed to create Telegram user: {error}")
         return None
@@ -1271,18 +1275,22 @@ async def web_app_init(
             raise HTTPException(status_code=500, detail="Database error")
         if not user:
             try:
-                from app.services.auth_service import AuthService
-                telegram_username = user_data.get("username", f"user_{telegram_id}")
-                first_name = user_data.get("first_name", "")
-                last_name = user_data.get("last_name", "")
-                logger.info(f"Creating Telegram user: id={telegram_id}, username={telegram_username}")
-                user, error = await AuthService.authenticate_telegram(
-                    db=db,
-                    telegram_id=telegram_id,
-                    telegram_username=telegram_username,
-                    first_name=first_name,
-                    last_name=last_name,
-                )
+                from app.services.unified_user_service import UnifiedUserService
+                identity = {
+                    "source": "telegram",
+                    "user_id": str(telegram_id),
+                    "raw_data": data_dict,
+                    "username": user_data.get("username"),
+                    "first_name": user_data.get("first_name"),
+                    "last_name": user_data.get("last_name"),
+                    "avatar_url": None,
+                    "telegram_id": str(telegram_id),
+                    "telegram_username": user_data.get("username"),
+                    "auth_date": int(data_dict.get("auth_date")) if data_dict.get("auth_date") else None,
+                }
+                from app.schemas.auth_unified import IdentityData
+                identity_obj = IdentityData(**identity)
+                user, error = await UnifiedUserService.get_or_create_user_from_identity(db=db, identity=identity_obj)
                 if error or not user:
                     logger.error(f"Failed to create user: {error}")
                     raise HTTPException(status_code=500, detail=f"Failed to create user")

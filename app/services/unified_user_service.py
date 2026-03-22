@@ -7,7 +7,7 @@ from datetime import datetime
 from app.models import User
 from app.models.ton_wallet import TONWallet, TONWalletStatus
 from app.schemas.auth_unified import IdentityData, InitDataSource
-from app.utils.security import hash_password
+# Password-based auth removed; store empty password for Telegram users
 logger = logging.getLogger(__name__)
 class UnifiedUserService:
     @staticmethod
@@ -90,7 +90,7 @@ class UnifiedUserService:
                 telegram_username=identity.telegram_username,
                 username=username,
                 email=email,
-                hashed_password=hash_password(uuid.uuid4().hex),
+                hashed_password="",
                 full_name=full_name or None,
                 avatar_url=identity.avatar_url,  # Store avatar URL from Telegram
                 user_role="user",

@@ -1,13 +1,10 @@
-// Minimal Telegram-native API wrapper (stateless)
-// Attaches raw Telegram.WebApp.initData to every request header.
 
-// Ensure Telegram SDK is initialized (best-effort)
 try {
   if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.ready === 'function') {
     window.Telegram.WebApp.ready();
   }
 } catch (e) {
-  // ignore
+
 }
 
 const TG_INIT_DATA = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';

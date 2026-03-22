@@ -8,8 +8,9 @@ from app.database import get_db_session
 from app.models import Notification
 from app.models.user import User
 from app.services.notification_service import NotificationService
-from app.utils.security import verify_token
 from app.utils.auth import get_current_user
+from app.utils.telegram_init_data import verify_telegram_init_data
+from app.config import get_settings
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["notifications"])
 @router.get("/notifications", tags=["notifications"], summary="Get User Notifications")
@@ -153,15 +154,25 @@ async def websocket_notification_endpoint(websocket: WebSocket, user_id: str):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid user ID format")
         logger.warning(f"Connection rejected: Invalid user ID format - {user_id}")
         return
-    token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authentication token")
-        logger.warning(f"Connection rejected: Missing token for user {user_id}")
+    # Expect Telegram init_data as query param for WebSocket authentication
+    settings = get_settings()
+    init_data = websocket.query_params.get("init_data")
+    if not init_data:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing Telegram init_data")
+        logger.warning(f"Connection rejected: Missing init_data for user {user_id}")
         return
-    verified_user_id = verify_token(token)
-    if not verified_user_id or verified_user_id != user_uuid:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid or expired token")
-        logger.warning(f"Connection rejected: Invalid token for user {user_id}")
+    telegram_user = verify_telegram_init_data(init_data, settings.telegram_bot_token)
+    if not telegram_user:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid Telegram authentication data")
+        logger.warning(f"Connection rejected: Invalid init_data for user {user_id}")
+        return
+    try:
+        if str(telegram_user.get('telegram_id')) != str(user_uuid):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Telegram user mismatch")
+            logger.warning(f"Connection rejected: Telegram user mismatch for user {user_id}")
+            return
+    except Exception:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid Telegram data")
         return
     await websocket.accept()
     logger.info(f"WebSocket connected - user: {user_id}")

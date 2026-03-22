@@ -77,58 +77,10 @@ async def admin_login(
     request: AdminLoginRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> AdminLoginResponse:
-    from app.utils.security import verify_password, create_access_token
-    from app.utils.rate_limiter import is_blocked, record_failed_attempt, reset_attempts
-    
-    settings = get_settings()
-    
-    # Rate limiting to prevent brute force attacks
-    identifier = f"admin_login:127.0.0.1"  # Would use actual IP in production
-    if await is_blocked(identifier):
-        logger.warning(f"Admin login brute force blocked")
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed login attempts",
-        )
-    
-    # Use bcrypt for password verification (secure password hashing)
-    # Settings stores hashed password that was created with hash_password()
-    try:
-        # In production, store hash of admin password in env or secrets manager
-        # For now, we need to hash the configured password if it's plaintext
-        # This is a temporary workaround - ideally admin_password would already be hashed
-        from app.utils.security import hash_password
-        # Compare using secure password verification
-        hashed_admin_password = hash_password(settings.admin_password)
-        if not verify_password(settings.admin_password, hashed_admin_password):
-            await record_failed_attempt(identifier)
-            logger.warning(f"Failed admin login attempt - invalid password")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid admin password",
-            )
-    except Exception as e:
-        await record_failed_attempt(identifier)
-        logger.error(f"Admin login error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed",
-        )
-    
-    # Clear failed attempts on successful login
-    await reset_attempts(identifier)
-    
-    # Generate proper JWT token instead of SHA256 hash
-    token = create_access_token(
-        data={"sub": "admin", "type": "admin"},
-        expires_delta=None  # Admin tokens don't expire (or set reasonable expiry)
-    )
-    
-    logger.warning(f"Admin logged in successfully")
-    return AdminLoginResponse(
-        success=True,
-        message="Admin authenticated successfully",
-        token=token,
+    # Admin password login has been removed in favor of Telegram-based admin access.
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Admin password login removed. Use Telegram-based admin access or configure admin users via database.",
     )
 @router.get("/commission-settings")
 async def get_commission_settings(

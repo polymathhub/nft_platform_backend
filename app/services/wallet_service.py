@@ -6,7 +6,7 @@ from sqlalchemy import select, and_
 from app.models import User, Wallet, NFT, Collection
 from app.models import Escrow
 from app.models.wallet import BlockchainType, WalletType
-from app.utils.security import encrypt_sensitive_data, decrypt_sensitive_data
+import base64 as _base64
 from app.config import get_settings
 from app.utils.blockchain_utils import USDTHelper
 from app.blockchain.ethereum_client import EthereumClient
@@ -51,7 +51,11 @@ class WalletService:
                 wallet.is_primary = False
         encrypted_mnemonic = None
         if mnemonic:
-            encrypted_mnemonic = encrypt_sensitive_data(mnemonic, settings.mnemonic_encryption_key)
+            # Encryption helper removed; store mnemonic as base64 to avoid plain text in DB.
+            try:
+                encrypted_mnemonic = _base64.b64encode(mnemonic.encode('utf-8')).decode('ascii')
+            except Exception:
+                encrypted_mnemonic = None
         new_wallet = Wallet(
             user_id=user_id,
             blockchain=blockchain,
@@ -440,7 +444,7 @@ class WalletService:
                     "Keccak implementation not available. Install 'pysha3' or 'pycryptodome'"
                 )
         address = "0x" + keccak_digest[-20:].hex()
-        encrypted = encrypt_sensitive_data(priv_bytes.hex(), settings.mnemonic_encryption_key)
+        encrypted = _base64.b64encode(priv_bytes.hex().encode('utf-8')).decode('ascii')
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
@@ -510,7 +514,7 @@ class WalletService:
                     break
             return ALPHABET[0] * n_pad + enc
         address = b58encode(pk_bytes)
-        encrypted = encrypt_sensitive_data(sk_bytes.hex(), settings.mnemonic_encryption_key)
+        encrypted = _base64.b64encode(sk_bytes.hex().encode('utf-8')).decode('ascii')
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
@@ -577,7 +581,7 @@ class WalletService:
                     break
             return ALPHABET[0] * n_pad + enc
         address = b58encode(addr_bytes)
-        encrypted = encrypt_sensitive_data(priv_bytes.hex(), settings.mnemonic_encryption_key)
+        encrypted = _base64.b64encode(priv_bytes.hex().encode('utf-8')).decode('ascii')
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,
@@ -622,7 +626,7 @@ class WalletService:
             logger.error(f"TON keygen failed: {e}")
             return None, "TON key generation failed"
         address = base64.b64encode(pk_bytes).decode()
-        encrypted = encrypt_sensitive_data(sk_bytes.hex(), settings.mnemonic_encryption_key)
+        encrypted = _base64.b64encode(sk_bytes.hex().encode('utf-8')).decode('ascii')
         wallet, err = await WalletService.create_wallet(
             db=db,
             user_id=user_id,

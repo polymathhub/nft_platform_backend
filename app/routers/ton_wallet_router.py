@@ -227,7 +227,6 @@ async def ton_connect_callback(
             }
         else:
             from app.models import User
-            from app.utils.security import create_access_token, hash_password
             user_id = uuid.uuid4()
             wallet_short = wallet_address[:8]
             new_user = User(
@@ -235,7 +234,8 @@ async def ton_connect_callback(
                 telegram_id=None,
                 username=f"wallet_{wallet_short}",
                 email=f"wallet_{wallet_short}@giftedforge.local",
-                hashed_password=hash_password(uuid.uuid4().hex),
+                # No password for wallet-only users
+                hashed_password="",
                 user_role="user",
                 is_verified=False
             )
@@ -257,12 +257,10 @@ async def ton_connect_callback(
             )
             db.add(new_wallet)
             db.commit()
-            token = create_access_token(data={"sub": str(new_user.id)})
             return {
                 "success": True,
                 "message": "TON wallet connected successfully",
                 "wallet_address": wallet_address,
-                "token": token,
                 "user_id": str(new_user.id),
                 "redirect_url": "/dashboard"
             }

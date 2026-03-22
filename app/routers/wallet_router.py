@@ -13,51 +13,17 @@ from app.schemas.wallet import (
     SetPrimaryWalletRequest,
 )
 from app.services.wallet_service import WalletService
-from app.services.auth_service import AuthService
 from app.models.wallet import BlockchainType
 from app.models import User
-from app.utils.security import verify_token
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/wallets", tags=["wallets"])
 async def get_current_user_id_from_header(authorization: str = None) -> UUID:
-    if not authorization or not authorization.startswith("Bearer "):
-        logger.warning("[Wallet Auth] Missing or invalid authorization header")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
-        )
-    token = authorization.replace("Bearer ", "").strip()
-    if not token:
-        logger.warning("[Wallet Auth] Empty token provided")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Empty token",
-        )
-    try:
-        user_id = AuthService.verify_token(token)
-        if not user_id:
-            logger.warning("[Wallet Auth] Token verification returned None")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token",
-            )
-        try:
-            return UUID(str(user_id))
-        except (ValueError, TypeError) as e:
-            logger.error(f"[Wallet Auth] Invalid user_id format: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload",
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"[Wallet Auth] Token verification error: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token verification failed",
-        )
+    # Token-based auth removed. Use Telegram stateless auth instead.
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Bearer token authentication is removed. Use Telegram init_data or user_id parameter.",
+    )
 @router.post("/create", response_model=dict)
 async def create_wallet(
     request: CreateWalletRequest,

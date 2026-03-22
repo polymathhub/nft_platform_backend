@@ -304,7 +304,7 @@ app.include_router(
     tags=["telegram-compat-2"]
 )
 
-# Legacy auth routers removed. Using stateless Telegram auth via `me_v1_router`.
+# Legacy auth routers removed.  we are Using the stateless Telegram auth via `me_v1_router`.
 app.include_router(me_v1_router, prefix="/api")  # telegram stateless login is here 
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
@@ -362,3 +362,4 @@ if os.path.isdir(webapp_path):
 else:
     logger.error(f"Web app static directory NOT FOUND at {webapp_path}")
     logger.error(f"  This will cause 404 errors for CSS/JS files")
+    
