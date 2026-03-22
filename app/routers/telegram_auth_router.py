@@ -28,7 +28,7 @@ import json
 import secrets
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/auth", tags=["telegram authentication"])
+router = APIRouter(tags=["telegram authentication"])
 settings = get_settings()
 
 # Simple in-memory session store
