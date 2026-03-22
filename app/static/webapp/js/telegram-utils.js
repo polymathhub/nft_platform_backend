@@ -66,12 +66,25 @@ export const TelegramUtils = {
   },
 
   /**
-   * Safe page redirect with Telegram readiness check
+   * DEPRECATED: Safe page redirect with Telegram readiness check
+   * ⚠️ DO NOT USE - Causes aggressive redirect loops
+   * 
+   * This function is dangerous because it redirects the user when Telegram
+   * is not immediately available, but Telegram often takes time to initialize.
+   * 
+   * Instead:
+   * - Use window.AuthSystem.isInitialized for auth checks
+   * - Wait for AuthSystem in your page initialization
+   * - Never force redirects during auth loading phase
+   * 
    * Only redirects if Telegram is ready or timeout is reached
    * @param {string} path - Path to redirect to
    * @param {number} timeout - Max time to wait for Telegram (default 3000)
+   * @deprecated - Use AuthSystem instead
    */
   async safeNavigateIfNotReady(path, timeout = 3000) {
+    console.warn('[TelegramUtils] DEPRECATED: safeNavigateIfNotReady() should not be used - use AuthSystem instead');
+    
     // If already ready, don't redirect
     if (this.isTelegramReady()) {
       console.log('[TelegramUtils] Telegram ready, no redirect needed');

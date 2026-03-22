@@ -778,21 +778,26 @@
       const nftId = getNFTIdFromURL();
       if (nftId) {
         try {
-          // Wait for Telegram to be ready (with timeout)
-          const isReady = await TelegramUtils.waitForTelegram(3000);
-          if (!isReady) {
-            console.warn('[NFT-Detail] Telegram not ready after timeout');
-            showNotification('Authentication Required', 'Please open this app from Telegram', 'error');
-            // Only redirect if Telegram is still not ready
-            setTimeout(() => {
-              window.location.href = '/webapp/dashboard.html';
-            }, 2000);
-            return;
+          // Wait for auth-system to initialize (it handles Telegram readiness)
+          let authReady = false;
+          let waitCount = 0;
+          const maxWait = 50; // 5 seconds with 100ms checks
+          
+          while (!authReady && waitCount < maxWait) {
+            if (window.AuthSystem?.isInitialized) {
+              authReady = true;
+              console.log('[NFT-Detail] AuthSystem ready');
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            waitCount++;
           }
 
+          // Get initData - AuthSystem will have it if Telegram is ready
           const initData = TelegramUtils.getInitData();
           if (!initData) {
-            showNotification('Authentication Required', 'Telegram session expired', 'error');
+            console.warn('[NFT-Detail] No Telegram initData available');
+            showNotification('Authentication Required', 'Please open this app from Telegram', 'info');
             return;
           }
 

@@ -20,6 +20,37 @@
  * ✅ Single source of truth: Telegram initData
  */
 
+// ============================================
+// DEBUG: Intercept all redirects to log origin
+// ============================================
+(function() {
+  // Override window.location.href setter
+  const locationDescriptor = Object.getOwnPropertyDescriptor(window.location, 'href');
+  Object.defineProperty(window.location, 'href', {
+    get: locationDescriptor?.get,
+    set: function(value) {
+      console.warn('[AUTH-DEBUG] REDIRECT ATTEMPTED:', value);
+      console.trace('[AUTH-DEBUG] Stack trace:');
+      
+      // Allow the redirect to proceed
+      if (locationDescriptor?.set) {
+        locationDescriptor.set.call(this, value);
+      } else {
+        window.location.replace(value);
+      }
+    },
+    configurable: true
+  });
+  
+  // Also intercept window.location.replace()
+  const originalReplace = window.location.replace;
+  window.location.replace = function(url) {
+    console.warn('[AUTH-DEBUG] REPLACE ATTEMPTED:', url);
+    console.trace('[AUTH-DEBUG] Stack trace:');
+    return originalReplace.call(this, url);
+  };
+})();
+
 // Global auth state
 window.AuthSystem = {
   user: null,
