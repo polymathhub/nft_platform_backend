@@ -1,14 +1,3 @@
-"""
-TELEGRAM AUTH DEPENDENCY - FastAPI Integration
-
-This dependency extracts Telegram initData from request headers,
-verifies it, and provides the authenticated user to routes.
-
-Usage:
-    @router.get("/me")
-    async def get_me(user: User = Depends(get_telegram_user)):
-        return {"id": user.id, "username": user.username}
-"""
 
 import logging
 from typing import Optional, Dict
@@ -21,6 +10,7 @@ from app.database import get_db_session
 from app.models import User
 from app.schemas.user import UserResponse
 from app.utils.telegram_init_data import verify_telegram_init_data
+from app.utils.security import hash_password
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -131,8 +121,8 @@ async def get_current_user(
             full_name=telegram_user.get('first_name', ''),
             telegram_id=str(telegram_id),
             telegram_username=telegram_user.get('username'),
-            # Don't set password - Telegram-only login
-            password_hash=None,
+            # Set a placeholder hashed password to satisfy non-null DB column
+            hashed_password=hash_password("") if callable(hash_password) else "",
             is_active=True,
         )
         
@@ -205,7 +195,7 @@ async def get_current_user_optional(
             full_name=telegram_user.get('first_name', ''),
             telegram_id=str(telegram_id),
             telegram_username=telegram_user.get('username'),
-            password_hash=None,
+            hashed_password=hash_password("") if callable(hash_password) else "",
             is_active=True,
         )
         

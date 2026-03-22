@@ -62,8 +62,9 @@
     }
 
     // 2) If Telegram WebApp is available, try to validate with backend
-    const tg = window.Telegram && window.Telegram.WebApp;
-    const initData = tg && (tg.initData || tg.initDataUnsafe && tg.initDataUnsafe.auth_date ? tg.initData : null);
+    const tg = (typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+    // Only use signed initData for backend validation. Do NOT send initDataUnsafe to backend.
+    const initData = tg && tg.initData ? tg.initData : null;
 
     if (initData) {
       LOG('Telegram initData detected, validating with backend');

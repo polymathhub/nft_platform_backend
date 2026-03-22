@@ -1,13 +1,3 @@
-"""
-TELEGRAM INIT DATA VERIFICATION - Stateless Identity System
-============================================================
-
-Validates Telegram WebApp initData using HMAC-SHA256 verification.
-This is the ONLY authentication method used by the system.
-
-Reference:
-https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
-"""
 
 import hmac
 import hashlib
@@ -19,30 +9,8 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-
 def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: int = 300) -> Optional[Dict]:
-    """
-    Verify Telegram WebApp initData signature and return parsed user data.
-    
-    Args:
-        init_data: Query string from window.Telegram.WebApp.initData
-        bot_token: Telegram bot token (format: 123456:ABC-DEF...)
-        
-    Returns:
-        dict with parsed user data if valid, None otherwise
-        
-    Raises:
-        ValueError: If init_data format is invalid
-        
-    Example:
-        user = verify_telegram_init_data(
-            "user=%7B%22id%22%3A123...",
-            "8374653306:AAFa2xO-hAuq7mh3T4KplUbLUcn35hbqYkI"
-        )
-        if user:
-            print(user['id'], user['username'])
-    """
-    
+ 
     if not init_data or not bot_token:
         logger.warning("[Telegram] Missing init_data or bot_token")
         return None
@@ -74,14 +42,10 @@ def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: i
         logger.debug(f"[Telegram] Data check string: {data_check_string[:100]}...")
         
         # Compute HMAC
-        # Step 1: Compute secret key = HMAC-SHA256(bot_token, "WebAppData")
-        secret_key = hmac.new(
-            b"WebAppData",
-            bot_token.encode(),
-            hashlib.sha256
-        ).digest()
-        
-        # Step 2: Compute hash = HMAC-SHA256(secret_key, data_check_string)
+        # Step 1: Compute secret key = SHA256(bot_token)
+        secret_key = hashlib.sha256(bot_token.encode()).digest()
+
+        # Step 2: Compute HMAC-SHA256(secret_key, data_check_string)
         computed_hash = hmac.new(
             secret_key,
             data_check_string.encode(),
@@ -128,12 +92,12 @@ def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: i
             return None
         
         # Validate required user fields
-        if not user_data.get('id') or not user_data.get('is_bot') is False:
+        if not user_data.get('id') or user_data.get('is_bot'):
             logger.warning(f"[Telegram] Invalid user data: {user_data}")
             return None
         
         logger.info(
-            f"[Telegram] ✅ Verification successful - user_id={user_data['id']}, "
+            f"[Telegram] Verification successful - user_id={user_data['id']}, "
             f"username={user_data.get('username')}"
         )
         
