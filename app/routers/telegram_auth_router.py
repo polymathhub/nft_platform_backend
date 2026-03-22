@@ -23,6 +23,8 @@ from app.models import User
 from app.services.auth_service import AuthService
 from app.schemas.user import UserResponse
 from app.utils.telegram_security import verify_telegram_data
+from app.utils.telegram_init_data import verify_telegram_init_data
+import sqlite3
 from app.config import get_settings
 from datetime import datetime, timedelta
 import json
@@ -305,20 +307,94 @@ async def get_profile(
     x_telegram_init_data: Optional[str] = request.headers.get("x-telegram-init-data")
     if x_telegram_init_data:
         try:
-            telegram_user = verify_telegram_data(x_telegram_init_data, settings.telegram_bot_token)
+            telegram_user = verify_telegram_init_data(x_telegram_init_data, settings.telegram_bot_token)
             if telegram_user and telegram_user.get('telegram_id'):
                 telegram_id = str(telegram_user.get('telegram_id'))
-                result = await db.execute(
-                    select(User).where(User.telegram_id == telegram_id)
-                )
-                user = result.scalar_one_or_none()
-                if user:
-                    logger.debug(f"[Auth] GET /profile - stateless user: id={user.id} telegram_id={telegram_id}")
-                    return {
-                        "success": True,
-                        "user": UserResponse.model_validate(user),
-                        "message": "Profile retrieved successfully (stateless)"
-                    }
+                try:
+                    result = await db.execute(
+                        select(User).where(User.telegram_id == telegram_id)
+                    )
+                    user = result.scalar_one_or_none()
+                    if user:
+                        logger.debug(f"[Auth] GET /profile - stateless user: id={user.id} telegram_id={telegram_id}")
+                        return {
+                            "success": True,
+                            "user": UserResponse.model_validate(user),
+                            "message": "Profile retrieved successfully (stateless)"
+                        }
+                    # Auto-create user if not found
+                    logger.info(f"[Auth] Auto-creating user for telegram_id={telegram_id}")
+                    new_user, err = await AuthService.authenticate_telegram(
+                        db=db,
+                        telegram_id=int(telegram_id),
+                        telegram_username=str(telegram_user.get('username') or ''),
+                        first_name=str(telegram_user.get('first_name') or ''),
+                        last_name=str(telegram_user.get('last_name') or ''),
+                    )
+                    if new_user:
+                        logger.info(f"[Auth] Created user id={new_user.id} telegram_id={telegram_id}")
+                        return {
+                            "success": True,
+                            "user": UserResponse.model_validate(new_user),
+                            "message": "Profile retrieved successfully (created)"
+                        }
+                except Exception as db_exc:
+                    # DB operation failed - fallback to lightweight SQLite storage
+                    logger.warning(f"[Auth] DB error in /profile, falling back to sqlite: {db_exc}")
+                    try:
+                        conn = sqlite3.connect('local_users.sqlite')
+                        cur = conn.cursor()
+                        cur.execute('''
+                        CREATE TABLE IF NOT EXISTS users (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            telegram_id TEXT UNIQUE,
+                            username TEXT,
+                            first_name TEXT,
+                            photo_url TEXT
+                        )
+                        ''')
+                        conn.commit()
+                        cur.execute('SELECT id, telegram_id, username, first_name, photo_url FROM users WHERE telegram_id = ?', (telegram_id,))
+                        row = cur.fetchone()
+                        if row:
+                            user_obj = {
+                                'id': row[0],
+                                'telegram_id': row[1],
+                                'username': row[2],
+                                'first_name': row[3],
+                                'photo_url': row[4],
+                            }
+                            conn.close()
+                            return {
+                                'success': True,
+                                'user': user_obj,
+                                'message': 'Profile retrieved from sqlite fallback'
+                            }
+                        # Insert new user into sqlite
+                        cur.execute('INSERT INTO users (telegram_id, username, first_name, photo_url) VALUES (?, ?, ?, ?)', (
+                            telegram_id,
+                            telegram_user.get('username') or f'user_{telegram_id}',
+                            telegram_user.get('first_name') or '',
+                            telegram_user.get('photo_url') or None,
+                        ))
+                        conn.commit()
+                        uid = cur.lastrowid
+                        conn.close()
+                        return {
+                            'success': True,
+                            'user': {
+                                'id': uid,
+                                'telegram_id': telegram_id,
+                                'username': telegram_user.get('username') or f'user_{telegram_id}',
+                                'first_name': telegram_user.get('first_name') or '',
+                                'photo_url': telegram_user.get('photo_url') or None,
+                            },
+                            'message': 'Profile created in sqlite fallback'
+                        }
+                    except Exception as sqlite_exc:
+                        logger.error(f"[Auth] Sqlite fallback failed: {sqlite_exc}")
+                        # allow outer handler to return 401 below
+                        pass
         except Exception as e:
             logger.warning(f"[Auth] Telegram verification failed in /profile: {e}")
     

@@ -11,6 +11,8 @@
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Global Auth Bootstrap -->
+  <script src="js/auth-global.js"></script>
   <!-- NEW: Production-Grade Auth System -->
   <script src="js/auth-system.js"></script>
   <!-- TON Connect UI -->
@@ -380,10 +382,6 @@
   <div class="container">
 
 
-    <!-- Welcome Section -->
-    <div class="welcome-section">
-      <p class="welcome-text">Welcome back, <span id="user-name"></span></p>
-    </div>
 
     <!-- Profile Card -->
     <div class="profile-card">
@@ -600,10 +598,8 @@
     // Ensure authenticated - with graceful fallback using Telegram auth
     async function ensureAuthenticated() {
       try {
-        // Wait for AuthSystem to initialize (it handles Telegram readiness)
-        let authReady = false;
         let waitCount = 0;
-        const maxWait = 50; // 5 seconds with 100ms checks
+        const maxWait = 50; 
         
         while (!authReady && waitCount < maxWait) {
           if (window.AuthSystem?.isInitialized) {
@@ -641,14 +637,14 @@
           console.warn('Failed to fetch /api/v1/me:', e);
         }
 
-        // Wait briefly for auth manager
+        // Wait briefly for auth manager to start
         let authWait = 20;
         while (!authManager.isAuthenticated && authWait > 0) {
           await new Promise(r => setTimeout(r, 100));
           authWait--;
         }
 
-        // If still not authenticated, show in preview mode
+        // If still not authenticated, show in demo preview
         if (!authManager.isAuthenticated) {
           console.log('Profile: preview mode (no authentication)');
           return false;
@@ -706,7 +702,7 @@
       window.open(`https://tonscan.org/address/${address}`, '_blank');
     };
 
-    // Referral System - Connected to Backend API
+    // Referral System Connected to Backend API
     class ReferralSystem {
       constructor(apiClient, endpoints) {
         this.api = apiClient;
