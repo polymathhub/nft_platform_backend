@@ -84,22 +84,24 @@ export const TelegramUtils = {
    */
   async safeNavigateIfNotReady(path, timeout = 3000) {
     console.warn('[TelegramUtils] DEPRECATED: safeNavigateIfNotReady() should not be used - use AuthSystem instead');
-    
-    // If already ready, don't redirect
+
+    // If already ready, nothing to do
     if (this.isTelegramReady()) {
-      console.log('[TelegramUtils] Telegram ready, no redirect needed');
-      return;
+      console.log('[TelegramUtils] Telegram ready, no navigation required');
+      return true;
     }
 
-    console.log('[TelegramUtils] Waiting for Telegram before redirect...');
+    console.log('[TelegramUtils] Waiting for Telegram before deciding navigation...');
     const ready = await this.waitForTelegram(timeout);
 
     if (!ready) {
-      console.warn(`[TelegramUtils] Telegram not ready after ${timeout}ms, redirecting to ${path}`);
-      const basePath = window.location.pathname.includes('/webapp') ? '/webapp' : '';
-      window.location.href = basePath + path;
+      // Suppress automatic redirect to avoid aggressive loops.
+      // Return false so callers can decide how to handle navigation (UI prompt, modal, or manual click).
+      console.warn(`[TelegramUtils] Telegram not ready after ${timeout}ms — automatic redirect suppressed for ${path}`);
+      return false;
     } else {
-      console.log('[TelegramUtils] Telegram became ready, staying on current page');
+      console.log('[TelegramUtils] Telegram became ready, no redirect needed');
+      return true;
     }
   },
 

@@ -27,6 +27,8 @@
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Global Auth System - loads immediately after Telegram SDK -->
+  <script src="js/auth-global.js"></script>
   <!-- NEW: Production-Grade Auth System -->
   <script src="js/auth-system.js"></script>
   <!-- TON Connect UI -->
@@ -547,7 +549,7 @@
 
         <!-- Profile -->
         <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
-          <div class="profile-avatar" id="profileAvatar">U</div>
+          <div class="profile-avatar" id="profileAvatar">F</div>
         </button>
       </div>
     </div>
@@ -666,7 +668,7 @@
     <div class="balance-card">
       <div class="balance-card-content">
         <div class="balance-label">Total Balance</div>
-        <div class="balance-amount" id="balance-amount">$0.00
+        <div class="balance-amount" id="balance-amount">$ 0.00
           USD</div>
         <div class="balance-footer">
           <div class="balance-chip">
@@ -703,7 +705,7 @@
       <div class="stat-card">
         <div class="stat-content">
           <div class="stat-label">Wallet Balance</div>
-          <div class="stat-value">$0.00</div>
+          <div class="stat-value">$ 0.00</div>
         </div>
         <div class="stat-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path><circle cx="12" cy="12" r="8"></circle></svg>
@@ -712,7 +714,7 @@
       <div class="stat-card">
         <div class="stat-content">
           <div class="stat-label">Total Profit</div>
-          <div class="stat-value" style="color: #4ade80;">$2</div>
+          <div class="stat-value" style="color: #4ade80;">$ 0</div>
         </div>
         <div class="stat-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>

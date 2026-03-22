@@ -100,8 +100,14 @@ class WalletUtils {
    */
   navigateToWalletIfNeeded() {
     if (this.tonConnect && !this.tonConnect.isConnected()) {
-      window.location.href = '/webapp/wallet.html';
-      return true;
+      // Do not perform automatic redirect; prompt user via UI instead.
+      Toast.show({
+        title: 'Wallet Required',
+        description: 'Please open the Wallet page to connect your TON wallet.',
+        type: 'info',
+        duration: 4000
+      });
+      return false;
     }
     return false;
   }

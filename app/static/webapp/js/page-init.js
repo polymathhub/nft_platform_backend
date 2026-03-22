@@ -75,8 +75,6 @@ class PageInitializer {
       });
     }
   }
-    }
-  }
 
   /**
    * Setup navigation active state tracking

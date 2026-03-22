@@ -169,7 +169,16 @@ app.add_middleware(
 
 @app.get("/")
 async def root_get():
-    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+    # Serve the dashboard HTML directly to avoid an extra redirect
+    try:
+        dashboard_path = os.path.join(webapp_path, 'dashboard.html')
+        if os.path.isfile(dashboard_path):
+            return FileResponse(dashboard_path, media_type='text/html')
+    except Exception as e:
+        logger.warning(f"Failed to serve dashboard.html for '/': {e}")
+
+    # Fallback: return a minimal JSON response instead of redirecting
+    return JSONResponse(status_code=200, content={"message": "NFT Platform - web UI available at /webapp/"})
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
@@ -322,7 +331,15 @@ async def redirect_to_webapp():
 
 @app.get("/webapp/", include_in_schema=False)
 async def redirect_webapp_root():
-    return RedirectResponse(url="/webapp/dashboard.html", status_code=301)
+    # Serve dashboard directly for webapp root
+    try:
+        dashboard_path = os.path.join(webapp_path, 'dashboard.html')
+        if os.path.isfile(dashboard_path):
+            return FileResponse(dashboard_path, media_type='text/html')
+    except Exception as e:
+        logger.warning(f"Failed to serve dashboard.html for '/webapp/': {e}")
+
+    return JSONResponse(status_code=200, content={"message": "Webapp root - dashboard not available"})
 
 logger.info(f"Checking web app static directory: {webapp_path}")
 if os.path.isdir(webapp_path):

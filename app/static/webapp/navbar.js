@@ -1,7 +1,3 @@
-/**
- * NAVBAR CONTROLLER
- * Handles header dropdowns, notifications, and bottom navigation
- */
 
 class NavbarController {
   constructor() {
@@ -61,15 +57,6 @@ class NavbarController {
   }
 
   startRealtimeSync() {
-    // DISABLED: No aggressive polling - causes unnecessary refreshes
-    // All data is now loaded on-demand when user interacts with UI
-    // This prevents constant re-renders and battery drain in Telegram Mini App
-    
-    // To load fresh data, users can:
-    // - Manually refresh/open notification panel
-    // - Click navbar items to trigger fresh loads
-    // - App loads data on page focus automatically via browser APIs
-    
     console.log('[Navbar] Real-time sync disabled - using on-demand loading only');
   }
 
@@ -564,9 +551,11 @@ class NavbarController {
       if (window.authManager) {
         window.authManager.logout();
       }
-      // Redirect to dashboard (stateless system will prompt Telegram auth again if needed)
-      const basePath = window.location.pathname.startsWith('/webapp') ? '/webapp' : '';
-      window.location.href = basePath + '/dashboard.html';
+      // Do NOT force navigation — keep logout passive so pages don't get redirected automatically.
+      if (window.AuthSystem && typeof window.AuthSystem.logout === 'function') {
+        try { window.AuthSystem.logout(); } catch (e) { /* ignore */ }
+      }
+      alert('You have been logged out. Use the Home button to return to Dashboard when ready.');
     }
   }
 }
