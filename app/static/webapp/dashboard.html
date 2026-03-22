@@ -865,11 +865,16 @@
 
 
 
+  <!-- Dashboard Initialization -->
   <script type="module">
     import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
     import { telegramApi } from './js/telegram-fetch.js';
+    import { tonConnect } from './js/tonconnect.js';
+    import { Toast } from './js/components.js';
 
-    // Dashboard Activity Manager
+    /**
+     * Activity Manager - Load and display recent transactions
+     */
     class ActivityManager {
       constructor(telegramApi) {
         this.telegramApi = telegramApi;
@@ -880,7 +885,7 @@
           const response = await this.telegramApi.get('/api/v1/dashboard/recent-transactions');
           this.renderActivity(response.transactions || []);
         } catch (error) {
-          console.warn('Failed to load activity:', error);
+          console.warn('[Dashboard] Failed to load activity:', error);
         }
       }
 
@@ -940,47 +945,53 @@
       }
     }
 
-    // Display user info - NO redirects, graceful degradation
-    async function displayUserInfo() {
+    /**
+     * Display Telegram user info (no API calls needed)
+     * Uses Telegram WebApp identity directly from initDataUnsafe
+     */
+    function displayTelegramUserInfo() {
       try {
-        // Wait for auth initialization
-        const authManager = await initializeAuthSystem();
+        // Get Telegram user data directly
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (!tgUser) {
+          console.log('[Dashboard] No Telegram user data - using Guest');
+          document.getElementById('user-name').textContent = 'Guest';
+          document.querySelectorAll('#userName').forEach(el => el.textContent = 'Guest');
+          return;
+        }
+
+        // Extract user info from Telegram
+        const displayName = tgUser.first_name || tgUser.username || 'User';
         
-        if (authManager?.user) {
-          const user = authManager.user;
-          let displayName = user?.username || user?.full_name || user?.first_name || 'User';
-          if (displayName.startsWith('@')) {
-            displayName = displayName.substring(1);
-          }
-          
-          const userNameEl = document.getElementById('user-name');
-          if (userNameEl) userNameEl.textContent = displayName;
-          
-          document.querySelectorAll('#userName').forEach(el => {
-            el.textContent = displayName;
-          });
-          console.log('[Dashboard] User greeting updated:', displayName);
-        } else {
-          console.log('[Dashboard] No user authenticated - showing guest');\n          document.getElementById('user-name').textContent = 'Guest';
-          document.querySelectorAll('#userName').forEach(el => {
-            el.textContent = 'Guest';
+        // Update username in page
+        document.getElementById('user-name').textContent = displayName;
+        document.querySelectorAll('#userName').forEach(el => {
+          el.textContent = displayName;
+        });
+
+        // Update avatar if available
+        if (tgUser.photo_url) {
+          const avatarElements = document.querySelectorAll('#profileAvatar, #profileAvatarLarge');
+          avatarElements.forEach(el => {
+            el.style.backgroundImage = `url('${tgUser.photo_url}')`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.textContent = ''; // Clear placeholder
           });
         }
+
+        console.log('[Dashboard] Telegram user loaded:', displayName);
       } catch (error) {
-        console.warn('[Dashboard] User not authenticated or auth timeout:', error.message);
-        // Show default "Guest" - graceful fallback
-        const userNameEl = document.getElementById('user-name');
-        if (userNameEl) userNameEl.textContent = 'Guest';
-        document.querySelectorAll('#userName').forEach(el => {
-          el.textContent = 'Guest';
-        });
+        console.warn('[Dashboard] Failed to load Telegram user:', error);
+        document.getElementById('user-name').textContent = 'Guest';
       }
     }
 
-    // Navigation
+    /**
+     * Global handlers
+     */
     window.navigate = (path) => window.location.href = path;
 
-    // Copy balance to clipboard
     window.copyBalance = function() {
       const amount = document.getElementById('balance-amount').textContent;
       navigator.clipboard.writeText(amount).then(() => {
@@ -993,62 +1004,13 @@
       });
     };
 
-    // Set active nav item
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', function() {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
-
-    // Initialize dashboard - Prevent multiple initializations with guard flag
-    const activityManager = new ActivityManager(telegramApi);
-    let dashboardInitialized = false;
-    
-    async function initDashboard() {
-      if (dashboardInitialized) {
-        console.log('[Dashboard] Already initialized, skipping');
-        return;
-      }
-      dashboardInitialized = true;
-      console.log('[Dashboard] Starting initialization...');
-
-      try {
-        // Ensure page is visible
-        if (document.body) document.body.style.display = '';
-        
-        displayUserInfo(); // Non-blocking user display
-        try {
-          activityManager.loadRecentActivity();
-        } catch (error) {
-          console.warn('[Dashboard] Could not load activity:', error);
-        }
-        console.log('[Dashboard] Initialization complete');\n      } catch (error) {
-        console.error('[Dashboard] Init error:', error);\n        // Graceful error handling - page still shows content
-        if (document.body) document.body.style.display = '';\n      }\n    }
-
-    // Execute initialization immediately
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initDashboard, { once: true });
-    } else {
-      initDashboard();
-    }
-  </script>
-  <script type="module">
-    // Import page initialization for consistent user greeting across pages
-    import PageInitializer from './js/page-init.js';
-    import { tonConnect } from './js/tonconnect.js';
-    import { Toast } from './js/components.js';
-
-    // Setup wallet connection handler
     window.handleCreateWallet = async (event) => {
       event.preventDefault();
       event.stopPropagation();
 
       try {
-        // Initialize TonConnect if needed
         if (!tonConnect.isReady) {
-          console.log('Initializing TonConnect...');
+          console.log('[Dashboard] Initializing TonConnect...');
           const initialized = await tonConnect.initialize();
           if (!initialized) {
             Toast.show({
@@ -1061,7 +1023,6 @@
           }
         }
 
-        // Check if already connected
         if (tonConnect.isConnected()) {
           Toast.show({
             title: 'Already Connected',
@@ -1072,23 +1033,20 @@
           return;
         }
 
-        // Open wallet modal
-        console.log('Opening wallet selection modal...');
+        console.log('[Dashboard] Opening wallet modal...');
         const result = await tonConnect.openModal();
 
         if (result && result.account) {
-          console.log('Wallet connected successfully:', result.account.address);
+          console.log('[Dashboard] Wallet connected:', result.account.address);
           Toast.show({
             title: 'Wallet Connected',
             description: 'Your TON wallet has been connected successfully',
             type: 'success',
             duration: 3000
           });
-        } else {
-          console.log('Wallet connection cancelled');
         }
       } catch (error) {
-        console.error('Error connecting wallet:', error);
+        console.error('[Dashboard] Wallet error:', error);
         Toast.show({
           title: 'Connection Error',
           description: error.message || 'Failed to connect wallet',
@@ -1098,20 +1056,69 @@
       }
     };
 
-    // Module-level initialization: TonConnect pre-initialization (runs once per load)
-    (async () => {
+    /**
+     * Initialize dashboard on page load
+     */
+    let dashboardInitialized = false;
+
+    async function initDashboard() {
+      if (dashboardInitialized) return;
+      dashboardInitialized = true;
+
       try {
-        console.log('[Dashboard] Pre-initializing TonConnect...');
-        await tonConnect.initialize();
-      } catch (e) {
-        console.warn('[Dashboard] TonConnect initialization failed:', e);
+        // Ensure page is visible
+        if (document.body) document.body.style.display = '';
+
+        // Initialize auth system
+        await initializeAuthSystem();
+
+        // Display user info from Telegram (no API calls)
+        displayTelegramUserInfo();
+
+        // Load activity if available
+        try {
+          const activityManager = new ActivityManager(telegramApi);
+          await activityManager.loadRecentActivity();
+        } catch (error) {
+          console.warn('[Dashboard] Activity loading skipped:', error.message);
+        }
+
+        // Pre-initialize TonConnect
+        try {
+          await tonConnect.initialize();
+          console.log('[Dashboard] TonConnect ready');
+        } catch (e) {
+          console.warn('[Dashboard] TonConnect init skipped:', e.message);
+        }
+
+        // Setup active nav items
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+          });
+        });
+
+        console.log('[Dashboard] Initialization complete');
+      } catch (error) {
+        console.error('[Dashboard] Init error:', error);
+        if (document.body) document.body.style.display = '';
       }
-    })();
+    }
+
+    // Start initialization
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDashboard, { once: true });
+    } else {
+      initDashboard();
+    }
   </script>
+
+  <!-- Load Navbar Component -->
   <script src="navbar.js?v=CACHE_BUST"></script>
-  <!-- Load Shared Navbar Component -->
+
+  <!-- Cache Busting -->
   <script>
-    // Replace cache-bust placeholder with timestamp
     document.querySelectorAll('script[src*="?v=CACHE_BUST"]').forEach(script => {
       script.src = script.src.replace('CACHE_BUST', Date.now());
     });
