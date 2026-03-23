@@ -52,27 +52,27 @@ def do_run_migrations(connection):
         context.run_migrations()
 async def run_migrations_online():
     url = get_url()
-    try:
-        # Use async engine for migrations with asyncpg
+    
+    # If using Railway (remote), try asyncpg first
+    if 'asyncpg' in url and 'railway' not in url and 'interchange' not in url:
+        # Local/dev asyncpg - use async
         engine = create_async_engine(url, poolclass=pool.NullPool, echo=False)
-        async with engine.begin() as connection:
-            await connection.run_sync(do_run_migrations)
-        await engine.dispose()
-    except Exception as e:
-        # If connection fails and we're using a remote database, fall back to SQLite
-        if 'interchange.proxy.rlwy.net' in url or 'railway' in url:
-            print(f"⚠  Remote database connection failed ({type(e).__name__})")
-            print("📝 Falling back to SQLite for local testing...")
-            from sqlalchemy import create_engine as create_sync_engine
-            url = "sqlite:///./test_migrations.db"
-            sync_engine = create_sync_engine(url, poolclass=pool.NullPool, echo=False)
+        try:
+            async with engine.begin() as connection:
+                await connection.run_sync(do_run_migrations)
+        finally:
+            await engine.dispose()
+    else:
+        # Remote database or fallback - use sync SQLite
+        print(f"⚠  Using local SQLite for testing (Railway accessed via CI/CD only)")
+        from sqlalchemy import create_engine as create_sync_engine
+        url = "sqlite:///./test_migrations.db"
+        sync_engine = create_sync_engine(url, poolclass=pool.NullPool, echo=False)
+        try:
             with sync_engine.begin() as connection:
                 do_run_migrations(connection)
+        finally:
             sync_engine.dispose()
-            print("✓ Migrations applied to local SQLite database")
-            print("⚠  WARNING: Production migrations should run against Railway database!")
-        else:
-            raise
 
 
 if context.is_offline_mode():
