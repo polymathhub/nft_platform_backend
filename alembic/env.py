@@ -5,11 +5,6 @@ from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
-from dotenv import load_dotenv
-
-# Load environment variables from .env
-load_dotenv()
-
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -53,22 +48,11 @@ def do_run_migrations(connection):
         context.run_migrations()
 async def run_migrations_online():
     url = get_url()
-    print(f"[DEBUG] Connecting to database: {url.split('@')[0].split('://')[0]}://***@{url.split('@')[1] if '@' in url else 'unknown'}")
-    
     engine = create_async_engine(url, poolclass=pool.NullPool)
     async with engine.begin() as connection:
         await connection.run_sync(do_run_migrations)
     await engine.dispose()
-
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    try:
-        # Handle Windows event loop policy
-        if os.name == 'nt':
-            from asyncio import WindowsSelectorEventLoopPolicy
-            asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-        asyncio.run(run_migrations_online())
-    except Exception as e:
-        print(f"[ERROR] Migration failed: {type(e).__name__}: {e}")
-        raise
+    asyncio.run(run_migrations_online())

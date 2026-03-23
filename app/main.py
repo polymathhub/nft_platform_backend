@@ -15,7 +15,6 @@ import redis.asyncio as redis
 from app.routers import (
     wallet_router,
     nft_router,
-    nft_pfp_router,
     notification_router,
     marketplace_router,
     attestation_router,
@@ -309,7 +308,6 @@ app.include_router(
 app.include_router(me_v1_router, prefix="/api")  # telegram stateless login is here 
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
-app.include_router(nft_pfp_router, prefix="/api/v1")
 app.include_router(notification_router, prefix="/api/v1")
 app.include_router(marketplace_router, prefix="/api/v1")
 app.include_router(attestation_router, prefix="/api/v1")
