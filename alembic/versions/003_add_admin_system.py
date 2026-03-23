@@ -10,9 +10,8 @@ depends_on = None
 def upgrade() -> None:
     log.info("Starting Migration 003: Add admin system tables")
     log.info("Step 1: Creating adminlogaction ENUM type...")
-    op.execute(
-    )
-    log.info("  adminlogaction ENUM created or already exists")
+    # ENUM type will be created when first referenced in create_table
+    log.info("  adminlogaction ENUM will be created automatically")
     log.info("Step 2: Creating admin_logs table...")
     op.create_table(
         'admin_logs',
