@@ -10,16 +10,23 @@ depends_on = None
 def upgrade() -> None:
     log.info("Starting Migration 003: Add admin system tables")
     log.info("Step 1: Creating adminlogaction ENUM type...")
-    # Create the ENUM type explicitly before using it
+    # Create the ENUM type with proper error handling using DO block
     op.execute(
-        "CREATE TYPE adminlogaction AS ENUM ("
-        "'user_role_changed', 'commission_rate_updated', 'commission_wallet_updated', "
-        "'admin_added', 'admin_removed', 'user_suspended', 'user_activated', "
-        "'system_config_changed', 'database_backup', 'listing_removed', "
-        "'offer_cancelled', 'nft_locked'"
-        ") IF NOT EXISTS"
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'adminlogaction') THEN
+                CREATE TYPE adminlogaction AS ENUM (
+                    'user_role_changed', 'commission_rate_updated', 'commission_wallet_updated',
+                    'admin_added', 'admin_removed', 'user_suspended', 'user_activated',
+                    'system_config_changed', 'database_backup', 'listing_removed',
+                    'offer_cancelled', 'nft_locked'
+                );
+            END IF;
+        END $$;
+        """
     )
-    log.info("  adminlogaction ENUM created or already exists")
+    log.info("  ✓ adminlogaction ENUM created or already exists")
     log.info("Step 2: Creating admin_logs table...")
     op.create_table(
         'admin_logs',
