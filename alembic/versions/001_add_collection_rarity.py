@@ -7,8 +7,6 @@ branch_labels = None
 depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
-    op.execute(
-    )
     op.execute("CREATE INDEX IF NOT EXISTS ix_collections_creator ON collections (creator_id);")
     op.execute("CREATE INDEX IF NOT EXISTS ix_collections_blockchain ON collections (blockchain);")
     op.execute("CREATE INDEX IF NOT EXISTS ix_collections_floor_price ON collections (floor_price);")
@@ -16,8 +14,6 @@ def upgrade() -> None:
     op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS attributes JSONB;")
     op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_score DOUBLE PRECISION;")
     op.execute("ALTER TABLE nfts ADD COLUMN IF NOT EXISTS rarity_tier VARCHAR(50);")
-    op.execute(
-    )
     op.execute("CREATE INDEX IF NOT EXISTS ix_nfts_collection ON nfts (collection_id);")
     op.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_tier ON nfts (rarity_tier);")
     op.execute("CREATE INDEX IF NOT EXISTS ix_nfts_rarity_score ON nfts (rarity_score);")
