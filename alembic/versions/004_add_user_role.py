@@ -16,8 +16,14 @@ def upgrade() -> None:
             "For other databases, manual adjustment required."
         )
         return
-    log.info("Step 1: Adding user_role column to users table...")
+    log.info("Step 1: Creating userrole ENUM type...")
+    # Create the ENUM type explicitly before using it
     op.execute(
+        "CREATE TYPE userrole AS ENUM ('admin', 'user') IF NOT EXISTS"
+    )
+    log.info("Step 2: Adding user_role column to users table...")
+    op.execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role userrole DEFAULT 'user' NOT NULL"
     )
     log.info("  user_role column added or already exists with default='user'")
     log.info("Step 2: Creating index on user_role...")
@@ -39,5 +45,6 @@ def downgrade() -> None:
     op.drop_index('ix_users_user_role', table_name='users', if_exists=True)
     log.info("Removing user_role column...")
     op.execute("ALTER TABLE users DROP COLUMN IF EXISTS user_role;")
-    log.info("  userrole ENUM intentionally preserved")
+    log.info("Dropping userrole ENUM type...")
+    op.execute("DROP TYPE IF EXISTS userrole CASCADE")
     log.info("Migration 004 downgrade completed")

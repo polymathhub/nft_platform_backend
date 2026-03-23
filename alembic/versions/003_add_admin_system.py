@@ -10,7 +10,14 @@ depends_on = None
 def upgrade() -> None:
     log.info("Starting Migration 003: Add admin system tables")
     log.info("Step 1: Creating adminlogaction ENUM type...")
+    # Create the ENUM type explicitly before using it
     op.execute(
+        "CREATE TYPE adminlogaction AS ENUM ("
+        "'user_role_changed', 'commission_rate_updated', 'commission_wallet_updated', "
+        "'admin_added', 'admin_removed', 'user_suspended', 'user_activated', "
+        "'system_config_changed', 'database_backup', 'listing_removed', "
+        "'offer_cancelled', 'nft_locked'"
+        ") IF NOT EXISTS"
     )
     log.info("  adminlogaction ENUM created or already exists")
     log.info("Step 2: Creating admin_logs table...")
@@ -102,5 +109,6 @@ def downgrade() -> None:
     op.drop_index('ix_admin_logs_action', table_name='admin_logs', if_exists=True)
     op.drop_index('ix_admin_logs_admin_id', table_name='admin_logs', if_exists=True)
     op.drop_table('admin_logs', if_exists=True)
-    log.info("  adminlogaction ENUM intentionally preserved for forward migration safety")
+    log.info("Dropping adminlogaction ENUM type...")
+    op.execute("DROP TYPE IF EXISTS adminlogaction CASCADE")
     log.info("Migration 003 downgrade completed")
