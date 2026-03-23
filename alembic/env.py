@@ -23,6 +23,9 @@ def get_url():
             "DATABASE_URL is required for migrations. "
             "Set it in .env file or as environment variable."
         )
+    # Convert postgresql:// to postgresql+asyncpg:// for async migrations
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return url 
 target_metadata = Base.metadata
 def run_migrations_offline():
