@@ -1,6 +1,7 @@
 # Legacy auth routers removed - repository now uses stateless Telegram auth only
 from app.routers.wallet_router import router as wallet_router
 from app.routers.nft_router import router as nft_router
+from app.routers.nft_pfp_router import router as nft_pfp_router
 from app.routers.notification_router import router as notification_router
 from app.routers.marketplace_router import router as marketplace_router
 from app.routers.attestation_router import router as attestation_router
@@ -19,6 +20,7 @@ __all__ = [
     # legacy auth routers removed
     "wallet_router",
     "nft_router",
+    "nft_pfp_router",
     "notification_router",
     "marketplace_router",
     "attestation_router",

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, DateTime, Boolean, Index, Enum, ForeignKey, Float
+from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 from enum import Enum as PyEnum
@@ -30,6 +31,12 @@ class User(Base):
     creator_name = Column(String(255), nullable=True)
     creator_bio = Column(String(1000), nullable=True)
     creator_avatar_url = Column(String(500), nullable=True)
+    nft_pfp_id = Column(
+        GUID(),
+        ForeignKey('nfts.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
+    )
     referral_code = Column(String(50), unique=True, nullable=True, index=True)
     referred_by_id = Column(
         GUID(),
@@ -44,6 +51,10 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_login = Column(DateTime, nullable=True)
+    
+    # Relationship to NFT used as profile picture
+    nft_pfp_rel = relationship("NFT", foreign_keys=[nft_pfp_id], uselist=False, lazy="select", viewonly=True)
+    
     __table_args__ = (
         Index("ix_users_username_active", "username", "is_active"),
         Index("ix_users_referral_code", "referral_code"),
