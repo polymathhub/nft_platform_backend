@@ -445,7 +445,7 @@ app.mount("/webapp", StaticFiles(...))   # Static routes last
 ```python
 # app/config.py
 allowed_origins: list[str] = Field(default=[
-    "https://nftplatformbackend-production-9081.up.railway.app",  # Production
+    "https://nftplatformbackend-production-ee5f.up.railway.app",  # Production
     "http://localhost:3000",                                      # Dev
 ])
 ```

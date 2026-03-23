@@ -65,7 +65,7 @@ class Settings(BaseSettings):
         app_url = info.data.get('app_url')
         if app_url:
             return app_url.rstrip('/') + '/webapp/'
-        return "https://nftplatformbackend-production-9081.up.railway.app/webapp/"
+        return "https://nftplatformbackend-production-ee5f.up.railway.app/webapp/"
     ipfs_api_url: str = Field(default="http://localhost:5001")
     ipfs_gateway_url: str = Field(default="https://gateway.pinata.cloud/ipfs")
     ton_rpc_url: str = Field(default="https://toncenter.com/api/v2/jsonRPC")

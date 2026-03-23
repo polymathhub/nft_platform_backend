@@ -2,9 +2,9 @@ import json
 import urllib.request
 import urllib.error
 endpoints = {
-    'manifest': 'https://nftplatformbackend-production-9081.up.railway.app/tonconnect-manifest.json',
+    'manifest': 'https://nftplatformbackend-production-ee5f.up.railway.app/tonconnect-manifest.json',
     'unpkg_tonconnect': 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.js',
-    'telegram_auth': 'https://nftplatformbackend-production-9081.up.railway.app/api/v1/auth/telegram/login'
+    'telegram_auth': 'https://nftplatformbackend-production-ee5f.up.railway.app/api/v1/auth/telegram/login'
 }
 def fetch(url, method='GET', data=None):
     try:

@@ -62,7 +62,7 @@ Your NFT Platform Backend is **fully configured** for TonConnect integration in 
 
 ```json
 {
-  "url": "https://nftplatformbackend-production-9081.up.railway.app",
+  "url": "https://nftplatformbackend-production-ee5f.up.railway.app",
   "name": "GiftedForge",
   "iconUrl": "https://image2url.com/r2/default/images/1773286803181-3e04067a-db2d-48b1-93e7-d486c16f805c.jpg"
 }
@@ -98,7 +98,7 @@ async def tonconnect_manifest(request: Request):
 - ✅ Caches response with proper HTTP headers
 - ✅ 404 handling if manifest file missing
 
-**Current Manifest Origin:** `https://nftplatformbackend-production-9081.up.railway.app`
+**Current Manifest Origin:** `https://nftplatformbackend-production-ee5f.up.railway.app`
 
 ---
 
@@ -204,7 +204,7 @@ ELSE (new wallet):
 **Origin Derivation Logic (Priority):**
 1. `APP_URL` (if set) → used for telegram_webapp_url
 2. `TELEGRAM_WEBAPP_URL` (if set) → used directly
-3. **Fallback**: `https://nftplatformbackend-production-9081.up.railway.app/webapp/`
+3. **Fallback**: `https://nftplatformbackend-production-ee5f.up.railway.app/webapp/`
 
 ---
 
@@ -278,7 +278,7 @@ ELSE (new wallet):
 1. **Telegram Bot** displays button to open WebApp
    ```
    Button Label: "🎨 Connect TON Wallet"
-   WebApp URL: https://nftplatformbackend-production-9081.up.railway.app/webapp/
+   WebApp URL: https://nftplatformbackend-production-ee5f.up.railway.app/webapp/
    ```
 
 2. **Telegram Opens WebApp** in embedded browser
@@ -333,7 +333,7 @@ ELSE (new wallet):
 
 ```bash
 # Required
-APP_URL=https://nftplatformbackend-production-9081.up.railway.app
+APP_URL=https://nftplatformbackend-production-ee5f.up.railway.app
 DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 JWT_SECRET_KEY=<strong-random-key-here>
 
@@ -366,7 +366,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton(
             text="🎨 Connect TON Wallet",
             web_app=WebAppInfo(
-                url="https://nftplatformbackend-production-9081.up.railway.app/webapp/"
+                url="https://nftplatformbackend-production-ee5f.up.railway.app/webapp/"
             )
         )],
         [InlineKeyboardButton(
