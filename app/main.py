@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,10 +7,12 @@ from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.exceptions import HTTPException
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
+import asyncio
+import os
 from app.config import get_settings
 from app.database import init_db, close_db
 from app.utils.logger import configure_logging
-from app.utils.startup import setup_telegram_webhook, auto_migrate
+from app.utils.startup import setup_telegram_webhook, auto_migrate_safe
 import redis.asyncio as redis
 from app.routers import (
     wallet_router,
@@ -47,51 +49,117 @@ except Exception as e:
 # to capture API endpoint logs for debugging
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    ROBUST STARTUP FLOW:
+    
+    Phase 1 (sync): Init DB pool - MUST succeed
+    Phase 2 (async): Setup Redis - optional, continues if fails
+    Phase 3 (background): Run migrations - async, non-blocking, non-fatal
+    Phase 4 (background): Setup Telegram - async, non-blocking, non-fatal
+    
+    App is ready to serve requests after Phase 1!
+    """
     logger.info("=" * 70)
-    logger.info("NFT Platform Backend - Startup")
+    logger.info("NFT Platform Backend - Startup Starting")
     logger.info("=" * 70)
-    logger.info("[Wake up] Initializing DB pool...")
-    await init_db()
+    
+    # =====================================================================
+    # PHASE 1: Initialize DB Pool (CRITICAL - must succeed)
+    # =====================================================================
     try:
-        logger.info("[Redis] Trying to connect...")
+        logger.info("[Phase 1] Initializing database pool...")
+        await init_db()
+        logger.info("[Phase 1] ✓ Database pool initialized successfully")
+    except Exception as e:
+        logger.error(f"[Phase 1] ✗ FATAL: Database initialization failed: {e}", exc_info=True)
+        # Still raise because we can't function without a DB
+        raise RuntimeError(f"Database initialization failed: {e}") from e
+    
+    # =====================================================================
+    # PHASE 2: Setup Redis (optional, non-fatal)
+    # =====================================================================
+    try:
+        logger.info("[Phase 2] Attempting Redis connection...")
         if getattr(settings, "redis_url", None):
             app.state.redis = redis.from_url(settings.redis_url, encoding='utf-8', decode_responses=True)
             try:
                 await app.state.redis.ping()
-                logger.info("Redis connected")
+                logger.info("[Phase 2] ✓ Redis connected successfully")
             except Exception as e:
-                logger.warning(f"Redis connection failed: {e}")
+                logger.warning(f"[Phase 2] ⚠ Redis connection failed (non-fatal): {e}")
                 app.state.redis = None
         else:
+            logger.info("[Phase 2] Redis URL not configured; skipping")
             app.state.redis = None
     except Exception as e:
-        logger.warning(f"Redis connection error: {e}")
+        logger.warning(f"[Phase 2] ⚠ Redis setup error (non-fatal): {e}")
         app.state.redis = None
-    logger.info("[Migrations] Running... (AUTO_MIGRATE toggle respected)")
+    
+    # =====================================================================
+    # PHASE 3: Schedule background migrations (non-blocking, non-fatal)
+    # =====================================================================
+    async def run_migrations_background():
+        try:
+            auto_flag = os.environ.get("AUTO_MIGRATE", "true").lower()
+            if auto_flag not in ("1", "true", "yes"):
+                logger.info("[Phase 3] AUTO_MIGRATE disabled; skipping migrations")
+                return
+            
+            logger.info("[Phase 3] Starting database migrations in background...")
+            await auto_migrate_safe()
+            logger.info("[Phase 3] ✓ Migrations completed successfully")
+        except Exception as e:
+            logger.error(f"[Phase 3] ✗ Migration failed (non-fatal): {e}", exc_info=True)
+            logger.warning(f"[Phase 3] ⚠ App will continue running despite migration failure")
+    
+    # Schedule migration as background task (doesn't block app startup)
     try:
-        import os
-        auto_flag = os.environ.get("AUTO_MIGRATE", "true").lower()
-        if auto_flag in ("1", "true", "yes"):
-            await auto_migrate()
-        else:
-            logger.info("AUTO_MIGRATE disabled via environment; skipping Alembic migrations on startup.")
+        asyncio.create_task(run_migrations_background())
+        logger.info("[Phase 3] Migrations scheduled as background task")
     except Exception as e:
-        logger.error(f"Auto-migration failed: {e}", exc_info=True)
-        raise
-    logger.info("[Telegram] Setting up webhook...")
-    await setup_telegram_webhook()
-    logger.info("[Ready] App startup complete")
+        logger.warning(f"[Phase 3] Could not schedule migrations: {e}")
+    
+    # =====================================================================
+    # PHASE 4: Schedule Telegram setup (non-blocking, non-fatal)
+    # =====================================================================
+    async def setup_telegram_background():
+        try:
+            logger.info("[Phase 4] Setting up Telegram webhook in background...")
+            result = await setup_telegram_webhook()
+            if result:
+                logger.info("[Phase 4] ✓ Telegram setup completed")
+            else:
+                logger.warning("[Phase 4] ⚠ Telegram setup returned False")
+        except Exception as e:
+            logger.warning(f"[Phase 4] ⚠ Telegram setup failed (non-fatal): {e}")
+    
+    # Schedule Telegram setup as background task
+    try:
+        asyncio.create_task(setup_telegram_background())
+        logger.info("[Phase 4] Telegram setup scheduled as background task")
+    except Exception as e:
+        logger.warning(f"[Phase 4] Could not schedule Telegram setup: {e}")
+    
+    logger.info("=" * 70)
+    logger.info("✓ App startup phases complete - app is now ready to serve requests")
+    logger.info("  (Migrations and Telegram setup continue in background)")
+    logger.info("=" * 70)
+    
     yield
-    logger.info("[Shutdown] Shutting down...")
+    
+    # =====================================================================
+    # SHUTDOWN
+    # =====================================================================
+    logger.info("[Shutdown] Starting graceful shutdown...")
     await close_db()
     try:
         r = getattr(app.state, "redis", None)
         if r:
             await r.close()
-            logger.info("Redis closed")
-    except Exception:
-        pass
-    logger.info("App shutdown complete")
+            logger.info("[Shutdown] Redis connection closed")
+    except Exception as e:
+        logger.warning(f"[Shutdown] Redis close error (non-fatal): {e}")
+    logger.info("[Shutdown] ✓ Shutdown complete")
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
