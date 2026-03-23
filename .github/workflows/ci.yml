@@ -61,17 +61,29 @@ jobs:
           docker build -t $IMAGE_NAME:${GITHUB_SHA::8} .
 
       - name: Login to registry
-        if: secrets.DOCKER_USERNAME != null && secrets.DOCKER_PASSWORD != null
-        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        run: |
+          if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          else
+            echo "Docker credentials not set, skipping login"
+          fi
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Push Docker image
-        if: secrets.DOCKER_USERNAME != null && secrets.DOCKER_PASSWORD != null
+        run: |
+          if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+            docker tag $IMAGE_NAME:${GITHUB_SHA::8} $IMAGE_NAME:latest
+            docker push $IMAGE_NAME:${GITHUB_SHA::8}
+            docker push $IMAGE_NAME:latest
+          else
+            echo "Docker credentials not set, skipping push"
+          fi
         env:
           IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-        run: |
-          docker tag $IMAGE_NAME:${GITHUB_SHA::8} $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:${GITHUB_SHA::8}
-          docker push $IMAGE_NAME:latest
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Upload vendored assets as artifact
         uses: actions/upload-artifact@v4
