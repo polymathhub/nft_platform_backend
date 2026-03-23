@@ -26,6 +26,30 @@ def upgrade() -> None:
     op.create_index('ix_users_is_active', 'users', ['is_active'], unique=False)
     op.create_index('ix_users_username_active', 'users', ['username', 'is_active'], unique=False)
     op.create_table(
+        'collections',
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
+        sa.Column('creator_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('description', sa.String(length=500), nullable=True),
+        sa.Column('blockchain', sa.String(length=50), nullable=False),
+        sa.Column('contract_address', sa.String(length=255), unique=True, nullable=True),
+        sa.Column('floor_price', sa.Float(), nullable=True),
+        sa.Column('average_price', sa.Float(), nullable=True),
+        sa.Column('ceiling_price', sa.Float(), nullable=True),
+        sa.Column('total_volume', sa.Float(), nullable=False, server_default=sa.text('0')),
+        sa.Column('total_sales', sa.Integer(), nullable=False, server_default=sa.text('0')),
+        sa.Column('rarity_weights', sa.JSON(), nullable=True),
+        sa.Column('collection_metadata', sa.JSON(), nullable=True),
+        sa.Column('image_url', sa.String(length=500), nullable=True),
+        sa.Column('banner_url', sa.String(length=500), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+    )
+    op.create_index('ix_collections_creator', 'collections', ['creator_id'], unique=False)
+    op.create_index('ix_collections_blockchain', 'collections', ['blockchain'], unique=False)
+    op.create_index('ix_collections_floor_price', 'collections', ['floor_price'], unique=False)
+    op.create_index('ix_collections_name', 'collections', ['name'], unique=False)
+    op.create_table(
         'wallets',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, primary_key=True, server_default=sa.text('gen_random_uuid()')),
         sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
@@ -159,4 +183,5 @@ def downgrade() -> None:
     op.drop_table('transactions')
     op.drop_table('nfts')
     op.drop_table('wallets')
+    op.drop_table('collections')
     op.drop_table('users')

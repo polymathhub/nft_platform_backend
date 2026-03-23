@@ -17,16 +17,22 @@ def upgrade() -> None:
         )
         return
     log.info("Step 1: Creating userrole ENUM type...")
-    # Create the ENUM type explicitly before using it
-    op.execute(
-        "CREATE TYPE userrole AS ENUM ('admin', 'user') IF NOT EXISTS"
-    )
+    # Create the ENUM type using DO block for compatibility
+    op.execute("""
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole') THEN
+                CREATE TYPE userrole AS ENUM ('admin', 'user');
+            END IF;
+        END
+        $$;
+    """)
     log.info("Step 2: Adding user_role column to users table...")
     op.execute(
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role userrole DEFAULT 'user' NOT NULL"
     )
     log.info("  user_role column added or already exists with default='user'")
-    log.info("Step 2: Creating index on user_role...")
+    log.info("Step 3: Creating index on user_role...")
     op.create_index(
         'ix_users_user_role',
         'users',
