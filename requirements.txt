@@ -34,7 +34,6 @@ mypy==1.7.1
 cryptography
 
 pydantic[email]
-psycopg2
 asyncpg
 python-telegram-bot==20.7
 pycryptodome
