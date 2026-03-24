@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Pa
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 from app.database import get_db_session
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.models import User, UserRole, AdminSettings
 from app.services.admin_service import AdminService
 from app.config import get_settings

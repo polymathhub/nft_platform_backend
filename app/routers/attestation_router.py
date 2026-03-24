@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from app.database import get_db_session
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.services.attestation_service import AttestationService
 from app.schemas.attestation import (
     CreateAttestationRequest,

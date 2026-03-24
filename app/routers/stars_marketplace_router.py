@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
 import uuid
@@ -9,7 +9,7 @@ from typing import Optional
 from decimal import Decimal
 from app.database import get_db
 from app.models import User, TONWallet, StarTransaction, NFT, Listing, Order
-from app.security.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.utils.logger import logger
 router = APIRouter(prefix="/api/v1/stars/marketplace", tags=["Stars Marketplace"])
 class StarsPurchaseRequest(BaseModel):
@@ -46,24 +46,26 @@ def convert_stars_to_usdt(stars_amount: int) -> float:
 @router.post("/buy-nft", response_model=StarsPurchaseResponse)
 async def create_star_purchase(
     request: StarsPurchaseRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StarsPurchaseResponse:
     try:
-        listing = db.execute(
+        result = await db.execute(
             select(Listing).where(Listing.id == uuid.UUID(request.listing_id))
-        ).scalar_one_or_none()
+        )
+        listing = result.scalar_one_or_none()
         if not listing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Listing not found"
             )
-        wallet = db.execute(
+        result = await db.execute(
             select(TONWallet).where(
                 (TONWallet.user_id == current_user.id) &
                 (TONWallet.status == "connected")
             )
-        ).scalar_one_or_none()
+        )
+        wallet = result.scalar_one_or_none()
         if not wallet:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -95,7 +97,7 @@ async def create_star_purchase(
             }
         )
         db.add(star_transaction)
-        db.commit()
+        await db.commit()
         payment_link = (
             f"https://t.me/your_bot_username/marketplace"
             f"?startapp=pay_{invoice_id}"
@@ -119,17 +121,18 @@ async def create_star_purchase(
 @router.post("/payment-confirmation")
 async def confirm_star_payment(
     confirmation: StarsPaymentConfirmation,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
-        star_transaction = db.execute(
+        result = await db.execute(
             select(StarTransaction).where(
                 (StarTransaction.tx_metadata['invoice_id'].astext == confirmation.invoice_id) &
                 (StarTransaction.user_id == current_user.id) &
                 (StarTransaction.status == "pending")
             )
-        ).scalar_one_or_none()
+        )
+        star_transaction = result.scalar_one_or_none()
         if not star_transaction:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -137,7 +140,7 @@ async def confirm_star_payment(
             )
         if not confirmation.successful:
             star_transaction.status = "failed"
-            db.commit()
+            await db.commit()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Payment was not successful"
@@ -146,9 +149,10 @@ async def confirm_star_payment(
         star_transaction.provider_payment_charge_id = confirmation.provider_payment_charge_id
         star_transaction.status = "completed"
         star_transaction.completed_at = datetime.utcnow()
-        listing = db.execute(
+        result = await db.execute(
             select(Listing).where(Listing.id == star_transaction.related_listing_id)
-        ).scalar_one_or_none()
+        )
+        listing = result.scalar_one_or_none()
         if not listing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

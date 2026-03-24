@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from sqlalchemy import select
 from app.database import get_db_session
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.services.marketplace_service import MarketplaceService
 from app.models import Escrow, User
 from app.models.marketplace import Offer, Listing

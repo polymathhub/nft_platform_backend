@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_DOWN
 import uuid
@@ -10,7 +11,7 @@ import json
 from typing import Optional
 from app.database import get_db
 from app.models import User, Payment, PaymentStatus, PaymentType, Referral, ReferralStatus, ReferralCommission, CommissionStatus
-from app.security.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.utils.logger import logger
 from app.config import get_settings
 router = APIRouter(prefix="/api/v1/stars", tags=["Telegram Stars"])
@@ -95,7 +96,7 @@ def calculate_commissions(total_amount: int, referrer_exists: bool = True):
 async def create_stars_invoice(
     req: StarsPurchaseRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -114,8 +115,8 @@ async def create_stars_invoice(
         platform_fee=commissions["platform_commission"],
     )
     db.add(payment)
-    db.commit()
-    db.refresh(payment)
+    await db.commit()
+    await db.refresh(payment)
     logger.info(f"Invoice created: {req.invoice_id} for user {current_user.id}, amount: {req.total_amount}")
     return StarsInvoiceResponse(
         invoice_id=req.invoice_id,
@@ -131,7 +132,7 @@ async def handle_payment_success(
     confirmation: StarsPaymentConfirmation,
     x_telegram_init_data: str = Header(None),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -145,13 +146,15 @@ async def handle_payment_success(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="Invalid payment signature"
         )
-    from sqlalchemy import and_
-    payment = db.query(Payment).filter(
-        and_(
-            Payment.transaction_hash == confirmation.invoice_id,
-            Payment.user_id == current_user.id,
+    result = await db.execute(
+        select(Payment).where(
+            and_(
+                Payment.transaction_hash == confirmation.invoice_id,
+                Payment.user_id == current_user.id,
+            )
         )
-    ).with_for_update().first()
+    )
+    payment = result.scalar_one_or_none()
     if not payment:
         logger.warning(f"Payment not found: {confirmation.invoice_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
@@ -170,17 +173,23 @@ async def handle_payment_success(
     current_user.total_stars_earned += confirmation.total_amount
     db.add(current_user)
     if current_user.referred_by_id:
-        referral = db.query(Referral).filter(
-            Referral.referrer_id == current_user.referred_by_id,
-            Referral.referred_user_id == current_user.id,
-            Referral.status == ReferralStatus.ACTIVE,
-        ).first()
+        result = await db.execute(
+            select(Referral).where(
+                (Referral.referrer_id == current_user.referred_by_id) &
+                (Referral.referred_user_id == current_user.id) &
+                (Referral.status == ReferralStatus.ACTIVE)
+            )
+        )
+        referral = result.scalar_one_or_none()
         if referral:
             commissions = calculate_commissions(confirmation.total_amount, True)
-            existing_commission = db.query(ReferralCommission).filter(
-                ReferralCommission.transaction_id == payment.id,
-                ReferralCommission.referral_id == referral.id,
-            ).first()
+            result = await db.execute(
+                select(ReferralCommission).where(
+                    (ReferralCommission.transaction_id == payment.id) &
+                    (ReferralCommission.referral_id == referral.id)
+                )
+            )
+            existing_commission = result.scalar_one_or_none()
             if not existing_commission:
                 commission = ReferralCommission(
                     id=uuid.uuid4(),
@@ -194,7 +203,8 @@ async def handle_payment_success(
                 referral.lifetime_earnings += commissions["referral_commission"]
                 referral.referred_purchase_count += 1
                 referral.referred_purchase_amount += confirmation.total_amount
-                referrer = db.query(User).filter(User.id == current_user.referred_by_id).first()
+                result = await db.execute(select(User).where(User.id == current_user.referred_by_id))
+                referrer = result.scalar_one_or_none()
                 if referrer:
                     referrer.stars_balance += commissions["referral_commission"]
                     referrer.total_stars_earned += commissions["referral_commission"]
@@ -209,7 +219,7 @@ async def handle_payment_success(
                 logger.info(
                     f"Referral commission already exists for transaction {payment.id} - skipping"
                 )
-    db.commit()
+    await db.commit()
     logger.info(
         f"Payment confirmed: {confirmation.invoice_id}, "
         f"user: {current_user.id}, "
@@ -225,21 +235,24 @@ async def handle_payment_success(
 async def handle_payment_failed(
     data: dict,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     invoice_id = data.get("invoice_id")
     error_message = data.get("error_message", "Payment failed")
-    payment = db.query(Payment).filter(
-        Payment.transaction_hash == invoice_id,
-        Payment.user_id == current_user.id
-    ).first()
+    result = await db.execute(
+        select(Payment).where(
+            (Payment.transaction_hash == invoice_id) &
+            (Payment.user_id == current_user.id)
+        )
+    )
+    payment = result.scalar_one_or_none()
     if payment:
         payment.status = PaymentStatus.FAILED
         payment.error_message = error_message
         db.add(payment)
-        db.commit()
+        await db.commit()
         logger.warning(f"Payment failed: {invoice_id}, error: {error_message}")
     return {
         "success": False,

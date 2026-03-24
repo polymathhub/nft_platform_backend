@@ -99,6 +99,222 @@
 
     /* ============ WELCOME SECTION ============ */
     .welcome-section {
+      padding: var(--space-lg) var(--space-lg) 0;
+    }
+
+    .welcome-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ============ SKELETON LOADERS ============ */
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--bg-secondary) 25%,
+        var(--bg-tertiary) 50%,
+        var(--bg-secondary) 75%
+      );
+      background-size: 1000px 100%;
+      animation: shimmer 2s infinite;
+      border-radius: var(--radius-lg);
+    }
+
+    .skeleton-text {
+      height: 12px;
+      margin: 8px 0;
+      border-radius: var(--radius-sm);
+    }
+
+    .skeleton-text.large {
+      height: 24px;
+      margin: 12px 0;
+    }
+
+    .skeleton-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin-right: var(--space-md);
+    }
+
+    .skeleton-card {
+      padding: var(--space-lg);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-lg);
+    }
+
+    .skeleton-stat-card {
+      height: 100px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-lg);
+    }
+
+    .skeleton-nft-card {
+      height: 180px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+    }
+
+    /* ============ ERROR STATES ============ */
+    .error-container {
+      padding: var(--space-xl);
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius-lg);
+      margin: var(--space-lg) 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .error-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ef4444;
+      font-size: 20px;
+    }
+
+    .error-message {
+      font-size: var(--font-size-sm);
+      color: #dc2626;
+      font-weight: 500;
+    }
+
+    .error-details {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+      font-family: 'Monaco', 'Courier New', monospace;
+      background: rgba(0, 0, 0, 0.05);
+      padding: var(--space-sm);
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+    }
+
+    .retry-button {
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      padding: 10px 16px;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .retry-button:hover:not(:disabled) {
+      background: #4c46d0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(88, 86, 214, 0.4);
+    }
+
+    .retry-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .retry-button.loading::after {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ============ EMPTY STATES ============ */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-2xl) var(--space-lg);
+      color: var(--text-tertiary);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: var(--space-lg);
+      opacity: 0.5;
+    }
+
+    .empty-state-title {
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .empty-state-description {
+      font-size: var(--font-size-sm);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-lg);
+    }
+
+    .empty-state-action {
+      display: inline-block;
+      background: var(--color-primary);
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-lg);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      transition: all var(--transition-fast);
+    }
+
+    .empty-state-action:hover {
+      background: #4c46d0;
+      transform: translateY(-2px);
+    }
+
+    /* ============ LOADING INDICATOR ============ */
+    .loading-pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--color-primary);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      margin-left: 4px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .section-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-2xl);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-sm);
+    }
+
+    /* ============ WELCOME SECTION ============ */
+    .welcome-section {
       padding: var(--space-xl) var(--space-lg);
       background: #ffffff;
       border-bottom: 1px solid rgba(26, 32, 44, 0.06);
@@ -764,37 +980,8 @@
     <!-- Recent Activity -->
     <div class="activity-section">
       <h2 class="section-title">Recent Activity</h2>
-      <div class="activity-list">
-        <div class="activity-item">
-          <div class="activity-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          </div>
-          <div class="activity-content">
-            <div class="activity-title">Minted Cosmic Cube</div>
-            <div class="activity-time">2 hrs ago</div>
-          </div>
-          <div class="activity-badge pink">MINTED</div>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
-          </div>
-          <div class="activity-content">
-            <div class="activity-title">Sold Abstract #22</div>
-            <div class="activity-time">1.5 hrs ago</div>
-          </div>
-          <div class="activity-badge blue">SOLD</div>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-          </div>
-          <div class="activity-content">
-            <div class="activity-title">Bought Pixel Park</div>
-            <div class="activity-time">4 hrs ago</div>
-          </div>
-          <div class="activity-badge pink">BOUGHT</div>
-        </div>
+      <div class="activity-list" id="activity-list">
+        <div class="loading-skeleton">Loading recent activity...</div>
       </div>
     </div>
   </div>
@@ -816,29 +1003,133 @@
     window.TelegramUtils = TelegramUtils;
 
     /**
-     * Dashboard Stats Manager - Load and display dashboard statistics
+     * Production-Grade Error Handler Utility
+     * Standardized error handling across all managers
+     */
+    class APIErrorHandler {
+      static async handleError(error, context = '') {
+        console.error(`[${context}]`, error);
+        return {
+          message: this.getErrorMessage(error),
+          details: error?.message || String(error),
+          retry: true,
+          type: this.getErrorType(error)
+        };
+      }
+
+      static getErrorType(error) {
+        if (!error) return 'unknown';
+        if (error.status === 401) return 'unauthorized';
+        if (error.status === 403) return 'forbidden';
+        if (error.status === 404) return 'not_found';
+        if (error.status === 429) return 'rate_limit';
+        if (error.status >= 500) return 'server_error';
+        if (error.message?.includes('timeout')) return 'timeout';
+        if (error.message?.includes('network')) return 'network';
+        return 'unknown';
+      }
+
+      static getErrorMessage(error) {
+        const type = this.getErrorType(error);
+        const messages = {
+          unauthorized: 'Authentication failed. Please refresh and try again.',
+          forbidden: 'You do not have permission to access this resource.',
+          not_found: 'Resource not found. It may have been deleted.',
+          rate_limit: 'Too many requests. Please wait and try again.',
+          server_error: 'Server error. Please try again later.',
+          timeout: 'Request timed out. Please check your connection.',
+          network: 'Network error. Please check your internet connection.',
+          unknown: 'An unexpected error occurred. Please try again.'
+        };
+        return messages[type] || messages.unknown;
+      }
+
+      static renderError(containerId, error, onRetry) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const errorInfo = this.handleError(error, containerId);
+        container.innerHTML = `
+          <div class="error-container">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+              <div class="error-icon">⚠️</div>
+              <div style="flex: 1;">
+                <div class="error-message">${errorInfo.message}</div>
+                ${error?.status ? `<div class="error-details">Error ${error.status}: ${errorInfo.details}</div>` : ''}
+              </div>
+            </div>
+            ${onRetry ? `<button class="retry-button" onclick="event.stopPropagation(); ${onRetry}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2-8.83"></path>
+              </svg>
+              Retry
+            </button>` : ''}
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Production-Grade Dashboard Stats Manager
+     * With error handling, retry logic, and loading states
      */
     class DashboardStatsManager {
       constructor(telegramApi) {
         this.telegramApi = telegramApi;
+        this.retryCount = 0;
+        this.maxRetries = 3;
+        this.retryDelay = 1000;
       }
 
       async loadDashboardStats() {
         try {
-          const response = await this.telegramApi.get('/api/v1/dashboard/stats');
+          this.showLoadingState();
+          const response = await this.withRetry(() => 
+            this.telegramApi.get('/api/v1/dashboard/stats')
+          );
           this.renderStats(response);
+          console.log('[Dashboard] Stats loaded successfully');
         } catch (error) {
-          console.warn('[Dashboard] Failed to load stats:', error);
+          this.renderError(error);
+          console.error('[Dashboard] Stats loading failed:', error);
         }
+      }
+
+      async withRetry(fn) {
+        for (let i = 0; i < this.maxRetries; i++) {
+          try {
+            return await fn();
+          } catch (error) {
+            if (i === this.maxRetries - 1) throw error;
+            console.warn(`[Dashboard] Retry ${i + 1}/${this.maxRetries} in ${this.retryDelay}ms`);
+            await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+            this.retryDelay *= 1.5;
+          }
+        }
+      }
+
+      showLoadingState() {
+        const balanceEl = document.getElementById('balance-amount');
+        if (balanceEl) {
+          balanceEl.innerHTML = '<span class="skeleton skeleton-text large"></span>';
+        }
+
+        document.querySelectorAll('.stat-card .stat-value').forEach(el => {
+          el.innerHTML = '<span class="skeleton skeleton-text"></span>';
+        });
       }
 
       renderStats(stats) {
         try {
+          if (!stats) throw new Error('Invalid stats response');
+
           // Update balance card
           if (stats.total_balance !== undefined) {
             const balanceEl = document.getElementById('balance-amount');
             if (balanceEl) {
               balanceEl.textContent = `$ ${parseFloat(stats.total_balance).toFixed(2)}`;
+              balanceEl.style.opacity = '1';
             }
           }
 
@@ -870,28 +1161,78 @@
             }
           }
 
-          console.log('[Dashboard] Stats rendered successfully:', stats);
+          console.log('[Dashboard] Stats rendered:', stats);
         } catch (error) {
-          console.warn('[Dashboard] Failed to render stats:', error);
+          console.error('[Dashboard] Render stats error:', error);
+          this.renderError(error);
         }
+      }
+
+      renderError(error) {
+        const retryFn = `(() => { const manager = new DashboardStatsManager(telegramApi); manager.loadDashboardStats(); })()`;
+        
+        // Show error in balance card
+        const balanceEl = document.getElementById('balance-amount');
+        if (balanceEl) {
+          balanceEl.innerHTML = `<div style="color: #ef4444; font-size: 12px;">Unable to load</div>`;
+        }
+
+        // Show error message
+        const errorMsg = APIErrorHandler.getErrorMessage(error);
+        console.error('[Dashboard Stats] Error:', errorMsg);
       }
     }
 
     /**
-     * NFT Manager - Load and display user NFTs
+     * Production-Grade NFT Manager
+     * With error handling, loading states, and empty states
      */
     class NFTManager {
       constructor(telegramApi) {
         this.telegramApi = telegramApi;
+        this.maxRetries = 3;
       }
 
       async loadUserNFTs() {
         try {
-          const response = await this.telegramApi.get('/api/v1/dashboard/nfts?limit=6');
+          this.showLoadingState();
+          const response = await this.withRetry(() => 
+            this.telegramApi.get('/api/v1/dashboard/nfts?limit=6')
+          );
           this.renderNFTs(response.nfts || []);
+          console.log('[NFT Manager] NFTs loaded:', response.nfts?.length || 0);
         } catch (error) {
-          console.warn('[Dashboard] Failed to load NFTs:', error);
+          this.renderError(error);
+          console.error('[NFT Manager] Failed to load NFTs:', error);
         }
+      }
+
+      async withRetry(fn) {
+        let delay = 1000;
+        for (let i = 0; i < this.maxRetries; i++) {
+          try {
+            return await fn();
+          } catch (error) {
+            if (i === this.maxRetries - 1) throw error;
+            console.warn(`[NFT Manager] Retry ${i + 1}/${this.maxRetries}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 1.5;
+          }
+        }
+      }
+
+      showLoadingState() {
+        const container = document.getElementById('user-nfts-container');
+        if (!container) return;
+
+        container.innerHTML = `
+          <div class="skeleton-nft-card"></div>
+          <div class="skeleton-nft-card"></div>
+          <div class="skeleton-nft-card"></div>
+          <div class="skeleton-nft-card"></div>
+          <div class="skeleton-nft-card"></div>
+          <div class="skeleton-nft-card"></div>
+        `;
       }
 
       renderNFTs(nfts) {
@@ -900,46 +1241,122 @@
           if (!container) return;
 
           if (!nfts || nfts.length === 0) {
-            container.innerHTML = `
-              <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-tertiary);">
-                <p>No NFTs yet. Start collecting or <a href="/webapp/mint.html" style="color: #5856d6; text-decoration: none; font-weight: 600;">mint your first NFT</a></p>
-              </div>
-            `;
+            this.renderEmptyState(container);
             return;
           }
 
           container.innerHTML = nfts.slice(0, 6).map(nft => `
-            <div class="nft-card" style="border-radius: 12px; overflow: hidden; background: var(--bg-secondary); cursor: pointer; transition: transform 0.2s;">
-              <img src="${nft.image_url || '/static/placeholder-nft.svg'}" alt="${nft.name}" style="width: 100%; height: 160px; object-fit: cover;">
-              <div style="padding: var(--space-md);">
-                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">${nft.name || 'Unnamed NFT'}</h3>
-                <p style="margin: 0; font-size: 12px; color: var(--text-tertiary);">${nft.collection_name || 'Collection'}</p>
+            <div class="nft-card" style="border-radius: 12px; overflow: hidden; background: var(--bg-secondary); cursor: pointer; transition: transform 0.2s; display: flex; flex-direction: column;">
+              <img 
+                src="${nft.image_url || '/static/placeholder-nft.svg'}" 
+                alt="${nft.name || 'NFT'}" 
+                style="width: 100%; height: 160px; object-fit: cover; background: var(--bg-tertiary);"
+                onerror="this.src='/static/placeholder-nft.svg'"
+              >
+              <div style="padding: var(--space-md); flex: 1;">
+                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nft.name || 'Unnamed NFT'}</h3>
+                <p style="margin: 0; font-size: 12px; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${nft.collection_name || 'Collection'}</p>
               </div>
             </div>
           `).join('');
 
-          console.log('[Dashboard] NFTs rendered:', nfts.length);
+          console.log('[NFT Manager] Rendered', nfts.length, 'NFTs');
         } catch (error) {
-          console.warn('[Dashboard] Failed to render NFTs:', error);
+          console.error('[NFT Manager] Render error:', error);
+          this.renderError(error);
         }
+      }
+
+      renderEmptyState(container) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px;">
+            <div class="empty-state">
+              <div class="empty-state-icon">🎨</div>
+              <div class="empty-state-title">No NFTs Yet</div>
+              <div class="empty-state-description">Start your collection by minting or purchasing your first NFT</div>
+              <a href="/webapp/mint.html" class="empty-state-action">Mint Your First NFT</a>
+            </div>
+          </div>
+        `;
+      }
+
+      renderError(error) {
+        const container = document.getElementById('user-nfts-container');
+        if (!container) return;
+
+        const errorMsg = APIErrorHandler.getErrorMessage(error);
+        const retryFn = `(() => { const manager = new NFTManager(telegramApi); manager.loadUserNFTs(); })()`;
+        
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1;">
+            <div class="error-container">
+              <div class="error-icon">⚠️</div>
+              <div class="error-message">Failed to load NFTs</div>
+              <div class="error-details">${errorMsg}</div>
+              <button class="retry-button" onclick="${retryFn}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M20.49 15a9 9 0 1 1-2-8.83"></path>
+                </svg>
+                Retry
+              </button>
+            </div>
+          </div>
+        `;
       }
     }
 
     /**
-     * Activity Manager - Load and display recent transactions
+     * Production-Grade Activity Manager
+     * With error handling, loading states, and empty states
      */
     class ActivityManager {
       constructor(telegramApi) {
         this.telegramApi = telegramApi;
+        this.maxRetries = 3;
       }
 
       async loadRecentActivity() {
         try {
-          const response = await this.telegramApi.get('/api/v1/dashboard/recent-transactions');
+          this.showLoadingState();
+          const response = await this.withRetry(() => 
+            this.telegramApi.get('/api/v1/dashboard/recent-transactions')
+          );
           this.renderActivity(response.transactions || []);
+          console.log('[Activity Manager] Loaded', response.transactions?.length || 0, 'transactions');
         } catch (error) {
-          console.warn('[Dashboard] Failed to load activity:', error);
+          this.renderError(error);
+          console.error('[Activity Manager] Failed to load activity:', error);
         }
+      }
+
+      async withRetry(fn) {
+        let delay = 1000;
+        for (let i = 0; i < this.maxRetries; i++) {
+          try {
+            return await fn();
+          } catch (error) {
+            if (i === this.maxRetries - 1) throw error;
+            console.warn(`[Activity Manager] Retry ${i + 1}/${this.maxRetries}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 1.5;
+          }
+        }
+      }
+
+      showLoadingState() {
+        const activityList = document.getElementById('activity-list');
+        if (!activityList) return;
+
+        activityList.innerHTML = `
+          <div class="section-loading">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 2a10 10 0 0 1 0 20"></path>
+            </svg>
+            <span style="margin-left: 8px;">Loading activity...</span>
+          </div>
+        `;
       }
 
       getActivityIcon(transactionType) {
@@ -949,7 +1366,7 @@
           'purchase': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>',
           'transfer': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path><path d="M10 17h4M12 13v4"></path></svg>'
         };
-        return icons[transactionType.toLowerCase()] || icons.transfer;
+        return icons[transactionType?.toLowerCase?.()] || icons.transfer;
       }
 
       getActivityBadge(transactionType) {
@@ -959,42 +1376,91 @@
           'purchase': `<div class="activity-badge pink">BOUGHT</div>`,
           'transfer': `<div class="activity-badge blue">TRANSFERRED</div>`
         };
-        return badges[transactionType.toLowerCase()] || `<div class="activity-badge pink">${transactionType.toUpperCase()}</div>`;
+        return badges[transactionType?.toLowerCase?.()] || `<div class="activity-badge pink">${String(transactionType).toUpperCase()}</div>`;
       }
 
       formatTime(timestamp) {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-        
-        const minutes = Math.floor(diff / 60000);
-        const hours = Math.floor(diff / 3600000);
-        const days = Math.floor(diff / 86400000);
-        
-        if (minutes < 1) return 'just now';
-        if (minutes < 60) return `${minutes}m ago`;
-        if (hours < 24) return `${hours}h ago`;
-        if (days < 7) return `${days}d ago`;
-        
-        return date.toLocaleDateString();
+        try {
+          const date = new Date(timestamp);
+          const now = new Date();
+          const diff = now - date;
+          
+          const minutes = Math.floor(diff / 60000);
+          const hours = Math.floor(diff / 3600000);
+          const days = Math.floor(diff / 86400000);
+          
+          if (minutes < 1) return 'just now';
+          if (minutes < 60) return `${minutes}m ago`;
+          if (hours < 24) return `${hours}h ago`;
+          if (days < 7) return `${days}d ago`;
+          
+          return date.toLocaleDateString();
+        } catch (e) {
+          return 'recently';
+        }
       }
 
       renderActivity(transactions) {
-        const activityList = document.querySelector('.activity-list');
-        if (!activityList || transactions.length === 0) return;
+        try {
+          const activityList = document.getElementById('activity-list');
+          if (!activityList) return;
 
-        activityList.innerHTML = transactions.slice(0, 3).map(tx => `
-          <div class="activity-item">
-            <div class="activity-icon">
-              ${this.getActivityIcon(tx.transaction_type || 'transfer')}
+          if (!transactions || transactions.length === 0) {
+            this.renderEmptyState(activityList);
+            return;
+          }
+
+          activityList.innerHTML = transactions.slice(0, 3).map(tx => `
+            <div class="activity-item">
+              <div class="activity-icon">
+                ${this.getActivityIcon(tx.transaction_type || 'transfer')}
+              </div>
+              <div class="activity-content">
+                <div class="activity-title">${tx.description || `${tx.transaction_type} on ${tx.nft_name || 'NFT'}`}</div>
+                <div class="activity-time">${this.formatTime(tx.created_at)}</div>
+              </div>
+              ${this.getActivityBadge(tx.transaction_type || 'transfer')}
             </div>
-            <div class="activity-content">
-              <div class="activity-title">${tx.description || `${tx.transaction_type} on ${tx.nft_name || 'NFT'}`}</div>
-              <div class="activity-time">${this.formatTime(tx.created_at)}</div>
-            </div>
-            ${this.getActivityBadge(tx.transaction_type || 'transfer')}
+          `).join('');
+
+          console.log('[Activity Manager] Rendered', transactions.length, 'activities');
+        } catch (error) {
+          console.error('[Activity Manager] Render error:', error);
+          this.renderError(error);
+        }
+      }
+
+      renderEmptyState(container) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-tertiary);">
+            <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;">📊</div>
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px; color: var(--text-secondary);">No Recent Activity</div>
+            <div style="font-size: 12px;">Your activities will appear here</div>
           </div>
-        `).join('');
+        `;
+      }
+
+      renderError(error) {
+        const activityList = document.getElementById('activity-list');
+        if (!activityList) return;
+
+        const errorMsg = APIErrorHandler.getErrorMessage(error);
+        const retryFn = `(() => { const manager = new ActivityManager(telegramApi); manager.loadRecentActivity(); })()`;
+        
+        activityList.innerHTML = `
+          <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <div class="error-message">Failed to load activity</div>
+            <div class="error-details">${errorMsg}</div>
+            <button class="retry-button" onclick="${retryFn}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2-8.83"></path>
+              </svg>
+              Retry
+            </button>
+          </div>
+        `;
       }
     }
 
@@ -1004,38 +1470,49 @@
      */
     function displayTelegramUserInfo() {
       try {
-        // Get user from AuthSystem (which validates with backend)
-        const user = window.AuthSystem?.getUser();
+        let firstName = '';
+        let lastName = '';
+        let username = 'Guest';
+
+        // Try AuthSystem first (has backend-verified data)
+        let user = window.AuthSystem?.getUser?.();
+        if (!user) user = window.authManager?.user;
         
-        if (!user || !user.id) {
-          console.log('[Dashboard] No authenticated user - showing Guest');
-          document.getElementById('user-name').textContent = 'Guest';
-          document.querySelectorAll('#userName').forEach(el => el.textContent = 'Guest');
-          return;
+        if (user) {
+          firstName = user.first_name?.trim() || '';
+          lastName = user.last_name?.trim() || '';
+          username = user.username || user.telegram_id || 'Guest';
+        } else if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+          const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+          firstName = tgUser.first_name?.trim() || '';
+          lastName = tgUser.last_name?.trim() || '';
+          username = tgUser.username || 'Guest';
         }
 
-        // Display username
-        const displayName = user.first_name || user.username || user.name || 'User';
-        document.getElementById('user-name').textContent = displayName;
-        document.querySelectorAll('#userName').forEach(el => {
-          el.textContent = displayName;
+        const displayName = `${firstName} ${lastName}`.trim() || username;
+        
+        const userNameElements = document.querySelectorAll('#user-name');
+        userNameElements.forEach(element => {
+          element.textContent = displayName;
         });
 
         // Display avatar if available
-        if (user.photo_url) {
+        if (user?.photo_url) {
           const avatarElements = document.querySelectorAll('#profileAvatar, #profileAvatarLarge');
           avatarElements.forEach(el => {
             el.style.backgroundImage = `url('${user.photo_url}')`;
             el.style.backgroundSize = 'cover';
             el.style.backgroundPosition = 'center';
-            el.textContent = ''; // Clear placeholder
+            el.textContent = '';
           });
         }
 
-        console.log('[Dashboard] User info displayed:', displayName);
+        console.log(`[Dashboard] Welcome: ${displayName}`, user);
       } catch (error) {
-        console.warn('[Dashboard] Failed to display user info:', error);
-        document.getElementById('user-name').textContent = 'Guest';
+        console.warn('[Dashboard] updateWelcomeGreeting error:', error);
+        document.querySelectorAll('#user-name').forEach(el => {
+          el.textContent = 'User';
+        });
       }
     }
     }

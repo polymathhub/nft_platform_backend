@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 import aiohttp
 import logging
 from typing import Optional
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from urllib.parse import urlparse
 import base64
 import io

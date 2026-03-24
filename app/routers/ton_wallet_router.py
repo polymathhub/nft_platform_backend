@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
 import uuid
@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 from app.database import get_db
 from app.models import User, TONWallet, TONWalletStatus, StarTransaction
-from app.security.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.utils.logger import logger
 from app.config import get_settings
 import json
@@ -94,7 +94,7 @@ async def ton_wallet_health_check():
 @router.post("/connect-request")
 async def initiate_ton_connection(
     request: TONConnectRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
@@ -152,7 +152,7 @@ async def verify_ton_session(session_id: str):
 @router.post("/callback")
 async def ton_connect_callback(
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     try:
         import hmac
@@ -203,18 +203,19 @@ async def ton_connect_callback(
         else:
             logger.info("No init_data provided - allowing wallet connection (development mode)")
         
-        existing_wallet = db.execute(
+        result = await db.execute(
             select(TONWallet).where(
                 TONWallet.wallet_address == wallet_address
             )
-        ).scalar_one_or_none()
+        )
+        existing_wallet = result.scalar_one_or_none()
         
         if existing_wallet:
             existing_wallet.status = "connected"
             existing_wallet.connected_at = datetime.utcnow()
             if wallet_metadata:
                 existing_wallet.wallet_metadata.update(wallet_metadata)
-            db.commit()
+            await db.commit()
             for sid, rec in list(_TON_SESSIONS.items()):
                 if rec.get("wallet_address") == wallet_address:
                     rec["status"] = "connected"
@@ -240,7 +241,7 @@ async def ton_connect_callback(
                 is_verified=False
             )
             db.add(new_user)
-            db.commit()
+            await db.flush()
             new_wallet = TONWallet(
                 id=uuid.uuid4(),
                 user_id=new_user.id,
@@ -256,7 +257,7 @@ async def ton_connect_callback(
                 }
             )
             db.add(new_wallet)
-            db.commit()
+            await db.commit()
             token = create_access_token(data={"sub": str(new_user.id)})
             return {
                 "success": True,
@@ -270,23 +271,24 @@ async def ton_connect_callback(
         raise
     except Exception as e:
         logger.error(f"Error in TON wallet callback: {e}")
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to connect TON wallet: {str(e)}"
         )
 @router.get("/status")
 async def get_ton_wallet_status(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
-        wallet = db.execute(
+        result = await db.execute(
             select(TONWallet).where(
                 (TONWallet.user_id == current_user.id) &
                 (TONWallet.is_primary == True)
             )
-        ).scalar_one_or_none()
+        )
+        wallet = result.scalar_one_or_none()
         if not wallet:
             return {
                 "is_connected": False,

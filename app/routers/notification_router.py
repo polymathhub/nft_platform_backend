@@ -9,7 +9,7 @@ from app.models import Notification
 from app.models.user import User
 from app.services.notification_service import NotificationService
 from app.utils.security import verify_token
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["notifications"])
 @router.get("/notifications", tags=["notifications"], summary="Get User Notifications")

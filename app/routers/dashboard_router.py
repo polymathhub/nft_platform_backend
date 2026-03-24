@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from app.database import get_db_session
 from app.models import User, NFT, Wallet, Payment, Transaction
-from app.security.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.schemas.dashboard import (
     DashboardStatsResponse,
     WalletBalanceResponse,

@@ -17,7 +17,7 @@ from app.services.auth_service import AuthService
 from app.models.wallet import BlockchainType
 from app.models import User
 from app.utils.security import verify_token
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/wallets", tags=["wallets"])
 async def get_current_user_id_from_header(authorization: str = None) -> UUID:

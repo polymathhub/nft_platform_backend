@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi import Request
 from sqlalchemy import select
-from app.utils.auth import get_current_user
+from app.utils.telegram_auth_dependency import get_current_user
 from app.models import Wallet
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -83,6 +83,54 @@ async def mint_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(nft)
+
+@router.post("/metadata/upload", response_model=NFTMetadataUploadResponse)
+async def upload_nft_metadata(
+    metadata: dict,
+    db: AsyncSession = Depends(get_db_session),
+    current_user = Depends(get_current_user),
+) -> NFTMetadataUploadResponse:
+    if not metadata.get("name"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="missing name")
+    uploaded = await NFTService.upload_metadata_to_ipfs(metadata)
+    if not uploaded:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="ipfs upload failed")
+    ipfs_hash, gateway = uploaded
+    return NFTMetadataUploadResponse(ipfs_hash=ipfs_hash, ipfs_url=f"ipfs://{ipfs_hash}", gateway_url=gateway)
+
+@router.get("/user/collection", response_model=UserNFTListResponse)
+async def get_user_nfts(
+    skip: int = 0,
+    limit: int = 50,
+    status: str | None = None,
+    blockchain: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+    current_user = Depends(get_current_user),
+) -> UserNFTListResponse:
+    nfts, total = await NFTService.get_user_nfts(
+        db=db,
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit,
+        status=status,
+        blockchain=blockchain,
+    )
+    items = [NFTResponse.model_validate(n) for n in nfts]
+    return UserNFTListResponse(total=total, page=(skip // limit) + 1, per_page=limit, items=items)
+
+@router.get("/{nft_id}", response_model=NFTDetailResponse)
+async def get_nft(
+    nft_id: UUID,
+    db: AsyncSession = Depends(get_db_session),
+) -> NFTDetailResponse:
+    nft = await NFTService.get_nft_by_id(db, nft_id)
+    if not nft:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="NFT not found",
+        )
+    return NFTDetailResponse.model_validate(nft)
+
 @router.post("/{nft_id}/transfer", response_model=NFTDetailResponse)
 async def transfer_nft(
     nft_id: UUID,
@@ -104,6 +152,7 @@ async def transfer_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(transferred)
+
 @router.post("/{nft_id}/burn", response_model=NFTDetailResponse, status_code=status.HTTP_202_ACCEPTED)
 async def burn_nft(
     nft_id: UUID,
@@ -119,6 +168,7 @@ async def burn_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(burned)
+
 @router.post("/{nft_id}/lock", response_model=NFTDetailResponse)
 async def lock_nft(
     nft_id: UUID,
@@ -140,6 +190,7 @@ async def lock_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(locked)
+
 @router.post("/{nft_id}/unlock", response_model=NFTDetailResponse)
 async def unlock_nft(
     nft_id: UUID,
@@ -156,47 +207,3 @@ async def unlock_nft(
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return NFTDetailResponse.model_validate(unlocked)
-@router.get("/user/collection", response_model=UserNFTListResponse)
-async def get_user_nfts(
-    skip: int = 0,
-    limit: int = 50,
-    status: str | None = None,
-    blockchain: str | None = None,
-    db: AsyncSession = Depends(get_db_session),
-    current_user = Depends(get_current_user),
-) -> UserNFTListResponse:
-    nfts, total = await NFTService.get_user_nfts(
-        db=db,
-        user_id=current_user.id,
-        skip=skip,
-        limit=limit,
-        status=status,
-        blockchain=blockchain,
-    )
-    items = [NFTResponse.model_validate(n) for n in nfts]
-    return UserNFTListResponse(total=total, page=(skip // limit) + 1, per_page=limit, items=items)
-@router.get("/{nft_id}", response_model=NFTDetailResponse)
-async def get_nft(
-    nft_id: UUID,
-    db: AsyncSession = Depends(get_db_session),
-) -> NFTDetailResponse:
-    nft = await NFTService.get_nft_by_id(db, nft_id)
-    if not nft:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="NFT not found",
-        )
-    return NFTDetailResponse.model_validate(nft)
-@router.post("/metadata/upload", response_model=NFTMetadataUploadResponse)
-async def upload_nft_metadata(
-    metadata: dict,
-    db: AsyncSession = Depends(get_db_session),
-    current_user = Depends(get_current_user),
-) -> NFTMetadataUploadResponse:
-    if not metadata.get("name"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="missing name")
-    uploaded = await NFTService.upload_metadata_to_ipfs(metadata)
-    if not uploaded:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="ipfs upload failed")
-    ipfs_hash, gateway = uploaded
-    return NFTMetadataUploadResponse(ipfs_hash=ipfs_hash, ipfs_url=f"ipfs://{ipfs_hash}", gateway_url=gateway)
