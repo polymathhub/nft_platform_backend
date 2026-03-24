@@ -168,16 +168,9 @@ app.add_middleware(
 
 @app.get("/")
 async def root_get():
-    # Serve the dashboard HTML directly to avoid an extra redirect
-    try:
-        dashboard_path = os.path.join(webapp_path, 'dashboard.html')
-        if os.path.isfile(dashboard_path):
-            return FileResponse(dashboard_path, media_type='text/html')
-    except Exception as e:
-        logger.warning(f"Failed to serve dashboard.html for '/': {e}")
-
-    # Fallback: return a minimal JSON response instead of redirecting
-    return JSONResponse(status_code=200, content={"message": "NFT Platform - web UI available at /webapp/"})
+    # Redirect to /webapp/ to maintain consistent routing and proper webapp context
+    # This ensures all navigation links and JavaScript references work correctly
+    return RedirectResponse(url="/webapp/", status_code=301)
 @app.get("/app.js", include_in_schema=False)
 async def redirect_app_js():
     return RedirectResponse(url="/webapp/static/app.js", status_code=301)
