@@ -29,7 +29,7 @@
 
   async function fetchProfileWithInitData(initData) {
     try {
-      const res = await fetch('/api/auth/profile', {
+      const res = await fetch('/api/v1/me', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

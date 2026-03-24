@@ -1,12 +1,66 @@
 import logging
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.models import User
 from app.schemas.user import UserResponse
 from app.utils.auth import get_current_user
+from pydantic import BaseModel
+from typing import Optional
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/user", tags=["user"])
+
+class UserUpdateRequest(BaseModel):
+    """Schema for updating user profile"""
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_creator: Optional[bool] = None
+
+@router.post("/update", response_model=dict, summary="Update User Profile")
+async def update_profile(
+    update_data: UserUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Update user profile information.
+    
+    Only authenticated users can update their own profile.
+    
+    Args:
+        update_data: Fields to update (full_name, avatar_url, is_creator)
+    
+    Returns:
+        Updated user profile
+    """
+    try:
+        # Update only provided fields
+        if update_data.full_name is not None:
+            current_user.full_name = update_data.full_name
+        if update_data.avatar_url is not None:
+            current_user.avatar_url = update_data.avatar_url
+        if update_data.is_creator is not None:
+            current_user.is_creator = update_data.is_creator
+        
+        # Commit changes
+        await db.flush()
+        await db.commit()
+        await db.refresh(current_user)
+        
+        return {
+            "success": True,
+            "data": UserResponse.model_validate(current_user),
+            "message": "User profile updated successfully"
+        }
+    except Exception as e:
+        logger.error(f"Failed to update user profile: {str(e)}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user profile"
+        )
+
 @router.get("/profile", response_model=dict, summary="Get User Profile")
 async def get_profile(
     current_user: User = Depends(get_current_user),

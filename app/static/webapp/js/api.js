@@ -228,6 +228,33 @@ const api = {
       throw error;
     }
   },
+
+  /**
+   * Upload file with Telegram authentication
+   * @param {string} endpoint - API endpoint path
+   * @param {FormData} formData - Form data containing file(s)
+   * @param {Object} options - Additional fetch options
+   * @returns {Promise} Response data
+   */
+  upload: async (endpoint, formData, options = {}) => {
+    try {
+      if (!(formData instanceof FormData)) {
+        throw new Error('formData must be a FormData instance');
+      }
+      return await telegramFetch(endpoint, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - browser will set it with proper boundary
+        headers: {
+          ...options.headers,
+        },
+        ...options,
+      });
+    } catch (error) {
+      console.error(`[API] UPLOAD ${endpoint} failed:`, error);
+      throw error;
+    }
+  },
 };
 
 // Export both api and endpoints for use in other modules

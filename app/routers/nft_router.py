@@ -21,6 +21,49 @@ from app.schemas.nft import (
 from app.services.nft_service import NFTService
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/nfts", tags=["nfts"])
+
+@router.get("", response_model=UserNFTListResponse, summary="List All NFTs")
+async def list_all_nfts(
+    skip: int = 0,
+    limit: int = 50,
+    status: str | None = None,
+    blockchain: str | None = None,
+    db: AsyncSession = Depends(get_db_session),
+) -> UserNFTListResponse:
+    """
+    List all NFTs in the marketplace (public endpoint).
+    
+    Args:
+        skip: Number of items to skip (pagination)
+        limit: Number of items to return (max 50)
+        status: Filter by status (e.g., 'published', 'locked', 'burned')
+        blockchain: Filter by blockchain (e.g., 'ton', 'ethereum')
+    
+    Returns:
+        UserNFTListResponse with paginated NFT list
+    """
+    try:
+        nfts, total = await NFTService.get_all_nfts(
+            db=db,
+            skip=skip,
+            limit=limit,
+            status=status,
+            blockchain=blockchain,
+        )
+        items = [NFTResponse.model_validate(n) for n in nfts]
+        return UserNFTListResponse(
+            total=total, 
+            page=(skip // limit) + 1, 
+            per_page=limit, 
+            items=items
+        )
+    except Exception as e:
+        logger.error(f"Failed to list NFTs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list NFTs"
+        )
+
 @router.post("/mint", response_model=NFTDetailResponse)
 async def mint_nft(
     request: MintNFTRequest,

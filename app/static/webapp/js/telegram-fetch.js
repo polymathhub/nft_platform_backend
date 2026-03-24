@@ -121,7 +121,15 @@ async function telegramFetch(url, options = {}) {
         throw new Error(`${response.status} ${response.statusText}`);
       }
 
-      return response;
+      // For successful non-JSON responses, parse as text and return
+      const text = await response.text();
+      try {
+        // Try to parse as JSON in case Content-Type header was missing
+        return JSON.parse(text);
+      } catch (e) {
+        // Return raw text if not JSON - caller will handle appropriately
+        return { _raw: text, _type: contentType || 'text/plain' };
+      }
   } catch (error) {
     console.error('[TG Fetch] Error:', error.message || error);
     throw error;
@@ -138,12 +146,12 @@ const telegramApi = {
   logout: () => telegramFetch('/api/v1/me/logout'),
   
   // NFTs
-  mintNFT: (data) => telegramFetch('/api/v1/nft/mint', { method: 'POST', body: JSON.stringify(data) }),
+  mintNFT: (data) => telegramFetch('/api/v1/nfts/mint', { method: 'POST', body: JSON.stringify(data) }),
   listNFTs: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return telegramFetch(`/api/v1/nft/list?${qs}`);
+    return telegramFetch(`/api/v1/nfts?${qs}`);
   },
-  getNFT: (id) => telegramFetch(`/api/v1/nft/${id}`),
+  getNFT: (id) => telegramFetch(`/api/v1/nfts/${id}`),
   
   // Wallets
   listWallets: () => telegramFetch('/api/v1/wallets'),

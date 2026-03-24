@@ -303,6 +303,48 @@ class NFTService:
         await db.refresh(nft)
         return nft, None
     @staticmethod
+    async def get_all_nfts(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 50,
+        status: Optional[str] = None,
+        blockchain: Optional[str] = None,
+    ) -> tuple[list[NFT], int]:
+        """Get all NFTs from the platform with optional filtering."""
+        from sqlalchemy import func
+        query = select(NFT)
+        if status:
+            query = query.where(NFT.status == status)
+        if blockchain:
+            query = query.where(NFT.blockchain == blockchain)
+        
+        # Get total count
+        count_result = await db.execute(select(func.count(NFT.id)).select_from(NFT))
+        if status:
+            count_result = await db.execute(
+                select(func.count(NFT.id)).select_from(NFT).where(NFT.status == status)
+            )
+        if blockchain and status:
+            count_result = await db.execute(
+                select(func.count(NFT.id)).select_from(NFT).where(
+                    (NFT.status == status) & (NFT.blockchain == blockchain)
+                )
+            )
+        elif blockchain:
+            count_result = await db.execute(
+                select(func.count(NFT.id)).select_from(NFT).where(NFT.blockchain == blockchain)
+            )
+        
+        total = count_result.scalar() or 0
+        
+        # Get paginated results
+        result = await db.execute(
+            query.order_by(desc(NFT.created_at)).offset(skip).limit(limit)
+        )
+        nfts = result.scalars().all()
+        return nfts, total
+
+    @staticmethod
     async def get_user_nfts(
         db: AsyncSession,
         user_id: UUID,
