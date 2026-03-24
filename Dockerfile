@@ -26,6 +26,12 @@ COPY alembic.ini .
 COPY entrypoint.sh .
 COPY scripts ./scripts
 
+# Explicitly ensure static files are properly copied and accessible
+RUN chmod -R 755 /app/app/static 2>/dev/null || true && \
+    chmod -R 644 /app/app/static/webapp/*.html 2>/dev/null || true && \
+    chmod -R 644 /app/app/static/webapp/css/* 2>/dev/null || true && \
+    chmod -R 644 /app/app/static/webapp/js/* 2>/dev/null || true
+
 # Set entrypoint script permissions
 RUN chmod +x /app/entrypoint.sh && \
     chmod +x /app/scripts/check_syntax.py
