@@ -816,6 +816,116 @@
     window.TelegramUtils = TelegramUtils;
 
     /**
+     * Dashboard Stats Manager - Load and display dashboard statistics
+     */
+    class DashboardStatsManager {
+      constructor(telegramApi) {
+        this.telegramApi = telegramApi;
+      }
+
+      async loadDashboardStats() {
+        try {
+          const response = await this.telegramApi.get('/api/v1/dashboard/stats');
+          this.renderStats(response);
+        } catch (error) {
+          console.warn('[Dashboard] Failed to load stats:', error);
+        }
+      }
+
+      renderStats(stats) {
+        try {
+          // Update balance card
+          if (stats.total_balance !== undefined) {
+            const balanceEl = document.getElementById('balance-amount');
+            if (balanceEl) {
+              balanceEl.textContent = `$ ${parseFloat(stats.total_balance).toFixed(2)}`;
+            }
+          }
+
+          // Update stat cards
+          const statCards = document.querySelectorAll('.stat-card');
+          if (statCards.length >= 4) {
+            // NFTs Owned
+            const nftsValue = statCards[0].querySelector('.stat-value');
+            if (nftsValue && stats.nfts_owned !== undefined) {
+              nftsValue.textContent = stats.nfts_owned;
+            }
+
+            // Active Listings
+            const listingsValue = statCards[1].querySelector('.stat-value');
+            if (listingsValue && stats.active_listings !== undefined) {
+              listingsValue.textContent = stats.active_listings;
+            }
+
+            // Wallet Balance
+            const walletValue = statCards[2].querySelector('.stat-value');
+            if (walletValue && stats.wallet_balance !== undefined) {
+              walletValue.textContent = `$ ${parseFloat(stats.wallet_balance).toFixed(2)}`;
+            }
+
+            // Total Profit
+            const profitValue = statCards[3].querySelector('.stat-value');
+            if (profitValue && stats.profit_24h !== undefined) {
+              profitValue.textContent = `$ ${parseFloat(stats.profit_24h).toFixed(2)}`;
+            }
+          }
+
+          console.log('[Dashboard] Stats rendered successfully:', stats);
+        } catch (error) {
+          console.warn('[Dashboard] Failed to render stats:', error);
+        }
+      }
+    }
+
+    /**
+     * NFT Manager - Load and display user NFTs
+     */
+    class NFTManager {
+      constructor(telegramApi) {
+        this.telegramApi = telegramApi;
+      }
+
+      async loadUserNFTs() {
+        try {
+          const response = await this.telegramApi.get('/api/v1/dashboard/nfts?limit=6');
+          this.renderNFTs(response.nfts || []);
+        } catch (error) {
+          console.warn('[Dashboard] Failed to load NFTs:', error);
+        }
+      }
+
+      renderNFTs(nfts) {
+        try {
+          const container = document.getElementById('user-nfts-container');
+          if (!container) return;
+
+          if (!nfts || nfts.length === 0) {
+            container.innerHTML = `
+              <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-tertiary);">
+                <p>No NFTs yet. Start collecting or <a href="/webapp/mint.html" style="color: #5856d6; text-decoration: none; font-weight: 600;">mint your first NFT</a></p>
+              </div>
+            `;
+            return;
+          }
+
+          container.innerHTML = nfts.slice(0, 6).map(nft => `
+            <div class="nft-card" style="border-radius: 12px; overflow: hidden; background: var(--bg-secondary); cursor: pointer; transition: transform 0.2s;">
+              <img src="${nft.image_url || '/static/placeholder-nft.svg'}" alt="${nft.name}" style="width: 100%; height: 160px; object-fit: cover;">
+              <div style="padding: var(--space-md);">
+                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">${nft.name || 'Unnamed NFT'}</h3>
+                <p style="margin: 0; font-size: 12px; color: var(--text-tertiary);">${nft.collection_name || 'Collection'}</p>
+              </div>
+            </div>
+          `).join('');
+
+          console.log('[Dashboard] NFTs rendered:', nfts.length);
+        } catch (error) {
+          console.warn('[Dashboard] Failed to render NFTs:', error);
+        }
+      }
+    }
+
+    /**
      * Activity Manager - Load and display recent transactions
      */
     class ActivityManager {
@@ -1031,6 +1141,22 @@
 
         // Display user info (pulls from AuthSystem which has backend-verified data)
         displayTelegramUserInfo();
+
+        // Load dashboard stats from backend
+        try {
+          const statsManager = new DashboardStatsManager(telegramApi);
+          await statsManager.loadDashboardStats();
+        } catch (error) {
+          console.warn('[Dashboard] Stats loading skipped:', error.message);
+        }
+
+        // Load user NFTs from backend
+        try {
+          const nftManager = new NFTManager(telegramApi);
+          await nftManager.loadUserNFTs();
+        } catch (error) {
+          console.warn('[Dashboard] NFT loading skipped:', error.message);
+        }
 
         // Load activity if available
         try {
