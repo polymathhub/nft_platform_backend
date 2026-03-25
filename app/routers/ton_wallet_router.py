@@ -309,13 +309,14 @@ async def get_ton_wallet_status(
         )
 @router.get("/list")
 async def list_ton_wallets(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
-        wallets = db.execute(
+        wallets_result = await db.execute(
             select(TONWallet).where(TONWallet.user_id == current_user.id)
-        ).scalars().all()
+        )
+        wallets = wallets_result.scalars().all()
         return {
             "success": True,
             "wallets": [
@@ -338,16 +339,17 @@ async def list_ton_wallets(
 @router.post("/disconnect/{wallet_id}")
 async def disconnect_ton_wallet(
     wallet_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
-        wallet = db.execute(
+        wallet_result = await db.execute(
             select(TONWallet).where(
                 (TONWallet.id == uuid.UUID(wallet_id)) &
                 (TONWallet.user_id == current_user.id)
             )
-        ).scalar_one_or_none()
+        )
+        wallet = wallet_result.scalar_one_or_none()
         if not wallet:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -355,7 +357,7 @@ async def disconnect_ton_wallet(
             )
         wallet.status = TONWalletStatus.DISCONNECTED
         wallet.disconnected_at = datetime.utcnow()
-        db.commit()
+        await db.commit()
         return {
             "success": True,
             "message": "Wallet disconnected successfully"
@@ -364,7 +366,7 @@ async def disconnect_ton_wallet(
         raise
     except Exception as e:
         logger.error(f"Error disconnecting TON wallet: {e}")
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to disconnect wallet"

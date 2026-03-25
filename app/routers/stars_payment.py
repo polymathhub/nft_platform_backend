@@ -261,7 +261,7 @@ async def handle_payment_failed(
 @router.post("/wallet/signin")
 async def wallet_signin(
     req: WalletSignInRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     from eth_account.messages import encode_defunct
     from eth_account import Account
@@ -276,7 +276,8 @@ async def wallet_signin(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Signature verification failed"
             )
-        user = db.query(User).filter(User.telegram_id == wallet_address).first()
+        result = await db.execute(select(User).where(User.telegram_id == wallet_address))
+        user = result.scalar_one_or_none()
         is_new = False
         if not user:
             is_new = True
@@ -292,12 +293,15 @@ async def wallet_signin(
             )
             import secrets
             referral_code = f"REF{secrets.token_hex(3).upper()}"
-            while db.query(User).filter(User.referral_code == referral_code).first():
+            while True:
+                result = await db.execute(select(User).where(User.referral_code == referral_code))
+                if not result.scalar_one_or_none():
+                    break
                 referral_code = f"REF{secrets.token_hex(3).upper()}"
             user.referral_code = referral_code
             db.add(user)
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
             logger.info(f"New wallet user created: {wallet_address}")
         else:
             logger.info(f"Wallet user logged in: {wallet_address}")
@@ -305,7 +309,7 @@ async def wallet_signin(
         access_token = create_access_token(data={"sub": str(user.id)})
         user.last_login = datetime.utcnow()
         db.add(user)
-        db.commit()
+        await db.commit()
         return WalletSignInResponse(
             access_token=access_token,
             user_id=str(user.id),

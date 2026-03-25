@@ -173,7 +173,7 @@ async def confirm_star_payment(
         listing.sold_at = datetime.utcnow()
         listing.sold_to = current_user.id
         db.add(order)
-        db.commit()
+        await db.commit()
         return {
             "success": True,
             "message": "NFT purchased successfully",
@@ -185,7 +185,7 @@ async def confirm_star_payment(
         raise
     except Exception as e:
         logger.error(f"Error confirming star payment: {e}")
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to confirm payment"
@@ -194,17 +194,19 @@ async def confirm_star_payment(
 async def get_marketplace_prices(
     skip: int = 0,
     limit: int = 50,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     try:
-        listings = db.execute(
+        listings_result = await db.execute(
             select(Listing).where(Listing.status == "active").offset(skip).limit(limit)
-        ).scalars().all()
+        )
+        listings = listings_result.scalars().all()
         prices = []
         for listing in listings:
-            nft = db.execute(
+            nft_result = await db.execute(
                 select(NFT).where(NFT.id == listing.nft_id)
-            ).scalar_one_or_none()
+            )
+            nft = nft_result.scalar_one_or_none()
             if nft:
                 stars_price = convert_usdt_to_stars(float(listing.price))
                 prices.append({
@@ -233,15 +235,16 @@ async def get_marketplace_prices(
 async def get_star_transaction_history(
     skip: int = 0,
     limit: int = 20,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
     try:
-        transactions = db.execute(
+        transactions_result = await db.execute(
             select(StarTransaction).where(
                 StarTransaction.user_id == current_user.id
             ).offset(skip).limit(limit)
-        ).scalars().all()
+        )
+        transactions = transactions_result.scalars().all()
         return {
             "success": True,
             "total": len(transactions),
