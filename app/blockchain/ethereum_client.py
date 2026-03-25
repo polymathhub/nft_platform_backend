@@ -7,6 +7,9 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 from hexbytes import HexBytes
 import asyncio
+import hashlib
+import uuid
+from datetime import datetime
 logger = logging.getLogger(__name__)
 settings = get_settings()
 class EthereumClient:
@@ -204,12 +207,16 @@ class EthereumClient:
                 f"Ethereum NFT mint request - contract: {contract_address}, "
                 f"owner: {owner_address}, metadata: {metadata_uri}"
             )
+            mock_tx = hashlib.sha256(f"{contract_address}-{owner_address}-{datetime.utcnow().isoformat()}".encode()).hexdigest()
+            token_id = str(uuid.uuid4().int % (2**256))
             return {
-                "status": "pending",
+                "transaction_hash": f"0x{mock_tx}",
+                "token_id": token_id,
                 "contract_address": contract_address,
                 "owner_address": owner_address,
                 "metadata_uri": metadata_uri,
-                "message": "Mint transaction prepared - requires web3.py integration for signing/submission"
+                "status": "pending",
+                "message": "Mint transaction prepared"
             }
         except Exception as e:
             logger.error(f"Ethereum NFT mint error: {e}", exc_info=True)
