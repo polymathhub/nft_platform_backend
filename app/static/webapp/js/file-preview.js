@@ -39,26 +39,38 @@ class FilePreviewManager {
    */
   init() {
     const fileInput = document.getElementById(this.config.fileInputId);
-    if (fileInput) {
-      fileInput.addEventListener('change', this.handleFileSelect);
+    if (!fileInput) {
+      console.error(`[FilePreview] ERROR: File input element not found with ID: ${this.config.fileInputId}`);
+      return;
     }
+    console.log('[FilePreview] Initialized successfully with file input:', fileInput);
+    fileInput.addEventListener('change', this.handleFileSelect);
   }
 
   /**
    * Main file selection handler
    */
   handleFileSelect(event) {
+    console.log('[FilePreview] File selected, event:', event);
     const file = event.target.files?.[0];
     
-    if (!file) return;
+    if (!file) {
+      console.log('[FilePreview] No file selected');
+      return;
+    }
+
+    console.log('[FilePreview] File details:', { name: file.name, type: file.type, size: file.size });
 
     // Validate file
     const validation = this.validateFile(file);
     if (!validation.valid) {
+      console.error('[FilePreview] Validation failed:', validation.error);
       this.showError(validation.error);
       this.resetFileInput();
       return;
     }
+
+    console.log('[FilePreview] Validation passed, displaying preview');
 
     // Store file and display preview
     this.state.currentFile = file;
@@ -67,6 +79,9 @@ class FilePreviewManager {
     // Callback for form state (if needed)
     if (window.formState) {
       window.formState.imageFile = file;
+      console.log('[FilePreview] File set to formState.imageFile');
+    } else {
+      console.warn('[FilePreview] WARNING: window.formState not available');
     }
   }
 

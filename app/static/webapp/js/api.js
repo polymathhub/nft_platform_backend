@@ -241,13 +241,16 @@ const api = {
       if (!(formData instanceof FormData)) {
         throw new Error('formData must be a FormData instance');
       }
+      
+      // Build headers - NEVER include Content-Type for FormData
+      // The browser MUST set it with the multipart boundary
+      const headers = { ...options.headers };
+      delete headers['Content-Type']; // Ensure no Content-Type override
+      
       return await telegramFetch(endpoint, {
         method: 'POST',
         body: formData,
-        // Don't set Content-Type header - browser will set it with proper boundary
-        headers: {
-          ...options.headers,
-        },
+        headers, // Browser will add: Content-Type: multipart/form-data; boundary=...
         ...options,
       });
     } catch (error) {

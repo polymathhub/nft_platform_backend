@@ -649,12 +649,8 @@
       }
     }
 
-    // State for form data
-    const formState = {
-      imageFile: null,
-      listForSale: true,
-      unlockableContent: false
-    };
+    // Make form state globally accessible to FilePreviewManager BEFORE initialization
+    window.formState = formState;
 
     // Initialize File Preview Manager
     const filePreviewManager = new FilePreviewManager({
@@ -672,8 +668,11 @@
       ]
     });
 
-    // Make form state globally accessible to FilePreviewManager
-    window.formState = formState;
+    // DEBUG: Verify FilePreviewManager is ready
+    console.log('[MINT] FilePreviewManager initialized:', filePreviewManager);
+    console.log('[MINT] window.formState available:', window.formState);
+    console.log('[MINT] File input element:', document.getElementById('file-upload'));
+    console.log('[MINT] Preview container:', document.getElementById('preview'));
 
     // Global functions
     // `window.navigate` is provided by `page-init.js` (normalized to /webapp/*.html)
@@ -783,11 +782,18 @@
         console.log('NFT created:', mintResponse);
         alert(`✨ ${mediaType === 'gif' ? '🎬' : mediaType === 'video' ? '🎥' : '🖼️'} NFT "${formData.name}" created!\n\nTransaction: ${mintResponse.transaction_hash || 'Processing...'}\n\nNFT ID: ${mintResponse.id || 'Pending...'}`);
         
-        // Reset form and navigate
+        // Reset form and preview
         form.reset();
         formState.imageFile = null;
-        const preview = document.getElementById('image-preview');
-        if (preview) preview.innerHTML = '';
+        
+        // Clear preview container (FIX: use correct ID 'preview', not 'image-preview')
+        const preview = document.getElementById('preview');
+        if (preview) {
+          preview.innerHTML = '';
+          // Show upload default icon again
+          const uploadDefault = document.getElementById('upload-default');
+          if (uploadDefault) uploadDefault.style.display = '';
+        }
         
         navigate('/dashboard');
 
@@ -797,10 +803,18 @@
         
         // Provide helpful error messages
         let errorMessage = error.message || 'Please try again';
-        if (error.message && error.message.includes('wallet')) {
-          errorMessage = 'Wallet connection failed. Please reconnect your wallet and try again.';
-        } else if (error.message && error.message.includes('upload')) {
-          errorMessage = 'Failed to upload media. Please check file size and format.';
+        
+        if (error.message) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes('wallet')) {
+            errorMessage = 'Wallet connection failed. Please reconnect your wallet and try again.';
+          } else if (msg.includes('upload') || msg.includes('media')) {
+            errorMessage = 'Failed to upload media. Please check:\n- File format (JPG, PNG, GIF, WebP)\n- File size (max 50MB)\n- Internet connection';
+          } else if (msg.includes('mint') || msg.includes('transaction')) {
+            errorMessage = 'NFT minting failed. The transaction may not have been confirmed. Please try again.';
+          } else if (msg.includes('file') || msg.includes('format')) {
+            errorMessage = 'Invalid file selected. Please use JPG, PNG, GIF, or WebP format.';
+          }
         }
         
         alert(`❌ Error: ${errorMessage}`);
