@@ -27,6 +27,7 @@ from app.routers import (
     ton_wallet_router,
     stars_marketplace_router,
     me_v1_router,
+    auth_profile_router,
 )
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
@@ -299,6 +300,7 @@ app.include_router(
 
 # Legacy auth routers removed. Using stateless Telegram auth via `me_v1_router`.
 app.include_router(me_v1_router, prefix="/api")  # telegram stateless login is here 
+app.include_router(auth_profile_router, prefix="/api")  # /api/auth/profile, /api/auth/logout, /api/auth/check
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(nft_router, prefix="/api/v1")
 app.include_router(notification_router, prefix="/api/v1")

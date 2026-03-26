@@ -13,6 +13,10 @@
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Socket.io for Real-time Notifications -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <!-- Notifications Module -->
+  <script src="js/notifications.js"></script>
   <!-- Global Auth Bootstrap -->
   <script src="js/auth-global.js"></script>
   <!-- NEW: Production-Grade Auth System -->
@@ -534,20 +538,24 @@
 
         <div class="form-grid">
           <div class="form-group">
-            <label class="form-label">Collection</label>
-            <select class="form-select">
-              <option>New Collection</option>
-              <option>Artworks</option>
-              <option>Digital Art</option>
+            <label class="form-label">Blockchain</label>
+            <select class="form-select" id="blockchain-select" required>
+              <option value="">Select blockchain</option>
+              <option value="ton">TON</option>
+              <option value="ethereum">Ethereum</option>
+              <option value="polygon">Polygon</option>
+              <option value="arbitrum">Arbitrum</option>
+              <option value="optimism">Optimism</option>
+              <option value="base">Base</option>
+              <option value="solana">Solana</option>
+              <option value="avalanche">Avalanche</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Chain</label>
-            <select class="form-select">
-              <option>Solana</option>
-              <option>Ethereum</option>
-              <option>Polygon</option>
+            <label class="form-label">Wallet</label>
+            <select class="form-select" id="wallet-select" required disabled>
+              <option value="">Select wallet</option>
             </select>
           </div>
         </div>
@@ -685,9 +693,15 @@
       });
     });
 
-    // Initialize authentication on page load
+    // Initialize authentication and notifications on page load
     (async () => {
-      await ensureAuthenticated();
+      const authenticated = await ensureAuthenticated();
+      if (authenticated && authManager.user) {
+        // Initialize real-time notifications
+        if (window.notificationManager) {
+          window.notificationManager.initialize(authManager.user?.id || authManager.user?.telegram_id);
+        }
+      }
     })();
 
     window.handleImageUpload = (event) => {
@@ -707,6 +721,48 @@
       formState.unlockableContent = toggle.classList.contains('on');
     };
 
+    // Load wallets when blockchain is selected
+    const blockchainSelect = document.getElementById('blockchain-select');
+    const walletSelect = document.getElementById('wallet-select');
+
+    if (blockchainSelect) {
+      blockchainSelect.addEventListener('change', async (e) => {
+        const blockchain = e.target.value;
+        walletSelect.innerHTML = '<option value="">Loading wallets...</option>';
+        walletSelect.disabled = true;
+
+        if (!blockchain) {
+          walletSelect.innerHTML = '<option value="">Select blockchain first</option>';
+          walletSelect.disabled = true;
+          return;
+        }
+
+        try {
+          const response = await api.get(`/api/v1/wallets?blockchain=${blockchain}`);
+          const wallets = response.wallets || [];
+
+          walletSelect.innerHTML = '<option value="">Select wallet</option>';
+          if (wallets.length === 0) {
+            walletSelect.innerHTML += '<option disabled>No wallets found for this blockchain</option>';
+            walletSelect.disabled = true;
+            return;
+          }
+
+          wallets.forEach(wallet => {
+            const option = document.createElement('option');
+            option.value = wallet.id;
+            option.textContent = `${wallet.address.slice(0, 10)}...${wallet.address.slice(-4)}${wallet.is_primary ? ' (Primary)' : ''}`;
+            walletSelect.appendChild(option);
+          });
+
+          walletSelect.disabled = false;
+        } catch (error) {
+          walletSelect.innerHTML = '<option disabled>Failed to load wallets</option>';
+          walletSelect.disabled = true;
+        }
+      });
+    }
+
     window.handleMint = async (event) => {
       event.preventDefault();
       
@@ -718,33 +774,42 @@
         const formData = {
           name: form.querySelector('input[placeholder*="Cosmic"]').value,
           description: form.querySelector('textarea').value,
-          collection: form.querySelectorAll('select')[0].value,
-          chain: form.querySelectorAll('select')[1].value,
-          price: parseFloat(form.querySelector('input[type="number"]').value),
-          royalty_percentage: parseInt(form.querySelectorAll('input[type="number"]')[1].value),
+          blockchain: document.getElementById('blockchain-select')?.value || '',
+          wallet_id: document.getElementById('wallet-select')?.value || '',
+          royalty_percentage: parseInt(form.querySelectorAll('input[type="number"]')[0]?.value || '0'),
           is_listed: formState.listForSale,
           has_unlockable: formState.unlockableContent
         };
 
         // Validate inputs
-        if (!formData.name || !formState.imageFile) {
-          alert('Please enter an NFT name and upload media (image, GIF, or video)');
+        if (!formData.name) {
+          alert('Please enter an NFT name');
           return;
         }
 
-        // Step 1: Get user's wallet list
-        submitBtn.textContent = 'Connecting wallet...';
+        if (!formState.imageFile) {
+          alert('Please upload media (image, GIF, or video)');
+          return;
+        }
+
+        if (!formData.blockchain) {
+          alert('Please select a blockchain');
+          return;
+        }
+
+        if (!formData.wallet_id) {
+          alert('Please select a wallet');
+          return;
+        }
+
+        if (formData.royalty_percentage < 0 || formData.royalty_percentage > 10) {
+          alert('Royalty must be between 0% and 10%');
+          return;
+        }
+
+        // Step 1: Validate wallet
+        submitBtn.textContent = 'Validating wallet...';
         submitBtn.disabled = true;
-
-        const walletResponse = await api.get('/api/v1/wallet/ton/list');
-        if (!walletResponse.wallets || walletResponse.wallets.length === 0) {
-          alert('No wallet found. Please connect your wallet first.');
-          submitBtn.textContent = 'Create NFT';
-          submitBtn.disabled = false;
-          return;
-        }
-
-        const wallet_id = walletResponse.wallets[0].id;
 
         // Step 2: Upload media
         submitBtn.textContent = 'Uploading media...';
@@ -765,69 +830,65 @@
         submitBtn.textContent = 'Minting NFT...';
         
         const mintPayload = {
-          wallet_id: wallet_id,
+          wallet_id: formData.wallet_id,
           name: formData.name,
           description: formData.description,
           image_url: imageUrl,
           royalty_percentage: formData.royalty_percentage,
           metadata: { 
-            collection: formData.collection, 
-            media_type: mediaType,
-            price: formData.price
+            blockchain: formData.blockchain,
+            media_type: mediaType
           }
         };
 
         const mintResponse = await api.post('/api/v1/nfts/mint', mintPayload);
 
-        console.log('NFT created:', mintResponse);
-        alert(`✨ ${mediaType === 'gif' ? '🎬' : mediaType === 'video' ? '🎥' : '🖼️'} NFT "${formData.name}" created!\n\nTransaction: ${mintResponse.transaction_hash || 'Processing...'}\n\nNFT ID: ${mintResponse.id || 'Pending...'}`);
+        alert(`NFT "${formData.name}" created successfully!\n\nTransaction: ${mintResponse.transaction_hash || 'Processing...'}\n\nNFT ID: ${mintResponse.id || 'Pending...'}`);
         
         // Reset form and preview
         form.reset();
         formState.imageFile = null;
         
-        // Clear preview container (FIX: use correct ID 'preview', not 'image-preview')
+        // Clear preview container
         const preview = document.getElementById('preview');
         if (preview) {
           preview.innerHTML = '';
-          // Show upload default icon again
           const uploadDefault = document.getElementById('upload-default');
           if (uploadDefault) uploadDefault.style.display = '';
         }
         
-        navigate('/dashboard');
+        // Reset button
+        submitBtn.textContent = 'Create NFT';
+        submitBtn.disabled = false;
+        
+        // Redirect
+        setTimeout(() => {
+          window.location.href = '/webapp/dashboard.html';
+        }, 2000);
 
       } catch (error) {
-        console.error('NFT minting failed:', error);
         const submitBtn = event.target.querySelector('button[type="submit"]');
         
-        // Provide helpful error messages
         let errorMessage = error.message || 'Please try again';
         
         if (error.message) {
           const msg = error.message.toLowerCase();
           if (msg.includes('wallet')) {
-            errorMessage = 'Wallet connection failed. Please reconnect your wallet and try again.';
+            errorMessage = 'Wallet connection failed. Please try again.';
           } else if (msg.includes('upload') || msg.includes('media')) {
-            errorMessage = 'Failed to upload media. Please check:\n- File format (JPG, PNG, GIF, WebP)\n- File size (max 50MB)\n- Internet connection';
+            errorMessage = 'Failed to upload media. Check file format and size.';
           } else if (msg.includes('mint') || msg.includes('transaction')) {
-            errorMessage = 'NFT minting failed. The transaction may not have been confirmed. Please try again.';
-          } else if (msg.includes('file') || msg.includes('format')) {
-            errorMessage = 'Invalid file selected. Please use JPG, PNG, GIF, or WebP format.';
+            errorMessage = 'NFT minting failed. Please try again.';
           }
         }
         
-        alert(`❌ Error: ${errorMessage}`);
+        alert(`Error: ${errorMessage}`);
         
         // Reset button state
         submitBtn.textContent = 'Create NFT';
         submitBtn.disabled = false;
       }
     };
-  </script>
-  <script type="module">
-    // Import page initialization for consistent user greeting across pages
-    import PageInitializer from './js/page-init.js';
   </script>
   
   <script src="navbar.js?v=CACHE_BUST"></script>

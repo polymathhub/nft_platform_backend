@@ -9,9 +9,10 @@
   <meta name="theme-color" content="#0a0a14">
   <title>Profile NFT Platform</title>
 
-  <!-- Telegram WebApp SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Global Auth Bootstrap -->
+  <!-- Socket.io for Real-time Notifications -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <!-- Notifications Module -->
+  <script src="js/notifications.js"></script>
   <script src="js/auth-global.js"></script>
   <!-- NEW: Production-Grade Auth System -->
   <script src="js/auth-system.js"></script>
@@ -272,7 +273,7 @@
 
         <!-- Profile -->
         <button class="icon-btn profile-btn" id="profileBtn" aria-label="Profile">
-          <div class="profile-avatar" id="profileAvatar">U</div>
+          <div class="profile-avatar" id="navbar-profile-avatar">U</div>
         </button>
       </div>
     </div>
@@ -385,7 +386,9 @@
 
     <!-- Profile Card -->
     <div class="profile-card">
-      <div class="profile-avatar" id="profile-avatar-image" style="background-size: cover; background-position: center;">👤</div>
+      <div class="profile-avatar" id="profile-avatar-image" style="background-size: cover; background-position: center; overflow: hidden;">
+        <img id="profile-avatar-img" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+      </div>
       <div class="profile-name" id="profile-name"></div>
       <div class="profile-username" id="profile-username"></div>
 
@@ -654,8 +657,36 @@
       if (!await ensureAuthenticated()) return;
 
       const user = authManager.user;
-      document.getElementById('profile-name').textContent = user?.username || 'User';
+      document.getElementById('profile-name').textContent = user?.first_name || user?.username || 'User';
       document.getElementById('profile-username').textContent = '@' + (user?.telegram_username?.replace('@', '') || user?.username || 'username');
+      
+      // Load and display profile picture
+      if (user?.profile_picture_url) {
+        const img = document.getElementById('profile-avatar-img');
+        img.src = user.profile_picture_url;
+        img.style.display = 'block';
+        
+        // Hide the emoji fallback when image loads
+        img.onload = () => {
+          img.style.display = 'block';
+        };
+        
+        // Fallback to initial on error
+        img.onerror = () => {
+          img.style.display = 'none';
+          const avatarEl = document.getElementById('profile-avatar-image');
+          const initial = (user?.first_name || user?.username || 'U')[0].toUpperCase();
+          avatarEl.textContent = initial;
+        };
+      } else {
+        // Show user initial as fallback
+        const avatarEl = document.getElementById('profile-avatar-image');
+        const initial = (user?.first_name || user?.username || 'U')[0].toUpperCase();
+        avatarEl.textContent = initial;
+      }
+      
+      // Initialize Socket.io for real-time notifications
+      initializeNotifications(user?.id || user?.telegram_id);
     })();
 
     // Global functions
@@ -683,11 +714,11 @@
       alert('Wallet address copied to clipboard!');
     };
 
-    window.viewOnExplorer = () => {
-      const address = document.getElementById('wallet-address').textContent;
-      // Opens TON blockchain explorer - adjust URL based on network
-      window.open(`https://tonscan.org/address/${address}`, '_blank');
-    };
+    // Initialize real-time notifications using Socket.io
+    function initializeNotifications(userId) {
+      if (!userId || !window.notificationManager) return;
+      window.notificationManager.initialize(userId);
+    }
 
     // Referral System Connected to Backend API
     class ReferralSystem {
@@ -704,22 +735,23 @@
           // Fetch actual referral data from backend
           const response = await this.api.get(this.endpoints.referrals.me);
           this.userData = {
-            referralCode: response.code,
-            totalEarned: response.lifetime_earnings || 0,
-            referralCount: response.total_referrals || 0,
-            pendingEarnings: response.pending_commissions || 0,
+            referralCode: response.code || response.referral_code || '',
+            totalEarned: response.lifetime_earnings || response.total_earned || 0,
+            referralCount: response.total_referrals || response.referral_count || 0,
+            pendingEarnings: response.pending_commissions || response.pending || 0,
           };
           this.renderUI();
         } catch (error) {
-          console.warn('Could not load referral data from backend, using defaults:', error);
-          // Fallback to mock data if backend unavailable
+          console.warn('Could not load referral data:', error.message);
+          // Show error state instead of mock fallback
           this.userData = {
-            referralCode: 'REFXXXXXX',
+            referralCode: 'Loading...',
             totalEarned: 0,
             referralCount: 0,
             pendingEarnings: 0,
           };
           this.renderUI();
+          this.showError('Failed to load referral data. Please refresh the page.');
         } finally {
           this.loading = false;
         }
@@ -929,7 +961,32 @@
           setTimeout(() => toast.remove(), 300);
         }, 2000);
       }
-    }
+
+      showError(message) {
+        const error = document.createElement('div');
+        error.style.cssText = `
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          right: 20px;
+          background: #fee;
+          color: #c00;
+          padding: 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          z-index: 1000;
+          border: 1px solid #fcc;
+          animation: slideIn 0.3s ease-out;
+        `;
+        error.textContent = message;
+        document.body.appendChild(error);
+        
+        setTimeout(() => {
+          error.style.animation = 'slideOut 0.3s ease-in';
+          setTimeout(() => error.remove(), 300);
+        }, 5000);
+      }
 
     // Initialize referral system with API client
     const referralSystem = new ReferralSystem(api, endpoints);

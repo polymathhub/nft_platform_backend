@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NFT Marketplace">
+  <meta name="theme-color" content="#0a0a14">
+  <title>Profile - NFT Platform</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/auth-global.js"></script>
+  <script src="js/auth-system.js"></script>
+  <link href="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.css" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-tertiary: #f0f1f3;
+      --text-primary: #1a202c;
+      --text-secondary: #5a6370;
+      --text-tertiary: #9ca3af;
+      --color-primary: #6366f1;
+      --color-accent: #8b5cf6;
+      --color-success: #10b981;
+      --color-error: #ef4444;
+      --color-warning: #f59e0b;
+      --border-primary: rgba(26, 32, 44, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.3);
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      --font-size-xs: 12px;
+      --font-size-sm: 13px;
+      --font-size-base: 14px;
+      --font-size-lg: 16px;
+      --font-size-xl: 18px;
+      --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+      padding-bottom: calc(80px + var(--safe-area-inset-bottom));
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .page-header {
+      padding: var(--space-xl) var(--space-lg);
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-primary);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .page-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .content-wrapper {
+      padding: var(--space-lg);
+    }
+
+    .section {
+      margin-bottom: var(--space-2xl);
+    }
+
+    .section-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--space-lg);
+    }
+
+    /* Profile Card */
+    .profile-card {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      text-align: center;
+      margin-bottom: var(--space-xl);
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 auto var(--space-lg);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .profile-name {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .profile-handle {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-lg);
+    }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--space-md);
+      padding-top: var(--space-lg);
+      border-top: 1px solid var(--border-primary);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .stat-value {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+    }
+
+    /* Form Group */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+    }
+
+    .form-label {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .form-input,
+    .form-textarea {
+      padding: var(--space-md) var(--space-lg);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      font-family: inherit;
+      transition: all var(--transition-fast);
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--border-focus);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-hint {
+      font-size: var(--font-size-xs);
+      color: var(--text-tertiary);
+    }
+
+    .form-error {
+      font-size: var(--font-size-xs);
+      color: var(--color-error);
+      display: none;
+      animation: slideDown var(--transition-fast) ease-out;
+    }
+
+    .form-error.visible {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: var(--space-md);
+      border-bottom: 1px solid var(--border-primary);
+      margin-bottom: var(--space-xl);
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: var(--space-md);
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+
+    .card-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-md);
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .card-row:last-child {
+      border-bottom: none;
+    }
+
+    .card-label {
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+    }
+
+    .card-value {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: var(--space-md);
+      margin-top: var(--space-lg);
+    }
+
+    .btn {
+      flex: 1;
+      padding: var(--space-md) var(--space-lg);
+      border: none;
+      border-radius: var(--radius-lg);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      color: white;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-primary);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--bg-tertiary);
+      border-color: var(--color-primary);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+      color: var(--color-error);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+      border-color: var(--color-error);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn.loading::after {
+      content: '';
+      width: 14px;
+      height: 14px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin var(--transition-smooth) linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Status Messages */
+    .status-message {
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--radius-lg);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-xl);
+      display: none;
+      animation: slideDown var(--transition-fast) ease-out;
+    }
+
+    .status-message.visible {
+      display: block;
+    }
+
+    .status-message.success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--color-success);
+    }
+
+    .status-message.error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--color-error);
+    }
+
+    /* Copy Button */
+    .copy-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: var(--font-size-xs);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .copy-btn:hover {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .copy-btn.copied {
+      background: var(--color-success);
+      color: white;
+      border-color: var(--color-success);
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      top: var(--space-lg);
+      right: var(--space-lg);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .toast {
+      padding: var(--space-md) var(--space-lg);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      font-size: var(--font-size-sm);
+      animation: slideInRight var(--transition-smooth) ease-out;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Loading Skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-tertiary) 50%, var(--bg-secondary) 100%);
+      background-size: 200% 100%;
+      animation: shimmer var(--transition-smooth) infinite;
+      border-radius: var(--radius-md);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto var(--space-lg);
+    }
+
+    .skeleton-line {
+      height: 16px;
+      width: 100%;
+      margin-bottom: var(--space-md);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: flex-end;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+    }
+
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      width: 100%;
+      background: var(--bg-primary);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: var(--space-xl) var(--space-lg);
+      animation: slideUp var(--transition-smooth) ease-out;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .profile-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Profile</h1>
+    </div>
+
+    <!-- Content -->
+    <div class="content-wrapper">
+      <!-- Status Messages -->
+      <div id="statusMessage" class="status-message"></div>
+
+      <!-- Loading State -->
+      <div id="loadingState" style="display: none;">
+        <div class="profile-card">
+          <div class="skeleton skeleton-avatar"></div>
+          <div class="skeleton skeleton-line" style="width: 60%; margin: 0 auto var(--space-md);"></div>
+          <div class="skeleton skeleton-line" style="width: 80%; margin: 0 auto var(--space-lg);"></div>
+        </div>
+      </div>
+
+      <!-- Profile Content -->
+      <div id="profileContent" style="display: none;">
+        <!-- Profile Card -->
+        <div class="profile-card">
+          <div class="profile-avatar" id="profileAvatar">U</div>
+          <div class="profile-name" id="profileName">Loading...</div>
+          <div class="profile-handle" id="profileHandle"></div>
+          
+          <div class="profile-stats">
+            <div class="stat-item">
+              <div class="stat-value" id="nftsOwned">0</div>
+              <div class="stat-label">NFTs Owned</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="listingsActive">0</div>
+              <div class="stat-label">Listings</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="totalValue">$0</div>
+              <div class="stat-label">Total Value</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="about">About</button>
+          <button class="tab-btn" data-tab="settings">Settings</button>
+          <button class="tab-btn" data-tab="referrals">Referrals</button>
+        </div>
+
+        <!-- About Tab -->
+        <div id="about" class="tab-content active">
+          <!-- Bio Section -->
+          <div class="section">
+            <h3 class="section-title">Bio</h3>
+            <div class="card">
+              <form id="bioForm">
+                <div class="form-group">
+                  <label class="form-label" for="bio">About You</label>
+                  <textarea 
+                    id="bio" 
+                    class="form-textarea" 
+                    placeholder="Tell us about yourself..."
+                    maxlength="500"
+                  ></textarea>
+                  <div class="form-hint">
+                    <span id="bioCount">0</span> / 500 characters
+                  </div>
+                  <div class="form-error" id="bioError"></div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="website">Website</label>
+                  <input 
+                    type="url" 
+                    id="website" 
+                    class="form-input" 
+                    placeholder="https://..."
+                  >
+                  <div class="form-error" id="websiteError"></div>
+                </div>
+
+                <div class="btn-group">
+                  <button type="button" class="btn btn-secondary" id="resetBioBtn">Reset</button>
+                  <button type="submit" class="btn btn-primary" id="saveBioBtn">Save Bio</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Creator Mode Section -->
+          <div class="section">
+            <h3 class="section-title">Creator Mode</h3>
+            <div class="card">
+              <div class="card-row">
+                <div class="card-label">Creator Status</div>
+                <div class="card-value" id="creatorStatus">Disabled</div>
+              </div>
+              
+              <form id="creatorForm" style="display: none;">
+                <div class="form-group">
+                  <label class="form-label" for="creatorName">Creator Name</label>
+                  <input 
+                    type="text" 
+                    id="creatorName" 
+                    class="form-input" 
+                    placeholder="Your artist name"
+                    maxlength="100"
+                  >
+                  <div class="form-error" id="creatorNameError"></div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="creatorBio">Creator Bio</label>
+                  <textarea 
+                    id="creatorBio" 
+                    class="form-textarea" 
+                    placeholder="Describe your art..."
+                    maxlength="500"
+                  ></textarea>
+                  <div class="form-error" id="creatorBioError"></div>
+                </div>
+
+                <div class="btn-group">
+                  <button type="button" class="btn btn-secondary" id="disableCreatorBtn">Disable</button>
+                  <button type="submit" class="btn btn-primary" id="saveCreatorBtn">Save</button>
+                </div>
+              </form>
+
+              <div id="creatorDisabled">
+                <button type="button" class="btn btn-primary" id="enableCreatorBtn" style="width: 100%;">
+                  Enable Creator Mode
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wallet Section -->
+          <div class="section">
+            <h3 class="section-title">Primary Wallet</h3>
+            <div class="card">
+              <div class="card-row">
+                <div class="card-label">Wallet Address</div>
+                <button type="button" class="copy-btn" id="copyWalletBtn">Copy</button>
+              </div>
+              <div class="card-value" id="walletAddress" style="word-break: break-all; font-size: var(--font-size-xs);">
+                Not connected
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+          <div class="section">
+            <h3 class="section-title">Account</h3>
+            <div class="card">
+              <div class="card-row">
+                <div class="card-label">Email</div>
+                <div class="card-value" id="email">-</div>
+              </div>
+              <div class="card-row">
+                <div class="card-label">Joined</div>
+                <div class="card-value" id="joinDate">-</div>
+              </div>
+              <div class="card-row">
+                <div class="card-label">Account Verified</div>
+                <div class="card-value" id="verified">Yes</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Danger Zone</h3>
+            <div class="card">
+              <button type="button" class="btn btn-danger" id="logoutBtn" style="width: 100%;">
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Referrals Tab -->
+        <div id="referrals" class="tab-content">
+          <div class="section">
+            <h3 class="section-title">Your Referral Code</h3>
+            <div class="card">
+              <div class="form-group">
+                <div class="form-label">Referral Code</div>
+                <div style="display: flex; gap: var(--space-md);">
+                  <input 
+                    type="text" 
+                    id="referralCode" 
+                    class="form-input" 
+                    readonly
+                    style="flex: 1;"
+                  >
+                  <button type="button" class="copy-btn" id="copyReferralBtn">Copy</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="form-label">Referral Link</div>
+                <div style="display: flex; gap: var(--space-md);">
+                  <input 
+                    type="text" 
+                    id="referralLink" 
+                    class="form-input" 
+                    readonly
+                    style="flex: 1; font-size: var(--font-size-xs);"
+                  >
+                  <button type="button" class="copy-btn" id="copyLinkBtn">Copy</button>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-primary" id="shareReferralBtn" style="width: 100%;">
+                Share Referral
+              </button>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Referral Stats</h3>
+            <div class="card">
+              <div class="card-row">
+                <div class="card-label">Total Earned</div>
+                <div class="card-value" id="totalEarned">$0.00</div>
+              </div>
+              <div class="card-row">
+                <div class="card-label">Referrals Count</div>
+                <div class="card-value" id="referralCount">0</div>
+              </div>
+              <div class="card-row">
+                <div class="card-label">Pending Balance</div>
+                <div class="card-value" id="pendingBalance">$0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/nft-mint-utils.js"></script>
+
+  <script type="module">
+    import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
+    import { api } from './js/api.js';
+
+    // Initialize auth
+    await initializeAuthSystem();
+    const authManager = window.authManager;
+
+    // UI Elements
+    const loadingState = document.getElementById('loadingState');
+    const profileContent = document.getElementById('profileContent');
+    const statusMessage = document.getElementById('statusMessage');
+    const profileName = document.getElementById('profileName');
+    const profileHandle = document.getElementById('profileHandle');
+    const profileAvatar = document.getElementById('profileAvatar');
+    const nftsOwned = document.getElementById('nftsOwned');
+    const listingsActive = document.getElementById('listingsActive');
+    const totalValue = document.getElementById('totalValue');
+    const email = document.getElementById('email');
+    const joinDate = document.getElementById('joinDate');
+    const verified = document.getElementById('verified');
+    const walletAddress = document.getElementById('walletAddress');
+    const referralCode = document.getElementById('referralCode');
+    const referralLink = document.getElementById('referralLink');
+    const totalEarned = document.getElementById('totalEarned');
+    const referralCount = document.getElementById('referralCount');
+    const pendingBalance = document.getElementById('pendingBalance');
+    const creatorStatus = document.getElementById('creatorStatus');
+    const creatorForm = document.getElementById('creatorForm');
+    const creatorDisabled = document.getElementById('creatorDisabled');
+    const bioForm = document.getElementById('bioForm');
+    const bioField = document.getElementById('bio');
+    const bioCount = document.getElementById('bioCount');
+    const websiteField = document.getElementById('website');
+    const creatorNameField = document.getElementById('creatorName');
+    const creatorBioField = document.getElementById('creatorBio');
+
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.dataset.tab;
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(tabName).classList.add('active');
+      });
+    });
+
+    // Character counters
+    bioField.addEventListener('input', (e) => {
+      bioCount.textContent = e.target.value.length;
+    });
+
+    // Copy buttons
+    document.getElementById('copyWalletBtn').addEventListener('click', () => {
+      copyToClipboard(walletAddress.textContent, 'Wallet address copied');
+    });
+
+    document.getElementById('copyReferralBtn').addEventListener('click', () => {
+      copyToClipboard(referralCode.value, 'Referral code copied');
+    });
+
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+      copyToClipboard(referralLink.value, 'Referral link copied');
+    });
+
+    function copyToClipboard(text, message) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(message, 'success');
+      });
+    }
+
+    // Bio form
+    bioForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const saveBioBtn = document.getElementById('saveBioBtn');
+        saveBioBtn.disabled = true;
+        saveBioBtn.classList.add('loading');
+
+        const response = await api.post('/api/v1/user/update', {
+          bio: bioField.value,
+          website: websiteField.value
+        });
+
+        showStatus('Bio updated successfully', 'success');
+        showToast('Bio saved!', 'success');
+      } catch (error) {
+        showStatus('Failed to update bio: ' + error.message, 'error');
+      } finally {
+        document.getElementById('saveBioBtn').disabled = false;
+        document.getElementById('saveBioBtn').classList.remove('loading');
+      }
+    });
+
+    document.getElementById('resetBioBtn').addEventListener('click', () => {
+      loadUserProfile();
+    });
+
+    // Creator mode
+    document.getElementById('enableCreatorBtn').addEventListener('click', () => {
+      creatorDisabled.style.display = 'none';
+      creatorForm.style.display = 'block';
+    });
+
+    document.getElementById('disableCreatorBtn').addEventListener('click', () => {
+      creatorDisabled.style.display = 'block';
+      creatorForm.style.display = 'none';
+    });
+
+    document.getElementById('creatorForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const saveBtn = document.getElementById('saveCreatorBtn');
+        saveBtn.disabled = true;
+        saveBtn.classList.add('loading');
+
+        const response = await api.post('/api/v1/user/update', {
+          is_creator: true,
+          creator_name: creatorNameField.value,
+          creator_bio: creatorBioField.value
+        });
+
+        showStatus('Creator profile updated', 'success');
+        showToast('Creator profile saved!', 'success');
+        loadUserProfile();
+      } catch (error) {
+        showStatus('Failed to update creator profile: ' + error.message, 'error');
+      } finally {
+        document.getElementById('saveCreatorBtn').disabled = false;
+        document.getElementById('saveCreatorBtn').classList.remove('loading');
+      }
+    });
+
+    // Share referral
+    document.getElementById('shareReferralBtn').addEventListener('click', () => {
+      const text = `Join me on NFT Platform! Use my referral code: ${referralCode.value}\n${referralLink.value}`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: 'NFT Platform',
+          text: text
+        }).catch(() => {
+          // Fallback to copy
+          copyToClipboard(referralLink.value, 'Referral link copied');
+        });
+      } else {
+        copyToClipboard(referralLink.value, 'Referral link copied');
+      }
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to logout?')) return;
+
+      try {
+        await api.post('/api/v1/auth/logout');
+        localStorage.clear();
+        window.location.href = '/webapp/dashboard.html';
+      } catch (error) {
+        showStatus('Logout failed: ' + error.message, 'error');
+      }
+    });
+
+    // Load user profile
+    async function loadUserProfile() {
+      try {
+        loadingState.style.display = 'block';
+        profileContent.style.display = 'none';
+
+        const response = await api.get('/api/v1/user/profile');
+        const user = response;
+
+        // Update profile info
+        profileName.textContent = user.full_name || user.username || 'User';
+        profileHandle.textContent = `@${user.username}`;
+        profileAvatar.textContent = (user.full_name || user.username || 'U').charAt(0).toUpperCase();
+        email.textContent = user.email || '-';
+        verified.textContent = user.is_verified ? 'Yes' : 'No';
+
+        if (user.created_at) {
+          joinDate.textContent = new Date(user.created_at).toLocaleDateString();
+        }
+
+        // Update bio
+        bioField.value = user.bio || '';
+        websiteField.value = user.website || '';
+        bioCount.textContent = (user.bio || '').length;
+
+        // Update creator status
+        if (user.is_creator) {
+          creatorStatus.textContent = 'Enabled';
+          creatorDisabled.style.display = 'none';
+          creatorForm.style.display = 'block';
+          creatorNameField.value = user.creator_name || '';
+          creatorBioField.value = user.creator_bio || '';
+        } else {
+          creatorStatus.textContent = 'Disabled';
+          creatorDisabled.style.display = 'block';
+          creatorForm.style.display = 'none';
+        }
+
+        // Update wallet (if available)
+        if (user.primary_wallet && user.primary_wallet.address) {
+          walletAddress.textContent = `${user.primary_wallet.address.slice(0, 10)}...${user.primary_wallet.address.slice(-10)}`;
+        }
+
+        // Fetch additional stats
+        await loadUserStats();
+        await loadReferralData();
+
+        loadingState.style.display = 'none';
+        profileContent.style.display = 'block';
+      } catch (error) {
+        showStatus('Failed to load profile: ' + error.message, 'error');
+        loadingState.style.display = 'none';
+      }
+    }
+
+    async function loadUserStats() {
+      try {
+        const response = await api.get('/api/v1/dashboard/stats');
+        nftsOwned.textContent = response.nfts_owned || '0';
+        listingsActive.textContent = response.active_listings || '0';
+        totalValue.textContent = `$${(response.total_balance || 0).toFixed(2)}`;
+      } catch (error) {
+        console.warn('Failed to load stats:', error);
+      }
+    }
+
+    async function loadReferralData() {
+      try {
+        const response = await api.get('/api/v1/referrals/me');
+        
+        referralCode.value = response.code || '';
+        referralLink.value = `${window.location.origin}?ref=${response.code}` || '';
+        totalEarned.textContent = `$${(response.lifetime_earnings || 0).toFixed(2)}`;
+        referralCount.textContent = response.total_referrals || '0';
+        pendingBalance.textContent = `$${(response.pending_commissions || 0).toFixed(2)}`;
+      } catch (error) {
+        console.warn('Failed to load referral data:', error);
+      }
+    }
+
+    // Helpers
+    function showStatus(message, type = 'info') {
+      statusMessage.textContent = message;
+      statusMessage.className = `status-message visible ${type}`;
+      
+      if (type === 'success') {
+        setTimeout(() => {
+          statusMessage.classList.remove('visible');
+        }, 3000);
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.getElementById('toastContainer').appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Check auth
+    if (!authManager.isAuthenticated) {
+      showStatus('Please authenticate via Telegram', 'error');
+      return;
+    }
+
+    // Load profile on init
+    loadUserProfile();
+  </script>
+
+  <script src="navbar.js?v=CACHE_BUST"></script>
+  <script>
+    document.querySelectorAll('script[src*="?v=CACHE_BUST"]').forEach(script => {
+      script.src = script.src.replace('CACHE_BUST', Date.now());
+    });
+  </script>
+</body>
+</html>

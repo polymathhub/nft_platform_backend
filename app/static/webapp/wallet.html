@@ -600,6 +600,10 @@
     <link rel="stylesheet" href="navbar.css?v=2.7">
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+   <!-- Socket.io for Real-time Notifications -->
+   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+   <!-- Notifications Module -->
+   <script src="js/notifications.js"></script>
     <!-- Global Auth Bootstrap -->
     <script src="js/auth-global.js"></script>
     <!-- NEW: Production-Grade Auth System -->
@@ -1003,7 +1007,8 @@
     // Make available globally for onclick handlers
     window.tonWallet = new TONWalletUI();
 
-    // ========== ORIGINAL WALLET MANAGER CODE ==========
+    // ========== WALLET MANAGER ==========
+    class WalletManager {
       constructor(api, endpoints) {
         this.api = api;
         this.endpoints = endpoints;
@@ -1016,11 +1021,10 @@
       async loadWallets() {
         try {
           const response = await this.api.get(this.endpoints.wallets.list);
-          this.wallets = response.data || [];
+          this.wallets = response.data || response.wallets || [];
           this.updateWalletUI();
         } catch (error) {
           console.warn('Failed to load wallets:', error);
-          // Keep mock data as fallback
         }
       }
 
@@ -1044,9 +1048,6 @@
             maximumFractionDigits: 2 
           });
         }
-
-        // Update token list
-        this.renderTokenList();
       }
 
       /**
@@ -1109,7 +1110,6 @@
     // Ensure authenticated - with graceful fallback
     async function ensureAuthenticated() {
       try {
-
         // Wait briefly for auth manager
         let authWait = 20;
         while (!authManager.isAuthenticated && authWait > 0) {
@@ -1117,9 +1117,8 @@
           authWait--;
         }
 
-        // If still not authenticated, show in preview mode (don't redirect)
         if (!authManager.isAuthenticated) {
-          console.log('Wallet: preview mode (no authentication)');
+          console.log('Wallet: preview mode');
           return false;
         }
         return true;
@@ -1129,40 +1128,18 @@
       }
     }
 
-    // Global functions
-    // `window.navigate` is provided by `page-init.js` (normalized to /webapp/*.html)
-    
-    // Copy wallet address to clipboard
-    window.copyAddress = function() {
-      const addressEl = document.querySelector('#wallet-address span');
-      if (addressEl) {
-        const address = addressEl.textContent;
-        navigator.clipboard.writeText(address).then(() => {
-          // Show feedback
-          const btn = event?.target?.closest('.wallet-address-copy');
-          if (btn) {
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-            setTimeout(() => {
-              btn.innerHTML = originalHTML;
-            }, 1500);
-          }
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-        });
-      }
-    };
-    
-    // Initialize TON wallet UI
-    const tonWallet = new TONWalletUI();
-    
-    // Initialize user display
+    // Initialize wallet display and notifications
     (async () => {
-      await ensureAuthenticated();
+      const authenticated = await ensureAuthenticated();
       if (authManager.user) {
         const user = authManager.user;
         const firstName = user?.first_name || user?.username?.split(' ')[0] || 'User';
         document.getElementById('user-name').textContent = firstName;
+        
+        // Initialize real-time notifications
+        if (authenticated && window.notificationManager) {
+          window.notificationManager.initialize(user?.id || user?.telegram_id);
+        }
       }
     })();
     
