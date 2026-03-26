@@ -41,11 +41,12 @@ class PageInitializer {
    */
   static async updateWelcomeGreeting() {
     try {
+      let user = null;
       let firstName = 'Guest';
 
       // First priority: Use authManager user (already loaded in memory)
       if (window.authManager?.isAuthenticated && window.authManager?.user) {
-        const user = window.authManager.user;
+        user = window.authManager.user;
         firstName = user.first_name 
           || user.firstName 
           || (user.name && user.name.split(' ')[0])
@@ -57,6 +58,12 @@ class PageInitializer {
       else if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
         const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
         firstName = tgUser.first_name || tgUser.username || 'Guest';
+        // Create a user object from Telegram data
+        user = {
+          first_name: tgUser.first_name,
+          username: tgUser.username,
+          photo_url: tgUser.photo_url
+        };
       }
 
       // Update all elements with id="user-name" (supports multiple on same page)
@@ -64,6 +71,17 @@ class PageInitializer {
       userNameElements.forEach(element => {
         element.textContent = firstName;
       });
+
+      // Update avatars if user has photo_url
+      if (user?.photo_url) {
+        const avatarElements = document.querySelectorAll('#profileAvatar, #profileAvatarLarge');
+        avatarElements.forEach(el => {
+          el.style.backgroundImage = `url('${user.photo_url}')`;
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+          el.textContent = '';
+        });
+      }
 
       console.log(`✅ Welcome greeting updated: Hello ${firstName}`);
     } catch (error) {

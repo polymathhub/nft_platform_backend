@@ -170,7 +170,115 @@
       z-index: 2;
     }
 
-    .network-selector {
+    .balance-card {
+      margin: var(--space-lg) var(--space-lg) var(--space-xl);
+      padding: 48px var(--space-xl);
+      background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%);
+      border-radius: 28px;
+      color: white;
+      box-shadow: 0 16px 48px rgba(88, 86, 214, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .balance-card::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .balance-card-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .balance-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .balance-amount {
+      font-size: 42px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+
+    .balance-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--space-lg);
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .wallet-select {
+      width: 100%;
+      max-width: 360px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.15);
+      color: white;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .wallet-select option {
+      color: #1a1a1a;
+    }
+
+    .balance-chip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+
+    .balance-pulse {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .balance-action {
+      background: #1a1a1a;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .balance-action:hover {
+      background: #333333;
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .wallet-header {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -749,41 +857,17 @@
       <p class="welcome-text">Welcome back, <span id="user-name">Guest</span></p>
     </div>
 
-    <!-- Wallet Card -->
-    <div class="wallet-card">
-      <div class="wallet-header">
-        <div class="network-selector">
-          <span class="network-name" id="ton-network">TON</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
+    <!-- Balance card -->
+    <div class="balance-card" id="wallet-balance-card">
+      <div class="balance-card-content">
         </div>
-        <button class="wallet-menu-btn" id="tonWalletMenuBtn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="5" r="2"></circle>
-            <circle cx="12" cy="12" r="2"></circle>
-            <circle cx="12" cy="19" r="2"></circle>
-          </svg>
-        </button>
-      </div>
-      <div class="wallet-content">
-        <div class="wallet-label">TON Wallet Balance</div>
-        <div class="wallet-balance-row">
-          <div class="wallet-amount" id="ton-balance">0 TON</div>
-          <span class="wallet-change positive" id="ton-change" style="display: none;">+2.4%</span>
-        </div>
-        <div class="wallet-address" id="ton-wallet-display" style="display: none;">
-          <span id="ton-address-short">Not Connected</span>
-          <button class="wallet-address-copy" id="ton-copy-btn" onclick="window.tonWallet && window.tonWallet.copyAddress()" title="Copy address">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-            </svg>
-          </button>
-        </div>
-        <div class="wallet-actions">
-          <button class="wallet-action-btn primary" id="ton-connect-btn" onclick="window.tonWallet && window.tonWallet.connectWallet()">Connect Wallet</button>
-          <button class="wallet-action-btn secondary" id="ton-disconnect-btn" onclick="window.tonWallet && window.tonWallet.disconnectWallet()" style="display: none;">Disconnect</button>
+        <div class="balance-amount" id="selected-wallet-balance">$ 0.00</div>
+        <div class="balance-footer">
+          <div class="balance-chip">
+            <div class="balance-pulse"></div>
+            <span id="selected-wallet-currency">USD</span>
+          </div>
+          <button class="balance-action" onclick="connectWallet()" title="Connect wallet">Connect Wallet</button>
         </div>
       </div>
     </div>
@@ -871,6 +955,9 @@
     import { api, endpoints } from './js/api.js';
     import { tonConnect } from './js/tonconnect.js';
     import { TelegramUtils } from './js/telegram-utils.js';
+
+    // Expose to window
+    window.tonConnect = tonConnect;
 
     // Expose to window for navbar.js to access
     window.TelegramUtils = TelegramUtils;
@@ -1007,24 +1094,128 @@
     // Make available globally for onclick handlers
     window.tonWallet = new TONWalletUI();
 
+    // Wallet manager for API-backed wallet selection and balance
+    const walletManager = new WalletManager(api, endpoints);
+    window.walletManager = walletManager;
+
     // ========== WALLET MANAGER ==========
     class WalletManager {
       constructor(api, endpoints) {
         this.api = api;
         this.endpoints = endpoints;
         this.wallets = [];
+        this.walletBalanceData = null;
+        this.selectedWalletId = null;
       }
 
       /**
        * Load user's wallet list and balance
        */
-      async loadWallets() {
+      async loadWallets(userId) {
         try {
-          const response = await this.api.get(this.endpoints.wallets.list);
+          const params = {};
+          if (userId) params.user_id = userId;
+
+          const response = await this.api.get(this.endpoints.wallets.list, params);
           this.wallets = response.data || response.wallets || [];
+
+          this.renderWalletSelector();
+          await this.loadUserBalance(userId);
           this.updateWalletUI();
         } catch (error) {
           console.warn('Failed to load wallets:', error);
+          this.renderWalletSelector();
+        }
+      }
+
+      async loadUserBalance(userId) {
+        if (!userId) return;
+        try {
+          const balanceEndpoint = `/api/v1/wallets/user/${encodeURIComponent(userId)}/balance`;
+          const balanceResponse = await this.api.get(balanceEndpoint);
+          this.walletBalanceData = balanceResponse;
+          this.updateSelectedWalletCard();
+        } catch (error) {
+          console.warn('Failed to load user balance:', error);
+        }
+      }
+
+      renderWalletSelector() {
+        const selector = document.getElementById('wallet-selector');
+        if (!selector) return;
+
+        selector.innerHTML = '';
+        if (!this.wallets || this.wallets.length === 0) {
+          selector.innerHTML = '<option value="">No wallets found</option>';
+          selector.disabled = true;
+          this.updateSelectedWalletCard();
+          return;
+        }
+
+        const defaultOption = document.createElement('option');
+        defaultOption.textContent = 'Select wallet';
+        defaultOption.value = '';
+        selector.appendChild(defaultOption);
+
+        this.wallets.forEach(wallet => {
+          const option = document.createElement('option');
+          option.value = wallet.id;
+          option.textContent = `${wallet.blockchain?.toUpperCase() || 'Chain'} - ${wallet.address?.slice(0, 10) || ''}...${wallet.address?.slice(-4) || ''}`;
+          if (wallet.is_primary) option.textContent += ' (Primary)';
+          selector.appendChild(option);
+          if (!this.selectedWalletId || wallet.is_primary) {
+            this.selectedWalletId = wallet.id;
+          }
+        });
+
+        if (this.selectedWalletId) {
+          selector.value = this.selectedWalletId;
+        }
+
+        selector.disabled = false;
+        selector.onchange = (e) => {
+          this.selectedWalletId = e.target.value;
+          this.updateSelectedWalletCard();
+        };
+
+        this.updateSelectedWalletCard();
+      }
+
+      updateSelectedWalletCard() {
+        const totalBalanceEl = document.getElementById('selected-wallet-balance');
+        const currencyEl = document.getElementById('selected-wallet-currency');
+        const chip = document.getElementById('balance-chip');
+
+        const defaultText = '$ 0.00';
+        const defaultCurrency = 'USD';
+
+        if (!totalBalanceEl || !currencyEl) return;
+
+        let selectedWallet;
+
+        if (this.walletBalanceData?.wallets && this.selectedWalletId) {
+          selectedWallet = this.walletBalanceData.wallets.find(w => w.wallet_id === this.selectedWalletId);
+        }
+
+        // If no selected wallet, choose primary one or first
+        if (!selectedWallet && this.walletBalanceData?.wallets?.length) {
+          selectedWallet = this.walletBalanceData.wallets.find(w => w.is_primary) || this.walletBalanceData.wallets[0];
+        }
+
+        if (selectedWallet) {
+          const value = Number(selectedWallet.balance ?? 0);
+          totalBalanceEl.textContent = `$ ${value.toFixed(2)}`;
+          currencyEl.textContent = selectedWallet.blockchain ? selectedWallet.blockchain.toUpperCase() : 'USD';
+          if (chip) chip.textContent = selectedWallet.blockchain ? selectedWallet.blockchain.toUpperCase() : 'USD';
+        } else if (this.walletBalanceData?.total_balance_usd !== undefined) {
+          const total = Number(this.walletBalanceData.total_balance_usd || 0);
+          totalBalanceEl.textContent = `$ ${total.toFixed(2)}`;
+          currencyEl.textContent = defaultCurrency;
+          if (chip) chip.textContent = defaultCurrency;
+        } else {
+          totalBalanceEl.textContent = defaultText;
+          currencyEl.textContent = defaultCurrency;
+          if (chip) chip.textContent = defaultCurrency;
         }
       }
 
@@ -1032,21 +1223,20 @@
        * Update wallet display UI with real data
        */
       updateWalletUI() {
-        if (this.wallets.length === 0) return;
+        // If wallet list is not available yet, still initialize selectors
+        if (!this.wallets || this.wallets.length === 0) {
+          return;
+        }
 
-        // Calculate total balance
         let totalBalance = 0;
         this.wallets.forEach(wallet => {
           totalBalance += (wallet.balance || 0) * (wallet.current_price || 1);
         });
 
-        // Update display
-        const balanceEl = document.querySelector('.wallet-amount');
-        if (balanceEl) {
-          balanceEl.textContent = '$' + totalBalance.toLocaleString('en-US', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-          });
+        // Update TON wallet card amount currently not available from data
+        const balanceEl = document.getElementById('ton-balance');
+        if (balanceEl && totalBalance !== 0) {
+          balanceEl.textContent = `${totalBalance.toFixed(4)} TON`;
         }
       }
 
@@ -1135,7 +1325,10 @@
         const user = authManager.user;
         const firstName = user?.first_name || user?.username?.split(' ')[0] || 'User';
         document.getElementById('user-name').textContent = firstName;
-        
+
+        // Load wallet list and balance for the authenticated user
+        await walletManager.loadWallets(user?.id || user?.telegram_id);
+
         // Initialize real-time notifications
         if (authenticated && window.notificationManager) {
           window.notificationManager.initialize(user?.id || user?.telegram_id);
@@ -1143,6 +1336,32 @@
       }
     })();
     
+    async function connectWallet() {
+      try {
+        const result = await window.tonConnect.openModal();
+        if (result && result.account) {
+          // Success
+          const btn = document.querySelector('.balance-action');
+          if (btn) {
+            btn.textContent = 'Wallet Connected';
+            btn.disabled = true;
+          }
+        } else {
+          // Failure
+          const btn = document.querySelector('.balance-action');
+          if (btn) {
+            btn.textContent = 'Wallet Not Connected';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to connect wallet:', error);
+        const btn = document.querySelector('.balance-action');
+        if (btn) {
+          btn.textContent = 'Wallet Not Connected';
+        }
+      }
+    }
+
     // Set active nav item on click
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', function() {

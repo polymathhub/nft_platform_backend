@@ -506,9 +506,12 @@
     <!-- About Section -->
     <div class="section">
       <div class="section-title">About</div>
-      <p id="profile-bio" style="color: var(--text-secondary); font-size: var(--font-size-sm); line-height: 1.6;">
-        Digital artist and NFT collector. Passionate about blockchain technology and creative expression.
-      </p>
+      <div style="position: relative;">
+        <p id="profile-bio" contenteditable="true" style="color: var(--text-secondary); font-size: var(--font-size-sm); line-height: 1.6; min-height: 60px; padding: 8px; border: 1px solid transparent; border-radius: 8px; transition: border-color 0.2s;">
+          Digital artist and NFT collector. Passionate about blockchain technology and creative expression.
+        </p>
+        <button id="edit-bio-btn" style="position: absolute; top: 8px; right: 8px; background: var(--color-primary); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; opacity: 0; transition: opacity 0.2s;">Edit</button>
+      </div>
     </div>
 
     <!-- Account Section -->
@@ -685,10 +688,10 @@
       document.getElementById('profile-name').textContent = user?.first_name || user?.username || 'User';
       document.getElementById('profile-username').textContent = '@' + (user?.telegram_username?.replace('@', '') || user?.username || 'username');
       
-      // Load and display profile picture
-      if (user?.avatar_url) {
+      // Load and display profile picture from Telegram
+      if (user?.photo_url) {
         const img = document.getElementById('profile-avatar-img');
-        img.src = user.avatar_url;
+        img.src = user.photo_url;
         img.style.display = 'block';
         
         img.onload = () => {
@@ -779,6 +782,69 @@
       });
     })();
 
+    // Bio editing functionality
+    (function() {
+      const bioEl = document.getElementById('profile-bio');
+      const editBtn = document.getElementById('edit-bio-btn');
+
+      if (!bioEl || !editBtn) return;
+
+      // Show edit button on hover
+      bioEl.parentElement.addEventListener('mouseenter', () => {
+        editBtn.style.opacity = '1';
+      });
+
+      bioEl.parentElement.addEventListener('mouseleave', () => {
+        if (!bioEl.matches(':focus')) {
+          editBtn.style.opacity = '0';
+        }
+      });
+
+      // Handle edit button click
+      editBtn.addEventListener('click', () => {
+        bioEl.focus();
+        // Select all text for easy replacement
+        const range = document.createRange();
+        range.selectNodeContents(bioEl);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+
+      // Handle focus/blur for styling
+      bioEl.addEventListener('focus', () => {
+        bioEl.style.borderColor = 'var(--color-primary)';
+        bioEl.style.backgroundColor = 'rgba(88, 86, 214, 0.05)';
+        editBtn.style.opacity = '1';
+      });
+
+      bioEl.addEventListener('blur', () => {
+        bioEl.style.borderColor = 'transparent';
+        bioEl.style.backgroundColor = 'transparent';
+        editBtn.style.opacity = '0';
+
+        // Save bio to localStorage (since we don't have a backend endpoint for this)
+        const bio = bioEl.textContent.trim();
+        if (bio) {
+          localStorage.setItem('user_bio', bio);
+        }
+      });
+
+      // Load saved bio on page load
+      const savedBio = localStorage.getItem('user_bio');
+      if (savedBio) {
+        bioEl.textContent = savedBio;
+      }
+
+      // Prevent Enter key from creating new lines (single line bio)
+      bioEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          bioEl.blur();
+        }
+      });
+    })();
+
     // Global functions
     // `window.navigate` is provided by `page-init.js` (normalized to /webapp/*.html)
     
@@ -806,8 +872,22 @@
 
     // Initialize real-time notifications using Socket.io
     function initializeNotifications(userId) {
-      if (!userId || !window.notificationManager) return;
+      if (!userId || !window.notificationManager) {
+        console.warn('Notifications: Missing userId or notificationManager');
+        return;
+      }
+
+      console.log('Initializing notifications for user:', userId);
       window.notificationManager.initialize(userId);
+
+      // Add connection status indicator
+      setTimeout(() => {
+        if (window.notificationManager && window.notificationManager.isConnected) {
+          console.log('✅ Notifications connected');
+        } else {
+          console.warn('❌ Notifications not connected - Socket.io server may not be running');
+        }
+      }, 2000);
     }
 
     // Referral System Connected to Backend API

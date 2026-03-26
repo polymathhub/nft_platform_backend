@@ -319,10 +319,10 @@
 }
 
 .profile-avatar-large {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
@@ -335,7 +335,7 @@
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 20px;
   overflow: hidden;
 }
 

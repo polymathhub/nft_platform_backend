@@ -317,7 +317,6 @@ app.include_router(payment_router)
 app.include_router(referrals_router)
 app.include_router(stars_payment_router)
 
-# Define route handlers BEFORE mounts so they have priority
 # Serve dashboard at root; avoid redirect loops by not forcing a redirect here.
 @app.get("/webapp/", include_in_schema=False)
 async def webapp_root():

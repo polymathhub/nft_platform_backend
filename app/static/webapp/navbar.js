@@ -17,30 +17,24 @@ async function initNavbar() {
     const userName = user.first_name || user.username || user.full_name || 'User';
     if (userNameEl) userNameEl.innerText = userName;
 
-    // Display profile picture
-    if (profileAvatarEl) {
-      if (user.avatar_url) {
-        // Load actual profile picture
-        const img = document.createElement('img');
-        img.src = user.avatar_url;
-        img.alt = 'Profile';
-        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
-        
-        img.onload = () => {
-          profileAvatarEl.innerHTML = '';
-          profileAvatarEl.appendChild(img);
-        };
-        
-        img.onerror = () => {
-          // Fallback to initial
-          const initial = userName[0].toUpperCase();
-          profileAvatarEl.innerHTML = initial;
-        };
-      } else {
-        // Show user initial as fallback
-        const initial = userName[0].toUpperCase();
-        profileAvatarEl.innerHTML = initial;
-      }
+    // Display profile picture on all avatar elements
+    const avatarElements = document.querySelectorAll('#profileAvatar, #profileAvatarLarge, #navbar-profile-avatar');
+    
+    if (user.photo_url) {
+      // Use Telegram photo_url for all avatars
+      avatarElements.forEach(el => {
+        el.style.backgroundImage = `url('${user.photo_url}')`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.textContent = '';
+      });
+    } else {
+      // Fallback to user initial
+      const initial = userName[0].toUpperCase();
+      avatarElements.forEach(el => {
+        el.textContent = initial;
+        el.style.backgroundImage = '';
+      });
     }
   } catch (e) {
     console.warn('[Navbar] getCurrentUser failed', e);
