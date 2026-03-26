@@ -19,10 +19,10 @@ async function initNavbar() {
 
     // Display profile picture
     if (profileAvatarEl) {
-      if (user.profile_picture_url) {
+      if (user.avatar_url) {
         // Load actual profile picture
         const img = document.createElement('img');
-        img.src = user.profile_picture_url;
+        img.src = user.avatar_url;
         img.alt = 'Profile';
         img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
         

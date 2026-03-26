@@ -841,7 +841,9 @@
           }
         };
 
+        console.debug('NFT Mint Payload:', mintPayload);
         const mintResponse = await api.post('/api/v1/nfts/mint', mintPayload);
+        console.debug('NFT Mint Response:', mintResponse);
 
         alert(`NFT "${formData.name}" created successfully!\n\nTransaction: ${mintResponse.transaction_hash || 'Processing...'}\n\nNFT ID: ${mintResponse.id || 'Pending...'}`);
         

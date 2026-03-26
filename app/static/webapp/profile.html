@@ -95,6 +95,17 @@
       font-size: 1.8rem;
       margin: 0 auto var(--space-lg);
       box-shadow: 0 4px 12px rgba(88, 86, 214, 0.15);
+      user-select: none;
+    }
+
+    .profile-card .profile-avatar:hover {
+      opacity: 0.8;
+      box-shadow: 0 6px 16px rgba(88, 86, 214, 0.25);
+    }
+
+    .profile-card .profile-avatar:hover #avatar-upload-hint {
+      background: rgba(0, 0, 0, 0.3);
+      color: rgba(255, 255, 255, 1);
     }
 
     .profile-name {
@@ -386,9 +397,13 @@
 
     <!-- Profile Card -->
     <div class="profile-card">
-      <div class="profile-avatar" id="profile-avatar-image" style="background-size: cover; background-position: center; overflow: hidden;">
+      <div class="profile-avatar" id="profile-avatar-image" style="background-size: cover; background-position: center; overflow: hidden; cursor: pointer; position: relative; transition: opacity 200ms ease;">
         <img id="profile-avatar-img" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+        <div id="avatar-upload-hint" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0); font-size: 12px; color: rgba(255, 255, 255, 0); transition: all 200ms ease;">
+          <span>Change Photo</span>
+        </div>
       </div>
+      <input type="file" id="avatar-file-input" style="display: none;" accept="image/*" />
       <div class="profile-name" id="profile-name"></div>
       <div class="profile-username" id="profile-username"></div>
 
@@ -656,22 +671,30 @@
     (async () => {
       if (!await ensureAuthenticated()) return;
 
-      const user = authManager.user;
+      let user = authManager.user;
+      
+      // Fetch fresh user data from API
+      try {
+        const userData = await telegramFetch('/api/v1/me');
+        user = userData.data || userData;
+        authManager.user = user;
+      } catch (e) {
+        console.warn('Could not fetch fresh user data:', e);
+      }
+
       document.getElementById('profile-name').textContent = user?.first_name || user?.username || 'User';
       document.getElementById('profile-username').textContent = '@' + (user?.telegram_username?.replace('@', '') || user?.username || 'username');
       
       // Load and display profile picture
-      if (user?.profile_picture_url) {
+      if (user?.avatar_url) {
         const img = document.getElementById('profile-avatar-img');
-        img.src = user.profile_picture_url;
+        img.src = user.avatar_url;
         img.style.display = 'block';
         
-        // Hide the emoji fallback when image loads
         img.onload = () => {
           img.style.display = 'block';
         };
         
-        // Fallback to initial on error
         img.onerror = () => {
           img.style.display = 'none';
           const avatarEl = document.getElementById('profile-avatar-image');
@@ -679,7 +702,6 @@
           avatarEl.textContent = initial;
         };
       } else {
-        // Show user initial as fallback
         const avatarEl = document.getElementById('profile-avatar-image');
         const initial = (user?.first_name || user?.username || 'U')[0].toUpperCase();
         avatarEl.textContent = initial;
@@ -687,6 +709,74 @@
       
       // Initialize Socket.io for real-time notifications
       initializeNotifications(user?.id || user?.telegram_id);
+
+      // Setup avatar upload
+      const avatarEl = document.getElementById('profile-avatar-image');
+      const fileInput = document.getElementById('avatar-file-input');
+
+      avatarEl.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file
+        if (!file.type.startsWith('image/')) {
+          alert('Please select a valid image file');
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Image size must be less than 5MB');
+          return;
+        }
+
+        try {
+          // Show loading state
+          avatarEl.style.opacity = '0.5';
+
+          // Upload image
+          const formData = new FormData();
+          formData.append('file', file);
+          const uploadResponse = await api.upload('/api/v1/images/upload', formData);
+
+          if (!uploadResponse.image_url) {
+            throw new Error('Failed to upload image');
+          }
+
+          // Update user profile with new avatar
+          const updateResponse = await api.post('/api/v1/user/update', {
+            avatar_url: uploadResponse.image_url
+          });
+
+          if (updateResponse.success || updateResponse.data) {
+            // Update UI with new image
+            const img = document.getElementById('profile-avatar-img');
+            img.src = uploadResponse.image_url;
+            img.style.display = 'block';
+            img.onload = () => {
+              avatarEl.style.opacity = '1';
+            };
+            img.onerror = () => {
+              avatarEl.style.opacity = '1';
+              alert('Failed to load image');
+            };
+            
+            // Update authManager user data
+            authManager.user.avatar_url = uploadResponse.image_url;
+          } else {
+            throw new Error(updateResponse.message || 'Failed to update profile');
+          }
+        } catch (error) {
+          avatarEl.style.opacity = '1';
+          alert('Error uploading avatar: ' + error.message);
+        } finally {
+          // Reset file input
+          fileInput.value = '';
+        }
+      });
     })();
 
     // Global functions
