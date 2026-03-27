@@ -24,6 +24,7 @@ class NFTService:
         image_url: Optional[str],
         royalty_percentage: int,
         metadata: Optional[dict] = None,
+        image_id: Optional[UUID] = None,
     ) -> tuple[Optional[NFT], Optional[str]]:
         try:
             result = await db.execute(
@@ -38,6 +39,7 @@ class NFTService:
             nft = NFT(
                 user_id=user_id,
                 wallet_id=wallet_id,
+                image_id=image_id,  # Link to Image record created by ImageService
                 name=name,
                 description=description,
                 global_nft_id=global_nft_id,
@@ -88,6 +90,7 @@ class NFTService:
         image_url: Optional[str],
         royalty_percentage: int,
         metadata: Optional[dict] = None,
+        image_id: Optional[UUID] = None,
         ipfs_hash: Optional[str] = None,
         contract_address: Optional[str] = None,
         token_id: Optional[str] = None,
@@ -98,6 +101,7 @@ class NFTService:
                 db=db,
                 user_id=user_id,
                 wallet_id=wallet_id,
+                image_id=image_id,
                 name=name,
                 description=description,
                 image_url=image_url,
@@ -124,13 +128,25 @@ class NFTService:
             blockchain_client = BlockchainClientFactory.create_client(nft.blockchain)
             if not blockchain_client:
                 return None, f"Unsupported blockchain: {nft.blockchain}"
+
+            # Create blockchain metadata with optimized image reference
+            # Important: Don't pass full base64 data URIs to blockchain - use references instead
             blockchain_metadata = {
                 "name": name,
                 "description": description or "",
-                "image": image_url or "",
+                "image": image_url or "",  # Use image_url reference, not base64 data
                 "ipfs_uri": ipfs_hash or "",
                 "attributes": metadata or {}
             }
+
+            # Log metadata size to warn if it's getting too large for IPFS
+            import json
+            metadata_size = len(json.dumps(blockchain_metadata))
+            if metadata_size > 100 * 1024:  # 100KB threshold
+                logger.warning(
+                    f"Blockchain metadata is large ({metadata_size} bytes). "
+                    f"Ensure image_url is a reference, not a massive base64 data URI."
+                )
             import os
             allow_mock_transactions = os.getenv("ALLOW_MOCK_TRANSACTIONS", "true").lower() == "true"
             try:

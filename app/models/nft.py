@@ -48,6 +48,12 @@ class NFT(Base):
         nullable=True,
         index=True,
     )
+    image_id = Column(
+        GUID(),
+        ForeignKey("images.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     blockchain = Column(String(50), nullable=False)
@@ -64,7 +70,7 @@ class NFT(Base):
     lock_reason = Column(String(50), nullable=True)
     locked_until = Column(DateTime, nullable=True)
     ipfs_hash = Column(String(255), nullable=True)
-    image_url = Column(String(500), nullable=True)
+    image_url = Column(String(2083), nullable=True)  # Extended for base64 data URIs (~2KB for reasonable image sizes)
     media_type = Column(String(50), nullable=True)
     royalty_percentage = Column(Integer, default=0, nullable=False)
     attributes = Column(JSON, nullable=True, default=dict)

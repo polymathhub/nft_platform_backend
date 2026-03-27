@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc
+from sqlalchemy.orm import joinedload
 from app.models import NFT, User, Wallet, Collection, RarityTier, Escrow
 from app.models.marketplace import Listing, Offer, Order, ListingStatus, OfferStatus, OrderStatus
 from app.models.nft import NFTStatus
@@ -246,7 +247,8 @@ class MarketplaceService:
         limit: int = 50,
         blockchain: Optional[str] = None,
     ) -> tuple[list[Listing], int]:
-        query = select(Listing).where(Listing.status == ListingStatus.ACTIVE)
+        # Eagerly load NFT relationship to include image_url in response
+        query = select(Listing).options(joinedload(Listing.nft)).where(Listing.status == ListingStatus.ACTIVE)
         if blockchain:
             query = query.where(Listing.blockchain == blockchain)
         count_result = await db.execute(
@@ -256,7 +258,8 @@ class MarketplaceService:
         result = await db.execute(
             query.order_by(desc(Listing.created_at)).offset(skip).limit(limit)
         )
-        listings = result.scalars().all()
+        # Use .unique() when using joinedload to avoid duplicate rows
+        listings = result.unique().scalars().all()
         return listings, total
     @staticmethod
     async def get_user_listings(
@@ -265,13 +268,15 @@ class MarketplaceService:
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[Listing], int]:
-        query = select(Listing).where(Listing.seller_id == user_id)
+        # Eagerly load NFT relationship to include image_url in response
+        query = select(Listing).options(joinedload(Listing.nft)).where(Listing.seller_id == user_id)
         count_result = await db.execute(query)
         total = len(count_result.scalars().all())
         result = await db.execute(
             query.order_by(desc(Listing.created_at)).offset(skip).limit(limit)
         )
-        listings = result.scalars().all()
+        # Use .unique() when using joinedload to avoid duplicate rows
+        listings = result.unique().scalars().all()
         return listings, total
     @staticmethod
     async def get_listing_offers(

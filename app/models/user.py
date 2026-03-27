@@ -23,6 +23,7 @@ class User(Base):
     telegram_username = Column(String(100), nullable=True)
     full_name = Column(String(255), nullable=True)
     avatar_url = Column(String(500), nullable=True)
+    wallet_address = Column(String(255), nullable=True, unique=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     is_verified = Column(Boolean, default=False, nullable=False)
     user_role = Column(Enum(UserRole), default=UserRole.USER, nullable=False, index=True)

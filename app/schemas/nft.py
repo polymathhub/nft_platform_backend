@@ -28,7 +28,8 @@ class MintNFTRequest(BaseModel):
     wallet_id: UUID
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
-    image_url: Optional[str] = Field(None, max_length=500)
+    image_url: Optional[str] = Field(None, max_length=2083)  # Extended to support base64 URIs (2083 max URL length)
+    image_id: Optional[UUID] = None  # Reference to image record created by ImageService
     royalty_percentage: int = Field(0, ge=0, le=100)
     metadata: Optional[Dict[str, Any]] = None
     collection_id: Optional[UUID] = None
@@ -56,6 +57,7 @@ class NFTResponse(BaseModel):
     lock_reason: Optional[str]
     locked_until: Optional[datetime]
     ipfs_hash: Optional[str]
+    image_id: Optional[UUID] = None  # Reference to Image record
     image_url: Optional[str]
     media_type: Optional[str]
     royalty_percentage: int
@@ -77,7 +79,7 @@ class WebAppMintNFTRequest(BaseModel):
     wallet_id: UUID
     nft_name: str = Field(..., min_length=1, max_length=255)
     nft_description: Optional[str] = Field(None, max_length=2000)
-    image_url: Optional[str] = Field(None, max_length=500)
+    image_url: Optional[str] = Field(None, max_length=2083)  # Extended for base64 URIs
     user_id: UUID
     init_data: Optional[str] = None
 class WebAppListNFTRequest(BaseModel):

@@ -77,6 +77,7 @@ async def mint_nft(
         name=request.name,
         description=request.description,
         image_url=request.image_url,
+        image_id=request.image_id,
         royalty_percentage=request.royalty_percentage,
         metadata=request.metadata,
     )

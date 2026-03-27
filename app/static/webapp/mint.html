@@ -809,8 +809,8 @@
           return;
         }
 
-        if (formData.royalty_percentage < 0 || formData.royalty_percentage > 10) {
-          alert('Royalty must be between 0% and 10%');
+        if (formData.royalty_percentage < 0 || formData.royalty_percentage > 100) {
+          alert('Royalty must be between 0% and 100%');
           return;
         }
 
@@ -826,12 +826,14 @@
 
         const uploadResponse = await api.upload('/api/v1/images/upload', uploadFormData);
         
-        if (!uploadResponse.image_url && !uploadResponse.media_url) {
-          throw new Error('Failed to upload media');
+        if (!uploadResponse.image_id) {
+          throw new Error('Failed to upload media: No image_id returned');
         }
 
-        const imageUrl = uploadResponse.image_url || uploadResponse.media_url;
-        const mediaType = uploadResponse.type || 'image';
+        // New ImageService returns: image_id, image_url, image_ref, mime_type, etc
+        const imageUrl = uploadResponse.image_url || uploadResponse.image_ref || '';
+        const imageId = uploadResponse.image_id;
+        const mediaType = uploadResponse.mime_type || uploadResponse.type || 'image';
 
         // Step 3: Create MintNFTRequest and mint NFT
         submitBtn.textContent = 'Minting NFT...';
@@ -841,6 +843,7 @@
           name: formData.name,
           description: formData.description,
           image_url: imageUrl,
+          image_id: imageId,  // Reference to uploaded image record
           royalty_percentage: formData.royalty_percentage,
           metadata: { 
             blockchain: formData.blockchain,
