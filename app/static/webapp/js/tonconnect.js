@@ -81,23 +81,44 @@ class TonConnectManager {
    */
   async _performInitialization(options = {}) {
     try {
-      // ⚠️ CRITICAL: Ensure Telegram WebApp is ready before proceeding
-      console.log('[TonConnect] Waiting for Telegram WebApp to be ready...');
-      let telegramReady = false;
-      let telegramAttempts = 0;
+      // ⚠️ CRITICAL: Wait for Telegram initialization system
+      console.log('[TonConnect] Waiting for Telegram initialization system...');
+      let telegramInitAttempts = 0;
       
-      while (!telegramReady && telegramAttempts < 20) {
-        if (window.Telegram?.WebApp?.initData) {
-          console.log('[TonConnect] ✅ Telegram WebApp is ready with initData');
-          telegramReady = true;
-          break;
-        }
-        telegramAttempts++;
+      while (!window._telegramState?.isInitialized && telegramInitAttempts < 20) {
         await new Promise(r => setTimeout(r, 100));
+        telegramInitAttempts++;
       }
       
-      if (!telegramReady) {
-        console.warn('[TonConnect] ⚠️ Telegram WebApp not ready yet, continuing anyway...');
+      if (window._telegramState?.isInitialized) {
+        console.log('[TonConnect] ✅ Telegram initialization system ready');
+        console.log('[TonConnect] Telegram context:', window._telegramState.inTelegramContext);
+        console.log('[TonConnect] Telegram info:', window._getTelegramInfo?.());
+      } else {
+        console.warn('[TonConnect] ⚠️ Telegram initialization system not ready after waiting, continuing anyway...');
+      }
+      
+      // Now wait for Telegram WebApp initData if in Telegram context
+      if (window._telegramState?.inTelegramContext) {
+        console.log('[TonConnect] In Telegram context, waiting for Telegram WebApp...');
+        let telegramReady = false;
+        let telegramAttempts = 0;
+        
+        while (!telegramReady && telegramAttempts < 30) {
+          if (window.Telegram?.WebApp?.initData) {
+            console.log('[TonConnect] ✅ Telegram WebApp is ready with initData');
+            telegramReady = true;
+            break;
+          }
+          telegramAttempts++;
+          await new Promise(r => setTimeout(r, 100));
+        }
+        
+        if (!telegramReady) {
+          console.warn('[TonConnect] ⚠️ Telegram WebApp initData not available after waiting, continuing...');
+        }
+      } else {
+        console.log('[TonConnect] Not in Telegram context, skipping Telegram WebApp check');
       }
 
       // Check if TonConnect library is loaded

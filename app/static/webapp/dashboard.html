@@ -9,6 +9,11 @@
   <meta name="theme-color" content="#0a0a14">
   <title>Dashboard GiftedForge</title>
 
+  <!-- ⚠️ CRITICAL: Load Telegram initialization FIRST, before any other scripts -->
+  <script src="js/telegram-init.js" type="module"></script>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <!-- Global error handler to prevent going blank -->
   <script>
     window.addEventListener('error', (event) => {
