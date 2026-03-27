@@ -42,10 +42,10 @@ async def setup_telegram_webhook() -> bool:
     if not settings.telegram_bot_token:
         logger.info("Telegram bot token not configured, skipping Telegram webhook setup")
         return True
-    is_production = settings.environment.lower() == "production" and not settings.debug
+    is_production = settings.environment.lower() == "production"
     if not is_production:
         logger.info(
-            f"Local development detected (ENVIRONMENT={settings.environment}, DEBUG={settings.debug}) "
+            f"Local development detected (ENVIRONMENT={settings.environment}) "
             "- skipping Telegram webhook setup (using polling mode)"
         )
         return True
