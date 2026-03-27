@@ -9,7 +9,7 @@ from PIL import Image as PILImage
 from app.utils.telegram_auth_dependency import get_current_user
 from app.services.image_service import ImageService
 from app.models.image import ImageType
-from app.database.engine import get_db_session
+from app.database.connection import get_db_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from urllib.parse import urlparse
 
