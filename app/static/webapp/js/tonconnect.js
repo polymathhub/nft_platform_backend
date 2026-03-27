@@ -39,10 +39,14 @@ class TonConnectManager {
    */
   getManifestUrl() {
     try {
-      return new URL('/tonconnect-manifest.json', window.location.href).href;
+      const url = new URL('/tonconnect-manifest.json', window.location.href).href;
+      console.log('[TonConnect] Manifest URL:', url);
+      return url;
     } catch (e) {
       const origin = window.location?.origin || '';
-      return (origin ? origin.replace(/\/+$/, '') : '') + '/tonconnect-manifest.json';
+      const fallbackUrl = (origin ? origin.replace(/\/+$/, '') : '') + '/tonconnect-manifest.json';
+      console.log('[TonConnect] Using fallback manifest URL:', fallbackUrl);
+      return fallbackUrl;
     }
   }
 
@@ -196,23 +200,25 @@ class TonConnectManager {
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`[TonConnect] Validating manifest (${attempt}/${retries})...`);
+        console.log(`[TonConnect] Validating manifest (${attempt}/${retries}): ${manifestUrl}`);
         const response = await fetch(manifestUrl, {
           method: 'GET',
           cache: 'no-cache',
           signal: AbortSignal.timeout?.(5000), // 5 second timeout
         });
 
+        console.log(`[TonConnect] Manifest response status: ${response.status}`);
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
         }
 
         const manifest = await response.json();
+        console.log('[TonConnect] Manifest loaded, checking url field...');
         if (!manifest.url) {
           throw new Error('Manifest missing "url" field');
         }
 
-        console.log('[TonConnect] Manifest valid');
+        console.log('[TonConnect] ✅ Manifest valid, app URL:', manifest.url);
         return { success: true, url: manifest.url };
 
       } catch (error) {
@@ -220,14 +226,17 @@ class TonConnectManager {
 
         // Exponential backoff before retry
         if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+          const delay = Math.pow(2, attempt) * 100;
+          console.log(`[TonConnect] Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
 
+    console.error('[TonConnect] ❌ Manifest validation failed after all retries');
     return {
       success: false,
-      error: 'Manifest validation failed after retries'
+      error: 'Manifest validation failed after retries. Manifest URL may be incorrect or server unreachable.'
     };
   }
 

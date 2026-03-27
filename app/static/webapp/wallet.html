@@ -1341,37 +1341,63 @@
       try {
         // Ensure TonConnect is initialized
         if (!window.tonConnect) {
-          console.error('TonConnect not initialized');
+          console.error('❌ TonConnect not initialized');
           alert('Wallet service not available. Please refresh the page.');
           return;
         }
         
+        console.log('[Wallet Button] Starting wallet connection. TonConnect ready:', window.tonConnect.isReady);
+        
+        // If not ready, wait for initialization
+        if (!window.tonConnect.isReady) {
+          console.log('[Wallet Button] TonConnect not ready, initializing...');
+          const ready = await window.tonConnect.initialize();
+          if (!ready) {
+            throw new Error('Failed to initialize TonConnect after waiting');
+          }
+        }
+        
+        console.log('[Wallet Button] Opening TonConnect modal...');
         const result = await window.tonConnect.openModal();
+        
         if (result && result.account) {
           // Success
+          console.log('✅ Wallet connected:', result.account.address);
           const btn = document.querySelector('.balance-action');
           if (btn) {
             btn.textContent = 'Wallet Connected';
             btn.disabled = true;
           }
-          console.log('✅ Wallet connected:', result.account);
         } else {
           // User cancelled or failed
+          console.log('[Wallet Button] User cancelled wallet selection');
           const btn = document.querySelector('.balance-action');
           if (btn) {
             btn.textContent = 'Connect Wallet';
           }
-          console.log('Wallet connection cancelled or failed');
         }
       } catch (error) {
-        console.error('❌ Failed to connect wallet:', error);
+        console.error('❌ Wallet connection error:', error);
         const btn = document.querySelector('.balance-action');
         if (btn) {
           btn.textContent = 'Connect Wallet';
         }
-        alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`);
+        alert(`Failed to connect wallet: ${error.message || 'Unknown error. Check browser console.'}`);
       }
     };
+    
+    // Initialize TonConnect immediately on page load
+    (async () => {
+      try {
+        console.log('[Wallet Page] Initializing TonConnect on page load...');
+        if (window.tonConnect && !window.tonConnect.isReady) {
+          const ready = await window.tonConnect.initialize();
+          console.log('[Wallet Page] TonConnect initialization result:', ready);
+        }
+      } catch (error) {
+        console.error('[Wallet Page] TonConnect initialization error:', error);
+      }
+    })();
 
     // Set active nav item on click
     document.querySelectorAll('.nav-item').forEach(item => {
