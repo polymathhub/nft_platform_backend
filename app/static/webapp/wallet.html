@@ -1336,8 +1336,16 @@
       }
     })();
     
-    async function connectWallet() {
+    // Make connectWallet globally accessible for onclick handler
+    window.connectWallet = async function() {
       try {
+        // Ensure TonConnect is initialized
+        if (!window.tonConnect) {
+          console.error('TonConnect not initialized');
+          alert('Wallet service not available. Please refresh the page.');
+          return;
+        }
+        
         const result = await window.tonConnect.openModal();
         if (result && result.account) {
           // Success
@@ -1346,21 +1354,24 @@
             btn.textContent = 'Wallet Connected';
             btn.disabled = true;
           }
+          console.log('✅ Wallet connected:', result.account);
         } else {
-          // Failure
+          // User cancelled or failed
           const btn = document.querySelector('.balance-action');
           if (btn) {
-            btn.textContent = 'Wallet Not Connected';
+            btn.textContent = 'Connect Wallet';
           }
+          console.log('Wallet connection cancelled or failed');
         }
       } catch (error) {
-        console.error('Failed to connect wallet:', error);
+        console.error('❌ Failed to connect wallet:', error);
         const btn = document.querySelector('.balance-action');
         if (btn) {
-          btn.textContent = 'Wallet Not Connected';
+          btn.textContent = 'Connect Wallet';
         }
+        alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`);
       }
-    }
+    };
 
     // Set active nav item on click
     document.querySelectorAll('.nav-item').forEach(item => {
