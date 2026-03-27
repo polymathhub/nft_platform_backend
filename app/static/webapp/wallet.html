@@ -721,6 +721,25 @@
     <link href="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.css" rel="stylesheet" />
 </head>
 <body>
+  <script>
+    // ⚠️ CRITICAL: Define connectWallet shim BEFORE HTML renders
+    // The onclick handlers in HTML will call this function,
+    // and it will be replaced by the real implementation in the module script
+    window.connectWallet = async function() {
+      console.log('[Button Shim] connectWallet called before module init, waiting for real implementation...');
+      // Wait for the real implementation to be defined
+      let attempts = 0;
+      while (!window._connectWalletReal && attempts < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+      if (window._connectWalletReal) {
+        return await window._connectWalletReal();
+      } else {
+        alert('Wallet service is still loading. Please try again in a moment.');
+      }
+    };
+  </script>
   <!-- TOP HEADER -->
   <header class="app-header">
     <div class="header-container">
@@ -1385,6 +1404,9 @@
         alert(`Failed to connect wallet: ${error.message || 'Unknown error. Check browser console.'}`);
       }
     };
+    
+    // Save the real implementation for the shim to call
+    window._connectWalletReal = window.connectWallet;
     
     // Initialize TonConnect immediately on page load
     (async () => {

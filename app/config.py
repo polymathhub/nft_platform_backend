@@ -89,36 +89,45 @@ class Settings(BaseSettings):
     mnemonic_encryption_key: str = Field(...)
     login_max_attempts: int = Field(default=5, ge=1)
     login_block_minutes: int = Field(default=15, ge=1)
-    allowed_origins: list[str] = Field(default=["http://localhost:3000"])
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v, info):
+    allowed_origins_str: str = Field(default="")
+    allowed_origins: list[str] = Field(default=[])
+    
+    def __init__(self, **data):
+        """Parse allowed_origins from string"""
+        if not data.get('allowed_origins') and data.get('allowed_origins_str'):
+            data['allowed_origins'] = self._parse_origins(data['allowed_origins_str'], data)
+        elif not data.get('allowed_origins'):
+            data['allowed_origins'] = self._parse_origins("", data)
+        super().__init__(**data)
+    
+    @staticmethod
+    def _parse_origins(v: str, data: dict) -> list[str]:
+        """Parse origins from string"""
         origins = []
-        if isinstance(v, list):
-            return v  # Already a list, return as-is
-        elif isinstance(v, str):
-            v = v.strip()
-            # FIX: Handle empty strings first
-            if not v:
-                origins = ["http://localhost:3000"]
-                return origins
-            elif v.startswith('[') and v.endswith(']'):
-                try:
-                    parsed = json.loads(v)
-                    if isinstance(parsed, list):
-                        origins = [str(item).strip() for item in parsed if item]
-                except (json.JSONDecodeError, ValueError):
-                    pass
-            if not origins and v:
-                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+        v = (v or "").strip()
+        
+        if not v:
+            origins = ["http://localhost:3000"]
+        elif v.startswith('[') and v.endswith(']'):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    origins = [str(item).strip() for item in parsed if item]
+            except (json.JSONDecodeError, ValueError):
+                pass
+        
+        if not origins and v:
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+        
         if not origins:
             origins = ["http://localhost:3000"]
-        app_url = info.data.get('app_url')
+        
+        app_url = data.get('app_url')
         if app_url:
             origins.append(app_url)
         
         # ✅ SECURITY FIX: Only add localhost in development environments
-        environment = info.data.get('environment', 'development')
+        environment = data.get('environment', 'development')
         if environment.lower() in ('development', 'dev', 'local'):
             localhost_origins = [
                 "http://localhost",
@@ -140,6 +149,13 @@ class Settings(BaseSettings):
                 seen.add(origin)
                 unique_origins.append(origin)
         return unique_origins
+    
+    @field_validator("allowed_origins_str", mode="before")
+    @classmethod
+    def parse_allowed_origins_str(cls, v):
+        """Just pass through the string value as-is"""
+        return v or ""
+    
     require_https: bool = Field(default=True)
     max_request_size: int = Field(default=10485760)
     api_rate_limit: int = Field(default=100)
