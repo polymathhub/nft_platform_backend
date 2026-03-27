@@ -130,8 +130,12 @@ async function telegramFetch(url, options = {}) {
         // Return raw text if not JSON - caller will handle appropriately
         return { _raw: text, _type: contentType || 'text/plain' };
       }
+    } catch (error) {
+      console.error('[TG Fetch] Error:', error.message || error);
+      throw error;
+    }
   } catch (error) {
-    console.error('[TG Fetch] Error:', error.message || error);
+    console.error('[TG Fetch] Unexpected error:', error.message || error);
     throw error;
   }
 }

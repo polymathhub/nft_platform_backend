@@ -129,6 +129,15 @@ async def get_current_user(
         db.add(new_user)
         await db.flush()  # Get auto-generated ID
         await db.commit()
+        
+        # CRITICAL: Refresh user to ensure all database fields populated
+        try:
+            await db.refresh(new_user)
+        except Exception as refresh_error:
+            logger.warning(f"[Auth] Error refreshing user after insert: {refresh_error}")
+            # User was created successfully even if refresh fails
+            # but we log it for debugging
+        
         try:
             request.state.user = new_user
         except Exception:
@@ -200,7 +209,14 @@ async def get_current_user_optional(
         )
         
         db.add(new_user)
+        await db.flush()
         await db.commit()
+        
+        # CRITICAL: Refresh user to ensure all database fields populated
+        try:
+            await db.refresh(new_user)
+        except Exception as refresh_error:
+            logger.warning(f"[Auth] Error refreshing optional user after insert: {refresh_error}")
         
         return new_user
     
