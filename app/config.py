@@ -1,6 +1,6 @@
 from typing import Optional
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
 import os
 import json
@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
     jwt_expiration_hours: int = Field(default=24, ge=1)
     refresh_token_expiration_days: int = Field(default=30, ge=1)
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_database_url(cls, v):
@@ -88,10 +95,14 @@ class Settings(BaseSettings):
     def parse_allowed_origins(cls, v, info):
         origins = []
         if isinstance(v, list):
-            origins = v
+            return v  # Already a list, return as-is
         elif isinstance(v, str):
             v = v.strip()
-            if v.startswith('[') and v.endswith(']'):
+            # FIX: Handle empty strings first
+            if not v:
+                origins = ["http://localhost:3000"]
+                return origins
+            elif v.startswith('[') and v.endswith(']'):
                 try:
                     parsed = json.loads(v)
                     if isinstance(parsed, list):
@@ -194,11 +205,6 @@ class Settings(BaseSettings):
             logger = logging.getLogger(__name__)
             logger.warning("TELEGRAM_BOT_TOKEN format may be invalid")
         return v
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
-        case_sensitive = False
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
