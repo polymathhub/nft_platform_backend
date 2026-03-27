@@ -342,6 +342,43 @@ if os.path.isdir(webapp_path):
     logger.info(f"  HTML files found: {len(html_files)} - {[os.path.basename(f) for f in html_files]}")
     app.mount("/webapp", StaticFiles(directory=webapp_path, html=True), name="webapp")
     logger.info(f"Mounted web app static files at /webapp")
+    
+    # CRITICAL FIX: Handle requests to /js, /css, etc. at root by redirecting to /webapp
+    # This fixes a common issue where browsers request /js/api.js instead of /webapp/js/api.js
+    @app.get("/{path:path}", include_in_schema=False)
+    async def catch_root_static_files(path: str):
+        """
+        Catch requests for static files at root (e.g., /js/api.js, /css/style.css)
+        and redirect/serve from /webapp instead.
+        This addresses browser requests for /js/* when static files are at /webapp/js/*
+        """
+        # Only handle static file paths
+        if path.startswith(('js/', 'css/', 'fonts/', 'images/', 'vendor/')):
+            webapp_static_file_path = os.path.join(webapp_path, path)
+            # Check if file exists in webapp directory
+            if os.path.isfile(webapp_static_file_path):
+                # Get the file extension to determine media type
+                _, ext = os.path.splitext(path)
+                media_types = {
+                    '.js': 'application/javascript',
+                    '.css': 'text/css',
+                    '.json': 'application/json',
+                    '.html': 'text/html',
+                    '.svg': 'image/svg+xml',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.woff': 'font/woff',
+                    '.woff2': 'font/woff2',
+                    '.ttf': 'font/ttf',
+                }
+                media_type = media_types.get(ext, 'application/octet-stream')
+                logger.debug(f"Serving static file from root path: /{path} -> {webapp_static_file_path}")
+                return FileResponse(webapp_static_file_path, media_type=media_type)
+        
+        # For non-static paths or missing files, return 404
+        raise HTTPException(status_code=404, detail="Not found")
     try:
         if os.path.isdir(static_path):
             app.mount("/static", StaticFiles(directory=static_path), name="static")
