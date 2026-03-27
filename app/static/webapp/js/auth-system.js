@@ -357,6 +357,7 @@ window.AuthSystem = {
   clearCache() {
     try {
       localStorage.removeItem('__auth_user_cache');
+      localStorage.removeItem('app_tg_user'); // Legacy key from auth-global.js
       console.log('[AuthSystem] ✅ Cache cleared');
     } catch (error) {
       console.warn('[AuthSystem] Failed to clear cache:', error.message);

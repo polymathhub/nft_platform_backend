@@ -39,10 +39,11 @@ class TonConnectManager {
    */
   getManifestUrl() {
     try {
-      return new URL('/tonconnect-manifest.json', window.location.href).href;
+      // Manifest is served from /static/tonconnect-manifest.json
+      return new URL('/static/tonconnect-manifest.json', window.location.origin).href;
     } catch (e) {
       const origin = window.location?.origin || '';
-      return (origin ? origin.replace(/\/+$/, '') : '') + '/tonconnect-manifest.json';
+      return (origin ? origin : '') + '/static/tonconnect-manifest.json';
     }
   }
 

@@ -82,26 +82,28 @@ class Settings(BaseSettings):
     mnemonic_encryption_key: str = Field(...)
     login_max_attempts: int = Field(default=5, ge=1)
     login_block_minutes: int = Field(default=15, ge=1)
-    allowed_origins: list[str] = Field(default=["http://localhost:3000"])
+    allowed_origins_str: str = Field(default="http://localhost:3000")
+    allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     @field_validator("allowed_origins", mode="before")
     @classmethod
     def parse_allowed_origins(cls, v, info):
+        origins_str = info.data.get('allowed_origins_str', '')
         origins = []
-        if isinstance(v, list):
-            origins = v
-        elif isinstance(v, str):
-            v = v.strip()
-            if v.startswith('[') and v.endswith(']'):
-                try:
-                    parsed = json.loads(v)
-                    if isinstance(parsed, list):
-                        origins = [str(item).strip() for item in parsed if item]
-                except (json.JSONDecodeError, ValueError):
-                    pass
-            if not origins and v:
-                origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+        
+        # Use the string value for parsing
+        v = origins_str.strip()
+        if v.startswith('[') and v.endswith(']'):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    origins = [str(item).strip() for item in parsed if item]
+            except (json.JSONDecodeError, ValueError):
+                pass
+        if not origins and v:
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
         if not origins:
             origins = ["http://localhost:3000"]
+        
         app_url = info.data.get('app_url')
         if app_url:
             origins.append(app_url)
@@ -118,6 +120,8 @@ class Settings(BaseSettings):
                 "http://127.0.0.1:8000",
             ]
             origins.extend(localhost_origins)
+        
+        return list(set(origins))  # Remove duplicates
         else:
             # ✅ In production/staging, remove any localhost origins
             origins = [o for o in origins if 'localhost' not in o.lower() and '127.0.0.1' not in o]

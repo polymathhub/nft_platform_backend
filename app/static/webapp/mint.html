@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="NFT Marketplace">
   <meta name="theme-color" content="#0a0a14">
-  <title>Create NFT-NFT Platform</title>
+  <title>Create NFT-GiftedForge</title>
 
 
 
@@ -17,8 +17,8 @@
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <!-- Notifications Module -->
   <script src="js/notifications.js"></script>
-  <!-- Global Auth Bootstrap -->
-  <script src="js/auth-global.js"></script>
+  <!-- Page Initialization -->
+  <script src="js/page-init.js"></script>
   <!-- NEW: Production-Grade Auth System -->
   <script src="js/auth-system.js"></script>
   <!-- TON Connect UI -->
@@ -620,33 +620,27 @@
   <script src="js/file-preview.js"></script>
 
   <script type="module">
-    import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
     import { api, endpoints } from './js/api.js';
     import { TelegramUtils } from './js/telegram-utils.js';
+    import { tonConnect } from './js/tonconnect.js';
+    import './js/wallet-connection-flow.js';
+
+    // Expose to window
+    window.tonConnect = tonConnect;
 
     // Expose to window for navbar.js to access
     window.TelegramUtils = TelegramUtils;
 
-    // Initialize global auth system immediately (before any page code)
-    await initializeAuthSystem();
-
-    // Use global auth manager (initialized by bootstrap)
-    const authManager = window.authManager;
-
     // Ensure authenticated - with graceful fallback
     async function ensureAuthenticated() {
       try {
-        // Telegram auth system - no token storage
-
-        // Wait briefly for auth manager
-        let authWait = 20;
-        while (!authManager.isAuthenticated && authWait > 0) {
-          await new Promise(r => setTimeout(r, 100));
-          authWait--;
+        // Wait for AuthSystem to initialize
+        if (!window.AuthSystem.isInitialized) {
+          await window.AuthSystem.initialize();
         }
 
         // If still not authenticated, show in preview mode
-        if (!authManager.isAuthenticated) {
+        if (!window.AuthSystem.isAuthenticated) {
           console.log('Mint: preview mode (no authentication)');
           return false;
         }
@@ -703,10 +697,10 @@
     // Initialize authentication and notifications on page load
     (async () => {
       const authenticated = await ensureAuthenticated();
-      if (authenticated && authManager.user) {
+      if (authenticated && window.AuthSystem.user) {
         // Initialize real-time notifications
         if (window.notificationManager) {
-          window.notificationManager.initialize(authManager.user?.id || authManager.user?.telegram_id);
+          window.notificationManager.initialize(window.AuthSystem.user?.id || window.AuthSystem.user?.telegram_id);
         }
       }
     })();
@@ -744,14 +738,42 @@
           return;
         }
 
+        // Ensure user is authenticated
+        if (!window.AuthSystem?.isAuthenticated || !window.AuthSystem?.user) {
+          walletSelect.innerHTML = '<option disabled>Please authenticate first</option>';
+          walletSelect.disabled = true;
+          return;
+        }
+
         try {
-          const response = await api.get(`/api/v1/wallets?blockchain=${blockchain}`);
-          const wallets = response.wallets || [];
+          const userId = window.AuthSystem.user.id || window.AuthSystem.user.telegram_id;
+          const response = await api.get(`/api/v1/wallets?user_id=${userId}&blockchain=${blockchain}`);
+          const wallets = Array.isArray(response) ? response : (response.wallets || []);
 
           walletSelect.innerHTML = '<option value="">Select wallet</option>';
-          if (wallets.length === 0) {
-            walletSelect.innerHTML += '<option disabled>No wallets found for this blockchain</option>';
-            walletSelect.disabled = true;
+          if (!wallets || wallets.length === 0) {
+            // Add "Connect Wallet" option
+            const connectOption = document.createElement('option');
+            connectOption.value = 'connect_wallet';
+            connectOption.textContent = '🔗 Connect Wallet';
+            connectOption.style.fontWeight = 'bold';
+            connectOption.style.color = '#6366f1';
+            walletSelect.appendChild(connectOption);
+            walletSelect.disabled = false;
+            
+            // Add event listener for wallet connection
+            walletSelect.addEventListener('change', (e) => {
+              if (e.target.value === 'connect_wallet') {
+                // Reset selection
+                e.target.value = '';
+                // Trigger wallet connection
+                if (window.walletConnectionFlow) {
+                  window.walletConnectionFlow.connectWallet();
+                } else {
+                  alert('Wallet connection not available. Please refresh the page.');
+                }
+              }
+            });
             return;
           }
 
@@ -764,6 +786,7 @@
 
           walletSelect.disabled = false;
         } catch (error) {
+          console.error('Error loading wallets:', error);
           walletSelect.innerHTML = '<option disabled>Failed to load wallets</option>';
           walletSelect.disabled = true;
         }
@@ -783,7 +806,7 @@
           description: form.querySelector('textarea').value,
           blockchain: document.getElementById('blockchain-select')?.value || '',
           wallet_id: document.getElementById('wallet-select')?.value || '',
-          royalty_percentage: parseInt(form.querySelectorAll('input[type="number"]')[0]?.value || '0'),
+          royalty_percentage: parseInt(form.querySelectorAll('input[type="number"]')[1]?.value || '0'),
           is_listed: formState.listForSale,
           has_unlockable: formState.unlockableContent
         };

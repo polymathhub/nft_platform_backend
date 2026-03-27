@@ -16,6 +16,8 @@ class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
     is_creator: Optional[bool] = None
+    bio: Optional[str] = None
+    creator_bio: Optional[str] = None
 
 @router.post("/update", response_model=dict, summary="Update User Profile")
 async def update_profile(
@@ -42,6 +44,10 @@ async def update_profile(
             current_user.avatar_url = update_data.avatar_url
         if update_data.is_creator is not None:
             current_user.is_creator = update_data.is_creator
+        if update_data.bio is not None:
+            current_user.creator_bio = update_data.bio
+        if update_data.creator_bio is not None:
+            current_user.creator_bio = update_data.creator_bio
         
         # Commit changes
         await db.flush()

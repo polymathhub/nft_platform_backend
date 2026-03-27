@@ -183,7 +183,8 @@ class TONWalletConnectionFlow {
       }, this.connectionTimeout);
 
       try {
-        window.tonWallet?.tonConnect?.openModal?.()
+        // Use the global tonConnect instance (available as window.tonConnect)
+        window.tonConnect?.openModal?.()
           .then(result => {
             clearTimeout(timer);
             resolve(result);
@@ -507,6 +508,9 @@ class ValidationError extends Error {
 
 // Create global instance
 const walletConnectionFlow = new TONWalletConnectionFlow();
+
+// Expose globally for access from other scripts
+window.walletConnectionFlow = walletConnectionFlow;
 
 // Attach to window for button click handler
 window.connectTONWallet = () => {

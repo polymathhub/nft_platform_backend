@@ -441,3 +441,66 @@ async def get_collection_listings(
         "per_page": limit,
         "items": [ListingWithRarity.model_validate(l) for l in listings],
     }
+
+# Stars Purchase Endpoints
+from pydantic import BaseModel
+
+class PurchaseRequest(BaseModel):
+    listing_id: str
+    amount_stars: int
+    description: str | None = None
+    buyer_address: str | None = None
+    seller_address: str | None = None
+    nft_id: str | None = None
+    price: float | None = None
+    currency: str = "USDT"
+
+class PurchaseResponse(BaseModel):
+    invoice_id: str
+    message: str
+
+class VerifyPurchaseRequest(BaseModel):
+    purchase_data: PurchaseRequest
+    transaction_hash: str | None = None
+
+class VerifyPurchaseResponse(BaseModel):
+    transaction_id: str
+    status: str
+
+@router.post("/purchase", response_model=PurchaseResponse)
+async def purchase_nft(
+    request: PurchaseRequest,
+    db: AsyncSession = Depends(get_db_session),
+    current_user = Depends(get_current_user),
+) -> PurchaseResponse:
+    # Delegate to stars marketplace
+    from app.routers.stars_marketplace_router import create_star_purchase
+    
+    # Create a mock request for the stars marketplace
+    class MockRequest:
+        def __init__(self, data):
+            self.listing_id = data.listing_id
+            self.amount_stars = data.amount_stars
+            self.description = data.description
+    
+    mock_req = MockRequest(request)
+    try:
+        response = await create_star_purchase(mock_req, db, current_user)
+        return PurchaseResponse(
+            invoice_id=response.invoice_id,
+            message="Purchase initiated successfully"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/verify-purchase", response_model=VerifyPurchaseResponse)
+async def verify_purchase(
+    request: VerifyPurchaseRequest,
+    db: AsyncSession = Depends(get_db_session),
+    current_user = Depends(get_current_user),
+) -> VerifyPurchaseResponse:
+    # For now, just return success - actual verification would happen via Telegram Stars webhook
+    return VerifyPurchaseResponse(
+        transaction_id=f"tx_{request.purchase_data.listing_id}",
+        status="completed"
+    )

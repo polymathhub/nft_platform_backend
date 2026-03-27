@@ -135,8 +135,8 @@ class MarketplaceManager {
     
     try {
       return await api.post(
-        `${endpoints.marketplace.listings}/${listingId}/offer`,
-        { offer_price: offerPrice }
+        endpoints.marketplace.offer,
+        { listing_id: listingId, offer_price: offerPrice }
       );
     } catch (error) {
       console.error('Error making offer:', error);

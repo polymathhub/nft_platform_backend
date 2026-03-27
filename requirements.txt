@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn==0.24.0
-uvloop==0.19.0
+uvloop==0.19.0; sys_platform != "win32"
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
@@ -17,6 +17,8 @@ aiohttp==3.9.1
 ipfshttpclient==0.7.0
 
 redis>=4.5
+python-socketio>=5.9.0
+aiofiles>=23.0.0
 
 python-dotenv==1.0.0
 pytz==2023.3

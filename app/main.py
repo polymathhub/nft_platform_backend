@@ -32,6 +32,7 @@ from app.routers import (
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 from app.routers.image_router import router as image_router
+from app.services.socketio_manager import socketio_manager
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
     RequestSizeLimitMiddleware,
