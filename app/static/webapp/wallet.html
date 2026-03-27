@@ -722,7 +722,17 @@
 </head>
 <body>
   <script>
-    // ⚠️ CRITICAL: Define connectWallet shim BEFORE HTML renders
+    // ⚠️ CRITICAL: Initialize Telegram WebApp IMMEDIATELY
+    // This MUST happen before anything else
+    if (window.Telegram && window.Telegram.WebApp) {
+      console.log('[Page Init] 🔔 Calling Telegram.WebApp.ready()...');
+      window.Telegram.WebApp.ready();
+      console.log('[Page Init] ✅ Telegram WebApp ready called');
+    } else {
+      console.warn('[Page Init] ⚠️ Telegram WebApp SDK not loaded yet');
+    }
+
+    // Define connectWallet shim BEFORE HTML renders
     // The onclick handlers in HTML will call this function,
     // and it will be replaced by the real implementation in the module script
     window.connectWallet = async function() {
@@ -1358,66 +1368,113 @@
     // Make connectWallet globally accessible for onclick handler
     window.connectWallet = async function() {
       try {
+        console.log('[Wallet Button] ▶️ Connect Wallet clicked');
+        
         // Ensure TonConnect is initialized
         if (!window.tonConnect) {
-          console.error('❌ TonConnect not initialized');
+          console.error('❌ TonConnect not available');
           alert('Wallet service not available. Please refresh the page.');
           return;
         }
         
-        console.log('[Wallet Button] Starting wallet connection. TonConnect ready:', window.tonConnect.isReady);
+        console.log('[Wallet Button] TonConnect available, isReady:', window.tonConnect.isReady);
         
         // If not ready, wait for initialization
         if (!window.tonConnect.isReady) {
-          console.log('[Wallet Button] TonConnect not ready, initializing...');
+          console.log('[Wallet Button] 🔄 TonConnect not ready, initializing...');
           const ready = await window.tonConnect.initialize();
           if (!ready) {
-            throw new Error('Failed to initialize TonConnect after waiting');
+            throw new Error('TonConnect initialization failed');
           }
+          console.log('[Wallet Button] ✅ TonConnect initialized');
         }
         
-        console.log('[Wallet Button] Opening TonConnect modal...');
+        console.log('[Wallet Button] 🔓 Opening TonConnect modal...');
         const result = await window.tonConnect.openModal();
         
         if (result && result.account) {
           // Success
-          console.log('✅ Wallet connected:', result.account.address);
+          const address = result.account.address;
+          console.log('✅ Wallet connected:', address);
+          
+          // Update button UI
           const btn = document.querySelector('.balance-action');
           if (btn) {
-            btn.textContent = 'Wallet Connected';
+            btn.textContent = '✓ Wallet Connected';
             btn.disabled = true;
           }
+          
+          // Log success to console
+          console.log('[Wallet] 🎉 Success! Connected to wallet:', {
+            address,
+            network: result.account.chain
+          });
+          
+          return { success: true, address };
         } else {
           // User cancelled or failed
-          console.log('[Wallet Button] User cancelled wallet selection');
+          console.log('[Wallet Button] User cancelled wallet selection or no account returned');
           const btn = document.querySelector('.balance-action');
           if (btn) {
             btn.textContent = 'Connect Wallet';
           }
+          return { success: false, reason: 'User cancelled' };
         }
       } catch (error) {
         console.error('❌ Wallet connection error:', error);
+        console.error('[Error Details]', {
+          message: error.message,
+          stack: error.stack,
+          tonConnectReady: window.tonConnect?.isReady,
+          tonConnectInitialized: window.tonConnect?.isInitialized
+        });
+        
         const btn = document.querySelector('.balance-action');
         if (btn) {
           btn.textContent = 'Connect Wallet';
         }
-        alert(`Failed to connect wallet: ${error.message || 'Unknown error. Check browser console.'}`);
+        
+        const errorMsg = error.message || 'Unknown error';
+        alert(`Failed to connect wallet: ${errorMsg}\n\nCheck browser console for details.`);
+        return { success: false, error: errorMsg };
       }
     };
     
     // Save the real implementation for the shim to call
     window._connectWalletReal = window.connectWallet;
     
-    // Initialize TonConnect immediately on page load
+    // Initialize TonConnect on page load with proper logging
     (async () => {
       try {
-        console.log('[Wallet Page] Initializing TonConnect on page load...');
-        if (window.tonConnect && !window.tonConnect.isReady) {
+        console.log('[Wallet Page Init] 🚀 Starting TonConnect initialization...');
+        
+        // Ensure Telegram is ready
+        if (window.Telegram?.WebApp) {
+          console.log('[Wallet Page Init] Telegram.WebApp detected');
+          if (typeof window.Telegram.WebApp.ready === 'function') {
+            window.Telegram.WebApp.ready();
+            console.log('[Wallet Page Init] ✅ Telegram.WebApp.ready() called');
+          }
+        } else {
+          console.warn('[Wallet Page Init] ⚠️ Telegram.WebApp not detected');
+        }
+        
+        // Initialize TonConnect
+        if (window.tonConnect) {
+          console.log('[Wallet Page Init] TonConnect available, initializing...');
           const ready = await window.tonConnect.initialize();
-          console.log('[Wallet Page] TonConnect initialization result:', ready);
+          console.log('[Wallet Page Init] TonConnect initialization result:', ready);
+          
+          if (ready) {
+            console.log('[Wallet Page Init] ✅ TonConnect is ready for wallet connections');
+          } else {
+            console.warn('[Wallet Page Init] ⚠️ TonConnect initialization returned false');
+          }
+        } else {
+          console.error('[Wallet Page Init] ❌ TonConnect not available');
         }
       } catch (error) {
-        console.error('[Wallet Page] TonConnect initialization error:', error);
+        console.error('[Wallet Page Init] Initialization error:', error);
       }
     })();
 

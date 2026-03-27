@@ -81,6 +81,25 @@ class TonConnectManager {
    */
   async _performInitialization(options = {}) {
     try {
+      // ⚠️ CRITICAL: Ensure Telegram WebApp is ready before proceeding
+      console.log('[TonConnect] Waiting for Telegram WebApp to be ready...');
+      let telegramReady = false;
+      let telegramAttempts = 0;
+      
+      while (!telegramReady && telegramAttempts < 20) {
+        if (window.Telegram?.WebApp?.initData) {
+          console.log('[TonConnect] ✅ Telegram WebApp is ready with initData');
+          telegramReady = true;
+          break;
+        }
+        telegramAttempts++;
+        await new Promise(r => setTimeout(r, 100));
+      }
+      
+      if (!telegramReady) {
+        console.warn('[TonConnect] ⚠️ Telegram WebApp not ready yet, continuing anyway...');
+      }
+
       // Check if TonConnect library is loaded
       if (typeof TonConnectUI === 'undefined') {
         console.error('[TonConnect] TonConnectUI library not loaded');
