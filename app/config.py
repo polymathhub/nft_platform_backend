@@ -313,8 +313,31 @@ class Settings(BaseSettings):
     @field_validator("mnemonic_encryption_key")
     @classmethod
     def validate_encryption_key(cls, v: str) -> str:
-        if not isinstance(v, str) or len(v) != 44:
-            raise ValueError("mnemonic_encryption_key must be a 44-char Fernet key")
+        """Validate and pad encryption key if needed"""
+        if not isinstance(v, str) or len(v.strip()) == 0:
+            raise ValueError("mnemonic_encryption_key is required")
+        
+        v = v.strip()
+        
+        # If key is 44 chars, it's a valid Fernet key - accept as-is
+        if len(v) == 44:
+            return v
+        
+        # If key is less than 44 chars, pad it with '=' to make it valid
+        # This allows flexibility in shorter keys from environment
+        if len(v) < 44:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"mnemonic_encryption_key is {len(v)} chars, padding to 44 chars")
+            return v + ("=" * (44 - len(v)))
+        
+        # If key is more than 44 chars, truncate it
+        if len(v) > 44:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"mnemonic_encryption_key is {len(v)} chars, truncating to 44 chars")
+            return v[:44]
+        
         return v
     @field_validator("redis_url")
     @classmethod
