@@ -90,15 +90,136 @@ class Settings(BaseSettings):
     login_max_attempts: int = Field(default=5, ge=1)
     login_block_minutes: int = Field(default=15, ge=1)
     allowed_origins_str: str = Field(default="")
-    allowed_origins: list[str] = Field(default=[])
     
     def __init__(self, **data):
-        """Parse allowed_origins from string"""
-        if not data.get('allowed_origins') and data.get('allowed_origins_str'):
-            data['allowed_origins'] = self._parse_origins(data['allowed_origins_str'], data)
-        elif not data.get('allowed_origins'):
-            data['allowed_origins'] = self._parse_origins("", data)
+        """Parse complex fields from strings"""
+        # Extract fields that need parsing
+        provided_origins = data.pop('allowed_origins', None)
+        provided_wallets = data.pop('platform_wallets', None)
+        provided_private_keys = data.pop('platform_private_keys', None)
+        provided_cors_headers = data.pop('cors_allow_headers', None)
+        
+        # Initialize parent first
         super().__init__(**data)
+        
+        # Parse allowed_origins
+        if provided_origins:
+            self.allowed_origins = provided_origins
+        else:
+            self.allowed_origins = self._parse_origins(self.allowed_origins_str, data)
+        
+        # Parse platform_wallets
+        if provided_wallets:
+            self.platform_wallets = provided_wallets
+        else:
+            self.platform_wallets = self._parse_dict(self.platform_wallets_str, {})
+        
+        # Parse platform_private_keys
+        if provided_private_keys:
+            self.platform_private_keys = provided_private_keys
+        else:
+            self.platform_private_keys = self._parse_dict(self.platform_private_keys_str, {})
+        
+        # Parse cors_allow_headers
+        if provided_cors_headers:
+            self.cors_allow_headers = provided_cors_headers
+        else:
+            self.cors_allow_headers = self._parse_list(self.cors_allow_headers_str, [
+                "Content-Type",
+                "Authorization",
+                "Accept",
+                "Origin",
+                "X-Requested-With",
+                "X-Telegram-Web-App-Data",
+                "X-Telegram-Init-Data",
+            ])
+    
+    @property
+    def allowed_origins(self) -> list[str]:
+        """Get computed allowed origins"""
+        if not hasattr(self, '_allowed_origins') or not self._allowed_origins:
+            self._allowed_origins = self._parse_origins(self.allowed_origins_str, vars(self))
+        return self._allowed_origins
+    
+    @allowed_origins.setter
+    def allowed_origins(self, value: list[str]):
+        """Set allowed origins"""
+        self._allowed_origins = value
+    
+    @property
+    def platform_wallets(self) -> dict[str, str]:
+        """Get computed platform wallets"""
+        if not hasattr(self, '_platform_wallets'):
+            self._platform_wallets = self._parse_dict(self.platform_wallets_str, {})
+        return self._platform_wallets
+    
+    @platform_wallets.setter
+    def platform_wallets(self, value: dict[str, str]):
+        """Set platform wallets"""
+        self._platform_wallets = value
+    
+    @property
+    def platform_private_keys(self) -> dict[str, str]:
+        """Get computed platform private keys"""
+        if not hasattr(self, '_platform_private_keys'):
+            self._platform_private_keys = self._parse_dict(self.platform_private_keys_str, {})
+        return self._platform_private_keys
+    
+    @platform_private_keys.setter
+    def platform_private_keys(self, value: dict[str, str]):
+        """Set platform private keys"""
+        self._platform_private_keys = value
+    
+    @property
+    def cors_allow_headers(self) -> list[str]:
+        """Get computed CORS allow headers"""
+        if not hasattr(self, '_cors_allow_headers'):
+            self._cors_allow_headers = self._parse_list(self.cors_allow_headers_str, [
+                "Content-Type",
+                "Authorization",
+                "Accept",
+                "Origin",
+                "X-Requested-With",
+                "X-Telegram-Web-App-Data",
+                "X-Telegram-Init-Data",
+            ])
+        return self._cors_allow_headers
+    
+    @cors_allow_headers.setter
+    def cors_allow_headers(self, value: list[str]):
+        """Set CORS allow headers"""
+        self._cors_allow_headers = value
+    
+    @staticmethod
+    def _parse_dict(v: str, default: dict) -> dict[str, str]:
+        """Parse dict from JSON string"""
+        v = (v or "").strip()
+        if not v or v == "{}":
+            return default
+        try:
+            parsed = json.loads(v)
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return default
+    
+    @staticmethod
+    def _parse_list(v: str, default: list) -> list[str]:
+        """Parse list from JSON string or comma-separated values"""
+        v = (v or "").strip()
+        if not v:
+            return default
+        if v.startswith('[') and v.endswith(']'):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+        if v:
+            return [item.strip() for item in v.split(",") if item.strip()]
+        return default
     
     @staticmethod
     def _parse_origins(v: str, data: dict) -> list[str]:
@@ -169,8 +290,9 @@ class Settings(BaseSettings):
     usdt_contract_base: str = Field(default="0xfde4C96c1286F4B9D7d4A537B9949cFfDA43a26d")
     usdt_decimals: int = Field(default=6)
     usdt_min_transaction: float = Field(default=1.0)
-    platform_wallets: dict[str, str] = Field(default={})
-    platform_private_keys: dict[str, str] = Field(default={})
+    # Store JSON strings that will be parsed in __init__
+    platform_wallets_str: str = Field(default="{}")
+    platform_private_keys_str: str = Field(default="{}")
     commission_rate: float = Field(default=0.02)
     commission_wallet_ton: str = Field(default="TMUSBPnZrpcgjaQM2eyugmoPTDf6EfibFd")
     commission_wallet_trc20: str = Field(default="0x892b8ba9c9566f22217e74d661d95eff56aa2ba6")
@@ -178,15 +300,7 @@ class Settings(BaseSettings):
     commission_wallet_solana: str = Field(default="3PFSpY3MeLXVxzJT7KY8AVSjG99v3dQnDjNwH6msYoAg")
     # SECURITY: Admin password MUST be set via environment variable - no default
     admin_password: str = Field(...)
-    cors_allow_headers: list[str] = Field(default=[
-        "Content-Type",
-        "Authorization",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-        "X-Telegram-Web-App-Data",
-        "X-Telegram-Init-Data",
-    ])
+    cors_allow_headers_str: str = Field(default="")
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=8000, ge=1, le=65535)
     workers: int = Field(default=4, ge=1)
