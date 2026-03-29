@@ -719,39 +719,16 @@
     <script src="js/auth-global.js"></script>
     <!-- NEW: Production-Grade Auth System -->
     <script src="js/auth-system.js"></script>
-    <!-- TON Connect UI Styles -->
-    <script src="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.css" rel="stylesheet" />
+    <!-- TON Connect handled by tonconnect.js -->
+
 </head>
 <body>
-  <script>
-    // ⚠️ CRITICAL: Initialize Telegram WebApp IMMEDIATELY
-    // This MUST happen before anything else
-    if (window.Telegram && window.Telegram.WebApp) {
-      console.log('[Page Init] 🔔 Calling Telegram.WebApp.ready()...');
-      window.Telegram.WebApp.ready();
-      console.log('[Page Init] ✅ Telegram WebApp ready called');
-    } else {
-      console.warn('[Page Init] ⚠️ Telegram WebApp SDK not loaded yet');
-    }
 
-    // Define connectWallet shim BEFORE HTML renders
-    // The onclick handlers in HTML will call this function,
-    // and it will be replaced by the real implementation in the module script
-    window.connectWallet = async function() {
-      console.log('[Button Shim] connectWallet called before module init, waiting for real implementation...');
-      // Wait for the real implementation to be defined
-      let attempts = 0;
-      while (!window._connectWalletReal && attempts < 50) {
-        await new Promise(r => setTimeout(r, 100));
-        attempts++;
-      }
-      if (window._connectWalletReal) {
-        return await window._connectWalletReal();
-      } else {
-        alert('Wallet service is still loading. Please try again in a moment.');
-      }
-    };
+  <script>
+    // Telegram WebApp ready
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.ready();
+    }
   </script>
   <!-- TOP HEADER -->
   <header class="app-header">
@@ -899,8 +876,15 @@
             <div class="balance-pulse"></div>
             <span id="selected-wallet-currency">USD</span>
           </div>
-          <button class="balance-action" onclick="connectWallet()" title="Connect wallet">Connect Wallet</button>
+          <div id="wallet-controls">
+            <span id="status" style="font-size: 13px; margin-right: 12px; display: none;"></span>
+            <span id="error" style="font-size: 12px; color: #ef4444; margin-right: 12px; display: none;"></span>
+            <span id="loading" style="display: none;">Connecting...</span>
+            <button id="connectBtn" class="balance-action" title="Connect TON Wallet">Connect TON Wallet</button>
+            <span id="walletAddress" style="font-size: 13px; font-family: monospace; display: none;"></span>
+          </div>
         </div>
+
       </div>
     </div>
 
@@ -983,99 +967,19 @@
 
 
   <script type="module">
-    import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
-    import { api, endpoints } from './js/api.js';
-    import { tonConnect } from './js/tonconnect.js';
-    import { TelegramUtils } from './js/telegram-utils.js';
-
-<<<<<<< HEAD
-
-  <script type="module">
-    import { TonConnectUI } from 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js';
-    // Telegram Mini App must be ready
-    window.Telegram?.WebApp?.ready?.();
-
-    // UI Elements
-    const connectBtn = document.getElementById('ton-connect-btn');
-    const walletStatus = document.getElementById('wallet-status');
-    const loading = document.getElementById('wallet-loading');
-    const errorMsg = document.getElementById('wallet-error');
-
-    // Helper UI functions
-    function setLoading(state) {
-      loading.style.display = state ? 'inline' : 'none';
-      connectBtn.disabled = state;
-    }
-    function setError(msg) {
-      errorMsg.textContent = msg || '';
-      errorMsg.style.display = msg ? 'inline' : 'none';
-    }
-    function setWalletAddress(address) {
-      if (address) {
-        walletStatus.textContent = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
-        walletStatus.style.display = 'inline';
-        connectBtn.textContent = '✓ Wallet Connected';
-        connectBtn.disabled = true;
+    import TelegramWalletIntegrator from './js/telegram-wallet.js';
+    
+    // Wait for DOM
+    document.addEventListener('DOMContentLoaded', async () => {
+      await new Promise(r => setTimeout(r, 500)); // Let auth init
+      const walletCard = document.getElementById('wallet-balance-card');
+      if (walletCard) {
+        new TelegramWalletIntegrator(walletCard);
+        console.log('[Wallet Page] TelegramWalletIntegrator initialized');
       } else {
-        walletStatus.textContent = '';
-        walletStatus.style.display = 'none';
-        connectBtn.textContent = 'Connect Wallet';
-        connectBtn.disabled = false;
+        console.error('[Wallet Page] wallet-balance-card not found');
       }
-    }
-
-    // TON Connect UI
-    const tonConnectUI = new TonConnectUI({
-      manifestUrl: '/tonconnect-manifest.json',
-      buttonRootId: 'ton-connect-btn',
     });
-
-    // Wallet connect handler
-    async function connectWallet() {
-      setLoading(true);
-      setError('');
-      try {
-        const result = await tonConnectUI.connectWallet();
-        if (result && result.account && result.account.address) {
-          setWalletAddress(result.account.address);
-          await syncWithBackend(result.account.address);
-        } else {
-          setError('Failed to get wallet address.');
-        }
-      } catch (e) {
-        setError('Wallet connection failed: ' + (e.message || e));
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    // Sync wallet + Telegram user with backend
-    async function syncWithBackend(walletAddress) {
-      const tg = window.Telegram?.WebApp;
-      const initData = tg?.initData || '';
-      const user = tg?.initDataUnsafe?.user || {};
-      try {
-        const resp = await fetch('/api/wallet/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wallet_address: walletAddress,
-            telegram_init_data: initData,
-            telegram_user: user
-          })
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.detail || 'Backend error');
-        console.log('[Wallet Sync] Success:', data);
-      } catch (e) {
-        setError('Backend sync failed: ' + (e.message || e));
-      }
-    }
-
-    // Button event
-    connectBtn.onclick = connectWallet;
-
-  
   </script>
   <script type="module">
     // Import page initialization for consistent user greeting across pages
