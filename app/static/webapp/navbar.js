@@ -1,4 +1,4 @@
-import { getCurrentUser } from './js/core/auth.js';
+import { AuthSystem } from './js/auth-system.js';
 
 async function initNavbar() {
   const userNameEl = document.getElementById('navbar-user');
@@ -7,7 +7,7 @@ async function initNavbar() {
   if (userNameEl) userNameEl.innerText = 'Loading...';
 
   try {
-    const user = await getCurrentUser();
+  const user = AuthSystem.getUser();
     if (!user) {
       if (userNameEl) userNameEl.innerText = 'Guest';
       return;
