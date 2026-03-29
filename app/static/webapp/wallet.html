@@ -986,103 +986,106 @@
 
 
 
-  import { TonConnectUI } from 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js';
-  // Telegram Mini App must be ready
-  window.Telegram?.WebApp?.ready?.();
 
-  // UI Elements
-  const connectBtn = document.getElementById('ton-connect-btn');
-  const walletStatus = document.getElementById('wallet-status');
-  const loading = document.getElementById('wallet-loading');
-  const errorMsg = document.getElementById('wallet-error');
+  <script type="module">
+    import { TonConnectUI } from 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js';
+    // Telegram Mini App must be ready
+    window.Telegram?.WebApp?.ready?.();
 
-  // Helper UI functions
-  function setLoading(state) {
-    loading.style.display = state ? 'inline' : 'none';
-    connectBtn.disabled = state;
-  }
-  function setError(msg) {
-    errorMsg.textContent = msg || '';
-    errorMsg.style.display = msg ? 'inline' : 'none';
-  }
-  function setWalletAddress(address) {
-    if (address) {
-      walletStatus.textContent = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
-      walletStatus.style.display = 'inline';
-      connectBtn.textContent = '✓ Wallet Connected';
-      connectBtn.disabled = true;
-    } else {
-      walletStatus.textContent = '';
-      walletStatus.style.display = 'none';
-      connectBtn.textContent = 'Connect Wallet';
-      connectBtn.disabled = false;
+    // UI Elements
+    const connectBtn = document.getElementById('ton-connect-btn');
+    const walletStatus = document.getElementById('wallet-status');
+    const loading = document.getElementById('wallet-loading');
+    const errorMsg = document.getElementById('wallet-error');
+
+    // Helper UI functions
+    function setLoading(state) {
+      loading.style.display = state ? 'inline' : 'none';
+      connectBtn.disabled = state;
     }
-  }
-
-  // TON Connect UI
-  const tonConnectUI = new TonConnectUI({
-    manifestUrl: '/tonconnect-manifest.json',
-    buttonRootId: 'ton-connect-btn',
-  });
-
-  // Wallet connect handler
-  async function connectWallet() {
-    setLoading(true);
-    setError('');
-    try {
-      const result = await tonConnectUI.connectWallet();
-      if (result && result.account && result.account.address) {
-        setWalletAddress(result.account.address);
-        await syncWithBackend(result.account.address);
+    function setError(msg) {
+      errorMsg.textContent = msg || '';
+      errorMsg.style.display = msg ? 'inline' : 'none';
+    }
+    function setWalletAddress(address) {
+      if (address) {
+        walletStatus.textContent = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
+        walletStatus.style.display = 'inline';
+        connectBtn.textContent = '✓ Wallet Connected';
+        connectBtn.disabled = true;
       } else {
-        setError('Failed to get wallet address.');
+        walletStatus.textContent = '';
+        walletStatus.style.display = 'none';
+        connectBtn.textContent = 'Connect Wallet';
+        connectBtn.disabled = false;
       }
-    } catch (e) {
-      setError('Wallet connection failed: ' + (e.message || e));
-    } finally {
-      setLoading(false);
     }
-  }
 
-  // Sync wallet + Telegram user with backend
-  async function syncWithBackend(walletAddress) {
-    const tg = window.Telegram?.WebApp;
-    const initData = tg?.initData || '';
-    const user = tg?.initDataUnsafe?.user || {};
-    try {
-      const resp = await fetch('/api/wallet/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet_address: walletAddress,
-          telegram_init_data: initData,
-          telegram_user: user
-        })
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.detail || 'Backend error');
-      console.log('[Wallet Sync] Success:', data);
-    } catch (e) {
-      setError('Backend sync failed: ' + (e.message || e));
+    // TON Connect UI
+    const tonConnectUI = new TonConnectUI({
+      manifestUrl: '/tonconnect-manifest.json',
+      buttonRootId: 'ton-connect-btn',
+    });
+
+    // Wallet connect handler
+    async function connectWallet() {
+      setLoading(true);
+      setError('');
+      try {
+        const result = await tonConnectUI.connectWallet();
+        if (result && result.account && result.account.address) {
+          setWalletAddress(result.account.address);
+          await syncWithBackend(result.account.address);
+        } else {
+          setError('Failed to get wallet address.');
+        }
+      } catch (e) {
+        setError('Wallet connection failed: ' + (e.message || e));
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  // Button event
-  connectBtn.onclick = connectWallet;
-
-  // On load: check for existing connection
-  tonConnectUI.onStatusChange((status) => {
-    if (status.account?.address) {
-      setWalletAddress(status.account.address);
-    } else {
-      setWalletAddress(null);
+    // Sync wallet + Telegram user with backend
+    async function syncWithBackend(walletAddress) {
+      const tg = window.Telegram?.WebApp;
+      const initData = tg?.initData || '';
+      const user = tg?.initDataUnsafe?.user || {};
+      try {
+        const resp = await fetch('/api/wallet/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet_address: walletAddress,
+            telegram_init_data: initData,
+            telegram_user: user
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Backend error');
+        console.log('[Wallet Sync] Success:', data);
+      } catch (e) {
+        setError('Backend sync failed: ' + (e.message || e));
+      }
     }
-  });
 
-  // Initial state
-  setWalletAddress(null);
-  setLoading(false);
-  setError('');
+    // Button event
+    connectBtn.onclick = connectWallet;
+
+    // On load: check for existing connection
+    tonConnectUI.onStatusChange((status) => {
+      if (status.account?.address) {
+        setWalletAddress(status.account.address);
+      } else {
+        setWalletAddress(null);
+      }
+    });
+
+    // Initial state
+    setWalletAddress(null);
+    setLoading(false);
+    setError('');
+  </script>
 
     // Wallet manager for API-backed wallet selection and balance
     const walletManager = new WalletManager(api, endpoints);
