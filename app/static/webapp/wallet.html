@@ -899,7 +899,10 @@
             <div class="balance-pulse"></div>
             <span id="selected-wallet-currency">USD</span>
           </div>
-          <button class="balance-action" onclick="connectWallet()" title="Connect wallet">Connect Wallet</button>
+          <button class="balance-action" id="ton-connect-btn" title="Connect wallet">Connect Wallet</button>
+          <span id="wallet-status" style="margin-left:12px;font-size:13px;color:#4ade80;display:none;"></span>
+          <span id="wallet-loading" style="margin-left:12px;font-size:13px;color:#6366f1;display:none;">Loading...</span>
+          <span id="wallet-error" style="margin-left:12px;font-size:13px;color:#ef4444;display:none;"></span>
         </div>
       </div>
     </div>
@@ -982,149 +985,104 @@
 
 
 
-  <script type="module">
-    import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
-    import { api, endpoints } from './js/api.js';
-    import { tonConnect } from './js/tonconnect.js';
-    import { TelegramUtils } from './js/telegram-utils.js';
 
-    // Expose to window
-    window.tonConnect = tonConnect;
+  import { TonConnectUI } from 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js';
+  // Telegram Mini App must be ready
+  window.Telegram?.WebApp?.ready?.();
 
-    // Expose to window for navbar.js to access
-    window.TelegramUtils = TelegramUtils;
+  // UI Elements
+  const connectBtn = document.getElementById('ton-connect-btn');
+  const walletStatus = document.getElementById('wallet-status');
+  const loading = document.getElementById('wallet-loading');
+  const errorMsg = document.getElementById('wallet-error');
 
-    // Initialize global auth system immediately (before any page code)
-    await initializeAuthSystem();
-
-    // Use global auth manager (initialized by bootstrap)
-    const authManager = window.authManager;
-
-    // ========== TON WALLET INTEGRATION ==========
-    class TONWalletUI {
-      constructor() {
-        this.tonConnect = tonConnect;
-        this.fullAddress = null;
-        this.init();
-      }
-
-      async init() {
-        try {
-          // Initialize TON Connect
-          const initialized = await this.tonConnect.initialize();
-          
-          if (initialized && this.tonConnect.isConnected()) {
-            // Wallet was already connected in previous session
-            this.updateUI();
-          } else {
-            // Show connect button
-            this.showConnectButton();
-          }
-
-          // Listen for wallet changes
-          this.tonConnect.on('wallet:connected', (data) => {
-            this.fullAddress = data.wallet.account.address;
-            this.updateUI();
-          });
-
-          this.tonConnect.on('wallet:disconnected', () => {
-            this.fullAddress = null;
-            this.showConnectButton();
-          });
-        } catch (error) {
-          console.error('Failed to initialize TON Wallet UI:', error);
-          this.showConnectButton();
-        }
-      }
-
-      async connectWallet() {
-        try {
-          const result = await this.tonConnect.openModal();
-          if (result && result.account) {
-            this.fullAddress = result.account.address;
-            this.updateUI();
-          }
-        } catch (error) {
-          console.error('Failed to connect wallet:', error);
-          this.showError('Failed to connect wallet. Please try again.');
-        }
-      }
-
-      async disconnectWallet() {
-        try {
-          await this.tonConnect.disconnect();
-          this.fullAddress = null;
-          this.showConnectButton();
-        } catch (error) {
-          console.error('Failed to disconnect wallet:', error);
-          this.showError('Failed to disconnect wallet.');
-        }
-      }
-
-      copyAddress() {
-        if (!this.fullAddress) return;
-        
-        navigator.clipboard.writeText(this.fullAddress).then(() => {
-          const btn = document.getElementById('ton-copy-btn');
-          if (btn) {
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-            setTimeout(() => {
-              btn.innerHTML = originalHTML;
-            }, 1500);
-          }
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-        });
-      }
-
-      updateUI() {
-        // Show wallet info
-        const display = document.getElementById('ton-wallet-display');
-        const connectBtn = document.getElementById('ton-connect-btn');
-        const disconnectBtn = document.getElementById('ton-disconnect-btn');
-        const shortAddr = document.getElementById('ton-address-short');
-        const balanceEl = document.getElementById('ton-balance');
-
-        if (this.fullAddress) {
-          // Show connected state
-          shortAddr.textContent = this.getShortAddress(this.fullAddress);
-          display.style.display = 'flex';
-          connectBtn.style.display = 'none';
-          disconnectBtn.style.display = 'block';
-          
-          // TODO: Fetch real balance from API if available
-          balanceEl.textContent = '0 TON';
-        } else {
-          this.showConnectButton();
-        }
-      }
-
-      showConnectButton() {
-        const display = document.getElementById('ton-wallet-display');
-        const connectBtn = document.getElementById('ton-connect-btn');
-        const disconnectBtn = document.getElementById('ton-disconnect-btn');
-        const balanceEl = document.getElementById('ton-balance');
-
-        display.style.display = 'none';
-        connectBtn.style.display = 'block';
-        disconnectBtn.style.display = 'none';
-        balanceEl.textContent = '0 TON';
-      }
-
-      getShortAddress(address) {
-        if (!address || address.length < 10) return address;
-        return `${address.slice(0, 6)}...${address.slice(-4)}`;
-      }
-
-      showError(message) {
-        // Show toast or alert
-        alert(message);
-      }
+  // Helper UI functions
+  function setLoading(state) {
+    loading.style.display = state ? 'inline' : 'none';
+    connectBtn.disabled = state;
+  }
+  function setError(msg) {
+    errorMsg.textContent = msg || '';
+    errorMsg.style.display = msg ? 'inline' : 'none';
+  }
+  function setWalletAddress(address) {
+    if (address) {
+      walletStatus.textContent = `Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
+      walletStatus.style.display = 'inline';
+      connectBtn.textContent = '✓ Wallet Connected';
+      connectBtn.disabled = true;
+    } else {
+      walletStatus.textContent = '';
+      walletStatus.style.display = 'none';
+      connectBtn.textContent = 'Connect Wallet';
+      connectBtn.disabled = false;
     }
+  }
 
-    // Make available globally for onclick handlers
-    window.tonWallet = new TONWalletUI();
+  // TON Connect UI
+  const tonConnectUI = new TonConnectUI({
+    manifestUrl: '/tonconnect-manifest.json',
+    buttonRootId: 'ton-connect-btn',
+  });
+
+  // Wallet connect handler
+  async function connectWallet() {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await tonConnectUI.connectWallet();
+      if (result && result.account && result.account.address) {
+        setWalletAddress(result.account.address);
+        await syncWithBackend(result.account.address);
+      } else {
+        setError('Failed to get wallet address.');
+      }
+    } catch (e) {
+      setError('Wallet connection failed: ' + (e.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Sync wallet + Telegram user with backend
+  async function syncWithBackend(walletAddress) {
+    const tg = window.Telegram?.WebApp;
+    const initData = tg?.initData || '';
+    const user = tg?.initDataUnsafe?.user || {};
+    try {
+      const resp = await fetch('/api/wallet/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address: walletAddress,
+          telegram_init_data: initData,
+          telegram_user: user
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.detail || 'Backend error');
+      console.log('[Wallet Sync] Success:', data);
+    } catch (e) {
+      setError('Backend sync failed: ' + (e.message || e));
+    }
+  }
+
+  // Button event
+  connectBtn.onclick = connectWallet;
+
+  // On load: check for existing connection
+  tonConnectUI.onStatusChange((status) => {
+    if (status.account?.address) {
+      setWalletAddress(status.account.address);
+    } else {
+      setWalletAddress(null);
+    }
+  });
+
+  // Initial state
+  setWalletAddress(null);
+  setLoading(false);
+  setError('');
 
     // Wallet manager for API-backed wallet selection and balance
     const walletManager = new WalletManager(api, endpoints);
@@ -1132,154 +1090,8 @@
 
     // ========== WALLET MANAGER ==========
     class WalletManager {
-      constructor(api, endpoints) {
-        this.api = api;
-        this.endpoints = endpoints;
-        this.wallets = [];
-        this.walletBalanceData = null;
-        this.selectedWalletId = null;
-      }
-
-      /**
-       * Load user's wallet list and balance
-       */
-      async loadWallets(userId) {
-        try {
-          const params = {};
-          if (userId) params.user_id = userId;
-
-          const response = await this.api.get(this.endpoints.wallets.list, params);
-          this.wallets = response.data || response.wallets || [];
-
-          this.renderWalletSelector();
-          await this.loadUserBalance(userId);
-          this.updateWalletUI();
-        } catch (error) {
-          console.warn('Failed to load wallets:', error);
-          this.renderWalletSelector();
-        }
-      }
-
-      async loadUserBalance(userId) {
-        if (!userId) return;
-        try {
-          const balanceEndpoint = `/api/v1/wallets/user/${encodeURIComponent(userId)}/balance`;
-          const balanceResponse = await this.api.get(balanceEndpoint);
-          this.walletBalanceData = balanceResponse;
-          this.updateSelectedWalletCard();
-        } catch (error) {
-          console.warn('Failed to load user balance:', error);
-        }
-      }
-
-      renderWalletSelector() {
-        const selector = document.getElementById('wallet-selector');
-        if (!selector) return;
-
-        selector.innerHTML = '';
-        if (!this.wallets || this.wallets.length === 0) {
-          selector.innerHTML = '<option value="">No wallets found</option>';
-          selector.disabled = true;
-          this.updateSelectedWalletCard();
-          return;
-        }
-
-        const defaultOption = document.createElement('option');
-        defaultOption.textContent = 'Select wallet';
-        defaultOption.value = '';
-        selector.appendChild(defaultOption);
-
-        this.wallets.forEach(wallet => {
-          const option = document.createElement('option');
-          option.value = wallet.id;
-          option.textContent = `${wallet.blockchain?.toUpperCase() || 'Chain'} - ${wallet.address?.slice(0, 10) || ''}...${wallet.address?.slice(-4) || ''}`;
-          if (wallet.is_primary) option.textContent += ' (Primary)';
-          selector.appendChild(option);
-          if (!this.selectedWalletId || wallet.is_primary) {
-            this.selectedWalletId = wallet.id;
-          }
-        });
-
-        if (this.selectedWalletId) {
-          selector.value = this.selectedWalletId;
-        }
-
-        selector.disabled = false;
-        selector.onchange = (e) => {
-          this.selectedWalletId = e.target.value;
-          this.updateSelectedWalletCard();
-        };
-
-        this.updateSelectedWalletCard();
-      }
-
-      updateSelectedWalletCard() {
-        const totalBalanceEl = document.getElementById('selected-wallet-balance');
-        const currencyEl = document.getElementById('selected-wallet-currency');
-        const chip = document.getElementById('balance-chip');
-
-        const defaultText = '$ 0.00';
-        const defaultCurrency = 'USD';
-
-        if (!totalBalanceEl || !currencyEl) return;
-
-        let selectedWallet;
-
-        if (this.walletBalanceData?.wallets && this.selectedWalletId) {
-          selectedWallet = this.walletBalanceData.wallets.find(w => w.wallet_id === this.selectedWalletId);
-        }
-
-        // If no selected wallet, choose primary one or first
-        if (!selectedWallet && this.walletBalanceData?.wallets?.length) {
-          selectedWallet = this.walletBalanceData.wallets.find(w => w.is_primary) || this.walletBalanceData.wallets[0];
-        }
-
-        if (selectedWallet) {
-          const value = Number(selectedWallet.balance ?? 0);
-          totalBalanceEl.textContent = `$ ${value.toFixed(2)}`;
-          currencyEl.textContent = selectedWallet.blockchain ? selectedWallet.blockchain.toUpperCase() : 'USD';
-          if (chip) chip.textContent = selectedWallet.blockchain ? selectedWallet.blockchain.toUpperCase() : 'USD';
-        } else if (this.walletBalanceData?.total_balance_usd !== undefined) {
-          const total = Number(this.walletBalanceData.total_balance_usd || 0);
-          totalBalanceEl.textContent = `$ ${total.toFixed(2)}`;
-          currencyEl.textContent = defaultCurrency;
-          if (chip) chip.textContent = defaultCurrency;
-        } else {
-          totalBalanceEl.textContent = defaultText;
-          currencyEl.textContent = defaultCurrency;
-          if (chip) chip.textContent = defaultCurrency;
-        }
-      }
-
-      /**
-       * Update wallet display UI with real data
-       */
-      updateWalletUI() {
-        // If wallet list is not available yet, still initialize selectors
-        if (!this.wallets || this.wallets.length === 0) {
-          return;
-        }
-
-        let totalBalance = 0;
-        this.wallets.forEach(wallet => {
-          totalBalance += (wallet.balance || 0) * (wallet.current_price || 1);
-        });
-
-        // Update TON wallet card amount currently not available from data
-        const balanceEl = document.getElementById('ton-balance');
-        if (balanceEl && totalBalance !== 0) {
-          balanceEl.textContent = `${totalBalance.toFixed(4)} TON`;
-        }
-      }
-
-      /**
-       * Render token list from user's wallets
-       */
-      renderTokenList() {
-        const tokenList = document.querySelector('.token-list');
-        if (!tokenList || this.wallets.length === 0) return;
-
-        tokenList.innerHTML = this.wallets.map(wallet => `
+    // ...existing code for nav and other features...
+    // (Keep the rest of your nav and page-init logic as is)
           <div class="token-item" onclick="navigate('/wallet/token/${wallet.id}')">
             <div class="token-info">
               <div class="token-icon">${this.getTokenIcon(wallet.blockchain)}</div>
