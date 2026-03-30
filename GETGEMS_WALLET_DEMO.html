@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GetGems Wallet Integration Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      margin-bottom: 20px;
+    }
+
+    .card h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .card p {
+      color: #666;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .wallet-section {
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .wallet-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .status-label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .status-value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wallet-address {
+      color: #667eea;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      transition: all 0.3s ease;
+    }
+
+    .wallet-address:hover {
+      background: #e6e6fa;
+      color: #764ba2;
+    }
+
+    .wallet-type {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-message {
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .status-message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: none;
+    }
+
+    .status-message.error.show {
+      display: block;
+    }
+
+    .status-message.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: #6c757d;
+    }
+
+    button.secondary:hover {
+      box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      margin-right: 10px;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading.show {
+      display: inline-block;
+    }
+
+    .timer {
+      color: #999;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .features {
+      margin-top: 30px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .feature-icon {
+      font-size: 24px;
+      margin-right: 12px;
+      width: 30px;
+    }
+
+    .feature-text h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .feature-text p {
+      font-size: 12px;
+      color: #666;
+      margin: 0;
+    }
+
+    .code-block {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin-top: 15px;
+      color: #333;
+      border-left: 4px solid #667eea;
+    }
+
+    .wallet-detector {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-top: 15px;
+    }
+
+    .detector-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .detector-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .detector-name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .detector-status {
+      font-weight: 600;
+    }
+
+    .detector-status.available {
+      color: #4CAF50;
+    }
+
+    .detector-status.unavailable {
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header Card -->
+    <div class="card">
+      <h1>🖇️ GetGems Wallet Integration</h1>
+      <p>GetGems-style wallet connection with native wallet detection, automatic fallback, and session persistence.</p>
+    </div>
+
+    <!-- Wallet Connection Card -->
+    <div class="card">
+      <h2>Wallet Connection</h2>
+      
+      <div class="wallet-section">
+        <div id="statusMessage" class="status-message success">
+          Ready to connect wallet
+        </div>
+
+        <div class="wallet-status">
+          <span class="status-label">Status:</span>
+          <span class="status-value" id="statusValue">Not Connected</span>
+        </div>
+
+        <div class="wallet-status" id="walletInfo" style="display: none;">
+          <div style="width: 100%;">
+            <div style="margin-bottom: 10px;">
+              <strong>Address:</strong>
+              <span id="walletAddress" class="wallet-address">-</span>
+            </div>
+            <div>
+              <strong>Type:</strong>
+              <span id="walletType" class="wallet-type">NONE</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="loadingSpinner" class="loading"></div>
+
+        <button id="connectBtn" onclick="handleConnect()">Connect Wallet</button>
+        <button id="disconnectBtn" class="secondary" onclick="handleDisconnect()" style="display: none;">Disconnect</button>
+
+        <button class="secondary" onclick="handleDeepLink()" style="display: none;" id="deepLinkBtn">
+          Try Deep Link Transfer
+        </button>
+
+        <div class="timer" id="timer"></div>
+      </div>
+    </div>
+
+    <!-- Wallet Detection Card -->
+    <div class="card">
+      <h2>Available Wallets</h2>
+      <div class="wallet-detector" id="detectorList">
+        <div class="detector-item">
+          <span class="detector-name">🔍 Detecting wallets...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Card -->
+    <div class="card">
+      <h2>Features</h2>
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">⚡</span>
+          <div class="feature-text">
+            <h3>Native Wallet Detection</h3>
+            <p>Automatically detects TonHub, TonKeeper, TON Wallet, and Ledger</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="feature-icon">🔄</span>
+          <div class="feature-text">
+            <h3>Automatic Fallback</h3>
+            <p>Falls back to TonConnect v2 if no native wallet is available</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="feature-icon">💾</span>
+          <div class="feature-text">
+            <h3>Session Persistence</h3>
+            <p>Remembers your wallet for 24 hours with auto-reconnect</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="feature-icon">🔗</span>
+          <div class="feature-text">
+            <h3>Deep Linking</h3>
+            <p>Direct wallet transfers without modals using ton:// links</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="feature-icon">⚙️</span>
+          <div class="feature-text">
+            <h3>Full Control</h3>
+            <p>Send transactions, check balance, manage wallets programmatically</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code Example Card -->
+    <div class="card">
+      <h2>Usage Example</h2>
+      <div class="code-block">
+// 1. Initialize
+await getGemsWallet.init();
+
+// 2. Connect wallet
+const account = await getGemsWallet.connect();
+
+// 3. Get wallet info
+console.log(account.address);
+console.log(account.walletType);
+
+// 4. Send transaction
+const tx = {
+  to: 'UQDvV...',
+  value: '1000000000',
+  data: 'te6ccg...'
+};
+await getGemsWallet.sendTransaction(tx);
+
+// 5. Listen for events
+getGemsWallet.on('connected', (account) => {
+  console.log('Connected!');
+});
+      </div>
+    </div>
+  </div>
+
+  <!-- GetGems Wallet Script -->
+  <script src="/static/webapp/js/getgems-wallet.js"></script>
+
+  <script>
+    // Initialize on page load
+    async function initializeWallet() {
+      try {
+        console.log('[Page] Initializing GetGems Wallet...');
+        await getGemsWallet.init();
+        
+        // Setup event listeners
+        getGemsWallet.on('connected', (account) => {
+          updateUIConnected(account);
+        });
+
+        getGemsWallet.on('disconnected', () => {
+          updateUIDisconnected();
+        });
+
+        getGemsWallet.on('error', (error) => {
+          showError(error.message);
+        });
+
+        getGemsWallet.on('fallback-to-tonconnect', () => {
+          console.log('[Page] Using TonConnect fallback');
+        });
+
+        // Detect wallets
+        detectWallets();
+
+        // Check for auto-restore
+        if (getGemsWallet.getConnected()) {
+          updateUIConnected({
+            address: getGemsWallet.getAddress(),
+            walletType: getGemsWallet.getWalletType()
+          });
+        }
+
+      } catch (error) {
+        console.error('[Page] Init error:', error);
+        showError('Initialization failed');
+      }
+    }
+
+    // UI Functions
+    function setLoading(show) {
+      const spinner = document.getElementById('loadingSpinner');
+      const btn = document.getElementById('connectBtn');
+      if (show) {
+        spinner.classList.add('show');
+        btn.disabled = true;
+      } else {
+        spinner.classList.remove('show');
+        btn.disabled = false;
+      }
+    }
+
+    function showStatus(message, type = 'info') {
+      const el = document.getElementById('statusMessage');
+      el.textContent = message;
+      el.className = `status-message ${type}`;
+      if (type === 'error') el.classList.add('show');
+    }
+
+    function showError(message) {
+      showStatus(message, 'error');
+    }
+
+    function updateUIConnected(account) {
+      document.getElementById('statusValue').textContent = '✓ Connected';
+      document.getElementById('walletAddress').textContent = shortenAddress(account.address, 8);
+      document.getElementById('walletType').textContent = account.walletType?.toUpperCase() || 'UNKNOWN';
+      document.getElementById('walletInfo').style.display = 'block';
+      document.getElementById('connectBtn').style.display = 'none';
+      document.getElementById('disconnectBtn').style.display = 'block';
+      document.getElementById('deepLinkBtn').style.display = 'block';
+      showStatus('✓ Wallet connected successfully!', 'success');
+    }
+
+    function updateUIDisconnected() {
+      document.getElementById('statusValue').textContent = 'Not Connected';
+      document.getElementById('walletInfo').style.display = 'none';
+      document.getElementById('connectBtn').style.display = 'block';
+      document.getElementById('disconnectBtn').style.display = 'none';
+      document.getElementById('deepLinkBtn').style.display = 'none';
+      showStatus('Wallet disconnected', 'info');
+    }
+
+    // Handler Functions
+    async function handleConnect() {
+      setLoading(true);
+      try {
+        const account = await getGemsWallet.connect();
+        if (account) {
+          console.log('[Page] Connected to:', account.address);
+          showStatus(`✓ Connected to ${account.walletType}!`, 'success');
+        }
+      } catch (error) {
+        showError('Connection failed: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function handleDisconnect() {
+      try {
+        await getGemsWallet.disconnect();
+        console.log('[Page] Disconnected');
+        showStatus('Disconnected', 'info');
+      } catch (error) {
+        showError('Disconnect failed: ' + error.message);
+      }
+    }
+
+    function handleDeepLink() {
+      const address = getGemsWallet.getAddress();
+      const deepLink = getGemsWallet.deepLink('transfer', {
+        destination: address,
+        amount: '100000000',  // 0.1 TON
+        text: 'Test transfer'
+      });
+      console.log('[Page] Deep link:', deepLink);
+      showStatus('Deep link created (check console)', 'info');
+    }
+
+    function shortenAddress(addr, chars = 8) {
+      if (!addr) return '-';
+      return `${addr.slice(0, chars)}...${addr.slice(-chars)}`;
+    }
+
+    // Wallet Detection Display
+    function detectWallets() {
+      const wallets = [
+        { name: 'TonHub', check: () => !!window.TonHub },
+        { name: 'TonKeeper', check: () => !!window.ton?.isTonkeeper },
+        { name: 'TON Wallet', check: () => !!window.ton?.send },
+        { name: 'TonConnect', check: () => !!window.TonConnectUI }
+      ];
+
+      const detected = wallets.map(w => ({
+        name: w.name,
+        available: w.check()
+      }));
+
+      const html = detected.map(w => `
+        <div class="detector-item">
+          <span class="detector-name">${w.name}</span>
+          <span class="detector-status ${w.available ? 'available' : 'unavailable'}">
+            ${w.available ? '✓ Available' : '✗ Not Found'}
+          </span>
+        </div>
+      `).join('');
+
+      document.getElementById('detectorList').innerHTML = html;
+    }
+
+    // Initialize on load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeWallet);
+    } else {
+      initializeWallet();
+    }
+  </script>
+</body>
+</html>
