@@ -227,7 +227,11 @@ async def tonconnect_manifest(request: Request):
                     if src and not src.startswith("http"):
                         ico["src"] = origin.rstrip("/") + "/" + src.lstrip("/")
         from fastapi.responses import JSONResponse
-        return JSONResponse(content=manifest, media_type="application/json")
+        response = JSONResponse(content=manifest, media_type="application/json")
+        # Ensure proper cache control and headers
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
     except Exception as e:
         logger.error(f"Failed to load tonconnect-manifest: {e}")
         raise HTTPException(status_code=500, detail="Failed to load TonConnect manifest")

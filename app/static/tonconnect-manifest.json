@@ -1,5 +1,8 @@
 {
   "url": "https://nftplatformbackend-production-ee5f.up.railway.app",
   "name": "GiftedForge",
-  "iconUrl": "https://image2url.com/r2/default/images/1773286803181-3e04067a-db2d-48b1-93e7-d486c16f805c.jpg"
+  "description": "Premium NFT Platform - Buy, Sell, and Create Digital Assets",
+  "iconUrl": "https://image2url.com/r2/default/images/1773286803181-3e04067a-db2d-48b1-93e7-d486c16f805c.jpg",
+  "termsOfUseUrl": "https://nftplatformbackend-production-ee5f.up.railway.app/terms",
+  "privacyPolicyUrl": "https://nftplatformbackend-production-ee5f.up.railway.app/privacy"
 }

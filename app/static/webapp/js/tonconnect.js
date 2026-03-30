@@ -55,6 +55,9 @@ class TonConnectManager {
       const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
       console.log('[TONConnect] Manifest URL:', manifestUrl);
 
+      // Verify manifest is accessible before creating UI
+      await this.verifyManifest(manifestUrl);
+
       // Create a container for the button (required by TonConnectUI)
       let buttonContainer = document.getElementById('tonconnect-button-container');
       if (!buttonContainer) {
@@ -76,12 +79,14 @@ class TonConnectManager {
             theme: this._getTheme(),
           },
         });
+        console.log('[TONConnect] UI initialized with button container');
       } catch (e) {
         console.warn('[TONConnect] Standard UI init failed, trying alternative:', e);
         // Fallback: create UI without button
         this.ui = new window.TonConnectUI({
           manifestUrl: manifestUrl,
         });
+        console.log('[TONConnect] UI initialized without button container');
       }
 
       // Listen for status changes
@@ -105,7 +110,7 @@ class TonConnectManager {
 
       this.isInitialized = true;
       this.isReady = true;
-      console.log('[TONConnect] ✅ Initialized successfully');
+      console.log('[TONConnect] Initialized successfully');
       this.emit('ready');
       
       return this.ui;
@@ -128,6 +133,39 @@ class TonConnectManager {
   }
 
   /**
+   * Verify manifest is accessible
+   */
+  async verifyManifest(manifestUrl) {
+    try {
+      console.log('[TONConnect] Verifying manifest at:', manifestUrl);
+      const response = await fetch(manifestUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        cache: 'no-cache'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Manifest returned ${response.status}`);
+      }
+
+      const manifest = await response.json();
+      console.log('[TONConnect] Manifest verified:', manifest);
+
+      // Verify manifest has required fields
+      if (!manifest.url || !manifest.name) {
+        throw new Error('Manifest missing required fields (url, name)');
+      }
+
+      return manifest;
+    } catch (error) {
+      console.error('[TONConnect] Manifest verification failed:', error);
+      throw new Error(`Failed to load manifest: ${error.message}`);
+    }
+  }
+
+  /**
    * Load TON Connect SDK and CSS dynamically
    */
   async loadTonConnectSDK() {
@@ -137,32 +175,76 @@ class TonConnectManager {
       return;
     }
 
-    // Load CSS first
+    // Load CSS first (non-blocking)
     await this._loadCSS();
     
-    // Load JS
+    // Load JS with retry logic
+    return this._loadSDKWithRetry();
+  }
+
+  /**
+   * Load SDK with retry logic
+   */
+  async _loadSDKWithRetry(attempt = 1, maxAttempts = 3) {
+    try {
+      return await this._loadSDKScript();
+    } catch (error) {
+      if (attempt < maxAttempts) {
+        console.warn(`[TONConnect] SDK load attempt ${attempt} failed, retrying...`);
+        await new Promise(r => setTimeout(r, 1000 * attempt)); // Exponential backoff
+        return this._loadSDKWithRetry(attempt + 1, maxAttempts);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Load SDK script from CDN
+   */
+  async _loadSDKScript() {
     return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js';
-      script.async = true;
-      
-      script.onload = () => {
-        console.log('[TONConnect] SDK script loaded');
-        // Give it a moment to initialize
-        setTimeout(() => {
-          if (window.TonConnectUI) {
-            resolve();
-          } else {
-            reject(new Error('TonConnectUI not available after script load'));
-          }
-        }, 100);
+      // Try primary CDN
+      const cdnUrls = [
+        'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js',
+        'https://cdn.jsdelivr.net/npm/@tonconnect/ui@latest/dist/tonconnect-ui.min.js'
+      ];
+
+      let attemptedUrls = 0;
+
+      const tryLoadFromCDN = (index) => {
+        if (index >= cdnUrls.length) {
+          reject(new Error('Failed to load TON Connect SDK from all CDN sources'));
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = cdnUrls[index];
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        
+        script.onload = () => {
+          console.log(`[TONConnect] SDK loaded from: ${cdnUrls[index]}`);
+          // Give it a moment to initialize
+          setTimeout(() => {
+            if (window.TonConnectUI) {
+              console.log('[TONConnect] TonConnectUI is available');
+              resolve();
+            } else {
+              console.warn('[TONConnect] TonConnectUI not available after load, trying next CDN');
+              tryLoadFromCDN(index + 1);
+            }
+          }, 100);
+        };
+        
+        script.onerror = () => {
+          console.warn(`[TONConnect] Failed to load from ${cdnUrls[index]}, trying next...`);
+          tryLoadFromCDN(index + 1);
+        };
+        
+        document.head.appendChild(script);
       };
-      
-      script.onerror = () => {
-        reject(new Error('Failed to load TON Connect SDK from CDN'));
-      };
-      
-      document.head.appendChild(script);
+
+      tryLoadFromCDN(0);
     });
   }
 
@@ -171,23 +253,44 @@ class TonConnectManager {
    */
   async _loadCSS() {
     return new Promise((resolve) => {
-      if (document.querySelector('link[href*="tonconnect-ui.min.css"]')) {
+      // Check if already loaded
+      if (document.querySelector('link[href*="tonconnect"]')) {
+        console.log('[TONConnect] CSS already loaded');
         resolve();
         return;
       }
 
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css';
-      link.onload = () => {
-        console.log('[TONConnect] CSS loaded');
-        resolve();
+      const cssUrls = [
+        'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css',
+        'https://cdn.jsdelivr.net/npm/@tonconnect/ui@latest/dist/tonconnect-ui.min.css'
+      ];
+
+      const tryLoadCSS = (index) => {
+        if (index >= cssUrls.length) {
+          console.warn('[TONConnect] Could not load CSS from any CDN (will continue without styles)');
+          resolve();
+          return;
+        }
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = cssUrls[index];
+        link.crossOrigin = 'anonymous';
+        
+        link.onload = () => {
+          console.log(`[TONConnect] CSS loaded from: ${cssUrls[index]}`);
+          resolve();
+        };
+        
+        link.onerror = () => {
+          console.warn(`[TONConnect] CSS load failed from ${cssUrls[index]}, trying next...`);
+          tryLoadCSS(index + 1);
+        };
+        
+        document.head.appendChild(link);
       };
-      link.onerror = () => {
-        console.warn('[TONConnect] CSS failed to load (non-critical)');
-        resolve(); // Don't fail on CSS
-      };
-      document.head.appendChild(link);
+
+      tryLoadCSS(0);
     });
   }
 
@@ -227,6 +330,7 @@ class TonConnectManager {
    */
   async openModal() {
     if (!this.isInitialized || !this.ui) {
+      console.log('[TONConnect] UI not initialized, initializing now...');
       const ready = await this.waitForReady();
       if (!ready) {
         throw new Error('TON Connect not ready');
@@ -235,6 +339,13 @@ class TonConnectManager {
 
     try {
       console.log('[TONConnect] Opening wallet modal...');
+      console.log('[TONConnect] UI instance:', this.ui);
+      console.log('[TONConnect] UI methods available:', typeof this.ui?.connectWallet);
+      
+      if (!this.ui.connectWallet) {
+        throw new Error('connectWallet method not available on UI instance');
+      }
+
       const wallet = await this.ui.connectWallet();
       console.log('[TONConnect] Wallet connected:', wallet);
       return wallet;
@@ -245,7 +356,7 @@ class TonConnectManager {
       }
       console.error('[TONConnect] Modal error:', error);
       this.emit('error', { message: error.message || 'Connection cancelled' });
-      return null;
+      throw error;
     }
   }
 
