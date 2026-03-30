@@ -2,8 +2,9 @@
  * TON Connect v2 - Production Module for Telegram Mini App
  * 
  * Features:
- * ✅ Latest @tonconnect/ui v2 
- * ✅ Session persistence/reconnect
+ * ✅ GetGems-style native wallet detection
+ * ✅ Priority: TonHub → TonKeeper → TON Wallet → TonConnect
+ * ✅ Session persistence/reconnect (24h auto-restore)
  * ✅ Telegram Mini App compatible
  * ✅ Custom events
  * ✅ Error boundaries
@@ -20,6 +21,10 @@ class TonConnectManager {
     this.isConnecting = false;
     this.readyPromise = null;
     this.readyResolve = null;
+    
+    // GetGems connection mode
+    this.walletType = null; // 'tonhub', 'tonkeeper', 'tonwallet', 'tonconnect'
+    this.nativeWalletBridge = null; // Reference to native wallet if available
   }
 
   /**
@@ -41,9 +46,23 @@ class TonConnectManager {
 
   async _doInit() {
     try {
-      console.log('[TONConnect] Initializing v2 UI...');
+      console.log('[TONConnect] Initializing with GetGems-style detection...');
       
-      // Load TonConnect SDK and CSS
+      // 1. Detect native wallets (GetGems priority)
+      this._detectNativeWallets();
+      console.log('[TONConnect] Wallet type detected:', this.walletType);
+
+      // 2. Try to restore previous session first
+      const restored = await this.restoreSession();
+      if (restored) {
+        console.log('[TONConnect] Session restored, skipping modal');
+        this.isInitialized = true;
+        this.isReady = true;
+        this.emit('ready');
+        return this.ui || true;
+      }
+
+      // 3. Load TonConnect SDK and CSS (for fallback or native bridge)
       await this.loadTonConnectSDK();
       
       // Verify SDK is available
@@ -94,19 +113,18 @@ class TonConnectManager {
         console.log('[TONConnect] Status change:', wallet);
         if (wallet) {
           this.currentAccount = wallet.account;
+          this.walletType = 'tonconnect';
           this.saveSession(wallet);
           this.emit('connected', wallet.account);
           console.log('[TONConnect] Connected to:', wallet.account.address);
         } else {
           this.currentAccount = null;
+          this.walletType = null;
           this.clearSession();
           this.emit('disconnected');
           console.log('[TONConnect] Disconnected');
         }
       });
-
-      // Try to restore previous session
-      await this.restoreSession();
 
       this.isInitialized = true;
       this.isReady = true;
@@ -130,6 +148,129 @@ class TonConnectManager {
       return window.Telegram.WebApp.colorScheme === 'dark' ? 'dark' : 'light';
     }
     return 'light';
+  }
+
+  /**
+   * GetGems-style native wallet detection
+   * Check in priority order: TonHub → TonKeeper → TON Wallet → TonConnect
+   */
+  _detectNativeWallets() {
+    console.log('[TONConnect] Detecting native wallets...');
+    
+    // 1. Check for TonHub (popular bridge)
+    if (window.TonHub) {
+      console.log('[TONConnect] ✓ TonHub detected');
+      this.walletType = 'tonhub';
+      this.nativeWalletBridge = window.TonHub;
+      return;
+    }
+    
+    // 2. Check for TonKeeper (injects ton object with isTonkeeper flag)
+    if (window.ton?.isTonkeeper) {
+      console.log('[TONConnect] ✓ TonKeeper detected');
+      this.walletType = 'tonkeeper';
+      this.nativeWalletBridge = window.ton;
+      return;
+    }
+    
+    // 3. Check for generic TON wallet (Chrome extension)
+    if (window.ton && typeof window.ton.send === 'function') {
+      console.log('[TONConnect] ✓ Generic TON Wallet detected');
+      this.walletType = 'tonwallet';
+      this.nativeWalletBridge = window.ton;
+      return;
+    }
+
+    console.log('[TONConnect] No native wallet detected, will use TonConnect');
+    this.walletType = 'tonconnect';
+  }
+
+  /**
+   * Connect via native wallet bridge
+   */
+  async connectNativeWallet() {
+    if (!this.nativeWalletBridge) {
+      throw new Error('No native wallet bridge available');
+    }
+
+    try {
+      console.log('[TONConnect] Connecting via', this.walletType, '...');
+
+      let account;
+      
+      switch (this.walletType) {
+        case 'tonhub':
+          account = await this._connectTonHub();
+          break;
+        case 'tonkeeper':
+        case 'tonwallet':
+          account = await this._connectViaRpcBridge();
+          break;
+        default:
+          throw new Error('Unknown wallet type: ' + this.walletType);
+      }
+
+      if (account) {
+        this.currentAccount = account;
+        this.saveSession({ account, walletType: this.walletType });
+        this.emit('connected', account);
+        console.log('[TONConnect] Connected via', this.walletType);
+        return account;
+      }
+      
+      throw new Error('Failed to get account from native wallet');
+
+    } catch (error) {
+      console.error('[TONConnect] Native wallet connection failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connect via TonHub
+   */
+  async _connectTonHub() {
+    try {
+      const isAvailable = await this.TonHub?.isAvailable?.();
+      if (!isAvailable) {
+        throw new Error('TonHub not available');
+      }
+
+      const wallet = await this.TonHub.getWalletInfo?.();
+      if (!wallet) {
+        throw new Error('Could not get wallet info from TonHub');
+      }
+
+      return {
+        address: wallet.address,
+        publicKey: wallet.publicKey,
+        chain: wallet.network === 0 ? 'mainnet' : 'testnet'
+      };
+    } catch (error) {
+      console.error('[TONConnect] TonHub connection error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connect via RPC bridge (TonKeeper, TON Wallet)
+   */
+  async _connectViaRpcBridge() {
+    try {
+      const result = await this.nativeWalletBridge.send('ton_requestAccounts');
+      
+      if (!result || !result[0]) {
+        throw new Error('No account selected');
+      }
+
+      return {
+        address: result[0],
+        chain: this.walletType === 'tonkeeper' ? 'mainnet' : 'testnet'
+      };
+    } catch (error) {
+      console.error('[TONConnect] RPC bridge connection error:', error);
+      throw error;
+    }
   }
 
   /**
@@ -371,7 +512,8 @@ class TonConnectManager {
   }
 
   /**
-   * Connect wallet (programmatic)
+   * Connect wallet - GetGems style
+   * Tries native wallet first, then falls back to TonConnect modal
    */
   async connectWallet() {
     if (this.isConnecting) {
@@ -388,6 +530,19 @@ class TonConnectManager {
     this.emit('connecting');
 
     try {
+      // Try native wallet first (GetGems priority)
+      if (this.walletType && this.walletType !== 'tonconnect' && this.nativeWalletBridge) {
+        try {
+          console.log('[TONConnect] Attempting native wallet connection...');
+          const account = await this.connectNativeWallet();
+          return account;
+        } catch (error) {
+          console.warn('[TONConnect] Native wallet connection failed, falling back to TonConnect:', error.message);
+          this.walletType = 'tonconnect';
+        }
+      }
+
+      // Fallback: use TonConnect modal
       const result = await this.openModal();
       if (result) {
         return this.currentAccount;
@@ -403,30 +558,66 @@ class TonConnectManager {
   }
 
   /**
-   * Send transaction
+   * Send transaction - GetGems style
+   * Routes to native wallet or TonConnect based on connection type
    */
   async sendTransaction(transaction) {
     if (!this.isConnected()) {
       throw new Error('Wallet not connected');
     }
 
-    if (!this.ui) {
-      throw new Error('TON Connect not initialized');
-    }
-
     try {
-      console.log('[TONConnect] Sending transaction:', transaction);
+      console.log('[TONConnect] Sending transaction via', this.walletType);
       
-      // Use the TonConnectUI's sendTransaction method
+      // Send via native wallet if available
+      if (this.walletType !== 'tonconnect' && this.nativeWalletBridge) {
+        return await this._sendViaNativeWallet(transaction);
+      }
+
+      // Fallback to TonConnect
+      if (!this.ui) {
+        throw new Error('TON Connect not initialized');
+      }
+
+      console.log('[TONConnect] Sending transaction via TonConnect UI');
       const result = await this.ui.sendTransaction(transaction);
       
       console.log('[TONConnect] Transaction sent:', result);
       this.emit('transaction-sent', result);
       
       return result;
+
     } catch (error) {
       console.error('[TONConnect] Send transaction failed:', error);
       this.emit('error', { message: error.message || 'Transaction failed' });
+      throw error;
+    }
+  }
+
+  /**
+   * Send transaction via native wallet bridge
+   */
+  async _sendViaNativeWallet(tx) {
+    try {
+      switch (this.walletType) {
+        case 'tonhub':
+          return await this.nativeWalletBridge.send(tx);
+        
+        case 'tonkeeper':
+        case 'tonwallet':
+          const params = {
+            to: tx.to,
+            value: tx.value?.toString() || '0',
+            data: tx.data,
+            dataType: 'boc',
+          };
+          return await this.nativeWalletBridge.send('ton_sendTransaction', params);
+        
+        default:
+          throw new Error('Unknown wallet type for transaction: ' + this.walletType);
+      }
+    } catch (error) {
+      console.error('[TONConnect] Native wallet transaction error:', error);
       throw error;
     }
   }
@@ -440,12 +631,31 @@ class TonConnectManager {
         await this.ui.disconnect();
       }
       this.currentAccount = null;
+      this.walletType = 'tonconnect';
+      this.nativeWalletBridge = null;
       this.clearSession();
       console.log('[TONConnect] Disconnected');
       this.emit('disconnected');
     } catch (error) {
       console.error('[TONConnect] Disconnect failed:', error);
     }
+  }
+
+  /**
+   * Deep link for direct transfer (GetGems style)
+   * Usage: window.location.href = tonConnect.createDeepLink(...)
+   */
+  createDeepLink(params) {
+    const query = new URLSearchParams({
+      destination: params.destination || this.getWalletAddress() || '',
+      amount: params.amount || '0',
+      text: params.text || '',
+      init: params.init || '',
+    });
+
+    const deepLink = `ton://transfer/${query.toString()}`;
+    console.log('[TONConnect] Created deep link');
+    return deepLink;
   }
 
   /**
@@ -456,39 +666,54 @@ class TonConnectManager {
   }
 
   /**
-   * Restore session from localStorage
+   * Restore session from localStorage with 24-hour TTL
+   * GetGems-style auto-reconnect
    */
   async restoreSession() {
     const session = localStorage.getItem('tonconnect_session');
-    if (session && this.ui) {
-      try {
-        const parsed = JSON.parse(session);
-        console.log('[TONConnect] Attempting to restore session...');
-        
-        // Try to restore the connection
-        const restored = await this.ui.getWallets?.() || await this.ui.connectWallet?.();
-        if (restored) {
-          console.log('[TONConnect] Session restored');
-          return true;
-        }
-      } catch (error) {
-        console.warn('[TONConnect] Session restore failed:', error);
-        this.clearSession();
-      }
+    if (!session) {
+      console.log('[TONConnect] No session to restore');
+      return false;
     }
-    return false;
+
+    try {
+      const parsed = JSON.parse(session);
+      const now = Date.now();
+
+      // Check if session is still valid (24 hours = 86400000 ms)
+      if (now - parsed.timestamp > 24 * 60 * 60 * 1000) {
+        console.log('[TONConnect] Session expired');
+        this.clearSession();
+        return false;
+      }
+
+      console.log('[TONConnect] Restoring session with wallet type:', parsed.walletType);
+      this.currentAccount = parsed.account;
+      this.walletType = parsed.walletType;
+      
+      this.emit('connected', parsed.account);
+      console.log('[TONConnect] Session restored successfully');
+      return true;
+
+    } catch (error) {
+      console.warn('[TONConnect] Session restore error:', error);
+      this.clearSession();
+      return false;
+    }
   }
 
   /**
-   * Save session to localStorage
+   * Save session to localStorage with timestamp
    */
   saveSession(wallet) {
     try {
-      localStorage.setItem('tonconnect_session', JSON.stringify({
-        account: wallet.account,
-        wallet: wallet.jsBridgeKey,
-      }));
-      console.log('[TONConnect] Session saved');
+      const session = {
+        account: wallet.account || this.currentAccount,
+        walletType: this.walletType,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('tonconnect_session', JSON.stringify(session));
+      console.log('[TONConnect] Session saved (', this.walletType, ')');
     } catch (error) {
       console.warn('[TONConnect] Failed to save session:', error);
     }
@@ -500,6 +725,24 @@ class TonConnectManager {
   clearSession() {
     localStorage.removeItem('tonconnect_session');
     console.log('[TONConnect] Session cleared');
+  }
+
+  /**
+   * Get wallet type (GetGems info)
+   */
+  getWalletType() {
+    return this.walletType;
+  }
+
+  /**
+   * Get native wallet info
+   */
+  getNativeWalletInfo() {
+    return {
+      type: this.walletType,
+      isNative: this.walletType !== 'tonconnect' && this.walletType !== null,
+      bridge: this.nativeWalletBridge ? 'available' : 'none'
+    };
   }
 
   /**
