@@ -34,7 +34,6 @@ from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 from app.routers.image_router import router as image_router
 
-from app.routers.ton_wallet_connect_router import router as ton_wallet_connect_router
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
     RequestSizeLimitMiddleware,
@@ -317,7 +316,6 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(walletconnect_router, prefix="/api/v1")
 app.include_router(trending_router, prefix="/api/v1")
 app.include_router(image_router, prefix="/api/v1")
-app.include_router(ton_wallet_connect_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(ton_wallet_router)
 app.include_router(stars_marketplace_router)
