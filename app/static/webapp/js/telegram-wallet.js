@@ -26,41 +26,96 @@ class TelegramWalletIntegrator {
 
   bindEvents() {
     // TON Connect events
-    tonConnect.on('ready', () => this.updateUI());
-    tonConnect.on('connected', (account) => this.handleConnect(account));
-    tonConnect.on('disconnected', () => this.handleDisconnect());
-    tonConnect.on('error', (error) => this.handleError(error));
+    tonConnect.on('ready', () => {
+      console.log('[TelegramWallet] TON Connect is ready for wallet connections');
+      this.updateUI();
+    });
+    tonConnect.on('connected', (account) => {
+      console.log('[TelegramWallet] Connection event fired:', account);
+      this.handleConnect(account);
+    });
+    tonConnect.on('disconnected', () => {
+      console.log('[TelegramWallet] Disconnection event fired');
+      this.handleDisconnect();
+    });
+    tonConnect.on('error', (error) => {
+      console.log('[TelegramWallet] Error event fired:', error);
+      this.handleError(error);
+    });
 
-    // Button click
+    // Button click - GATEWAY ENTRY POINT
     if (this.connectBtn) {
-      this.connectBtn.addEventListener('click', () => this.connect());
+      this.connectBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[TelegramWallet] Connect button clicked - gateway entry point');
+        
+        // Check current state
+        if (tonConnect.getAccount()) {
+          console.log('[TelegramWallet] Already connected, showing disconnect option');
+          this.handleDisconnect();
+        } else {
+          console.log('[TelegramWallet] Not connected, initiating connect gateway');
+          this.connect();
+        }
+      });
     }
   }
 
   async initWalletState() {
     // Wait for TON Connect ready
-    await tonConnect.init();
-    await this.updateUI();
+    console.log('[TelegramWallet] Initializing wallet state...');
+    try {
+      await tonConnect.init();
+      console.log('[TelegramWallet] TON Connect initialized');
+      console.log('[TelegramWallet] Wallet type:', tonConnect.getWalletType());
+      await this.updateUI();
+      console.log('[TelegramWallet] Wallet state initialized - GATEWAY READY');
+    } catch (error) {
+      console.error('[TelegramWallet] Initialization error:', error);
+      this.setError('Wallet initialization failed');
+    }
   }
 
   async connect() {
-    if (tonConnect.isConnecting || tonConnect.getAccount()) return;
+    console.log('[TelegramWallet] ==== WALLET CONNECT GATEWAY INITIATED ====');
+    
+    // Check if already connecting or connected
+    if (tonConnect.isConnecting) {
+      console.log('[TelegramWallet] Already connecting, skipping...');
+      return;
+    }
+
+    if (tonConnect.getAccount()) {
+      console.log('[TelegramWallet] Already connected');
+      this.setConnected(tonConnect.getAccount().address);
+      return;
+    }
 
     this.setLoading(true);
     this.clearError();
 
     try {
+      console.log('[TelegramWallet] Triggering TON Connect modal...');
+      
+      // This is the GATEWAY: shows the wallet selection modal (popup)
       const account = await tonConnect.connectWallet();
+      
       if (!account) {
-        this.setError('No wallet selected');
+        this.setError('No wallet selected - modal cancelled');
+        console.warn('[TelegramWallet] User cancelled wallet selection');
         return;
       }
 
+      console.log('[TelegramWallet] Wallet selected via modal:', account.address);
+      
       // Auto-sync with backend
       await this.syncWithBackend(account.address);
+      console.log('[TelegramWallet] Gateway flow completed successfully');
       
     } catch (error) {
-      this.setError(error.message || 'Connection failed');
+      console.error('[TelegramWallet] Gateway error:', error);
+      this.setError(error.message || 'Connection failed - check console');
     } finally {
       this.setLoading(false);
     }
@@ -199,6 +254,35 @@ class TelegramWalletIntegrator {
       this.errorEl.textContent = '';
       this.errorEl.style.display = 'none';
     }
+  }
+
+  /**
+   * Disconnect current wallet
+   */
+  async disconnect() {
+    console.log('[TelegramWallet] Disconnecting wallet...');
+    this.setLoading(true);
+    
+    try {
+      await tonConnect.disconnect();
+      this.setDisconnected();
+      this.setStatus('Wallet disconnected');
+      console.log('[TelegramWallet] Wallet disconnected successfully');
+    } catch (error) {
+      console.error('[TelegramWallet] Disconnect error:', error);
+      this.setError('Disconnect failed: ' + error.message);
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
+  /**
+   * Handle disconnect action
+   */
+  handleDisconnect() {
+    console.log('[TelegramWallet] Disconnect handler triggered');
+    this.setDisconnected();
+    console.log('[TelegramWallet] UI updated for disconnected state');
   }
 }
 

@@ -48,7 +48,7 @@ class TonConnectManager {
     try {
       console.log('[TONConnect] Initializing with GetGems-style detection...');
       
-      // 1. Detect native wallets (GetGems priority)
+      // 1. Detect native wallets 
       this._detectNativeWallets();
       console.log('[TONConnect] Wallet type detected:', this.walletType);
 
@@ -467,9 +467,12 @@ class TonConnectManager {
   }
 
   /**
-   * Open wallet connection modal
+   * Show wallet connection modal (Telegram popup)
+   * This is the GATEWAY - triggered when user clicks "Connect Wallet" button
    */
-  async openModal() {
+  async showWalletModal() {
+    console.log('[TONConnect] ==== WALLET MODAL GATEWAY TRIGGERED ====');
+    
     if (!this.isInitialized || !this.ui) {
       console.log('[TONConnect] UI not initialized, initializing now...');
       const ready = await this.waitForReady();
@@ -479,26 +482,45 @@ class TonConnectManager {
     }
 
     try {
-      console.log('[TONConnect] Opening wallet modal...');
+      console.log('[TONConnect] Opening wallet selection modal...');
       console.log('[TONConnect] UI instance:', this.ui);
-      console.log('[TONConnect] UI methods available:', typeof this.ui?.connectWallet);
+      console.log('[TONConnect] UI available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.ui || {})));
       
-      if (!this.ui.connectWallet) {
-        throw new Error('connectWallet method not available on UI instance');
+      if (!this.ui) {
+        throw new Error('UI instance not available');
       }
 
-      const wallet = await this.ui.connectWallet();
-      console.log('[TONConnect] Wallet connected:', wallet);
-      return wallet;
+      if (typeof this.ui.connectWallet !== 'function') {
+        console.warn('[TONConnect] connectWallet method not available, trying openModal...');
+        if (typeof this.ui.openModal === 'function') {
+          await this.ui.openModal();
+        } else {
+          throw new Error('No modal method available on TonConnectUI');
+        }
+      } else {
+        // Trigger the TonConnect wallet selection modal
+        console.log('[TONConnect] Calling ui.connectWallet()...');
+        const wallet = await this.ui.connectWallet();
+        console.log('[TONConnect] Modal returned wallet:', wallet);
+        return wallet;
+      }
+
     } catch (error) {
-      if (error.message === 'Already connected') {
+      if (error.message.includes('Already connected')) {
         console.log('[TONConnect] Already connected');
-        return true;
+        return { success: true, alreadyConnected: true };
       }
       console.error('[TONConnect] Modal error:', error);
       this.emit('error', { message: error.message || 'Connection cancelled' });
       throw error;
     }
+  }
+
+  /**
+   * Open wallet connection modal (alias for backward compatibility)
+   */
+  async openModal() {
+    return this.showWalletModal();
   }
 
   /**
