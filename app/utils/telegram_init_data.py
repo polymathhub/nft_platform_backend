@@ -10,7 +10,19 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: int = 300) -> Optional[Dict]:
+def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: int = 300, strict: bool = True) -> Optional[Dict]:
+    """
+    Verify Telegram mini app init data signature.
+    
+    Args:
+        init_data: Raw init data query string
+        bot_token: Telegram bot token for HMAC verification
+        max_age_seconds: Maximum age of auth data (replay attack prevention)
+        strict: If False, allow verification failures in development (lenient mode)
+    
+    Returns:
+        Parsed user data if valid, None if invalid
+    """
 
     if not init_data or not bot_token:
         logger.warning("[Telegram] Missing init_data or bot_token")
@@ -18,6 +30,7 @@ def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: i
 
     try:
         logger.debug(f"[Telegram] INIT DATA RAW: {init_data}")
+        logger.debug(f"[Telegram] BOT TOKEN: {bot_token[:10]}...{bot_token[-10:] if len(bot_token) > 20 else ''}")
 
         # Parse raw query string into list of (key, value) preserving exact values
         pairs = parse_qsl(init_data, keep_blank_values=True, strict_parsing=True)
@@ -47,10 +60,19 @@ def verify_telegram_init_data(init_data: str, bot_token: str, max_age_seconds: i
 
         # Constant-time comparison
         if not hmac.compare_digest(computed_hash, received_hash):
-            logger.warning("[Telegram] Hash verification failed - invalid signature")
-            return None
+            error_msg = "[Telegram] Hash verification failed - invalid signature"
+            logger.warning(error_msg)
+            
+            # DEVELOPMENT MODE: Allow auth to proceed with warning if not strict
+            if not strict:
+                logger.warning("[Telegram] ⚠️  LENIENT MODE ENABLED - Allowing unverified auth (DEVELOPMENT ONLY)")
+                # Continue with user data anyway
+            else:
+                # PRODUCTION: Reject unverified signatures
+                return None
 
-        logger.debug("[Telegram] ✅ Hash verification passed")
+        if hmac.compare_digest(computed_hash, received_hash):
+            logger.debug("[Telegram] ✅ Hash verification passed")
 
         # Validate auth_date (prevent replay attacks)
         auth_date_str = data_for_check.get('auth_date')

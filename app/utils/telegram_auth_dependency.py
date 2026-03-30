@@ -40,11 +40,20 @@ async def get_telegram_init_data(
             detail="Missing Telegram authentication data"
         )
 
+    # Development mode: Allow auth even if verification fails (lenient mode)
+    # Production mode: Strict signature verification required
+    is_development = settings.debug or settings.environment.lower() in ('development', 'dev', 'local')
+    strict_mode = not is_development
+    
+    if is_development:
+        logger.info("[Auth] DEVELOPMENT MODE - Using lenient Telegram verification")
+    
     # Verify initData signature (5 minute default window)
     telegram_user = verify_telegram_init_data(
         init_data,
         settings.telegram_bot_token,
         max_age_seconds=300,
+        strict=strict_mode,
     )
     
     if not telegram_user:
@@ -176,9 +185,14 @@ async def get_current_user_optional(
         return None
     
     try:
+        # Development mode: Allow auth even if verification fails (lenient mode)
+        is_development = settings.debug or settings.environment.lower() in ('development', 'dev', 'local')
+        strict_mode = not is_development
+        
         telegram_user = verify_telegram_init_data(
             x_telegram_init_data,
-            settings.telegram_bot_token
+            settings.telegram_bot_token,
+            strict=strict_mode
         )
         
         if not telegram_user:
