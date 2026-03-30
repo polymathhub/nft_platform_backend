@@ -8,14 +8,18 @@
  * ✅ Custom events
  * ✅ Error boundaries
  * ✅ Universal wallet support
+ * ✅ Full API compatibility
  */
 
 class TonConnectManager {
   constructor() {
     this.ui = null;
     this.isInitialized = false;
+    this.isReady = false;
     this.currentAccount = null;
     this.isConnecting = false;
+    this.readyPromise = null;
+    this.readyResolve = null;
   }
 
   /**
@@ -27,85 +31,245 @@ class TonConnectManager {
       return this.ui;
     }
 
+    if (this.readyPromise) {
+      return this.readyPromise;
+    }
+
+    this.readyPromise = this._doInit();
+    return this.readyPromise;
+  }
+
+  async _doInit() {
     try {
       console.log('[TONConnect] Initializing v2 UI...');
       
-      // Dynamically load v2 SDK (latest)
+      // Load TonConnect SDK and CSS
       await this.loadTonConnectSDK();
       
-      // Get manifest URL (works with proxy/railway)
+      // Verify SDK is available
+      if (!window.TonConnectUI) {
+        throw new Error('TonConnectUI SDK not loaded');
+      }
+
+      // Get manifest URL 
       const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-      console.log('[TONConnect] Manifest:', manifestUrl);
+      console.log('[TONConnect] Manifest URL:', manifestUrl);
 
-      // Init UI v2
-      this.ui = new window.TonConnectUI({
-        manifestUrl,
-        buttonRootId: null, // Programmatic control
-        actionsConfiguration: {
-          twaReturnUrl: window.location.href,
-        },
-        uiPreferences: {
-          theme: window.Telegram?.WebApp?.colorScheme === 'dark' ? 'dark' : 'light',
-        },
-      });
+      // Create a container for the button (required by TonConnectUI)
+      let buttonContainer = document.getElementById('tonconnect-button-container');
+      if (!buttonContainer) {
+        buttonContainer = document.createElement('div');
+        buttonContainer.id = 'tonconnect-button-container';
+        buttonContainer.style.display = 'none';
+        document.body.appendChild(buttonContainer);
+      }
 
-      // Event listeners
+      // Initialize UI v2 with proper configuration
+      try {
+        this.ui = new window.TonConnectUI({
+          manifestUrl: manifestUrl,
+          buttonRootId: 'tonconnect-button-container',
+          actionsConfiguration: {
+            twaReturnUrl: window.location.href,
+          },
+          uiPreferences: {
+            theme: this._getTheme(),
+          },
+        });
+      } catch (e) {
+        console.warn('[TONConnect] Standard UI init failed, trying alternative:', e);
+        // Fallback: create UI without button
+        this.ui = new window.TonConnectUI({
+          manifestUrl: manifestUrl,
+        });
+      }
+
+      // Listen for status changes
       this.ui.onStatusChange((wallet) => {
         console.log('[TONConnect] Status change:', wallet);
-        this.currentAccount = wallet?.account || null;
-        
         if (wallet) {
+          this.currentAccount = wallet.account;
           this.saveSession(wallet);
           this.emit('connected', wallet.account);
+          console.log('[TONConnect] Connected to:', wallet.account.address);
         } else {
+          this.currentAccount = null;
           this.clearSession();
           this.emit('disconnected');
+          console.log('[TONConnect] Disconnected');
         }
       });
 
-      // Try auto-reconnect
+      // Try to restore previous session
       await this.restoreSession();
 
       this.isInitialized = true;
-      console.log('[TONConnect] ✅ Initialized');
+      this.isReady = true;
+      console.log('[TONConnect] ✅ Initialized successfully');
       this.emit('ready');
       
       return this.ui;
     } catch (error) {
       console.error('[TONConnect] Init failed:', error);
-      this.emit('error', { message: error.message });
+      this.isReady = false;
+      this.emit('error', { message: error.message || 'Initialization failed' });
       throw error;
     }
   }
 
   /**
-   * Load TON Connect SDK dynamically
+   * Get current theme
+   */
+  _getTheme() {
+    if (window.Telegram?.WebApp?.colorScheme) {
+      return window.Telegram.WebApp.colorScheme === 'dark' ? 'dark' : 'light';
+    }
+    return 'light';
+  }
+
+  /**
+   * Load TON Connect SDK and CSS dynamically
    */
   async loadTonConnectSDK() {
+    // Check if already loaded
     if (window.TonConnectUI) {
+      console.log('[TONConnect] SDK already loaded');
       return;
     }
 
+    // Load CSS first
+    await this._loadCSS();
+    
+    // Load JS
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js';
+      script.async = true;
+      
       script.onload = () => {
-        console.log('[TONConnect] SDK loaded');
-        resolve();
+        console.log('[TONConnect] SDK script loaded');
+        // Give it a moment to initialize
+        setTimeout(() => {
+          if (window.TonConnectUI) {
+            resolve();
+          } else {
+            reject(new Error('TonConnectUI not available after script load'));
+          }
+        }, 100);
       };
+      
       script.onerror = () => {
-        reject(new Error('Failed to load TON Connect SDK'));
+        reject(new Error('Failed to load TON Connect SDK from CDN'));
       };
+      
       document.head.appendChild(script);
     });
   }
 
   /**
-   * Connect wallet (user-initiated)
+   * Load TON Connect CSS
+   */
+  async _loadCSS() {
+    return new Promise((resolve) => {
+      if (document.querySelector('link[href*="tonconnect-ui.min.css"]')) {
+        resolve();
+        return;
+      }
+
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.css';
+      link.onload = () => {
+        console.log('[TONConnect] CSS loaded');
+        resolve();
+      };
+      link.onerror = () => {
+        console.warn('[TONConnect] CSS failed to load (non-critical)');
+        resolve(); // Don't fail on CSS
+      };
+      document.head.appendChild(link);
+    });
+  }
+
+  /**
+   * Wait for TON Connect to be ready
+   */
+  async waitForReady() {
+    if (this.isReady) {
+      return true;
+    }
+
+    try {
+      await this.init();
+      return this.isReady;
+    } catch (error) {
+      console.error('[TONConnect] waitForReady failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Initialize (same as init, for compatibility)
+   */
+  async initialize() {
+    return this.init();
+  }
+
+  /**
+   * Check if wallet is connected
+   */
+  isConnected() {
+    return this.currentAccount != null;
+  }
+
+  /**
+   * Open wallet connection modal
+   */
+  async openModal() {
+    if (!this.isInitialized || !this.ui) {
+      const ready = await this.waitForReady();
+      if (!ready) {
+        throw new Error('TON Connect not ready');
+      }
+    }
+
+    try {
+      console.log('[TONConnect] Opening wallet modal...');
+      const wallet = await this.ui.connectWallet();
+      console.log('[TONConnect] Wallet connected:', wallet);
+      return wallet;
+    } catch (error) {
+      if (error.message === 'Already connected') {
+        console.log('[TONConnect] Already connected');
+        return true;
+      }
+      console.error('[TONConnect] Modal error:', error);
+      this.emit('error', { message: error.message || 'Connection cancelled' });
+      return null;
+    }
+  }
+
+  /**
+   * Get wallet address
+   */
+  getWalletAddress() {
+    if (this.currentAccount?.address) {
+      return this.currentAccount.address;
+    }
+    return null;
+  }
+
+  /**
+   * Connect wallet (programmatic)
    */
   async connectWallet() {
-    if (this.isConnecting || this.currentAccount) {
-      console.log('[TONConnect] Already connecting or connected');
+    if (this.isConnecting) {
+      console.log('[TONConnect] Already connecting');
+      return this.currentAccount;
+    }
+
+    if (this.currentAccount) {
+      console.log('[TONConnect] Already connected');
       return this.currentAccount;
     }
 
@@ -113,15 +277,46 @@ class TonConnectManager {
     this.emit('connecting');
 
     try {
-      const wallet = await this.ui.connectWallet();
-      console.log('[TONConnect] Connected:', wallet.account);
-      return wallet.account;
+      const result = await this.openModal();
+      if (result) {
+        return this.currentAccount;
+      }
+      return null;
     } catch (error) {
       console.error('[TONConnect] Connect failed:', error);
-      this.emit('error', { message: error.message || 'Connection cancelled' });
+      this.emit('error', { message: error.message || 'Connection failed' });
       return null;
     } finally {
       this.isConnecting = false;
+    }
+  }
+
+  /**
+   * Send transaction
+   */
+  async sendTransaction(transaction) {
+    if (!this.isConnected()) {
+      throw new Error('Wallet not connected');
+    }
+
+    if (!this.ui) {
+      throw new Error('TON Connect not initialized');
+    }
+
+    try {
+      console.log('[TONConnect] Sending transaction:', transaction);
+      
+      // Use the TonConnectUI's sendTransaction method
+      const result = await this.ui.sendTransaction(transaction);
+      
+      console.log('[TONConnect] Transaction sent:', result);
+      this.emit('transaction-sent', result);
+      
+      return result;
+    } catch (error) {
+      console.error('[TONConnect] Send transaction failed:', error);
+      this.emit('error', { message: error.message || 'Transaction failed' });
+      throw error;
     }
   }
 
@@ -130,8 +325,13 @@ class TonConnectManager {
    */
   async disconnect() {
     try {
-      await this.ui.disconnect();
+      if (this.ui) {
+        await this.ui.disconnect();
+      }
+      this.currentAccount = null;
+      this.clearSession();
       console.log('[TONConnect] Disconnected');
+      this.emit('disconnected');
     } catch (error) {
       console.error('[TONConnect] Disconnect failed:', error);
     }
@@ -152,13 +352,20 @@ class TonConnectManager {
     if (session && this.ui) {
       try {
         const parsed = JSON.parse(session);
-        console.log('[TONConnect] Restoring session:', parsed);
-        await this.ui.restoreConnection(parsed);
+        console.log('[TONConnect] Attempting to restore session...');
+        
+        // Try to restore the connection
+        const restored = await this.ui.getWallets?.() || await this.ui.connectWallet?.();
+        if (restored) {
+          console.log('[TONConnect] Session restored');
+          return true;
+        }
       } catch (error) {
-        console.error('[TONConnect] Session restore failed:', error);
-        localStorage.removeItem('tonconnect_session');
+        console.warn('[TONConnect] Session restore failed:', error);
+        this.clearSession();
       }
     }
+    return false;
   }
 
   /**
@@ -166,7 +373,11 @@ class TonConnectManager {
    */
   saveSession(wallet) {
     try {
-      localStorage.setItem('tonconnect_session', JSON.stringify(wallet));
+      localStorage.setItem('tonconnect_session', JSON.stringify({
+        account: wallet.account,
+        wallet: wallet.jsBridgeKey,
+      }));
+      console.log('[TONConnect] Session saved');
     } catch (error) {
       console.warn('[TONConnect] Failed to save session:', error);
     }
@@ -177,6 +388,7 @@ class TonConnectManager {
    */
   clearSession() {
     localStorage.removeItem('tonconnect_session');
+    console.log('[TONConnect] Session cleared');
   }
 
   /**
@@ -185,7 +397,7 @@ class TonConnectManager {
   emit(event, data) {
     const customEvent = new CustomEvent(`tonconnect:${event}`, { detail: data });
     window.dispatchEvent(customEvent);
-    console.log(`[TONConnect] Event: ${event}`, data);
+    console.log(`[TONConnect] Event: tonconnect:${event}`, data);
   }
 
   /**
@@ -200,14 +412,24 @@ class TonConnectManager {
 export const tonConnect = new TonConnectManager();
 
 // Auto-init when DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => tonConnect.init().catch(console.error));
-} else {
-  tonConnect.init().catch(console.error);
+function autoInitTonConnect() {
+  console.log('[TONConnect] Setting up auto-init...');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[TONConnect] Initializing on DOMContentLoaded');
+      tonConnect.init().catch(e => console.error('[TONConnect] Auto-init error:', e));
+    });
+  } else {
+    console.log('[TONConnect] Initializing immediately');
+    tonConnect.init().catch(e => console.error('[TONConnect] Auto-init error:', e));
+  }
 }
+
+// Start auto-init
+autoInitTonConnect();
 
 // Global access
 window.tonConnect = tonConnect;
 
-console.log('[TONConnect] Module loaded');
+console.log('[TONConnect] Module loaded and ready');
 

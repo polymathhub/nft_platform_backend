@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1, minimal-ui">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GiftedForge">
+  <meta name="theme-color" content="#ffffff">
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/webapp/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="https://image2url.com/r2/default/images/1772911080422-1fac44d8-6cdb-4487-9c53-4bdd5d871163.png">
+  <meta name="description" content="NFT Activity Feed - Recent sales, listings, and transfers">
+  <meta name="format-detection" content="telephone=no">
+  <title>Activity - GiftedForge NFT Platform</title>
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Global Auth Bootstrap -->
+  <script src="js/auth-global.js"></script>
+  <!-- Auth System -->
+  <script src="js/auth-system.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --text-primary: #1a1a1a;
+      --text-secondary: #7d8fa3;
+      --text-tertiary: #a8b5c4;
+      --border-light: #e8eef7;
+      --color-primary: #5856d6;
+      --color-accent: #d946ef;
+      --color-success: #34c759;
+      --color-warning: #ff9500;
+      --color-danger: #ff3b30;
+      --color-dark: #1a1a2e;
+      
+      --gradient-purple: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --gradient-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      --gradient-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      --gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      
+      --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding-top: 56px;
+      padding-bottom: 140px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      margin: 0;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ============ HEADER ============ */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: linear-gradient(135deg, #ff9500 0%, #ff3b30 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .navbar-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .navbar-btn:active {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ============ FILTERS ============ */
+    .filters-section {
+      position: sticky;
+      top: 56px;
+      z-index: 98;
+      background: white;
+      border-bottom: 1px solid var(--border-light);
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-btn {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      background: white;
+      color: var(--text-secondary);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn.active {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .filter-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* ============ ACTIVITY TIMELINE ============ */
+    .content {
+      padding: 16px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 0;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 28px;
+      top: 30px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border-light);
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      position: relative;
+      padding-left: 16px;
+    }
+
+    .activity-icon {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      position: relative;
+      z-index: 2;
+      margin-left: 10px;
+    }
+
+    .activity-icon.sale {
+      background: linear-gradient(135deg, #34c759 0%, #30b0c0 100%);
+    }
+
+    .activity-icon.listing {
+      background: linear-gradient(135deg, #5856d6 0%, #b23ef0 100%);
+    }
+
+    .activity-icon.transfer {
+      background: linear-gradient(135deg, #ff9500 0%, #ff3b30 100%);
+    }
+
+    .activity-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-header {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .activity-type {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-left: auto;
+    }
+
+    .activity-nft {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .activity-nft:active {
+      background: var(--border-light);
+    }
+
+    .activity-nft-image {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+
+    .activity-nft-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .activity-nft-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-nft-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .activity-nft-collection {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .activity-price {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-accent);
+    }
+
+    .activity-details {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .activity-detail {
+      padding: 4px 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+
+    /* ============ LOADING ============ */
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--border-light);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ============ EMPTY STATE ============ */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    /* ============ ERROR STATE ============ */
+    .error-state {
+      background: #fee;
+      border: 1px solid #fcc;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px;
+      color: #c33;
+    }
+
+    .error-state button {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: #c33;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    /* ============ PAGINATION ============ */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 20px 16px;
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      background: white;
+      color: var(--color-primary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .pagination button:active {
+      transform: scale(0.95);
+    }
+
+    .pagination button.active {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <h1>📊 Activity</h1>
+    <button class="navbar-btn" id="refresh-btn">Refresh</button>
+  </div>
+
+  <div class="container">
+    <!-- FILTERS -->
+    <div class="filters-section">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="sale">Sales</button>
+      <button class="filter-btn" data-filter="listing">Listings</button>
+      <button class="filter-btn" data-days="1">Last 24H</button>
+      <button class="filter-btn" data-days="7">Last Week</button>
+      <button class="filter-btn" data-days="30">Last Month</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+      <div id="activity-feed"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+  <script src="js/activity-page.js"></script>
+</body>
+</html>

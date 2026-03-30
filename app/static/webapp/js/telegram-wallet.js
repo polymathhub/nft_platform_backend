@@ -83,6 +83,16 @@ class TelegramWalletIntegrator {
     this.updateUI();
   }
 
+  async copyAddress(address) {
+    try {
+      await navigator.clipboard.writeText(address);
+      this.setStatus('Address copied ✓');
+      setTimeout(() => this.setStatus('Connected to TON'), 2000);
+    } catch (err) {
+      this.setError('Copy failed');
+    }
+  }
+
   async syncWithBackend(walletAddress) {
     try {
       const initData = AuthSystem.getTelegramInitData();
@@ -90,7 +100,7 @@ class TelegramWalletIntegrator {
         throw new Error('Telegram auth required');
       }
 
-      const response = await fetch('/api/v1/wallet/connect', {
+      const response = await fetch('/api/v1/walletconnect/connect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +108,8 @@ class TelegramWalletIntegrator {
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
-          blockchain: 'ton'
+          blockchain: 'ton',
+          wallet_name: 'TON Connect Wallet'  // Optional name
         }),
       });
 

@@ -8,12 +8,14 @@ from sqlalchemy import select
 from app.database import get_db_session
 from app.models import User
 from app.services.walletconnect_service import WalletConnectService
+from app.utils.telegram_auth_dependency import get_current_user
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/walletconnect", tags=["walletconnect"])
 class WalletConnectRequest(BaseModel):
-    user_id: str
     wallet_address: str
     blockchain: str
+    user_id: Optional[str] = None  # Optional when using Telegram auth
     wallet_name: Optional[str] = None
     chain_id: Optional[str] = None
     signature: Optional[str] = None
@@ -53,16 +55,39 @@ async def initiate_walletconnect(
 async def connect_wallet(
     request: WalletConnectRequest,
     db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
+    """
+    Connect a wallet to current user.
+    Supports two modes:
+    1. With Telegram auth header - uses current authenticated user
+    2. With user_id in request body - uses provided user_id (legacy)
+    """
     try:
         from sqlalchemy import select
-        result = await db.execute(select(User).where(User.id == UUID(request.user_id)))
-        user = result.scalar_one_or_none()
+        
+        # Determine which user ID to use
+        if current_user and current_user.id:
+            # Prefer authenticated user from Telegram header
+            user_id = current_user.id
+            user = current_user
+        elif request.user_id:
+            # Fallback to request body user_id
+            user_id = UUID(request.user_id)
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required - provide Telegram initData header or user_id in request",
+            )
+        
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
+        
         if request.signature and request.message:
             is_valid = await WalletConnectService.verify_wallet_signature(
                 wallet_address=request.wallet_address,
@@ -75,19 +100,23 @@ async def connect_wallet(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Wallet signature verification failed",
                 )
+        
         wallet, error = await WalletConnectService.create_wallet_from_connection(
             db=db,
-            user_id=UUID(request.user_id),
+            user_id=user_id,
             wallet_address=request.wallet_address,
             blockchain=request.blockchain,
             wallet_name=request.wallet_name,
             chain_id=request.chain_id,
         )
+        
         if error:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Failed to connect wallet: {error}",
             )
+        
+        logger.info(f"Wallet connected for user {user_id}: {wallet.blockchain.value} {wallet.address}")
         return {
             "success": True,
             "wallet": {
@@ -102,7 +131,7 @@ async def connect_wallet(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error connecting wallet: {e}")
+        logger.error(f"Error connecting wallet: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to connect wallet: {str(e)}",

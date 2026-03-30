@@ -15,6 +15,7 @@ from app.routers.ton_wallet_router import router as ton_wallet_router
 from app.routers.stars_marketplace_router import router as stars_marketplace_router
 from app.routers.me_v1_router import router as me_v1_router
 from app.routers.auth_profile_router import router as auth_profile_router
+from app.routers.trending_router import router as trending_router
 
 __all__ = [
     # legacy auth routers removed
@@ -34,4 +35,5 @@ __all__ = [
     "ton_wallet_router",
     "stars_marketplace_router",
     "auth_profile_router",
+    "trending_router",
 ]
