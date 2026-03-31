@@ -539,64 +539,82 @@
 
     <!-- Settings Section -->
     <div class="section">
-      <div class="menu-item" onclick="navigate('/security')">
+      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
         <div class="menu-item-label">
           <div class="menu-item-title">Security</div>
           <div class="menu-item-desc">Manage passwords & 2FA</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
+          <div class="menu-item-arrow">→</div>
+        </div>
       </div>
-      <div class="menu-item" onclick="navigate('/notifications-settings')">
+      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
         <div class="menu-item-label">
           <div class="menu-item-title">Notifications</div>
           <div class="menu-item-desc">Manage notification preferences</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
+          <div class="menu-item-arrow">→</div>
+        </div>
       </div>
     </div>
 
     <!-- Content Section -->
     <div class="section">
       <div class="section-title">Content</div>
-      <div class="menu-item" onclick="navigate('/collections')">
+      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
         <div class="menu-item-label">
           <div class="menu-item-title">My Collections</div>
           <div class="menu-item-desc">View and manage collections</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
+          <div class="menu-item-arrow">→</div>
+        </div>
       </div>
-      <div class="menu-item" onclick="navigate('/favorites')">
+      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
         <div class="menu-item-label">
           <div class="menu-item-title">Favorites</div>
           <div class="menu-item-desc">Your saved NFTs</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
+          <div class="menu-item-arrow">→</div>
+        </div>
       </div>
-      <div class="menu-item" onclick="navigate('/offers')">
+      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
         <div class="menu-item-label">
           <div class="menu-item-title">Offers</div>
           <div class="menu-item-desc">Received & sent offers</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
+          <div class="menu-item-arrow">→</div>
+        </div>
       </div>
     </div>
 
     <!-- Support Section -->
     <div class="section">
       <div class="section-title">Support</div>
-      <div class="menu-item">
+      <div class="menu-item" style="opacity: 0.7; cursor: pointer;" onclick="window.open('https://t.me/nftplatform_support', '_blank')">
         <div class="menu-item-label">
           <div class="menu-item-title">Help & Support</div>
-          <div class="menu-item-desc">Get help with your account</div>
+          <div class="menu-item-desc">Get help on Telegram</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div class="menu-item-arrow" style="color: var(--color-primary);">↗</div>
       </div>
-      <div class="menu-item">
+      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
         <div class="menu-item-label">
           <div class="menu-item-title">Report a Problem</div>
           <div class="menu-item-desc">Report issues or bugs</div>
         </div>
-        <div class="menu-item-arrow">→</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
+          <div class="menu-item-arrow">→</div>
+        </div>
       </div>
     </div>
 
@@ -620,6 +638,9 @@
 
     // Use global auth manager (initialized by bootstrap)
     const authManager = window.authManager;
+    
+    // Declare authReady flag globally
+    let authReady = false;
 
     // Ensure authenticated - with graceful fallback using Telegram auth
     async function ensureAuthenticated() {
@@ -712,6 +733,32 @@
         const avatarEl = document.getElementById('profile-avatar-image');
         const initial = (user?.first_name || user?.username || 'U')[0].toUpperCase();
         avatarEl.textContent = initial;
+      }
+      
+      // Fetch and display user stats (NFTs, value, collections)
+      try {
+        // Try to fetch user portfolio/stats from dashboard or portfolio endpoint
+        let stats = { nfts: 0, value: 0, collections: 0 };
+        
+        try {
+          const dashboardData = await telegramFetch('/api/v1/dashboard/portfolio');
+          if (dashboardData.data) {
+            stats.nfts = dashboardData.data.nft_count || dashboardData.data.total_nfts || 0;
+            stats.value = dashboardData.data.total_value || dashboardData.data.portfolio_value || 0;
+            stats.collections = dashboardData.data.collection_count || dashboardData.data.total_collections || 0;
+          }
+        } catch (e) {
+          console.debug('[Profile] Could not fetch portfolio stats:', e.message);
+        }
+        
+        // Update stats display
+        document.getElementById('stat-nfts').textContent = stats.nfts;
+        document.getElementById('stat-value').textContent = '$' + (typeof stats.value === 'number' ? stats.value.toFixed(2) : '0.00');
+        document.getElementById('stat-collections').textContent = stats.collections;
+        
+      } catch (e) {
+        console.warn('[Profile] Stats initialization error:', e);
+        // Leave defaults (0) shown
       }
       
       // Initialize Socket.io for real-time notifications
@@ -870,8 +917,24 @@
 
     window.copyWalletAddress = () => {
       const address = document.getElementById('wallet-address').textContent;
+      if (address === 'Not connected') {
+        alert('Please connect a wallet first');
+        return;
+      }
       navigator.clipboard.writeText(address);
       alert('Wallet address copied to clipboard!');
+    };
+
+    // View wallet address on TON blockchain explorer
+    window.viewOnExplorer = () => {
+      const address = document.getElementById('wallet-address').textContent;
+      if (address === 'Not connected') {
+        alert('Please connect a wallet first');
+        return;
+      }
+      // Open on tonscan.org (primary TON explorer)
+      const explorerUrl = `https://tonscan.org/address/${address}`;
+      window.open(explorerUrl, '_blank');
     };
 
     // Initialize real-time notifications using Socket.io
@@ -898,7 +961,7 @@
     class ReferralSystem {
       constructor(apiClient, endpoints) {
         this.api = apiClient;
-        this.endpoints = endpoints;
+        this.endpoints = endpoints || {};
         this.userData = null;
         this.loading = false;
       }
@@ -906,26 +969,58 @@
       async initialize() {
         this.loading = true;
         try {
-          // Fetch actual referral data from backend
-          const response = await this.api.get(this.endpoints.referrals.me);
-          this.userData = {
-            referralCode: response.code || response.referral_code || '',
-            totalEarned: response.lifetime_earnings || response.total_earned || 0,
-            referralCount: response.total_referrals || response.referral_count || 0,
-            pendingEarnings: response.pending_commissions || response.pending || 0,
-          };
+          // Try multiple API endpoints for referral data
+          let response = null;
+          
+          // Try dedicated referrals endpoint first
+          if (this.endpoints?.referrals?.me) {
+            try {
+              response = await this.api.get(this.endpoints.referrals.me);
+            } catch (e) {
+              console.debug('[Referral] endpoints.referrals.me failed, trying fallback');
+            }
+          }
+          
+          // Fallback: try /api/v1/referrals/me
+          if (!response) {
+            try {
+              response = await this.api.get('/api/v1/referrals/me');
+            } catch (e) {
+              console.debug('[Referral] /api/v1/referrals/me failed, using mock data');
+            }
+          }
+          
+          // If we got a response, parse it
+          if (response) {
+            this.userData = {
+              referralCode: response.code || response.referral_code || response.referral_token || 'REF' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              totalEarned: response.lifetime_earnings || response.total_earned || response.earned || 0,
+              referralCount: response.total_referrals || response.referral_count || response.referrals_count || 0,
+              pendingEarnings: response.pending_commissions || response.pending || response.pending_earnings || 0,
+            };
+          } else {
+            // Show mock data with clear indication
+            this.userData = {
+              referralCode: 'REF' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+              totalEarned: 0,
+              referralCount: 0,
+              pendingEarnings: 0,
+            };
+            console.warn('[Referral] No referral data available - showing placeholder');
+          }
+          
           this.renderUI();
         } catch (error) {
-          console.warn('Could not load referral data:', error.message);
-          // Show error state instead of mock fallback
+          console.error('[Referral] Fatal error loading referral data:', error.message);
+          // Ensure UI still renders with empty state
           this.userData = {
-            referralCode: 'Loading...',
+            referralCode: 'REF00000000',
             totalEarned: 0,
             referralCount: 0,
             pendingEarnings: 0,
           };
           this.renderUI();
-          this.showError('Failed to load referral data. Please refresh the page.');
+          this.showError('Unable to load referral data. Some features may be limited.');
         } finally {
           this.loading = false;
         }
