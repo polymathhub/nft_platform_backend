@@ -66,11 +66,19 @@ class ActivityPage {
         url.searchParams.append('activity_types', this.currentFilter === 'sale' ? 'purchase_completed' : 'nft_listed');
       }
 
-      const response = await fetch(url.toString(), {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      let response;
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        response = await telegramFetch(url.pathname + url.search);
+      } catch (importErr) {
+        const initData = window.Telegram?.WebApp?.initData || '';
+        response = await fetch(url.toString(), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(initData && { 'X-Telegram-Init-Data': initData })
+          },
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch activity: ${response.status}`);
@@ -206,10 +214,11 @@ class ActivityPage {
   }
 
   openNFT(nftId) {
-    console.log('Opening NFT:', nftId);
-    // TODO: Navigate to NFT detail page
-    // window.location.href = `/webapp/nft-detail.html?id=${nftId}`;
-    alert(`NFT ${nftId} clicked - detail view coming soon`);
+    if (!nftId) {
+      console.error('[ActivityPage] Invalid NFT ID');
+      return;
+    }
+    window.location.href = `/webapp/nft-detail.html?id=${nftId}`;
   }
 }
 

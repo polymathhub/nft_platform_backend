@@ -722,22 +722,28 @@
     async function loadMarketplaceData() {
       try {
         state.isLoading = true;
-        // Fetch real listings from backend
-        const initData = window.Telegram?.WebApp?.initData;
-        const headers = { 'Content-Type': 'application/json' };
-        if (initData) {
-          headers['X-Telegram-Init-Data'] = initData;
-        }
-        const response = await fetch('/api/v1/marketplace/listings?skip=0&limit=50', {
-          headers
-        });
-        
-        if (response.ok) {
+        // Fetch real listings from backend using telegramFetch
+        try {
+          const { telegramFetch } = await import('./js/telegram-fetch.js');
+          const response = await telegramFetch('/api/v1/marketplace/listings?skip=0&limit=50');
           const data = await response.json();
           state.allNFTs = formatListings(data.items || data);
           console.log('Loaded real listings from database');
-        } else {
-          throw new Error(`Backend returned ${response.status}`);
+        } catch (importErr) {
+          // Fallback to raw fetch
+          const initData = window.Telegram?.WebApp?.initData;
+          const headers = { 'Content-Type': 'application/json' };
+          if (initData) {
+            headers['X-Telegram-Init-Data'] = initData;
+          }
+          const response = await fetch('/api/v1/marketplace/listings?skip=0&limit=50', { headers });
+          if (response.ok) {
+            const data = await response.json();
+            state.allNFTs = formatListings(data.items || data);
+            console.log('Loaded real listings from database');
+          } else {
+            throw new Error(`Backend returned ${response.status}`);
+          }
         }
 
         if (state.currentUser) {
@@ -783,18 +789,23 @@
 
     async function loadUserListings() {
       try {
-        const initData = window.Telegram?.WebApp?.initData;
-        const headers = { 'Content-Type': 'application/json' };
-        if (initData) {
-          headers['X-Telegram-Init-Data'] = initData;
-        }
-        const response = await fetch(`/api/v1/marketplace/listings?seller_id=${state.currentUser.id}`, {
-          headers
-        });
-        
-        if (response.ok) {
+        try {
+          const { telegramFetch } = await import('./js/telegram-fetch.js');
+          const response = await telegramFetch(`/api/v1/marketplace/listings?seller_id=${state.currentUser.id}`);
           const data = await response.json();
           state.userListings = formatListings(data.items || data);
+        } catch (importErr) {
+          // Fallback to raw fetch
+          const initData = window.Telegram?.WebApp?.initData;
+          const headers = { 'Content-Type': 'application/json' };
+          if (initData) {
+            headers['X-Telegram-Init-Data'] = initData;
+          }
+          const response = await fetch(`/api/v1/marketplace/listings?seller_id=${state.currentUser.id}`, { headers });
+          if (response.ok) {
+            const data = await response.json();
+            state.userListings = formatListings(data.items || data);
+          }
         }
       } catch (error) {
         console.warn('Could not load user listings:', error);

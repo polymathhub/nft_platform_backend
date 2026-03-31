@@ -79,12 +79,22 @@ async def get_wallet_balance(
                 token_symbol="ETH",
                 total_profit=0,
             )
+        
+        # Calculate total profit from transaction history
+        profit_result = await db.execute(
+            select(func.sum(Transaction.amount)).where(
+                (Transaction.user_id == current_user.id) &
+                (Transaction.transaction_type == "PROFIT")
+            )
+        )
+        total_profit = float(profit_result.scalar() or 0)
+        
         return WalletBalanceResponse(
             balance=float(primary_wallet.balance or 0),
             currency="USD",
             token_balance=float(primary_wallet.balance or 0) / 100,
             token_symbol=primary_wallet.blockchain.name,
-            total_profit=450.00,  # TODO: Calculate from transaction history
+            total_profit=total_profit,
         )
     except Exception as e:
         logger.error(f"Error getting wallet balance: {e}")

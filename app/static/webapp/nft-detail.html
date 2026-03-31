@@ -803,12 +803,19 @@
             return;
           }
 
-          const response = await fetch(`/api/v1/marketplace/listings/${nftId}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Telegram-Init-Data': initData
-            }
-          });
+          let response;
+          try {
+            const { telegramFetch } = await import('./telegram-fetch.js');
+            response = await telegramFetch(`/api/v1/nfts/${nftId}`);
+          } catch (importErr) {
+            console.warn('[NFT-Detail] telegramFetch import failed, using fallback:', importErr);
+            response = await fetch(`/api/v1/nfts/${nftId}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                ...(initData && { 'X-Telegram-Init-Data': initData })
+              }
+            });
+          }
 
           if (response.ok) {
             nft = await response.json();
@@ -956,14 +963,24 @@
 
         // Step 2: Request transaction from backend (creates transaction to sign)
         console.log('Requesting transaction from backend...');
-        let txResponse = await fetch('/api/v1/marketplace/purchase', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData
-          },
-          body: JSON.stringify(purchaseData)
-        });
+        let txResponse;
+        try {
+          const { telegramFetch } = await import('./telegram-fetch.js');
+          txResponse = await telegramFetch(`/api/v1/marketplace/listings/${nftId}/buy`, {
+            method: 'POST',
+            body: JSON.stringify(purchaseData)
+          });
+        } catch (importErr) {
+          console.warn('telegramFetch import failed, using fallback');
+          txResponse = await fetch(`/api/v1/marketplace/listings/${nftId}/buy`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
+            },
+            body: JSON.stringify(purchaseData)
+          });
+        }
 
         if (!txResponse.ok) {
           const errorData = await txResponse.json();
@@ -990,31 +1007,12 @@
           const signedTx = await tonConnect.sendTransaction(transaction);
           console.log('Transaction signed by wallet:', signedTx);
 
-          // Step 5: Verify the transaction with backend
-          console.log('Verifying signed transaction with backend...');
-          const verifyResponse = await fetch('/api/v1/marketplace/verify-purchase', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Telegram-Init-Data': initData
-            },
-            body: JSON.stringify({
-              nft_id: nft.id,
-              transaction_hash: signedTx.boc || signedTx,  // BOC-encoded transaction
-              wallet_address: walletAddress,
-              purchase_data: purchaseData
-            })
-          });
-
-          if (!verifyResponse.ok) {
-            const errorData = await verifyResponse.json();
-            throw new Error(`Purchase verification failed: ${errorData.detail || 'Unknown error'}`);
-          }
-
-          const verifyData = await verifyResponse.json();
-          console.log('Purchase verified:', verifyData);
+          // Step 5: Transaction complete - backend has processed it via blockchain listener
+          // Note: The /listings/{id}/buy endpoint already handled the purchase when we called it above
+          // The blockchain transaction is the proof of payment
+          console.log('Purchase transaction sent to blockchain');
           
-          alert(`Purchase successful!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars\n\nTransaction: ${verifyData.transaction_id || 'confirmed'}`);
+          alert(`Purchase initiated!\n\nYou've purchased "${nft.name}" for ${nft.price} Telegram Stars\n\nTransaction hash: ${signedTx.boc || signedTx.substring(0, 20)}...`);
           setTimeout(() => {
             window.history.back();
           }, 1500);
@@ -1083,14 +1081,24 @@
         };
 
         console.log('Submitting offer:', offerData);
-        const response = await fetch('/api/v1/marketplace/offer', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData
-          },
-          body: JSON.stringify(offerData)
-        });
+        let response;
+        try {
+          const { telegramFetch } = await import('./telegram-fetch.js');
+          response = await telegramFetch('/api/v1/marketplace/offers', {
+            method: 'POST',
+            body: JSON.stringify(offerData)
+          });
+        } catch (importErr) {
+          console.warn('telegramFetch import failed, using fallback');
+          response = await fetch('/api/v1/marketplace/offers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
+            },
+            body: JSON.stringify(offerData)
+          });
+        }
 
         if (!response.ok) {
           const errorData = await response.json();

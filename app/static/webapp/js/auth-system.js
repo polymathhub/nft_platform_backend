@@ -20,37 +20,6 @@
  * ✅ Single source of truth: Telegram initData
  */
 
-// ============================================
-// DEBUG: Intercept all redirects to log origin
-// ============================================
-(function() {
-  // Override window.location.href setter
-  const locationDescriptor = Object.getOwnPropertyDescriptor(window.location, 'href');
-  Object.defineProperty(window.location, 'href', {
-    get: locationDescriptor?.get,
-    set: function(value) {
-      console.warn('[AUTH-DEBUG] REDIRECT ATTEMPTED:', value);
-      console.trace('[AUTH-DEBUG] Stack trace:');
-      
-      // Allow the redirect to proceed
-      if (locationDescriptor?.set) {
-        locationDescriptor.set.call(this, value);
-      } else {
-        window.location.replace(value);
-      }
-    },
-    configurable: true
-  });
-  
-  // Also intercept window.location.replace()
-  const originalReplace = window.location.replace;
-  window.location.replace = function(url) {
-    console.warn('[AUTH-DEBUG] REPLACE ATTEMPTED:', url);
-    console.trace('[AUTH-DEBUG] Stack trace:');
-    return originalReplace.call(this, url);
-  };
-})();
-
 // Global auth state
 window.AuthSystem = {
   user: null,
@@ -255,13 +224,23 @@ window.AuthSystem = {
    */
   async authenticateWithRetry(initData) {
     try {
-      const response = await fetch('/api/v1/me', {
+      // Import telegramFetch dynamically
+      const { telegramFetch: tf } = await import('./telegram-fetch.js').catch(() => {
+        // Fallback: construct fetch manually with headers
+        return {
+          telegramFetch: async (url, opts = {}) => {
+            const headers = {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData,
+              ...opts.headers
+            };
+            return fetch(url, { ...opts, headers, credentials: 'include' });
+          }
+        };
+      });
+      
+      const response = await tf('/api/v1/me', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData,
-        },
-        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -394,17 +373,12 @@ window.AuthSystem = {
     this.clearCache();
     
     // Call backend logout endpoint (optional, backend is stateless)
-    try {
-      fetch('/api/v1/me/logout', {
-        method: 'GET',
-        headers: {
-          'X-Telegram-Init-Data': this.getTelegramInitData() || '',
-        },
-        credentials: 'include',
-      }).catch(err => console.warn('[AuthSystem] Backend logout failed:', err.message));
-    } catch (e) {
-      // Ignore
-    }
+    import('./telegram-fetch.js').then(({ telegramFetch }) => {
+      telegramFetch('/api/v1/me/logout', { method: 'GET' })
+        .catch(err => console.warn('[AuthSystem] Backend logout failed:', err.message));
+    }).catch(() => {
+      // Ignore if import fails
+    });
     
     this.emitEvent('auth:logout', {});
   },

@@ -72,11 +72,19 @@ class TrendingPage {
     container.innerHTML = '<div class="loading"></div>';
 
     try {
-      const response = await fetch('/api/v1/trending/nfts?skip=0&limit=20&days=7&sort_by=sales', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      let response;
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        response = await telegramFetch('/api/v1/trending/nfts?skip=0&limit=20&days=7&sort_by=sales');
+      } catch (importErr) {
+        const initData = window.Telegram?.WebApp?.initData || '';
+        response = await fetch('/api/v1/trending/nfts?skip=0&limit=20&days=7&sort_by=sales', {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(initData && { 'X-Telegram-Init-Data': initData })
+          },
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch trending NFTs: ${response.status}`);
@@ -124,11 +132,19 @@ class TrendingPage {
     container.innerHTML = '<div class="loading"></div>';
 
     try {
-      const response = await fetch('/api/v1/trending/collections?skip=0&limit=20&days=7&sort_by=volume', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      let response;
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        response = await telegramFetch('/api/v1/trending/collections?skip=0&limit=20&days=7&sort_by=volume');
+      } catch (importErr) {
+        const initData = window.Telegram?.WebApp?.initData || '';
+        response = await fetch('/api/v1/trending/collections?skip=0&limit=20&days=7&sort_by=volume', {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(initData && { 'X-Telegram-Init-Data': initData })
+          },
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch trending collections: ${response.status}`);
@@ -179,11 +195,19 @@ class TrendingPage {
     container.innerHTML = '<div class="loading"></div>';
 
     try {
-      const response = await fetch('/api/v1/trending/floor-prices?skip=0&limit=50', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      let response;
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        response = await telegramFetch('/api/v1/trending/floor-prices?skip=0&limit=50');
+      } catch (importErr) {
+        const initData = window.Telegram?.WebApp?.initData || '';
+        response = await fetch('/api/v1/trending/floor-prices?skip=0&limit=50', {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(initData && { 'X-Telegram-Init-Data': initData })
+          },
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch floor prices: ${response.status}`);
@@ -235,11 +259,19 @@ class TrendingPage {
     container.innerHTML = '<div class="loading"></div>';
 
     try {
-      const response = await fetch('/api/v1/trending/volume?days=7&group_by=day', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      let response;
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        response = await telegramFetch('/api/v1/trending/volume?days=7&group_by=day');
+      } catch (importErr) {
+        const initData = window.Telegram?.WebApp?.initData || '';
+        response = await fetch('/api/v1/trending/volume?days=7&group_by=day', {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(initData && { 'X-Telegram-Init-Data': initData })
+          },
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch volume data: ${response.status}`);
@@ -310,16 +342,19 @@ class TrendingPage {
   }
 
   openNFT(nftId) {
-    console.log('Opening NFT:', nftId);
-    // TODO: Navigate to NFT detail page
-    // window.location.href = `/webapp/nft-detail.html?id=${nftId}`;
-    alert(`NFT ${nftId} clicked - detail view coming soon`);
+    if (!nftId) {
+      console.error('[TrendingPage] Invalid NFT ID');
+      return;
+    }
+    window.location.href = `/webapp/nft-detail.html?id=${nftId}`;
   }
 
   openCollection(collectionId) {
-    console.log('Opening collection:', collectionId);
-    // TODO: Navigate to collection detail page
-    alert(`Collection ${collectionId} clicked - detail view coming soon`);
+    if (!collectionId) {
+      console.error('[TrendingPage] Invalid collection ID');
+      return;
+    }
+    window.location.href = `/webapp/marketplace.html?collection=${collectionId}`;
   }
 }
 

@@ -942,7 +942,7 @@
     <div class="section">
       <div class="section-title">Quick Action's</div>
       <div class="actions-grid">
-        <div class="action-card" onclick="navigate('/wallet')">
+        <div class="action-card" onclick="handleCreateWallet()">
           <div class="action-icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
@@ -951,7 +951,7 @@
           </div>
           <div class="action-label">Create New<br>Wallet</div>
         </div>
-        <div class="action-card" onclick="navigate('/wallet')">
+        <div class="action-card" onclick="handleImportWallet()">
           <div class="action-icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -964,7 +964,143 @@
     </div>
   </div>
 
+  <script>
+    // Wallet action handlers
+    async function handleCreateWallet() {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        alert('Please open this app in Telegram');
+        return;
+      }
+      
+      try {
+        const userId = new URLSearchParams(window.location.search).get('user_id') || localStorage.getItem('user_id');
+        if (!userId) {
+          alert('User ID not found. Please refresh the page.');
+          return;
+        }
 
+        // Show loading indicator
+        const originalText = event.target.textContent;
+        event.target.textContent = 'Creating...';
+        event.target.disabled = true;
+
+        // Call backend to create a new custodial wallet
+        let response;
+        try {
+          const { telegramFetch } = await import('./js/telegram-fetch.js');
+          response = await telegramFetch(`/api/v1/wallets/create?user_id=${userId}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              blockchain: 'ton',
+              wallet_type: 'custodial',
+              is_primary: false,
+              init_data: initData
+            })
+          });
+        } catch (importErr) {
+          response = await fetch(`/api/v1/wallets/create?user_id=${userId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
+            },
+            body: JSON.stringify({
+              blockchain: 'ton',
+              wallet_type: 'custodial',
+              is_primary: false,
+              init_data: initData
+            })
+          });
+        }
+
+        const data = await response.json();
+        if (response.ok) {
+          alert(`Wallet created successfully!\nAddress: ${data.data?.address || data.address || 'Created'}`);
+          // Refresh wallet list
+          location.reload();
+        } else {
+          alert(`Failed to create wallet: ${data.detail || data.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        alert(`Error creating wallet: ${error.message}`);
+      } finally {
+        event.target.textContent = originalText;
+        event.target.disabled = false;
+      }
+    }
+
+    async function handleImportWallet() {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        alert('Please open this app in Telegram');
+        return;
+      }
+      
+      const walletAddress = prompt('Enter the wallet address to import:');
+      if (!walletAddress || !walletAddress.trim()) {
+        return; // User cancelled
+      }
+
+      try {
+        const userId = new URLSearchParams(window.location.search).get('user_id') || localStorage.getItem('user_id');
+        if (!userId) {
+          alert('User ID not found. Please refresh the page.');
+          return;
+        }
+
+        // Show loading indicator
+        const originalText = event.target.textContent;
+        event.target.textContent = 'Importing...';
+        event.target.disabled = true;
+
+        // Call backend to import wallet
+        let response;
+        try {
+          const { telegramFetch } = await import('./js/telegram-fetch.js');
+          response = await telegramFetch(`/api/v1/wallets/import?user_id=${userId}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              blockchain: 'ton',
+              address: walletAddress.trim(),
+              wallet_type: 'self_custody',
+              is_primary: false,
+              init_data: initData
+            })
+          });
+        } catch (importErr) {
+          response = await fetch(`/api/v1/wallets/import?user_id=${userId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
+            },
+            body: JSON.stringify({
+              blockchain: 'ton',
+              address: walletAddress.trim(),
+              wallet_type: 'self_custody',
+              is_primary: false,
+              init_data: initData
+            })
+          });
+        }
+
+        const data = await response.json();
+        if (response.ok) {
+          alert('Wallet imported successfully!');
+          // Refresh wallet list
+          location.reload();
+        } else {
+          alert(`Failed to import wallet: ${data.detail || data.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        alert(`Error importing wallet: ${error.message}`);
+      } finally {
+        event.target.textContent = originalText;
+        event.target.disabled = false;
+      }
+    }
+  </script>
 
   <script type="module">
     import TelegramWalletIntegrator from './js/telegram-wallet.js';

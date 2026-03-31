@@ -1361,7 +1361,7 @@
         try {
           this.showLoadingState();
           const response = await this.withRetry(() => 
-            this.telegramApi.get('/api/v1/dashboard/recent-transactions')
+            this.telegramApi.get('/api/v1/dashboard/transactions/recent')
           );
           this.renderActivity(response.transactions || []);
           console.log('[Activity Manager] Loaded', response.transactions?.length || 0, 'transactions');

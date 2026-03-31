@@ -109,13 +109,27 @@ export class NFTMintingService {
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/v1/images/upload', {
-        method: 'POST',
-        headers: {
-          'X-Telegram-Init-Data': this.authManager.getTelegramInitData()
-        },
-        body: formData
-      });
+      // Try to use telegramFetch if available
+      let response;
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        response = await telegramFetch('/api/v1/images/upload', {
+          method: 'POST',
+          body: formData,
+          // Don't set Content-Type header for FormData - browser will set it with boundary
+          headers: {}
+        });
+      } catch (importErr) {
+        // Fallback to raw fetch with Telegram auth headerif available
+        const initData = window.Telegram?.WebApp?.initData || '';
+        response = await fetch('/api/v1/images/upload', {
+          method: 'POST',
+          headers: {
+            ...(initData && { 'X-Telegram-Init-Data': initData })
+          },
+          body: formData
+        });
+      }
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));

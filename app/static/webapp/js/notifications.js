@@ -29,7 +29,6 @@ class NotificationManager {
 
     const defaultOptions = {
       auth: {
-        token: localStorage.getItem('auth_token') || '',
         userId: userId,
         telegramInitData: window.Telegram?.WebApp?.initData || ''
       },

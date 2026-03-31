@@ -29,21 +29,35 @@
 
   async function fetchProfileWithInitData(initData) {
     try {
-      const res = await fetch('/api/v1/me', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': initData,
-        },
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        LOG('Profile fetch failed', res.status);
-        return null;
+      // Try to use telegramFetch if available
+      try {
+        const { telegramFetch } = await import('./telegram-fetch.js');
+        const res = await telegramFetch('/api/v1/me');
+        if (!res.ok) {
+          LOG('Profile fetch failed', res.status);
+          return null;
+        }
+        const body = await res.json();
+        if (body && body.user) return body.user;
+        return body; // Return body directly if no user wrapper
+      } catch (importErr) {
+        // Fallback to raw fetch if import fails
+        const res = await fetch('/api/v1/me', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Telegram-Init-Data': initData,
+          },
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          LOG('Profile fetch failed', res.status);
+          return null;
+        }
+        const body = await res.json();
+        if (body && body.user) return body.user;
+        return body;
       }
-      const body = await res.json();
-      if (body && body.user) return body.user;
-      return null;
     } catch (e) {
       console.warn('[auth-global] Failed to fetch profile', e);
       return null;

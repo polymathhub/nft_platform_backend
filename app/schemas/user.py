@@ -44,6 +44,7 @@ class UserResponse(BaseModel):
     username: str
     full_name: Optional[str]
     avatar_url: Optional[str]
+    photo_url: Optional[str]
     wallet_address: Optional[str]
     telegram_username: Optional[str]
     is_verified: bool

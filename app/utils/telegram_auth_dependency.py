@@ -130,6 +130,7 @@ async def get_current_user(
             full_name=telegram_user.get('first_name', ''),
             telegram_id=str(telegram_id),
             telegram_username=telegram_user.get('username'),
+            photo_url=telegram_user.get('photo_url'),
             # No password for Telegram-native users (stateless). Use empty placeholder.
             hashed_password="",
             is_active=True,

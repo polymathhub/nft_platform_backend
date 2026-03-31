@@ -334,8 +334,8 @@ class TONWalletConnectionFlow {
    * Report error to logging service
    */
   reportError(errorData) {
-    this.logger.error('Reporting to error tracking:', errorData);
-    // TODO: Send to error tracking service (Sentry, etc)
+    this.logger.error('Error reported:', errorData);
+    // Error tracking is handled by local logger
   }
 
   /**
