@@ -935,6 +935,14 @@
               <path d="M7 10H4.5A2.5 2.5 0 0 0 2 12.5v5A2.5 2.5 0 0 0 4.5 20h8a2.5 2.5 0 0 0 2.5-2.5V16"></path>
             </svg>
           </button>
+
+          <button class="balance-action" id="connect-wallet-btn" onclick="connectTONWallet()" data-wallet-action="connect" title="Connect TON Wallet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+              <path d="M1 10h22"></path>
+              <circle cx="17" cy="15" r="1" fill="currentColor"></circle>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -1725,6 +1733,9 @@
       initDashboard();
     }
   </script>
+
+  <!-- Wallet Connection Flow: exposes window.connectTONWallet() used by the balance card button -->
+  <script src="js/wallet-connection-flow.js?v=CACHE_BUST"></script>
 
   <!-- Load Navbar Component -->
   <script src="navbar.js?v=CACHE_BUST"></script>
