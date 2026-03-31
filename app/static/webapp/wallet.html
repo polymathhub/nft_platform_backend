@@ -906,42 +906,6 @@
       </div>
     </div>
 
-
-    <script>
-      
-     
-      document.addEventListener('DOMContentLoaded', async () => {
-        try {
-          if (typeof window.tonConnect !== 'undefined') {
-            await window.tonConnect.init();
-            console.log(' TON Connect initialized: Ready for wallet connections');
-          } else {
-            console.log('[TON Connect] Manager not yet loaded - will initialize via TelegramWalletIntegrator');
-          }
-        } catch (error) {
-          console.warn('[TON Connect] Initialization warning:', error.message);
-         
-        }
-      });
-      const connectBtn = document.getElementById('connectBtn');
-      if (connectBtn) {
-        connectBtn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          console.log('[TON Connect] Connect button clicked - initiating wallet connection');
-          
-          if (window._walletIntegrator) {
-            window._walletIntegrator.connect();
-          } else {
-            console.warn('[TON Connect] Wallet integrator not initialized yet');
-          }
-        }, false);
-        
-        console.log('TON Connect button trigger installed on #connectBtn');
-      }
-    </script>
-
     <!-- Tokens Section (Hidden) -->
     <div class="section" style="display: none;">
       <div class="section-title">Your Assets</div>
@@ -1159,19 +1123,38 @@
   <script type="module">
     import TelegramWalletIntegrator from './js/telegram-wallet.js';
     
-    // Wait for DOM
-    document.addEventListener('DOMContentLoaded', async () => {
-      await new Promise(r => setTimeout(r, 500)); // Let auth init
-      const walletCard = document.getElementById('wallet-balance-card');
-      if (walletCard) {
-        // Create instance and expose globally for direct access
+    // Initialize wallet integrator when DOM is ready
+    async function initializeWallet() {
+      try {
+        // Wait a bit for other scripts to initialize
+        await new Promise(r => setTimeout(r, 1000));
+        
+        const walletCard = document.getElementById('wallet-balance-card');
+        if (!walletCard) {
+          console.error('[Wallet Page] ERROR: wallet-balance-card element not found in DOM');
+          return;
+        }
+        
+        console.log('[Wallet Page] Creating TelegramWalletIntegrator instance...');
         const integrator = new TelegramWalletIntegrator(walletCard);
+        
+        // Expose globally for debugging and direct access if needed
         window._walletIntegrator = integrator;
-        console.log('[Wallet Page] TelegramWalletIntegrator initialized and exposed as window._walletIntegrator');
-      } else {
-        console.error('[Wallet Page] wallet-balance-card not found');
+        console.log('[Wallet Page] ✅ TON Wallet integrator initialized and ready');
+        console.log('[Wallet Page] Gate way accessible at: window._walletIntegrator');
+        
+      } catch (error) {
+        console.error('[Wallet Page] FATAL: Failed to initialize TON Wallet:', error);
+        console.error('[Wallet Page] Stack trace:', error.stack);
       }
-    });
+    }
+    
+    // Start initialization when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeWallet);
+    } else {
+      initializeWallet();
+    }
   </script>
   <script type="module">
     // Import page initialization for consistent user greeting across pages

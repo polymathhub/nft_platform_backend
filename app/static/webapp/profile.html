@@ -737,28 +737,17 @@
       
       // Fetch and display user stats (NFTs, value, collections)
       try {
-        // Try to fetch user portfolio/stats from dashboard or portfolio endpoint
-        let stats = { nfts: 0, value: 0, collections: 0 };
+        // Call ACTUAL endpoint: /api/v1/dashboard/stats
+        const dashboardData = await telegramFetch('/api/v1/dashboard/stats');
         
-        try {
-          const dashboardData = await telegramFetch('/api/v1/dashboard/portfolio');
-          if (dashboardData.data) {
-            stats.nfts = dashboardData.data.nft_count || dashboardData.data.total_nfts || 0;
-            stats.value = dashboardData.data.total_value || dashboardData.data.portfolio_value || 0;
-            stats.collections = dashboardData.data.collection_count || dashboardData.data.total_collections || 0;
-          }
-        } catch (e) {
-          console.debug('[Profile] Could not fetch portfolio stats:', e.message);
+        if (dashboardData && dashboardData.data) {
+          document.getElementById('stat-nfts').textContent = dashboardData.data.nfts_owned || 0;
+          document.getElementById('stat-value').textContent = '$' + (dashboardData.data.total_balance || 0).toFixed(2);
+          document.getElementById('stat-collections').textContent = dashboardData.data.active_listings || 0;
         }
-        
-        // Update stats display
-        document.getElementById('stat-nfts').textContent = stats.nfts;
-        document.getElementById('stat-value').textContent = '$' + (typeof stats.value === 'number' ? stats.value.toFixed(2) : '0.00');
-        document.getElementById('stat-collections').textContent = stats.collections;
-        
       } catch (e) {
-        console.warn('[Profile] Stats initialization error:', e);
-        // Leave defaults (0) shown
+        console.warn('[Profile] Dashboard stats fetch failed:', e.message);
+        // Leave defaults (0) shown - user will see incomplete data but no JavaScript errors
       }
       
       // Initialize Socket.io for real-time notifications

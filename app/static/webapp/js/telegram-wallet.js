@@ -1,6 +1,5 @@
 
 import { tonConnect } from './tonconnect.js';
-import { AuthSystem } from './auth-system.js';
 
 class TelegramWalletIntegrator {
   constructor(walletUi) {
@@ -10,10 +9,45 @@ class TelegramWalletIntegrator {
     this.statusEl = null;
     this.errorEl = null;
     this.loadingEl = null;
+    this.authSystem = null;
+    this.isConnecting = false;
     
     this.initElements();
+    this.initAuth();
     this.bindEvents();
     this.initWalletState();
+  }
+
+  /**
+   * Initialize authentication system
+   * Ensures AuthSystem is initialized before wallet operations
+   */
+  async initAuth() {
+    try {
+      // Wait for AuthSystem to be available (set in auth-system.js)
+      let retries = 0;
+      while (!window.AuthSystem && retries < 10) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      
+      if (!window.AuthSystem) {
+        console.warn('[TelegramWallet] AuthSystem not available, proceeding without cached auth');
+        return;
+      }
+      
+      this.authSystem = window.AuthSystem;
+      console.log('[TelegramWallet] AuthSystem initialized');
+      
+      // If not authenticated yet, initialize auth
+      if (!this.authSystem.isInitialized && !this.authSystem.isInitializing) {
+        console.log('[TelegramWallet] Initializing authentication...');
+        await this.authSystem.initialize();
+      }
+      
+    } catch (error) {
+      console.error('[TelegramWallet] Auth initialization error:', error);
+    }
   }
 
   initElements() {
@@ -22,6 +56,10 @@ class TelegramWalletIntegrator {
     this.statusEl = this.walletUi.querySelector('#status');
     this.errorEl = this.walletUi.querySelector('#error');
     this.loadingEl = this.walletUi.querySelector('#loading');
+    
+    if (!this.connectBtn) {
+      console.error('[TelegramWallet] Critical: connectBtn not found in DOM');
+    }
   }
 
   bindEvents() {
@@ -76,14 +114,34 @@ class TelegramWalletIntegrator {
     // Wait for TON Connect ready
     console.log('[TelegramWallet] Initializing wallet state...');
     try {
+      // Wait for Telegram SDK
+      let retries = 0;
+      while (!window.Telegram?.WebApp?.initData && retries < 10) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+      
+      if (!window.Telegram?.WebApp?.initData) {
+        console.warn('[TelegramWallet] Telegram SDK not ready, proceeding anyway');
+      }
+
+      // Initialize TON Connect
+      console.log('[TelegramWallet] Initializing TON Connect...');
       await tonConnect.init();
-      console.log('[TelegramWallet] TON Connect initialized');
-      console.log('[TelegramWallet] Wallet type:', tonConnect.getWalletType());
+      console.log('[TelegramWallet] TON Connect initialized successfully');
+      
+      // Check current wallet state
+      const walletType = tonConnect.getWalletType();
+      console.log('[TelegramWallet] Current wallet type:', walletType);
+      
+      // Update UI with current state
       await this.updateUI();
-      console.log('[TelegramWallet] Wallet state initialized - GATEWAY READY');
+      console.log('[TelegramWallet] Wallet state initialization complete - GATEWAY READY');
+      
     } catch (error) {
-      console.error('[TelegramWallet] Initialization error:', error);
-      this.setError('Wallet initialization failed');
+      console.error('[TelegramWallet] Wallet initialization error:', error);
+      this.setError(`Initialization error: ${error.message}`);
+      // Still allow user to try connecting
     }
   }
 
@@ -91,8 +149,9 @@ class TelegramWalletIntegrator {
     console.log('[TelegramWallet] ==== WALLET CONNECT GATEWAY INITIATED ====');
     
     // Check if already connecting or connected
-    if (tonConnect.isConnecting) {
-      console.log('[TelegramWallet] Already connecting, skipping...');
+    if (this.isConnecting) {
+      console.log('[TelegramWallet] Already connecting, skipping duplicate request');
+      this.setError('Connection already in progress');
       return;
     }
 
@@ -102,6 +161,7 @@ class TelegramWalletIntegrator {
       return;
     }
 
+    this.isConnecting = true;
     this.setLoading(true);
     this.clearError();
 
@@ -127,6 +187,7 @@ class TelegramWalletIntegrator {
       console.error('[TelegramWallet] Gateway error:', error);
       this.setError(error.message || 'Connection failed - check console');
     } finally {
+      this.isConnecting = false;
       this.setLoading(false);
     }
   }
@@ -160,10 +221,31 @@ class TelegramWalletIntegrator {
 
   async syncWithBackend(walletAddress) {
     try {
-      const initData = AuthSystem.getTelegramInitData();
-      if (!initData) {
-        throw new Error('Telegram auth required');
+      // Get Telegram initData with multiple fallback strategies
+      let initData = null;
+      
+      // Strategy 1: Use AuthSystem if available
+      if (this.authSystem && typeof this.authSystem.getTelegramInitData === 'function') {
+        initData = this.authSystem.getTelegramInitData();
       }
+      
+      // Strategy 2: Get directly from Telegram SDK
+      if (!initData) {
+        initData = window.Telegram?.WebApp?.initData;
+      }
+      
+      if (!initData) {
+        const errorMsg = 'Telegram authentication required - initData not available. Please ensure you\'re using a valid Telegram Mini App URL.';
+        console.error('[TelegramWallet] Authentication error:', errorMsg);
+        this.setError(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('[TelegramWallet] Syncing wallet with backend:', {
+        walletAddress: walletAddress.slice(0, 10) + '...',
+        authAvailable: !!initData,
+        timestamp: new Date().toISOString()
+      });
 
       const response = await fetch('/api/v1/walletconnect/connect', {
         method: 'POST',
@@ -174,21 +256,32 @@ class TelegramWalletIntegrator {
         body: JSON.stringify({
           wallet_address: walletAddress,
           blockchain: 'ton',
-          wallet_name: 'TON Connect Wallet'  // Optional name
+          wallet_name: 'TON Connect Wallet'
         }),
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || `Sync failed: ${response.status}`);
+        let errorDetail = `HTTP ${response.status}`;
+        try {
+          const data = await response.json();
+          errorDetail = data.detail || data.message || errorDetail;
+        } catch (e) {
+          // Response is not JSON
+        }
+        throw new Error(`Backend sync failed: ${errorDetail}`);
       }
 
-      console.log('[TelegramWallet] Backend sync OK');
+      const result = await response.json();
+      console.log('[TelegramWallet] Backend sync successful:', result);
       this.setStatus('Synced with backend ✓');
       
     } catch (error) {
       console.error('[TelegramWallet] Backend sync failed:', error);
-      this.setError(`Sync failed: ${error.message}`);
+      const userMessage = error.message.includes('initData') 
+        ? 'Authentication error - please reload the app'
+        : `Sync failed: ${error.message}`;
+      this.setError(userMessage);
+      console.error('[TelegramWallet] Full error:', error);
       // Don't disconnect wallet on sync error - it's frontend state
     }
   }
