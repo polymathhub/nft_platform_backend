@@ -880,24 +880,6 @@
             <span id="status" style="font-size: 13px; margin-right: 12px; display: none;"></span>
             <span id="error" style="font-size: 12px; color: #ef4444; margin-right: 12px; display: none;"></span>
             <span id="loading" style="display: none;">Connecting...</span>
-            <!-- TON Connect Button - Initiates wallet connection flow from Telegram
-                 Click handler: TelegramWalletIntegrator (telegram-wallet.js)
-                 Flow: User click → TelegramWalletIntegrator.connect() → TonConnectManager.connectWallet() → TonConnectUI modal
-                 
-                 ⚠️ MANIFEST REQUIREMENTS:
-                 - Full HTTPS URL: https://domain.com/tonconnect-manifest.json (NOT relative /tonconnect-manifest.json)
-                 - Wallets fetch manifest independently from outside app context
-                 - Relative paths fail silently
-                 - No authentication required
-                 - No CDN/proxy proxying (Cloudflare, etc.)
-                 
-                 ⚠️ ICON REQUIREMENTS:
-                 - iconUrl must return HTTP 200 (not 404)
-                 - If icon returns 404, wallet connection fails with generic error
-                 - Icon must be accessible without auth
-                 
-                 See claude.md for troubleshooting
-            -->
             <button id="connectBtn" class="balance-action" title="Connect TON Wallet">Connect Wallet</button>
             <span id="walletAddress" style="font-size: 13px; font-family: monospace; display: none;"></span>
           </div>

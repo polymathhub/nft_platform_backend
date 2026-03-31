@@ -1312,7 +1312,7 @@
         container.innerHTML = `
           <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px;">
             <div class="empty-state">
-              <div class="empty-state-icon">🎨</div>
+              <div class="empty-state-icon"></div>
               <div class="empty-state-title">No NFTs Yet</div>
               <div class="empty-state-description">Start your collection by minting or purchasing your first NFT</div>
               <a href="/webapp/mint.html" class="empty-state-action">Mint Your First NFT</a>
@@ -1725,6 +1725,9 @@
       initDashboard();
     }
   </script>
+
+  <!-- Wallet Connection Flow: exposes window.connectTONWallet() used by the balance card button -->
+  <script src="js/wallet-connection-flow.js?v=CACHE_BUST"></script>
 
   <!-- Load Navbar Component -->
   <script src="navbar.js?v=CACHE_BUST"></script>

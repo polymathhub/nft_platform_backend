@@ -1,19 +1,3 @@
-/**
- * TELEGRAM INITIALIZATION SYSTEM
- * 
- * This module ensures proper Telegram WebApp initialization BEFORE any other code.
- * It must be loaded as the FIRST script on every page.
- * 
- * Purpose:
- * - Detect Telegram context early
- * - Call Telegram.WebApp.ready() at the right time
- * - Ensure initData is available
- * - Provide status to downstream modules
- */
-
-// ============================================================================
-// PHASE 1: TELEGRAM CONTEXT DETECTION
-// ============================================================================
 
 /**
  * Detect if running in Telegram Mini App context
@@ -55,14 +39,7 @@ function getTelegramInfo() {
   }
 }
 
-// ============================================================================
-// PHASE 2: TELEGRAM.WEBAPP.READY() INITIALIZATION
-// ============================================================================
 
-/**
- * Call Telegram.WebApp.ready() at the appropriate time
- * This signals to Telegram that the Mini App is ready to receive updates
- */
 function initializeTelegramWebApp() {
   if (!isTelegramContext()) {
     console.log('[Telegram Init] Not in Telegram context, skipping WebApp.ready()');
@@ -97,9 +74,7 @@ function initializeTelegramWebApp() {
   }
 }
 
-// ============================================================================
-// PHASE 3: GLOBAL STATE AND EVENT SYSTEM
-// ============================================================================
+
 
 // Create global Telegram state object
 window._telegramState = {
@@ -129,13 +104,7 @@ function dispatchTelegramEvent(eventName, detail = {}) {
   }
 }
 
-// ============================================================================
-// PHASE 4: MAIN INITIALIZATION SEQUENCE
-// ============================================================================
 
-/**
- * Main initialization function - orchestrates the entire Telegram setup
- */
 async function initTelegram() {
   console.group('[Telegram Init] Starting Telegram initialization sequence');
   
@@ -193,11 +162,11 @@ async function initTelegram() {
       info: getTelegramInfo()
     });
     
-    console.log('[Telegram Init] ✅ Telegram initialization complete');
+    console.log('[Telegram Init]  Telegram initialization complete');
     console.log('[Telegram Init] Info:', getTelegramInfo());
     
   } catch (error) {
-    console.error('[Telegram Init] ❌ Fatal error during initialization:', error);
+    console.error('[Telegram Init] Fatal error during initialization:', error);
     window._telegramState.error = error.message;
     window._telegramState.isInitialized = false;
     
@@ -210,11 +179,7 @@ async function initTelegram() {
   }
 }
 
-// ============================================================================
-// PHASE 5: AUTO-INITIALIZATION ON SCRIPT LOAD
-// ============================================================================
 
-// Determine optimal time to initialize based on document state
 if (document.readyState === 'loading') {
   // DOM is still loading, initialize when document is ready
   document.addEventListener('DOMContentLoaded', () => {
