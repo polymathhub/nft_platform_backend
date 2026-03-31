@@ -43,9 +43,12 @@ class UserResponse(BaseModel):
     email: str
     username: str
     full_name: Optional[str]
+    first_name: Optional[str] = None  # For Telegram display
+    last_name: Optional[str] = None   # For Telegram display
     avatar_url: Optional[str]
     photo_url: Optional[str]
     wallet_address: Optional[str]
+    telegram_id: Optional[str] = None  # Telegram user ID
     telegram_username: Optional[str]
     is_verified: bool
     is_active: bool
