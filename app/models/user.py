@@ -27,7 +27,12 @@ class User(Base):
     wallet_address = Column(String(255), nullable=True, unique=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     is_verified = Column(Boolean, default=False, nullable=False)
-    user_role = Column(Enum(UserRole), default=UserRole.USER, nullable=False, index=True)
+    user_role = Column(
+        Enum(UserRole, values_callable=lambda x: [e.value for e in x], native_enum=True),
+        default=UserRole.USER,
+        nullable=False,
+        index=True
+    )
     is_creator = Column(Boolean, default=False, nullable=False, index=True)
     creator_name = Column(String(255), nullable=True)
     creator_bio = Column(String(1000), nullable=True)

@@ -906,37 +906,23 @@
       </div>
     </div>
 
-    <!-- Simple TON Connect Initialization Script -->
+
     <script>
-      /**
-       * Simple TON Connect Trigger Implementation
-       * Handles direct wallet connection from the Connect Wallet button
-       * 
-       * Flow:
-       * 1. User clicks "Connect Wallet" button (id="connectBtn")
-       * 2. TonegramWalletIntegrator.connect() is called
-       * 3. TonConnect modal opens
-       * 4. User selects wallet
-       * 5. Connection is synced to backend
-       */
       
-      // Initialize TON Connect when page loads
+     
       document.addEventListener('DOMContentLoaded', async () => {
         try {
-          // Ensure TonConnect is ready
           if (typeof window.tonConnect !== 'undefined') {
             await window.tonConnect.init();
-            console.log('✅ TON Connect initialized: Ready for wallet connections');
+            console.log(' TON Connect initialized: Ready for wallet connections');
           } else {
             console.log('[TON Connect] Manager not yet loaded - will initialize via TelegramWalletIntegrator');
           }
         } catch (error) {
           console.warn('[TON Connect] Initialization warning:', error.message);
-          // Continues anyway - TelegramWalletIntegrator will handle it
+         
         }
       });
-
-      // Direct button trigger implementation
       const connectBtn = document.getElementById('connectBtn');
       if (connectBtn) {
         connectBtn.addEventListener('click', async (e) => {
@@ -945,7 +931,6 @@
           
           console.log('[TON Connect] Connect button clicked - initiating wallet connection');
           
-          // Attempt direct connection via TelegramWalletIntegrator if available
           if (window._walletIntegrator) {
             window._walletIntegrator.connect();
           } else {
@@ -953,7 +938,7 @@
           }
         }, false);
         
-        console.log('✅ TON Connect button trigger installed on #connectBtn');
+        console.log('TON Connect button trigger installed on #connectBtn');
       }
     </script>
 
