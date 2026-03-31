@@ -72,7 +72,63 @@ class Settings(BaseSettings):
         app_url = info.data.get('app_url')
         if app_url:
             return app_url.rstrip('/') + '/webapp/'
-        return "https://nftplatformbackend-production-ee5f.up.railway.app/webapp/"
+        # Don't hardcode fallback - let request headers determine origin
+        return None
+    
+    @property
+    def get_base_url(self) -> str:
+        """Get base URL for TON Connect manifest and other public endpoints.
+        
+        Production-grade URL resolution:
+        1. Uses APP_URL environment variable if set and not localhost in production
+        2. Falls back to TELEGRAM_WEBAPP_URL domain 
+        3. Uses Railway production domain as last resort
+        4. Validates HTTPS in production mode
+        5. Never returns relative path (always full HTTPS URL)
+        """
+        # Build candidate URLs in priority order
+        candidates = []
+        
+        # Priority 1: app_url if it's production-ready (HTTPS or not localhost)
+        if self.app_url:
+            if self.app_url.startswith("https://") or "localhost" not in self.app_url:
+                candidates.append(self.app_url.rstrip('/'))
+        
+        # Priority 2: TELEGRAM_WEBAPP_URL domain if production-ready
+        if self.telegram_webapp_url:
+            # Skip if it's localhost in production mode
+            if not (self.environment == "production" and "localhost" in self.telegram_webapp_url):
+                base_from_webapp = '/'.join(self.telegram_webapp_url.split('/')[:3])
+                if base_from_webapp not in candidates:
+                    candidates.append(base_from_webapp)
+        
+        # Priority 3: Railway production fallback
+        candidates.append("https://nftplatformbackend-production-ee5f.up.railway.app")
+        
+        # Use first candidate
+        base = candidates[0] if candidates else "https://nftplatformbackend-production-ee5f.up.railway.app"
+        
+        # Validate HTTPS in production
+        if self.environment == "production" and not base.startswith("https://"):
+            raise ValueError(f"Production deployment must use HTTPS. Got: {base}")
+        
+        # Warn about localhost in production
+        if self.environment == "production" and "localhost" in base:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Production environment detected with localhost URL: {base}")
+        
+        return base
+    
+    def get_manifest_url(self) -> str:
+        """Get full URL to TON Connect manifest endpoint.
+        
+        ⚠️ CRITICAL for Wallet Apps:
+        - Must be full HTTPS URL (not relative path)
+        - Wallets fetch manifest independently from outside app context
+        - Relative paths fail silently with generic connection error
+        """
+        return f"{self.get_base_url}/tonconnect-manifest.json"
     ipfs_api_url: str = Field(default="http://localhost:5001")
     ipfs_gateway_url: str = Field(default="https://gateway.pinata.cloud/ipfs")
     ton_rpc_url: str = Field(default="https://toncenter.com/api/v2/jsonRPC")

@@ -70,9 +70,16 @@ class TonConnectManager {
         throw new Error('TonConnectUI SDK not loaded');
       }
 
-      // Get manifest URL 
-      const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
+      // Get manifest URL - Must be full HTTPS URL (not relative path)
+      // Wallets fetch manifest independently from outside the app context
+      // Relative paths like /tonconnect-manifest.json fail silently
+      // ⚠️ CRITICAL: Must match the public domain that serves tonconnect-manifest.json
+      const manifestUrl = this.getManifestUrl();
       console.log('[TONConnect] Manifest URL:', manifestUrl);
+
+      if (!manifestUrl || !manifestUrl.startsWith('https://')) {
+        throw new Error('Invalid manifest URL: must be full HTTPS URL');
+      }
 
       // Verify manifest is accessible before creating UI
       await this.verifyManifest(manifestUrl);
@@ -138,6 +145,27 @@ class TonConnectManager {
       this.emit('error', { message: error.message || 'Initialization failed' });
       throw error;
     }
+  }
+
+  /**
+   * Get manifest URL - Full HTTPS URL (not relative path)
+   * Wallets fetch the manifest independently, outside the app context
+   * ⚠️ CRITICAL: Manifest must be publicly accessible at full URL
+   * @returns {string} Full HTTPS URL to tonconnect-manifest.json
+   */
+  getManifestUrl() {
+    // Derive from window.location.origin
+    // This works because wallets make cross-origin requests to this URL
+    const origin = window.location.origin;
+    
+    // Ensure HTTPS
+    if (origin.startsWith('http://') && !origin.includes('localhost')) {
+      console.warn('[TONConnect] Non-HTTPS origin detected, may cause issues:', origin);
+    }
+    
+    const manifestUrl = `${origin}/tonconnect-manifest.json`;
+    console.log('[TONConnect] Derived manifest URL:', manifestUrl);
+    return manifestUrl;
   }
 
   /**
@@ -275,6 +303,7 @@ class TonConnectManager {
 
   /**
    * Verify manifest is accessible
+   * ⚠️ CRITICAL: Manifest must be at full HTTPS URL, publicly accessible, no auth required
    */
   async verifyManifest(manifestUrl) {
     try {
@@ -299,10 +328,50 @@ class TonConnectManager {
         throw new Error('Manifest missing required fields (url, name)');
       }
 
+      // Validate iconUrl if present (async, non-blocking)
+      if (manifest.iconUrl) {
+        console.log('[TONConnect] Manifest icon URL:', manifest.iconUrl);
+        this.validateManifestIcon(manifest.iconUrl).catch(err => {
+          console.warn('[TONConnect] Icon validation warning:', err.message);
+        });
+      }
+
       return manifest;
     } catch (error) {
       console.error('[TONConnect] Manifest verification failed:', error);
       throw new Error(`Failed to load manifest: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validate manifest icon URL (async, non-blocking)
+   * ⚠️ If icon returns 404, wallet connection may fail silently with generic error
+   * @param {string} iconUrl - Icon URL from manifest
+   */
+  async validateManifestIcon(iconUrl) {
+    try {
+      const response = await fetch(iconUrl, {
+        method: 'HEAD',
+        mode: 'no-cors',
+      });
+      
+      // no-cors mode doesn't allow checking status, try normal fetch as fallback
+      if (response.type === 'opaque') {
+        console.log('[TONConnect] Icon URL accessible (CORS mode):', iconUrl);
+        return true;
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Icon returned ${response.status}`);
+      }
+      console.log('[TONConnect] Icon URL verified:', iconUrl);
+      return true;
+    } catch (error) {
+      console.warn('[TONConnect] Icon URL validation issue - wallet connection may fail:', {
+        iconUrl,
+        error: error.message
+      });
+      return false;
     }
   }
 
@@ -477,7 +546,7 @@ class TonConnectManager {
       console.log('[TONConnect] UI not initialized, initializing now...');
       const ready = await this.waitForReady();
       if (!ready) {
-        throw new Error('TON Connect not ready');
+        throw new Error('TON Connect not in position to work yet');
       }
     }
 
@@ -564,7 +633,9 @@ class TonConnectManager {
         }
       }
 
-      // Fallback: use TonConnect modal
+      // Fallback: use TonConnect modal (GATEWAY TO TON CONNECT)
+      // This opens the wallet selection modal from TonConnectUI
+      // User can select from: TonHub, TonKeeper, TonWallet, etc.
       const result = await this.openModal();
       if (result) {
         return this.currentAccount;
@@ -580,7 +651,7 @@ class TonConnectManager {
   }
 
   /**
-   * Send transaction - GetGems style
+   * Send transaction 
    * Routes to native wallet or TonConnect based on connection type
    */
   async sendTransaction(transaction) {

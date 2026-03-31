@@ -216,7 +216,7 @@ async def tonconnect_manifest(request: Request):
                 if port and port not in (80, 443):
                     origin = f"{origin}:{port}"
         if not origin or origin.startswith("http://localhost"):
-            origin = "https://nftplatformbackend-production-ee5f.up.railway.app"
+            origin = settings.get_base_url
         logger.info(f"TonConnect manifest origin: {origin}")
         if origin:
             manifest["url"] = origin

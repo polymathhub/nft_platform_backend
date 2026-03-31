@@ -154,7 +154,7 @@ async def get_current_user(
             pass
         
         logger.info(
-            f"[Auth] ✅ New user registered: id={new_user.id}, "
+            f"[Auth]  New user registered: id={new_user.id}, "
             f"telegram_id={telegram_id}, username={username}"
         )
         

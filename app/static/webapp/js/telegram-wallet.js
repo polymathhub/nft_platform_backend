@@ -43,7 +43,17 @@ class TelegramWalletIntegrator {
       this.handleError(error);
     });
 
-    // Button click - GATEWAY ENTRY POINT
+    // ═══════════════════════════════════════════════════════════════════
+    // BUTTON CLICK - GATEWAY ENTRY POINT FOR TON CONNECT
+    // ═══════════════════════════════════════════════════════════════════
+    // This is the entry point that initiates TON Connect from Telegram
+    // When user clicks button on line 883 of wallet.html:
+    // 1. This handler fires
+    // 2. Calls this.connect()
+    // 3. Shows TonConnectUI wallet selection modal
+    // 4. User selects wallet
+    // 5. Auto-syncs with backend
+    // ═══════════════════════════════════════════════════════════════════
     if (this.connectBtn) {
       this.connectBtn.addEventListener('click', (e) => {
         e.preventDefault();
