@@ -219,7 +219,7 @@ async def get_current_user_optional(
             full_name=telegram_user.get('first_name', ''),
             telegram_id=str(telegram_id),
             telegram_username=telegram_user.get('username'),
-            hashed_password=hash_password("") if callable(hash_password) else "",
+            hashed_password="",  # Stateless Telegram auth - no passwords used
             is_active=True,
         )
         
@@ -238,3 +238,25 @@ async def get_current_user_optional(
     except Exception as e:
         logger.warning(f"[Auth] Optional auth failed: {e}")
         return None
+[{
+	"resource": "/c:/Users/HomePC/Downloads/nft_platform_backend-main (1)/nft_platform_backend-main/app/utils/telegram_auth_dependency.py",
+	"owner": "Pylance10",
+	"code": {
+		"value": "reportUndefinedVariable",
+		"target": {
+			"$mid": 1,
+			"path": "/microsoft/pylance-release/blob/main/docs/diagnostics/reportUndefinedVariable.md",
+			"scheme": "https",
+			"authority": "github.com"
+		}
+	},
+	"severity": 4,
+	"message": "\"hash_password\" is not defined",
+	"source": "Pylance",
+	"startLineNumber": 222,
+	"startColumn": 29,
+	"endLineNumber": 222,
+	"endColumn": 42,
+	"modelVersionId": 3,
+	"origin": "extHost2"
+}]

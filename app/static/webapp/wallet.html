@@ -906,6 +906,57 @@
       </div>
     </div>
 
+    <!-- Simple TON Connect Initialization Script -->
+    <script>
+      /**
+       * Simple TON Connect Trigger Implementation
+       * Handles direct wallet connection from the Connect Wallet button
+       * 
+       * Flow:
+       * 1. User clicks "Connect Wallet" button (id="connectBtn")
+       * 2. TonegramWalletIntegrator.connect() is called
+       * 3. TonConnect modal opens
+       * 4. User selects wallet
+       * 5. Connection is synced to backend
+       */
+      
+      // Initialize TON Connect when page loads
+      document.addEventListener('DOMContentLoaded', async () => {
+        try {
+          // Ensure TonConnect is ready
+          if (typeof window.tonConnect !== 'undefined') {
+            await window.tonConnect.init();
+            console.log('✅ TON Connect initialized: Ready for wallet connections');
+          } else {
+            console.log('[TON Connect] Manager not yet loaded - will initialize via TelegramWalletIntegrator');
+          }
+        } catch (error) {
+          console.warn('[TON Connect] Initialization warning:', error.message);
+          // Continues anyway - TelegramWalletIntegrator will handle it
+        }
+      });
+
+      // Direct button trigger implementation
+      const connectBtn = document.getElementById('connectBtn');
+      if (connectBtn) {
+        connectBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          console.log('[TON Connect] Connect button clicked - initiating wallet connection');
+          
+          // Attempt direct connection via TelegramWalletIntegrator if available
+          if (window._walletIntegrator) {
+            window._walletIntegrator.connect();
+          } else {
+            console.warn('[TON Connect] Wallet integrator not initialized yet');
+          }
+        }, false);
+        
+        console.log('✅ TON Connect button trigger installed on #connectBtn');
+      }
+    </script>
+
     <!-- Tokens Section (Hidden) -->
     <div class="section" style="display: none;">
       <div class="section-title">Your Assets</div>
@@ -1128,8 +1179,10 @@
       await new Promise(r => setTimeout(r, 500)); // Let auth init
       const walletCard = document.getElementById('wallet-balance-card');
       if (walletCard) {
-        new TelegramWalletIntegrator(walletCard);
-        console.log('[Wallet Page] TelegramWalletIntegrator initialized');
+        // Create instance and expose globally for direct access
+        const integrator = new TelegramWalletIntegrator(walletCard);
+        window._walletIntegrator = integrator;
+        console.log('[Wallet Page] TelegramWalletIntegrator initialized and exposed as window._walletIntegrator');
       } else {
         console.error('[Wallet Page] wallet-balance-card not found');
       }
