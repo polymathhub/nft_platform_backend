@@ -321,7 +321,7 @@ app.include_router(ton_wallet_router)
 app.include_router(stars_marketplace_router)
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(payment_router)
-app.include_router(referrals_router)
+app.include_router(referrals_router, prefix="/api/v1")  # /api/v1/referrals/*
 app.include_router(stars_payment_router)
 
 # Serve dashboard at root; avoid redirect loops by not forcing a redirect here.

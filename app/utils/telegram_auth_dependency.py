@@ -10,6 +10,7 @@ from app.database import get_db_session
 from app.models import User
 from app.schemas.user import UserResponse
 from app.utils.telegram_init_data import verify_telegram_init_data
+from app.utils.referral_utils import generate_referral_code
 # Legacy password hashing removed - Telegram-only auth is stateless
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,8 @@ async def get_current_user(
             # No password for Telegram-native users (stateless). Use empty placeholder.
             hashed_password="",
             is_active=True,
+            # ✨ AUTO-GENERATE REFERRAL CODE FOR NEW USERS
+            referral_code=await generate_referral_code(db)
         )
         
         db.add(new_user)

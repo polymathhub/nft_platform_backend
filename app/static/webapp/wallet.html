@@ -1103,39 +1103,13 @@
   </script>
 
   <script type="module">
-    import TelegramWalletIntegrator from './js/telegram-wallet.js';
+    import { initWalletConnect } from './js/wallet-connect-simple.js';
     
-    // Initialize wallet integrator when DOM is ready
-    async function initializeWallet() {
-      try {
-        // Wait a bit for other scripts to initialize
-        await new Promise(r => setTimeout(r, 1000));
-        
-        const walletCard = document.getElementById('wallet-balance-card');
-        if (!walletCard) {
-          console.error('[Wallet Page] ERROR: wallet-balance-card element not found in DOM');
-          return;
-        }
-        
-        console.log('[Wallet Page] Creating TelegramWalletIntegrator instance...');
-        const integrator = new TelegramWalletIntegrator(walletCard);
-        
-        // Expose globally for debugging and direct access if needed
-        window._walletIntegrator = integrator;
-        console.log('[Wallet Page] ✅ TON Wallet integrator initialized and ready');
-        console.log('[Wallet Page] Gate way accessible at: window._walletIntegrator');
-        
-      } catch (error) {
-        console.error('[Wallet Page] FATAL: Failed to initialize TON Wallet:', error);
-        console.error('[Wallet Page] Stack trace:', error.stack);
-      }
-    }
-    
-    // Start initialization when DOM is ready
+    // Initialize simple wallet connect when DOM is ready
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeWallet);
+      document.addEventListener('DOMContentLoaded', initWalletConnect);
     } else {
-      initializeWallet();
+      initWalletConnect();
     }
   </script>
   <script type="module">

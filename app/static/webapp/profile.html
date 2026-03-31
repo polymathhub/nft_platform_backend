@@ -427,8 +427,8 @@
       </div>
 
       <div class="profile-actions">
-        <button class="action-btn" onclick="navigate('/webapp/wallet.html')">Wallet</button>
-        <button class="action-btn primary" onclick="navigate('/webapp/mint.html')">Create</button>
+        <button class="action-btn" onclick="navigate('wallet.html')">Wallet</button>
+        <button class="action-btn primary" onclick="navigate('mint.html')">Create</button>
       </div>
     </div>
 
@@ -537,65 +537,6 @@
       </div>
     </div>
 
-    <!-- Settings Section -->
-    <div class="section">
-      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
-        <div class="menu-item-label">
-          <div class="menu-item-title">Security</div>
-          <div class="menu-item-desc">Manage passwords & 2FA</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
-          <div class="menu-item-arrow">→</div>
-        </div>
-      </div>
-      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
-        <div class="menu-item-label">
-          <div class="menu-item-title">Notifications</div>
-          <div class="menu-item-desc">Manage notification preferences</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
-          <div class="menu-item-arrow">→</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Content Section -->
-    <div class="section">
-      <div class="section-title">Content</div>
-      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
-        <div class="menu-item-label">
-          <div class="menu-item-title">My Collections</div>
-          <div class="menu-item-desc">View and manage collections</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
-          <div class="menu-item-arrow">→</div>
-        </div>
-      </div>
-      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
-        <div class="menu-item-label">
-          <div class="menu-item-title">Favorites</div>
-          <div class="menu-item-desc">Your saved NFTs</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
-          <div class="menu-item-arrow">→</div>
-        </div>
-      </div>
-      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
-        <div class="menu-item-label">
-          <div class="menu-item-title">Offers</div>
-          <div class="menu-item-desc">Received & sent offers</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
-          <div class="menu-item-arrow">→</div>
-        </div>
-      </div>
-    </div>
-
     <!-- Support Section -->
     <div class="section">
       <div class="section-title">Support</div>
@@ -605,16 +546,6 @@
           <div class="menu-item-desc">Get help on Telegram</div>
         </div>
         <div class="menu-item-arrow" style="color: var(--color-primary);">↗</div>
-      </div>
-      <div class="menu-item" style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">
-        <div class="menu-item-label">
-          <div class="menu-item-title">Report a Problem</div>
-          <div class="menu-item-desc">Report issues or bugs</div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="background: #fef08a; color: #b45309; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Coming Soon</span>
-          <div class="menu-item-arrow">→</div>
-        </div>
       </div>
     </div>
 
@@ -946,105 +877,63 @@
       }, 2000);
     }
 
-    // Referral System Connected to Backend API
+    // ✨ SIMPLE REFERRAL SYSTEM - Get Code from Backend
     class ReferralSystem {
-      constructor(apiClient, endpoints) {
-        this.api = apiClient;
-        this.endpoints = endpoints || {};
-        this.userData = null;
-        this.loading = false;
+      constructor() {
+        this.referralCode = null;
+        this.referralCount = 0;
       }
 
-      async initialize() {
-        this.loading = true;
+      // Load referral data from API
+      async loadReferralData() {
         try {
-          // Try multiple API endpoints for referral data
-          let response = null;
+          const response = await telegramFetch('/api/v1/referrals/me');
           
-          // Try dedicated referrals endpoint first
-          if (this.endpoints?.referrals?.me) {
-            try {
-              response = await this.api.get(this.endpoints.referrals.me);
-            } catch (e) {
-              console.debug('[Referral] endpoints.referrals.me failed, trying fallback');
-            }
+          if (response && response.data) {
+            this.referralCode = response.data.referral_code;
+            this.referralCount = response.data.total_referrals || 0;
+            console.log('[Referral] Loaded:', this.referralCode);
           }
-          
-          // Fallback: try /api/v1/referrals/me
-          if (!response) {
-            try {
-              response = await this.api.get('/api/v1/referrals/me');
-            } catch (e) {
-              console.debug('[Referral] /api/v1/referrals/me failed, using mock data');
-            }
-          }
-          
-          // If we got a response, parse it
-          if (response) {
-            this.userData = {
-              referralCode: response.code || response.referral_code || response.referral_token || 'REF' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-              totalEarned: response.lifetime_earnings || response.total_earned || response.earned || 0,
-              referralCount: response.total_referrals || response.referral_count || response.referrals_count || 0,
-              pendingEarnings: response.pending_commissions || response.pending || response.pending_earnings || 0,
-            };
-          } else {
-            // Show mock data with clear indication
-            this.userData = {
-              referralCode: 'REF' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-              totalEarned: 0,
-              referralCount: 0,
-              pendingEarnings: 0,
-            };
-            console.warn('[Referral] No referral data available - showing placeholder');
-          }
-          
-          this.renderUI();
         } catch (error) {
-          console.error('[Referral] Fatal error loading referral data:', error.message);
-          // Ensure UI still renders with empty state
-          this.userData = {
-            referralCode: 'REF00000000',
-            totalEarned: 0,
-            referralCount: 0,
-            pendingEarnings: 0,
-          };
-          this.renderUI();
-          this.showError('Unable to load referral data. Some features may be limited.');
-        } finally {
-          this.loading = false;
+          console.warn('[Referral] Failed to load:', error.message);
         }
+
+        // Render UI with whatever data we have
+        this.renderUI();
       }
 
+      // Update UI elements with data
       renderUI() {
-        if (!this.userData) return;
-        
-        const codeElement = document.getElementById('referral-code-display');
-        const earningsElement = document.getElementById('earnings-earned');
-        const countElement = document.getElementById('referral-count');
-        const pendingElement = document.getElementById('pending-amount');
-        
-        if (codeElement) codeElement.textContent = this.userData.referralCode;
-        if (earningsElement) earningsElement.textContent = '$' + this.userData.totalEarned.toFixed(2);
-        if (countElement) countElement.textContent = this.userData.referralCount;
-        if (pendingElement) pendingElement.textContent = '$' + this.userData.pendingEarnings.toFixed(2);
+        if (this.referralCode) {
+          const codeEl = document.getElementById('referral-code-display');
+          if (codeEl) codeEl.textContent = this.referralCode;
+        }
+
+        const countEl = document.getElementById('referral-count');
+        if (countEl) countEl.textContent = this.referralCount;
       }
 
+      // Copy code to clipboard
       copy() {
-        if (!this.userData) return;
-        const code = this.userData.referralCode;
-        navigator.clipboard.writeText(code).then(() => {
-          this.showToast('Referral code copied!');
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-          this.showToast('Failed to copy code');
+        if (!this.referralCode) {
+          alert('Referral code not loaded');
+          return;
+        }
+        navigator.clipboard.writeText(this.referralCode).then(() => {
+          alert('Referral code copied!');
+        }).catch(() => {
+          alert('Failed to copy code');
         });
       }
 
+      // Share via Telegram or other services
       share() {
-        if (!this.userData) return;
-        const code = this.userData.referralCode;
-        const shareText = `Join me on GiftedForge! Use my referral code: ${code}`;
-        const shareUrl = `${window.location.origin}/?ref=${code}`;
+        if (!this.referralCode) {
+          alert('Referral code not loaded');
+          return;
+        }
+        const shareText = `Join me on NFT Platform! Use my referral code: ${this.referralCode}`;
+        const shareUrl = `${window.location.origin}/?ref=${this.referralCode}`;
         
         // Try native Web Share API first (mobile)
         if (navigator.share) {
@@ -1246,9 +1135,9 @@
         }, 5000);
       }
 
-    // Initialize referral system with API client
-    const referralSystem = new ReferralSystem(api, endpoints);
-    referralSystem.initialize();
+    // ✨ Initialize simple referral system
+    const referralSystem = new ReferralSystem();
+    referralSystem.loadReferralData();
 
     // Global referral functions
     window.copyReferralCode = () => referralSystem.copy();

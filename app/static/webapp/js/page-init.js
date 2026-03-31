@@ -43,9 +43,24 @@ class PageInitializer {
   }
 }
 
-// Global navigate function
+// Global navigate function - handles both relative and absolute paths
 window.navigate = (path) => {
-  window.location.href = path.startsWith('http') ? path : `/webapp${path}`;
+  if (path.startsWith('http')) {
+    // Absolute URL
+    window.location.href = path;
+  } else if (path.startsWith('/webapp/')) {
+    // Already has /webapp prefix
+    window.location.href = path;
+  } else if (path.startsWith('/')) {
+    // Absolute path without /webapp - add it
+    const filename = path.split('/').pop();
+    const hasExtension = filename.includes('.');
+    window.location.href = hasExtension ? `/webapp${path}` : `/webapp${path}.html`;
+  } else {
+    // Relative path - add .html if needed
+    const hasExtension = path.includes('.');
+    window.location.href = `/webapp/${path}${hasExtension ? '' : '.html'}`;
+  }
 };
 
 // Init on DOM ready
