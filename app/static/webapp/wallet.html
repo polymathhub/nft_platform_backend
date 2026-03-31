@@ -1103,14 +1103,79 @@
   </script>
 
   <script type="module">
-    import { initWalletConnect } from './js/wallet-connect-simple.js';
+    import TonWallet from './js/ton-wallet.js';
+
+    // Initialize wallet
+    const wallet = new TonWallet();
     
-    // Initialize simple wallet connect when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initWalletConnect);
-    } else {
-      initWalletConnect();
+    // Setup UI
+    function updateUI() {
+      const connectBtn = document.getElementById('connectBtn');
+      const walletAddress = document.getElementById('walletAddress');
+      const status = document.getElementById('status');
+
+      if (wallet.isConnected()) {
+        const address = wallet.getAddress();
+        connectBtn.textContent = 'Disconnect Wallet';
+        connectBtn.className = 'balance-action disconnect-btn';
+        if (walletAddress) walletAddress.textContent = wallet.formatAddress(address);
+        if (walletAddress) walletAddress.style.display = 'block';
+        if (status) {
+          status.textContent = 'Connected ✅';
+          status.className = 'status connected';
+        }
+      } else {
+        connectBtn.textContent = 'Connect TON Wallet';
+        connectBtn.className = 'balance-action';
+        if (walletAddress) walletAddress.style.display = 'none';
+        if (status) {
+          status.textContent = 'Not connected';
+          status.className = 'status disconnected';
+        }
+      }
     }
+
+    // Initialize wallet on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await wallet.init();
+        updateUI();
+
+        // Listen for connection changes
+        wallet.on('connected', (account) => {
+          console.log('[Wallet] Connected:', account.address);
+          updateUI();
+        });
+
+        wallet.on('disconnected', () => {
+          console.log('[Wallet] Disconnected');
+          updateUI();
+        });
+
+        wallet.on('error', (error) => {
+          console.error('[Wallet] Error:', error);
+        });
+
+        // Handle button click
+        const connectBtn = document.getElementById('connectBtn');
+        if (connectBtn) {
+          connectBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+              if (wallet.isConnected()) {
+                await wallet.disconnect();
+              } else {
+                await wallet.connect();
+              }
+            } catch (error) {
+              console.error('[Wallet] Connection error:', error);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('[Wallet] Initialization error:', error);
+      }
+    });
   </script>
   <script type="module">
     // Import page initialization for consistent user greeting across pages
