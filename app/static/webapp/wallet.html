@@ -284,6 +284,46 @@
       transform: translateY(-2px);
     }
 
+    .wallet-address-display {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .wallet-address {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.85);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.3px;
+      word-break: break-all;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .connection-status {
+      font-size: 12px;
+      color: #86efac;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .error-status {
+      font-size: 12px;
+      color: #fca5a5;
+      font-weight: 600;
+    }
+
+    .button-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      white-space: nowrap;
+    }
+
     .wallet-header {
       display: flex;
       align-items: center;
@@ -872,19 +912,19 @@
     <!-- Balance card -->
     <div class="balance-card" id="wallet-balance-card">
       <div class="balance-card-content">
-        </div>
         <div class="balance-amount" id="selected-wallet-balance">$ 0.00</div>
 
+        <div class="balance-footer">
+          <div class="wallet-address-display">
+            <span id="walletAddress" class="wallet-address" style="display: none;"></span>
+            <span id="status" class="connection-status" style="display: none;"></span>
+            <span id="error" class="error-status" style="display: none;"></span>
           </div>
-          <div id="wallet-controls">
-            <span id="status" style="font-size: 13px; margin-right: 12px; display: none;"></span>
-            <span id="error" style="font-size: 12px; color: #ef4444; margin-right: 12px; display: none;"></span>
+          <div class="button-group">
             <span id="loading" style="display: none;">Connecting...</span>
             <button id="connectBtn" class="balance-action" title="Connect TON Wallet">Connect Wallet</button>
-            <span id="walletAddress" style="font-size: 13px; font-family: monospace; display: none;"></span>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -1118,19 +1158,21 @@
         const address = wallet.getAddress();
         connectBtn.textContent = 'Disconnect Wallet';
         connectBtn.className = 'balance-action disconnect-btn';
-        if (walletAddress) walletAddress.textContent = wallet.formatAddress(address);
-        if (walletAddress) walletAddress.style.display = 'block';
+        if (walletAddress) {
+          walletAddress.textContent = wallet.formatAddress(address);
+          walletAddress.style.display = 'block';
+        }
         if (status) {
           status.textContent = 'Connected';
-          status.className = 'status connected';
+          status.className = 'connection-status';
+          status.style.display = 'block';
         }
       } else {
         connectBtn.textContent = 'Connect TON Wallet';
         connectBtn.className = 'balance-action';
         if (walletAddress) walletAddress.style.display = 'none';
         if (status) {
-          status.textContent = 'Not connected';
-          status.className = 'status disconnected';
+          status.style.display = 'none';
         }
       }
     }
@@ -1209,8 +1251,12 @@
 
   function setWallet(addr) {
     walletAddressEl.innerText = addr;
-    walletAddressEl.style.display = "inline";
-    connectBtn.innerText = "Connected";
+    walletAddressEl.style.display = "block";
+    connectBtn.innerText = "Disconnect Wallet";
+    connectBtn.className = 'balance-action disconnect-btn';
+    statusEl.innerText = "Connected";
+    statusEl.className = 'connection-status';
+    statusEl.style.display = "block";
   }
 
   // BUTTON CLICK → trigger TON CONNECT
@@ -1235,11 +1281,12 @@
     if (wallet) {
       const address = wallet.account.address;
       setWallet(address);
-      setStatus("Wallet connected");
     } else {
       connectBtn.innerText = "Connect Wallet";
+      connectBtn.className = 'balance-action';
       walletAddressEl.style.display = "none";
-      setStatus("Disconnected");
+      statusEl.style.display = "none";
+      setError("");
     }
   });
 
