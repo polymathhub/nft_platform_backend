@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0a0a14">
   <title>Profile NFT Platform</title>
 
-  <!-- ⚠️ CRITICAL: Load Telegram initialization FIRST, before any other scripts -->
+  <!-- CRITICAL: Load Telegram initialization FIRST, before any other scripts -->
   <script src="js/telegram-init.js" type="module"></script>
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -594,662 +594,273 @@
 
 
   <script type="module">
-    import { initializeAuthSystem } from './js/auth-bootstrap-telegram.js';
-    import { api, endpoints } from './js/api.js';
-    import { telegramFetch } from './js/telegram-fetch.js';
     import { TelegramUtils } from './js/telegram-utils.js';
 
-    // Expose to window for navbar.js to access
-    window.TelegramUtils = TelegramUtils;
-
-    // Initialize global auth system immediately (before any page code)
-    await initializeAuthSystem();
-
-    // Use global auth manager (initialized by bootstrap)
-    const authManager = window.authManager;
-    
-    // Declare authReady flag globally
-    let authReady = false;
-
-    // Ensure authenticated - with graceful fallback using Telegram auth
-    async function ensureAuthenticated() {
+    // ✅ SIMPLIFIED DIRECT AUTH - Get user data from Telegram
+    async function loadUserData() {
       try {
-        let waitCount = 0;
-        const maxWait = 50; 
-        
-        while (!authReady && waitCount < maxWait) {
-          if (window.AuthSystem?.isInitialized) {
-            authReady = true;
-            console.log('[Profile] AuthSystem ready');
-            break;
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-          waitCount++;
-        }
+        // Get Telegram initData
+        const initData = window.Telegram?.WebApp?.initData || TelegramUtils.getInitData();
+        console.log('[Profile] Has Telegram auth:', !!initData);
 
-        const initData = TelegramUtils.getInitData();
         if (!initData) {
-          console.log('Profile: no Telegram initData - preview mode');
-          return false;
+          console.log('[Profile] No Telegram data - preview mode');
+          return null;
         }
 
-        // Try to fetch current user from Telegram-authenticated endpoint
-        try {
-          const userData = await telegramFetch('/api/v1/me');
-          if (userData) {
-            authManager.user = userData.data || userData;
-            authManager.isAuthenticated = true;
-            return true;
+        // Fetch authenticated user
+        console.log('[Profile] Fetching from /api/v1/me');
+        const resp = await fetch('/api/v1/me', {
+          headers: {
+            'X-Telegram-Init-Data': initData,
+            'Content-Type': 'application/json'
           }
-        } catch (e) {
-          console.warn('Failed to fetch /api/v1/me:', e);
+        });
+
+        console.log('[Profile] Response status:', resp.status);
+
+        if (!resp.ok) {
+          console.warn('[Profile] Auth failed:', resp.status);
+          return null;
         }
 
-        // Wait briefly for auth manager to start
-        let authWait = 20;
-        while (!authManager.isAuthenticated && authWait > 0) {
-          await new Promise(r => setTimeout(r, 100));
-          authWait--;
-        }
-
-        // If still not authenticated, show in demo preview
-        if (!authManager.isAuthenticated) {
-          console.log('Profile: preview mode (no authentication)');
-          return false;
-        }
-        return true;
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        return false;
+        const user = await resp.json();
+        console.log('[Profile] Got user:', user.username || user.first_name);
+        return user;
+      } catch (err) {
+        console.error('[Profile] Error:', err.message);
+        return null;
       }
     }
 
-    // Wait for auth and initialize
+    // Load and display everything
     (async () => {
-      // Try to authenticate but don't block UI
-      const isAuthenticated = await ensureAuthenticated();
-      let user = isAuthenticated ? authManager.user : null;
+      const user = await loadUserData();
+      const initData = window.Telegram?.WebApp?.initData || TelegramUtils.getInitData();
+      // Update profile name and username
+      const name = user?.first_name || user?.username || 'Guest';
+      const username = user ? ('@' + (user?.telegram_username?.replace('@', '') || user?.username || 'user')) : '@guest';
       
-      // Fetch fresh user data from API
-      if (isAuthenticated) {
-        try {
-          const userData = await telegramFetch('/api/v1/me');
-          user = userData.data || userData;
-          authManager.user = user;
-        } catch (e) {
-          console.warn('Could not fetch fresh user data:', e);
-        }
-      }
+      document.getElementById('profile-name').textContent = name;
+      document.getElementById('profile-username').textContent = username;
+      console.log('[Profile] Displayed:', name);
 
-      // Always update UI with whatever data we have
-      const displayName = user?.first_name || user?.username || 'Guest';
-      const displayUsername = user ? ('@' + (user?.telegram_username?.replace('@', '') || user?.username || 'user')) : '@guest';
-      
-      document.getElementById('profile-name').textContent = displayName;
-      document.getElementById('profile-username').textContent = displayUsername;
-      
-
-      const getInitial = (user) => {
-        if (!user) return 'U';
-        const name = user?.first_name || user?.username || 'User';
-        return name[0].toUpperCase();
-      };
-      
-      const initials = getInitial(user);
+      // Set avatar initial
+      const initial = (name || 'U')[0].toUpperCase();
       const initialsEl = document.getElementById('avatar-initials');
+      if (initialsEl) initialsEl.textContent = initial;
+
+      // Load profile picture
       const imgEl = document.getElementById('profile-avatar-img');
-      const avatarEl = document.getElementById('profile-avatar-image');
-      
-      // Set initial text before attempting to load image
-      if (initialsEl) initialsEl.textContent = initials;
-      
-      // Load Telegram profile picture if available
-      if (user?.photo_url) {
+      if (user?.photo_url && imgEl) {
         imgEl.src = user.photo_url;
-        
         imgEl.onload = () => {
-          // Image loaded successfully - hide initials, show image
           imgEl.style.display = 'block';
           if (initialsEl) initialsEl.style.display = 'none';
-          console.log('[Profile] Telegram profile picture loaded successfully');
         };
-        
         imgEl.onerror = () => {
-          // Image failed to load - keep initials visible
           imgEl.style.display = 'none';
           if (initialsEl) initialsEl.style.display = 'flex';
-          console.warn('[Profile] Failed to load Telegram profile picture:', user.photo_url);
         };
       } else {
-        // No photo_url available - use initials
-        imgEl.style.display = 'none';
+        if (imgEl) imgEl.style.display = 'none';
         if (initialsEl) initialsEl.style.display = 'flex';
-        console.log('[Profile] No photo_url available, using initials');
-      }
-      
-      // Fetch and display user stats (NFTs, value, collections)
-      if (isAuthenticated) {
-        try {
-          // Call ACTUAL endpoint: /api/v1/dashboard/stats
-          const dashboardData = await telegramFetch('/api/v1/dashboard/stats');
-          
-          if (dashboardData && dashboardData.data) {
-            document.getElementById('stat-nfts').textContent = dashboardData.data.nfts_owned || 0;
-            document.getElementById('stat-value').textContent = '$' + (dashboardData.data.total_balance || 0).toFixed(2);
-            document.getElementById('stat-collections').textContent = dashboardData.data.active_listings || 0;
-          }
-        } catch (e) {
-          console.warn('[Profile] Dashboard stats fetch failed:', e.message);
-          // Leave defaults (0) shown - user will see incomplete data but no JavaScript errors
-        }
-      } else {
-        // Show defaults for preview mode
-        document.getElementById('stat-nfts').textContent = '0';
-        document.getElementById('stat-value').textContent = '$0.00';
-        document.getElementById('stat-collections').textContent = '0';
-      }
-      
-      // Initialize Socket.io for real-time notifications (only if authenticated)
-      if (isAuthenticated && user?.id) {
-        initializeNotifications(user?.id || user?.telegram_id);
       }
 
-      // Setup avatar upload
+      // Load stats if authenticated
+      if (user?.id && initData) {
+        try {
+          const statsResp = await fetch('/api/v1/dashboard/stats', {
+            headers: { 'X-Telegram-Init-Data': initData }
+          });
+          if (statsResp.ok) {
+            const data = await statsResp.json();
+            if (data?.data) {
+              document.getElementById('stat-nfts').textContent = data.data.nfts_owned || 0;
+              document.getElementById('stat-value').textContent = '$' + (data.data.total_balance || 0).toFixed(2);
+              document.getElementById('stat-collections').textContent = data.data.active_listings || 0;
+            }
+          }
+        } catch (e) {
+          console.warn('[Profile] Stats error:', e.message);
+        }
+      }
+
+      // Avatar upload handler
       const avatarEl = document.getElementById('profile-avatar-image');
       const fileInput = document.getElementById('avatar-file-input');
 
-      avatarEl.addEventListener('click', () => {
-        fileInput.click();
-      });
-
-      fileInput.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        // Validate file
-        if (!file.type.startsWith('image/')) {
-          alert('Please select a valid image file');
-          return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-          alert('Image size must be less than 5MB');
-          return;
-        }
-
-        try {
-          // Show loading state
-          avatarEl.style.opacity = '0.5';
-
-          // Upload image
-          const formData = new FormData();
-          formData.append('file', file);
-          const uploadResponse = await api.upload('/api/v1/images/upload', formData);
-
-          if (!uploadResponse.image_url) {
-            throw new Error('Failed to upload image');
-          }
-
-          // Update user profile with new avatar
-          const updateResponse = await api.post('/api/v1/user/update', {
-            avatar_url: uploadResponse.image_url
-          });
-
-          if (updateResponse.success || updateResponse.data) {
-            // Update UI with new image
-            const img = document.getElementById('profile-avatar-img');
-            const initialsEl = document.getElementById('avatar-initials');
-            img.src = uploadResponse.image_url;
-            img.style.display = 'block';
-            if (initialsEl) initialsEl.style.display = 'none';
-            img.onload = () => {
-              avatarEl.style.opacity = '1';
-              console.log('[Avatar] New profile picture uploaded and displayed');
-            };
-            img.onerror = () => {
-              avatarEl.style.opacity = '1';
-              img.style.display = 'none';
-              if (initialsEl) initialsEl.style.display = 'flex';
-              alert('Failed to load uploaded image');
-            };
-            
-            // Update authManager user data
-            authManager.user.avatar_url = uploadResponse.image_url;
-          } else {
-            throw new Error(updateResponse.message || 'Failed to update profile');
-          }
-        } catch (error) {
-          avatarEl.style.opacity = '1';
-          alert('Error uploading avatar: ' + error.message);
-        } finally {
-          // Reset file input
-          fileInput.value = '';
-        }
-      });
-    })();
-
-    // Bio editing functionality
-    (function() {
-      const bioEl = document.getElementById('profile-bio');
-      const editBtn = document.getElementById('edit-bio-btn');
-
-      if (!bioEl || !editBtn) return;
-
-      // Show edit button on hover
-      bioEl.parentElement.addEventListener('mouseenter', () => {
-        editBtn.style.opacity = '1';
-      });
-
-      bioEl.parentElement.addEventListener('mouseleave', () => {
-        if (!bioEl.matches(':focus')) {
-          editBtn.style.opacity = '0';
-        }
-      });
-
-      // Handle edit button click
-      editBtn.addEventListener('click', () => {
-        bioEl.focus();
-        // Select all text for easy replacement
-        const range = document.createRange();
-        range.selectNodeContents(bioEl);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-      });
-
-      // Handle focus/blur for styling
-      bioEl.addEventListener('focus', () => {
-        bioEl.style.borderColor = 'var(--color-primary)';
-        bioEl.style.backgroundColor = 'rgba(88, 86, 214, 0.05)';
-        editBtn.style.opacity = '1';
-      });
-
-      bioEl.addEventListener('blur', () => {
-        bioEl.style.borderColor = 'transparent';
-        bioEl.style.backgroundColor = 'transparent';
-        editBtn.style.opacity = '0';
-
-        // Save bio to localStorage (since we don't have a backend endpoint for this)
-        const bio = bioEl.textContent.trim();
-        if (bio) {
-          localStorage.setItem('user_bio', bio);
-        }
-      });
-
-      // Load saved bio on page load
-      const savedBio = localStorage.getItem('user_bio');
-      if (savedBio) {
-        bioEl.textContent = savedBio;
+      if (avatarEl) {
+        avatarEl.addEventListener('click', () => fileInput?.click());
       }
 
-      // Prevent Enter key from creating new lines (single line bio)
-      bioEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          bioEl.blur();
-        }
-      });
+      if (fileInput) {
+        fileInput.addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (!file || !file.type.startsWith('image/')) {
+            alert('Please select a valid image file');
+            return;
+          }
+
+          if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+          }
+
+          try {
+            if (avatarEl) avatarEl.style.opacity = '0.5';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadResp = await fetch('/api/v1/images/upload', {
+              method: 'POST',
+              body: formData
+            });
+
+            if (!uploadResp.ok) {
+              throw new Error('Upload failed');
+            }
+
+            const uploadData = await uploadResp.json();
+
+            if (imgEl && uploadData.image_url) {
+              imgEl.src = uploadData.image_url;
+              imgEl.style.display = 'block';
+              if (initialsEl) initialsEl.style.display = 'none';
+            }
+
+            if (avatarEl) avatarEl.style.opacity = '1';
+          } catch (err) {
+            console.error('Upload error:', err);
+            alert('Error uploading image: ' + err.message);
+            if (avatarEl) avatarEl.style.opacity = '1';
+          }
+          fileInput.value = '';
+        });
+      }
     })();
 
+
     // Global functions
-    // `window.navigate` is provided by `page-init.js` (normalized to /webapp/*.html)
-    
     window.disconnectWallet = async () => {
-      if (confirm('Disconnect your wallet? You will need to reconnect to access the app.')) {
-        // Call logout endpoint (stateless - no-op on backend, clears client state)
+      if (confirm('Disconnect wallet?')) {
         try {
-          const initData = window.Telegram?.WebApp?.initData;
+          const initData = TelegramUtils.getInitData();
           if (initData) {
-            await telegramFetch('/api/v1/me/logout');
+            await fetch('/api/v1/me/logout', {
+              headers: { 'X-Telegram-Init-Data': initData }
+            });
           }
         } catch (e) {
-          console.warn('Logout request failed:', e);
+          console.warn('[Profile] Logout error:', e);
         }
-        // Logout complete - user can navigate manually
         alert('Logged out successfully');
       }
     };
 
     window.copyWalletAddress = () => {
-      const address = document.getElementById('wallet-address').textContent;
-      if (address === 'Not connected') {
-        alert('Please connect a wallet first');
-        return;
+      const addr = document.getElementById('wallet-address')?.textContent;
+      if (addr && addr !== 'Not connected') {
+        navigator.clipboard.writeText(addr);
+        alert('Wallet address copied!');
       }
-      navigator.clipboard.writeText(address);
-      alert('Wallet address copied to clipboard!');
     };
 
-    // View wallet address on TON blockchain explorer
     window.viewOnExplorer = () => {
-      const address = document.getElementById('wallet-address').textContent;
-      if (address === 'Not connected') {
-        alert('Please connect a wallet first');
-        return;
+      const addr = document.getElementById('wallet-address')?.textContent;
+      if (addr && addr !== 'Not connected') {
+        window.open(`https://tonscan.org/address/${addr}`, '_blank');
       }
-      // Open on tonscan.org (primary TON explorer)
-      const explorerUrl = `https://tonscan.org/address/${address}`;
-      window.open(explorerUrl, '_blank');
     };
 
-    // Initialize real-time notifications using Socket.io
-    function initializeNotifications(userId) {
-      if (!userId || !window.notificationManager) {
-        console.warn('Notifications: Missing userId or notificationManager');
-        return;
-      }
-
-      console.log('Initializing notifications for user:', userId);
-      window.notificationManager.initialize(userId);
-
-      // Add connection status indicator
-      setTimeout(() => {
-        if (window.notificationManager && window.notificationManager.isConnected) {
-          console.log(' Notifications connected');
-        } else {
-          console.warn(' Notifications not connected - Socket.io server may not be running');
-        }
-      }, 2000);
-    }
-
-    // ✨ SIMPLE REFERRAL SYSTEM - Get Code from Backend
+    // Referral system
     class ReferralSystem {
       constructor() {
         this.referralCode = null;
         this.referralCount = 0;
       }
 
-      // Load referral data from API
       async loadReferralData() {
         try {
-          const response = await telegramFetch('/api/v1/referrals/me');
-          
-          if (response && response.data) {
-            this.referralCode = response.data.referral_code;
-            this.referralCount = response.data.total_referrals || 0;
-            console.log('[Referral] Loaded:', this.referralCode);
+          const initData = TelegramUtils.getInitData();
+          const resp = await fetch('/api/v1/referrals/me', {
+            headers: { 'X-Telegram-Init-Data': initData }
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data?.data) {
+              this.referralCode = data.data.referral_code;
+              this.referralCount = data.data.total_referrals || 0;
+            }
           }
-        } catch (error) {
-          console.warn('[Referral] Failed to load:', error.message);
+        } catch (e) {
+          console.warn('[Referral] Load error:', e);
         }
-
-        // Render UI with whatever data we have
         this.renderUI();
       }
 
-      // Update UI elements with data
       renderUI() {
-        if (this.referralCode) {
-          const codeEl = document.getElementById('referral-code-display');
-          if (codeEl) codeEl.textContent = this.referralCode;
-        }
-
+        const codeEl = document.getElementById('referral-code-display');
+        if (codeEl) codeEl.textContent = this.referralCode || 'REF000000';
         const countEl = document.getElementById('referral-count');
-        if (countEl) countEl.textContent = this.referralCount;
+        if (countEl) countEl.textContent = this.referralCount || 0;
       }
 
-      // Copy code to clipboard
       copy() {
-        if (!this.referralCode) {
-          alert('Referral code not loaded');
-          return;
-        }
-        navigator.clipboard.writeText(this.referralCode).then(() => {
+        if (this.referralCode) {
+          navigator.clipboard.writeText(this.referralCode);
           alert('Referral code copied!');
-        }).catch(() => {
-          alert('Failed to copy code');
-        });
+        }
       }
 
-      // Share via Telegram or other services
       share() {
         if (!this.referralCode) {
-          alert('Referral code not loaded');
+          alert('Referral code not available');
           return;
         }
-        const shareText = `Join me on NFT Platform! Use my referral code: ${this.referralCode}`;
-        const shareUrl = `${window.location.origin}/?ref=${this.referralCode}`;
+        const text = `Join NFT Platform! Use code: ${this.referralCode}`;
+        const url = `${window.location.origin}/?ref=${this.referralCode}`;
         
-        // Try native Web Share API first (mobile)
         if (navigator.share) {
-          navigator.share({
-            title: 'GiftedForge Referral',
-            text: shareText,
-            url: shareUrl,
-          }).catch(err => {
-            if (err.name !== 'AbortError') {
-              this.showShareOptions(shareText, shareUrl);
-            }
-          });
+          navigator.share({ title: 'Referral', text, url }).catch(() => {});
         } else {
-          // Show manual share options on desktop
-          this.showShareOptions(shareText, shareUrl);
+          alert('Share code: ' + this.referralCode);
         }
       }
+    }
 
-      showShareOptions(shareText, shareUrl) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          z-index: 1000;
-        `;
+    // Initialize referral
+    const referralSystem = new ReferralSystem();
+    const initData = window.Telegram?.WebApp?.initData || TelegramUtils.getInitData();
+    if (initData) {
+      referralSystem.loadReferralData();
+    } else {
+      referralSystem.renderUI();
+    }
 
-        const container = document.createElement('div');
-        container.style.cssText = `
-          background: white;
-          border-radius: 16px 16px 0 0;
-          width: 100%;
-          max-width: 600px;
-          padding: 24px;
-          box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-        `;
-
-        container.innerHTML = `
-          <div style="font-size: 18px; font-weight: 700; margin-bottom: 24px; color: #1a202c;">Share Referral Code</div>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
-            <button onclick="window.shareToTelegram('${this.userData.referralCode}', '${shareText}')" style="
-              padding: 16px;
-              border: 1px solid #e2e8f0;
-              background: #fff;
-              border-radius: 12px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 600;
-              transition: all 200ms;
-            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
-              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
-                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px; color: #0088cc;">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-1.13 1.06-.85.09-1.49-.56-2.3-.99-1.27-.79-1.98-1.28-3.22-2.05-1.42-.93-.5-1.43.31-2.26.21-.23 3.86-3.54 3.92-3.84.03-.15.05-.45-.17-.64-.23-.2-.56-.13-.79-.08-.34.05-5.74 3.62-8.15 5.07-.77.48-1.45.67-2.07.66-.68-.01-2-.13-2.98-.25-.96-.12-1.72-.56-1.66-1.2.03-.33.32-.96 1.04-1.92 3.02-4.17 4.47-6.15 4.7-6.53.2-.3.33-.5.33-.5z"/>
-                </svg>
-              </div>
-              Telegram
-            </button>
-            <button onclick="window.shareToWhatsApp('${shareText}', '${shareUrl}')" style="
-              padding: 16px;
-              border: 1px solid #e2e8f0;
-              background: #fff;
-              border-radius: 12px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 600;
-              transition: all 200ms;
-            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
-              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
-                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px; color: #25d366;">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.944 1.25c-1.54.919-2.764 2.267-3.592 3.77-.829 1.503-1.269 3.19-.788 4.686.48 1.497 1.904 2.884 3.27 3.646 1.365.762 3.355 1.253 5.037.666 1.268-.427 2.257-1.279 2.953-2.263.695-.983 1.278-2.396 1.514-3.76.236-1.364.052-2.836-.648-4.112-.7-1.275-1.7-2.546-3.106-3.308-1.406-.762-2.82-1.175-4.695-1.175z"/>
-                </svg>
-              </div>
-              WhatsApp
-            </button>
-            <button onclick="window.shareToTwitter('${shareText}', '${shareUrl}')" style="
-              padding: 16px;
-              border: 1px solid #e2e8f0;
-              background: #fff;
-              border-radius: 12px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 600;
-              transition: all 200ms;
-            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
-              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
-                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 24px; height: 24px; color: #000;">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.6l-5.17-6.763-5.91 6.763h-3.308l7.73-8.835L2.56 2.25h6.74l4.68 6.18 5.364-6.18zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                </svg>
-              </div>
-              Twitter
-            </button>
-            <button onclick="window.shareToEmail('${shareText}', '${shareUrl}')" style="
-              padding: 16px;
-              border: 1px solid #e2e8f0;
-              background: #fff;
-              border-radius: 12px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 600;
-              transition: all 200ms;
-            " onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='#fff';">
-              <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px; color: #666;">
-                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-                </svg>
-              </div>
-              Email
-            </button>
-          </div>
-          <button onclick="this.parentElement.parentElement.remove()" style="
-            width: 100%;
-            padding: 12px;
-            background: #f8f9fa;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a202c;
-          ">Close</button>
-        `;
-
-        modal.appendChild(container);
-        document.body.appendChild(modal);
-
-        modal.addEventListener('click', (e) => {
-          if (e.target === modal) modal.remove();
-        });
-      }
-
-      showToast(message) {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: linear-gradient(135deg, #5856d6 0%, #d946ef 100%);
-          color: white;
-          padding: 12px 20px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          z-index: 1000;
-          animation: slideIn 0.3s ease-out;
-          box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3);
-        `;
-        toast.textContent = message;
-        
-        const style = document.createElement('style');
-        style.textContent = `
-          @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-          @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(400px); opacity: 0; }
-          }
-        `;
-        document.head.appendChild(style);
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-          toast.style.animation = 'slideOut 0.3s ease-in';
-          setTimeout(() => toast.remove(), 300);
-        }, 2000);
-      }
-
-      showError(message) {
-        const error = document.createElement('div');
-        error.style.cssText = `
-          position: fixed;
-          top: 20px;
-          left: 20px;
-          right: 20px;
-          background: #fee;
-          color: #c00;
-          padding: 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          z-index: 1000;
-          border: 1px solid #fcc;
-          animation: slideIn 0.3s ease-out;
-        `;
-        error.textContent = message;
-        document.body.appendChild(error);
-        
-        setTimeout(() => {
-          error.style.animation = 'slideOut 0.3s ease-in';
-          setTimeout(() => error.remove(), 300);
-        }, 5000);
-      }
-
-      // ✨ Initialize simple referral system (only if authenticated)
-      const referralSystem = new ReferralSystem();
-      if (isAuthenticated) {
-        referralSystem.loadReferralData();
-      } else {
-        // Show defaults in preview mode
-        referralSystem.renderUI();
-      }
-
-    // Global referral functions
     window.copyReferralCode = () => referralSystem.copy();
     window.shareReferralCode = () => referralSystem.share();
 
-    // Share functions for different platforms
+    // Share functions
     window.shareToTelegram = (code, text) => {
       const url = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + '/?ref=' + code)}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
-      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
     };
 
     window.shareToWhatsApp = (text, url) => {
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
-      window.open(whatsappUrl, '_blank');
-      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+      window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
     };
 
     window.shareToTwitter = (text, url) => {
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-      window.open(twitterUrl, '_blank');
-      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
     };
 
     window.shareToEmail = (text, url) => {
-      const subject = 'Join GiftedForge - Exclusive NFT Platform';
-      const body = encodeURIComponent(`${text}\n\n${url}`);
-      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
-      document.querySelector('[style*="position: fixed"]')?.parentElement?.remove();
+      window.location.href = `mailto:?subject=Referral&body=${encodeURIComponent(text + '\n' + url)}`;
     };
 
-    // Set active nav item on click
+    // Nav active state
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', function() {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));

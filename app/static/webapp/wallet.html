@@ -118,7 +118,7 @@
       position: absolute;
       width: 8px;
       height: 8px;
-      background: #d946ef;
+      background: #ef4646;
       border-radius: 50%;
       top: 6px;
       right: 6px;
@@ -144,11 +144,11 @@
     }
     }
 
-    /* ============ WALLET CARD ============ */
+    /* WALLET CARD  */
     .wallet-card {
       margin: var(--space-lg);
       padding: var(--space-xl);
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, #8b5cf6 0%, #8b5cf6 100%);
       border-radius: 24px;
       color: white;
       box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
@@ -651,7 +651,7 @@
       color: var(--text-primary);
     }
 
-    /* ============ QUICK ACTIONS GRID ============ */
+    /*QUICK ACTIONS GRID */
     .actions-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -708,7 +708,7 @@
       line-height: 1.5;
     }
 
-    /* ============ BOTTOM NAVIGATION ============ */
+    /*BOTTOM NAVIGATION  */
 
   </style>
     <link rel="stylesheet" href="navbar.css?v=2.7">
@@ -722,8 +722,8 @@
     <script src="js/auth.js"></script>
     <!-- NEW: Production-Grade Auth System -->
     <script src="js/auth-system.js"></script>
-    <!-- TON Connect handled by tonconnect.js -->
-
+    <!-- TON Connect -->
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 </head>
 <body>
 
@@ -1180,6 +1180,76 @@
       }
     });
   </script>
+
+
+  // TON CONNECT UI (Telegram-Friendly)
+<script>
+  // DOM refs
+  const connectBtn = document.getElementById("connectBtn");
+  const statusEl = document.getElementById("status");
+  const errorEl = document.getElementById("error");
+  const loadingEl = document.getElementById("loading");
+  const walletAddressEl = document.getElementById("walletAddress");
+
+  // INIT TON CONNECT
+  const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+    manifestUrl: "https://nftplatformbackend-production-ee5f.up.railway.app//tonconnect-manifest.json"
+  });
+
+  // UI helpers
+  function setLoading(state) {
+    loadingEl.style.display = state ? "inline" : "none";
+    connectBtn.disabled = state;
+  }
+
+  function setError(msg) {
+    errorEl.innerText = msg;
+    errorEl.style.display = msg ? "inline" : "none";
+  }
+
+  function setStatus(msg) {
+    statusEl.innerText = msg;
+    statusEl.style.display = msg ? "inline" : "none";
+  }
+
+  function setWallet(addr) {
+    walletAddressEl.innerText = addr;
+    walletAddressEl.style.display = "inline";
+    connectBtn.innerText = "Connected";
+  }
+
+  // BUTTON CLICK → trigger TON CONNECT
+  connectBtn.addEventListener("click", async () => {
+    try {
+      setError("");
+      setStatus("");
+      setLoading(true);
+
+      await tonConnectUI.openModal(); //  THIS triggers wallet connect (Telegram-friendly)
+
+    } catch (err) {
+      setError("Connection failed");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // LISTEN FOR CONNECTION CHANGES
+  tonConnectUI.onStatusChange(wallet => {
+    if (wallet) {
+      const address = wallet.account.address;
+      setWallet(address);
+      setStatus("Wallet connected");
+    } else {
+      connectBtn.innerText = "Connect Wallet";
+      walletAddressEl.style.display = "none";
+      setStatus("Disconnected");
+    }
+  });
+
+</script>
+
   <script type="module">
     // Import page initialization for consistent user greeting across pages
     import PageInitializer from './js/page-init.js';

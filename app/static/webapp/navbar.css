@@ -460,6 +460,12 @@
   margin: 0 2px;
 }
 
+.nav-item.active:hover {
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(255, 255, 255, 0.5);
+  transform: scale(1.08);
+}
+
 .nav-item svg {
   width: 24px;
   height: 24px;
@@ -486,6 +492,10 @@
 .nav-item.active svg {
   stroke: #1a1a2e;
   filter: drop-shadow(0 0 4px rgba(88, 86, 214, 0.3));
+}
+
+.nav-item.active:hover svg {
+  filter: drop-shadow(0 0 6px rgba(88, 86, 214, 0.5));
 }
 
 .label {
@@ -577,6 +587,11 @@ body {
 
   .nav-item.active {
     padding: 0 14px;
+  }
+
+  .nav-item.active:hover {
+    padding: 0 14px;
+    box-shadow: 0 12px 32px rgba(255, 255, 255, 0.5);
   }
 
   .label {
