@@ -403,7 +403,7 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  width: calc(100% - 44px);
+  width: calc(100% - 52px);
   max-width: none;
   height: 52px;
   background: #1a1a2e;

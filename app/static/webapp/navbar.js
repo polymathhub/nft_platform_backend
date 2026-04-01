@@ -63,29 +63,61 @@ function updateUserDisplay(user) {
       }
     }
 
-    // Update avatars (all instances)
-    const avatarElements = document.querySelectorAll(
-      '#profileAvatar, #profileAvatarLarge, #navbar-profile-avatar, ' +
-      '[id*="avatar"], [class*="profile-avatar"]'
-    );
+    // ✅ Update avatars with Telegram profile picture support
+    const avatarSelectors = [
+      '#profileAvatar',
+      '#profileAvatarLarge', 
+      '#navbar-profile-avatar',
+      '[id*="avatar"]'
+    ];
     
-    if (user && user.photo_url) {
-      // Use Telegram photo_url
-      avatarElements.forEach(el => {
-        el.style.backgroundImage = `url('${user.photo_url}')`;
-        el.style.backgroundSize = 'cover';
-        el.style.backgroundPosition = 'center';
-        el.textContent = '';
-      });
-    } else if (user) {
-      // Use user initial
-      const userName = user.first_name || user.username || user.full_name || 'U';
-      const initial = userName[0].toUpperCase();
-      avatarElements.forEach(el => {
-        el.textContent = initial;
-        el.style.backgroundImage = '';
-      });
-    }
+    avatarSelectors.forEach(selector => {
+      try {
+        const avatarElements = document.querySelectorAll(selector);
+        avatarElements.forEach(el => {
+          if (!el) return;
+          
+          // Get user's initial for fallback
+          const userName = user ? (user.first_name || user.username || user.full_name || 'U') : 'U';
+          const initial = userName[0].toUpperCase();
+          
+          if (user && user.photo_url) {
+            // ✅ Use Telegram photo_url as background image
+            el.style.backgroundImage = `url('${user.photo_url}')`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.style.backgroundRepeat = 'no-repeat';
+            
+            // Create image element for preloading and fallback
+            const img = new Image();
+            img.onload = () => {
+              console.log('[Navbar] Photo loaded:', user.photo_url);
+              el.classList.add('photo-loaded');
+            };
+            img.onerror = () => {
+              console.warn('[Navbar] Photo failed to load:', user.photo_url);
+              // Fallback to initial
+              el.style.backgroundImage = '';
+              el.textContent = initial;
+            };
+            img.src = user.photo_url;
+            
+            // Clear text to show background image
+            el.textContent = '';
+          } else if (user) {
+            // Fallback to initial
+            el.style.backgroundImage = '';
+            el.textContent = initial;
+          } else {
+            // Guest
+            el.style.backgroundImage = '';
+            el.textContent = 'G';
+          }
+        });
+      } catch (e) {
+        console.warn(`[Navbar] Avatar selector error for "${selector}":`, e);
+      }
+    });
 
     // Update profile dropdown user info
     const profileName = document.getElementById('user-name');

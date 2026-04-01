@@ -222,8 +222,10 @@ async def get_current_user_optional(
             full_name=telegram_user.get('first_name', ''),
             telegram_id=str(telegram_id),
             telegram_username=telegram_user.get('username'),
+            photo_url=telegram_user.get('photo_url'),  # ✅ Add Telegram profile picture
             hashed_password="",  # Stateless Telegram auth - no passwords used
             is_active=True,
+            referral_code=await generate_referral_code(db)  # ✅ Generate referral code
         )
         
         db.add(new_user)
