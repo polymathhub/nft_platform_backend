@@ -27,6 +27,9 @@
   <!-- TON Connect System - Global wallet & transaction management -->
   <script src="js/tonconnect-init.js" type="module"></script>
 
+  <!-- Wallet State Manager - Cross-page wallet detection -->
+  <script src="js/wallet-state-manager.js"></script>
+
   <style>
     :root {
       --bg-primary: #ffffff;
@@ -738,46 +741,43 @@
     const walletSelect = document.getElementById('wallet-select');
     let tonWalletConnected = null;
 
-    // Monitor TON wallet connection from wallet.html
-    function checkTONWalletConnection() {
-      if (window.connectBtn) {
-        const walletData = window.connectBtn.getWalletData();
-        if (walletData.isConnected && walletData.address) {
-          tonWalletConnected = {
-            address: walletData.address,
-            wallet: walletData.wallet,
-            isTONConnect: true
-          };
-          console.log('[MintPage] TON wallet connected:', walletData.address);
-          return true;
-        }
-      }
-      tonWalletConnected = null;
-      return false;
-    }
-
-    // Listen for TON wallet connection events
-    if (window.connectBtn) {
-      window.connectBtn.addEventListener('wallet-connected', (e) => {
-        console.log('[MintPage] Wallet connection event received');
-        checkTONWalletConnection();
-        // Auto-select TON if user just connected
-        const blockchain = blockchainSelect.value;
-        if (blockchain === 'ton' && tonWalletConnected) {
-          walletSelect.innerHTML = `<option value="ton-connect" selected>${tonWalletConnected.address.slice(0, 10)}...${tonWalletConnected.address.slice(-4)}</option>`;
+    // Listen for real-time wallet state changes via WalletStateManager
+    window.WalletStateManager.onChange((state) => {
+      console.log('[MintPage] Wallet state changed:', state);
+      
+      if (state.isConnected && state.address) {
+        tonWalletConnected = {
+          address: state.address,
+          wallet: state.wallet,
+          isTONConnect: true
+        };
+        console.log('[MintPage] TON wallet NOW AVAILABLE:', state.address);
+        
+        // If TON is selected, auto-populate the wallet field
+        if (blockchainSelect && blockchainSelect.value === 'ton') {
+          walletSelect.innerHTML = `<option value="ton-connect" selected>${state.address.slice(0, 10)}...${state.address.slice(-4)}</option>`;
           walletSelect.disabled = false;
         }
-      });
-
-      window.connectBtn.addEventListener('wallet-disconnected', () => {
-        console.log('[MintPage] Wallet disconnected event received');
+      } else {
         tonWalletConnected = null;
-        if (blockchainSelect.value === 'ton') {
-          walletSelect.innerHTML = '<option value="">Connect TON Wallet First</option>';
+        console.log('[MintPage] TON wallet disconnected');
+        
+        // If TON is selected, clear the wallet field
+        if (blockchainSelect && blockchainSelect.value === 'ton') {
+          walletSelect.innerHTML = '<option value="">TON Wallet not connected</option>';
           walletSelect.disabled = true;
         }
-      });
-    }
+      }
+    });
+
+    // Check initial wallet state on page load
+    window.addEventListener('load', () => {
+      const wallet = window.WalletStateManager.getWallet();
+      if (wallet && wallet.isConnected && wallet.address) {
+        tonWalletConnected = wallet;
+        console.log('[MintPage] Initial wallet check - connected:', wallet.address);
+      }
+    });
 
     if (blockchainSelect) {
       blockchainSelect.addEventListener('change', async (e) => {
@@ -792,29 +792,36 @@
         }
 
         // ═════════════════════════════════════════════════════════
-        // TON BLOCKCHAIN - Use TonConnect Wallet
+        // TON BLOCKCHAIN - Use TonConnect Wallet (Real-time detection)
         // ═════════════════════════════════════════════════════════
         if (blockchain === 'ton') {
-          if (checkTONWalletConnection()) {
-            // Wallet already connected via wallet.html
-            walletSelect.innerHTML = `<option value="ton-connect" selected>${tonWalletConnected.address.slice(0, 10)}...${tonWalletConnected.address.slice(-4)}</option>`;
+          // Check current wallet state via WalletStateManager
+          const currentWallet = window.WalletStateManager.getWallet();
+          
+          if (currentWallet && currentWallet.isConnected && currentWallet.address) {
+            // Wallet is connected
+            tonWalletConnected = currentWallet;
+            walletSelect.innerHTML = `<option value="ton-connect" selected>${currentWallet.address.slice(0, 10)}...${currentWallet.address.slice(-4)}</option>`;
             walletSelect.disabled = false;
-            console.log('[MintPage] Using connected TON wallet for minting');
+            console.log('[MintPage] TON blockchain selected - wallet connected:', currentWallet.address);
           } else {
-            // Need to connect wallet first
+            // Wallet not connected - show connect option
             walletSelect.innerHTML = `
               <option value="">TON Wallet not connected</option>
               <option value="ton-connect-btn">→ Open Wallet to Connect</option>
             `;
             walletSelect.disabled = false;
             
-            // When user selects the connect option, redirect or show modal
-            walletSelect.addEventListener('change', (e) => {
+            // When user selects the connect option, redirect
+            const connectHandler = (e) => {
               if (e.target.value === 'ton-connect-btn') {
                 alert('Please go to the Wallet tab to connect your TON wallet first');
                 window.location.href = '/webapp/wallet.html';
               }
-            }, { once: true });
+              walletSelect.removeEventListener('change', connectHandler);
+            };
+            walletSelect.addEventListener('change', connectHandler);
+            console.log('[MintPage] TON blockchain selected - NO wallet connected, showing connect prompt');
           }
           return;
         }
@@ -848,11 +855,6 @@
         }
       });
     }
-
-    // Check for connected wallet on page load
-    window.addEventListener('load', () => {
-      checkTONWalletConnection();
-    });
 
     window.handleMint = async (event) => {
       event.preventDefault();

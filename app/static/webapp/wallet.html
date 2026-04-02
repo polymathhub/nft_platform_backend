@@ -23,6 +23,9 @@
   <!-- TON Connect System - Global wallet & transaction management -->
   <script src="js/tonconnect-init.js" type="module"></script>
 
+  <!-- Wallet State Manager - Cross-page wallet detection -->
+  <script src="js/wallet-state-manager.js"></script>
+
   <style>
     :root {
       --bg-primary: #ffffff;
@@ -1236,7 +1239,7 @@
 
   // INIT TON CONNECT
   const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: "https://nftplatformbackend-production-ee5f.up.railway.app//tonconnect-manifest.json"
+    manifestUrl: "https://nftplatformbackend-production-ee5f.up.railway.app/tonconnect-manifest.json"
   });
 
   // UI helpers
@@ -1287,12 +1290,32 @@
     if (wallet) {
       const address = wallet.account.address;
       setWallet(address);
+      
+      // ═════════════════════════════════════════════════════════
+      // NOTIFY OTHER PAGES OF WALLET CONNECTION
+      // ═════════════════════════════════════════════════════════
+      if (window.WalletStateManager) {
+        console.log('[WalletPage] Notifying WalletStateManager of connection:', address);
+        window.WalletStateManager.handleWalletUpdate({
+          address: address,
+          wallet: wallet,
+          isTONConnect: true
+        });
+      }
     } else {
       connectBtn.innerText = "Connect Wallet";
       connectBtn.className = 'balance-action';
       walletAddressEl.style.display = "none";
       statusEl.style.display = "none";
       setError("");
+      
+      // ═════════════════════════════════════════════════════════
+      // NOTIFY OTHER PAGES OF WALLET DISCONNECTION
+      // ═════════════════════════════════════════════════════════
+      if (window.WalletStateManager) {
+        console.log('[WalletPage] Notifying WalletStateManager of disconnection');
+        window.WalletStateManager.handleWalletUpdate(null);
+      }
     }
   });
 
@@ -1311,3 +1334,4 @@
   <!-- Load Shared Navbar Component -->
 </body>
 </html>
+  
