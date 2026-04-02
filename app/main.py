@@ -33,6 +33,8 @@ from app.routers import (
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 from app.routers.image_router import router as image_router
+from app.routers.transaction_router import router as transaction_router
+from app.routers.wallet_persistence_router import router as wallet_persistence_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
@@ -322,6 +324,8 @@ app.include_router(stars_marketplace_router)
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(payment_router)
 app.include_router(referrals_router, prefix="/api/v1")  # /api/v1/referrals/*
+app.include_router(transaction_router, prefix="/api/v1")  # Transaction confirmation & history
+app.include_router(wallet_persistence_router, prefix="/api/v1")  # Wallet status & persistence
 app.include_router(stars_payment_router)
 
 # Serve dashboard at root; avoid redirect loops by not forcing a redirect here.
