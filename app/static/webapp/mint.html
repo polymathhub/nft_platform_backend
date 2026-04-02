@@ -743,30 +743,40 @@
     
     // Function to get connected wallet from global state
     function getTONWallet() {
-      // Check window.walletConnected first (set by wallet.html)
-      if (window.walletConnected && window.walletConnected.isTONConnect) {
+      console.log('[getTONWallet] Checking for wallet...');
+      
+      // Check window.walletConnected first (set by wallet.html on same page load)
+      if (window.walletConnected && window.walletConnected.isTONConnect && window.walletConnected.address) {
+        console.log('[getTONWallet] Found in window.walletConnected:', window.walletConnected.address);
         return window.walletConnected;
       }
       
-      // Check sessionStorage
+      // Check sessionStorage (persists across page navigations)
       try {
         const stored = sessionStorage.getItem('ton_wallet_state');
+        console.log('[getTONWallet] sessionStorage.ton_wallet_state:', stored);
+        
         if (stored) {
           const state = JSON.parse(stored);
+          console.log('[getTONWallet] Parsed sessionStorage state:', state);
+          
           if (state && state.address) {
-            return {
+            const wallet = {
               address: state.address,
               chain: state.chain,
               publicKey: state.publicKey,
               isTONConnect: true,
               formatted: state.address.length > 20 ? state.address.slice(0, 10) + '...' + state.address.slice(-10) : state.address
             };
+            console.log('[getTONWallet] Returning wallet from sessionStorage:', wallet);
+            return wallet;
           }
         }
       } catch (e) {
-        // Ignore
+        console.error('[getTONWallet] Error reading sessionStorage:', e);
       }
       
+      console.log('[getTONWallet] No wallet found');
       return null;
     }
     
@@ -799,6 +809,8 @@
     if (blockchainSelect) {
       blockchainSelect.addEventListener('change', async (e) => {
         const blockchain = e.target.value;
+        console.log('[MintPage] Blockchain changed to:', blockchain);
+        
         walletSelect.innerHTML = '<option value="">Loading wallets...</option>';
         walletSelect.disabled = true;
 
@@ -812,15 +824,28 @@
         // TON BLOCKCHAIN - Use connected wallet from wallet.html
         // ═════════════════════════════════════════════════════════
         if (blockchain === 'ton') {
+          console.log('[MintPage] TON blockchain selected, checking for wallet...');
           const tonWallet = getTONWallet();
-          if (tonWallet) {
+          
+          if (tonWallet && tonWallet.address) {
+            console.log('[MintPage] TON wallet available:', tonWallet.formatted);
             walletSelect.innerHTML = `<option value="ton-connect" selected>${tonWallet.formatted}</option>`;
             walletSelect.disabled = false;
-            console.log('[MintPage] TON wallet available:', tonWallet.formatted);
           } else {
-            walletSelect.innerHTML = `<option value="">TON Wallet not connected</option>`;
-            walletSelect.disabled = true;
-            console.log('[MintPage] TON wallet not connected');
+            console.log('[MintPage] TON wallet NOT connected');
+            walletSelect.innerHTML = `
+              <option value="">TON Wallet not connected</option>
+              <option value="go-to-wallet">→ Go to Wallet Tab to Connect</option>
+            `;
+            walletSelect.disabled = false;
+            
+            // Add handler for the redirect option
+            walletSelect.addEventListener('change', function redirectToWallet(e) {
+              if (e.target.value === 'go-to-wallet') {
+                alert('Please go to the Wallet tab to connect your TON wallet first.');
+                window.location.href = '/webapp/wallet.html';
+              }
+            }, { once: true });
           }
           return;
         }
@@ -857,14 +882,18 @@
     
     // Check initial wallet state
     window.addEventListener('load', () => {
+      console.log('[MintPage] Page loaded, checking for wallet...');
+      
       // Check if TON wallet is already connected
       const tonWallet = getTONWallet();
       if (tonWallet && tonWallet.address) {
         console.log('[MintPage] TON wallet found on page load:', tonWallet.address);
         // Auto-select TON blockchain if wallet is connected
         blockchainSelect.value = 'ton';
+        console.log('[MintPage] Auto-selecting TON blockchain...');
         blockchainSelect.dispatchEvent(new Event('change'));
       } else {
+        console.log('[MintPage] No TON wallet found on page load');
         updateTONWalletField();
       }
     });
