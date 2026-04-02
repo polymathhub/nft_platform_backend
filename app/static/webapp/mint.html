@@ -857,7 +857,16 @@
     
     // Check initial wallet state
     window.addEventListener('load', () => {
-      updateTONWalletField();
+      // Check if TON wallet is already connected
+      const tonWallet = getTONWallet();
+      if (tonWallet && tonWallet.address) {
+        console.log('[MintPage] TON wallet found on page load:', tonWallet.address);
+        // Auto-select TON blockchain if wallet is connected
+        blockchainSelect.value = 'ton';
+        blockchainSelect.dispatchEvent(new Event('change'));
+      } else {
+        updateTONWalletField();
+      }
     });
 
     window.handleMint = async (event) => {
@@ -908,8 +917,11 @@
         // TON BLOCKCHAIN MINTING - Use TonConnect Wallet
         // ═══════════════════════════════════════════════════════════════
         if (formData.blockchain === 'ton') {
+          // Get connected TON wallet from global state
+          const tonWallet = getTONWallet();
+          
           // Verify TON wallet is connected
-          if (!tonWalletConnected || !tonWalletConnected.isTONConnect) {
+          if (!tonWallet || !tonWallet.isTONConnect) {
             alert('TON wallet not connected. Please connect your wallet first.');
             return;
           }
@@ -936,7 +948,7 @@
             submitBtn.textContent = 'Initiating TON transaction...';
             
             const mintPayload = {
-              wallet_address: tonWalletConnected.address,
+              wallet_address: tonWallet.address,
               name: formData.name,
               description: formData.description,
               image_url: imageUrl,
@@ -949,8 +961,8 @@
               },
               // Send TON transaction data
               tonconnect_wallet: {
-                address: tonWalletConnected.address,
-                wallet: tonWalletConnected.wallet
+                address: tonWallet.address,
+                wallet: tonWallet.wallet
               }
             };
 
