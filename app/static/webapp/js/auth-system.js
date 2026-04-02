@@ -157,6 +157,9 @@ window.AuthSystem = {
         // Step 3: Cache user for faster page loads
         this.cacheUser(user);
         
+        // Step 4: Start auth monitoring to handle expiration
+        this.startAuthMonitoring();
+        
         this.isInitialized = true;
         this.isInitializing = false;
         this.emitEvent('auth:success', { user });
@@ -339,6 +342,49 @@ window.AuthSystem = {
       console.log('[AuthSystem] ✅ Cache cleared');
     } catch (error) {
       console.warn('[AuthSystem] Failed to clear cache:', error.message);
+    }
+  },
+  
+  // ============================================
+  // AUTH REFRESH & MONITORING
+  // ============================================
+  
+  /**
+   * Start monitoring for authentication expiration
+   * Refreshes auth periodically and when page becomes visible
+   */
+  startAuthMonitoring() {
+    // Refresh auth every 9 minutes (before typical 10-min expiration)
+    this.authRefreshInterval = setInterval(() => {
+      if (this.isAuthenticated) {
+        console.log('[AuthSystem] 🔄 Periodic auth refresh...');
+        this.authenticateWithBackend().catch(err => {
+          console.warn('[AuthSystem] Periodic refresh failed:', err.message);
+        });
+      }
+    }, 9 * 60 * 1000);
+    
+    // Also refresh when page becomes visible (after being backgrounded)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.isAuthenticated) {
+        console.log('[AuthSystem] 📱 Page visible - refreshing auth...');
+        this.authenticateWithBackend().catch(err => {
+          console.warn('[AuthSystem] Visibility refresh failed:', err.message);
+        });
+      }
+    });
+    
+    console.log('[AuthSystem] ✅ Auth monitoring started');
+  },
+  
+  /**
+   * Stop monitoring authentication
+   */
+  stopAuthMonitoring() {
+    if (this.authRefreshInterval) {
+      clearInterval(this.authRefreshInterval);
+      this.authRefreshInterval = null;
+      console.log('[AuthSystem] ✅ Auth monitoring stopped');
     }
   },
   

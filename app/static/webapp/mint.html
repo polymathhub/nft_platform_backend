@@ -730,9 +730,54 @@
       formState.unlockableContent = toggle.classList.contains('on');
     };
 
-    // Load wallets when blockchain is selected
+    // ═══════════════════════════════════════════════════════════════
+    // TON CONNECT WALLET INTEGRATION FOR MINTING
+    // ═══════════════════════════════════════════════════════════════
+    
     const blockchainSelect = document.getElementById('blockchain-select');
     const walletSelect = document.getElementById('wallet-select');
+    let tonWalletConnected = null;
+
+    // Monitor TON wallet connection from wallet.html
+    function checkTONWalletConnection() {
+      if (window.connectBtn) {
+        const walletData = window.connectBtn.getWalletData();
+        if (walletData.isConnected && walletData.address) {
+          tonWalletConnected = {
+            address: walletData.address,
+            wallet: walletData.wallet,
+            isTONConnect: true
+          };
+          console.log('[MintPage] TON wallet connected:', walletData.address);
+          return true;
+        }
+      }
+      tonWalletConnected = null;
+      return false;
+    }
+
+    // Listen for TON wallet connection events
+    if (window.connectBtn) {
+      window.connectBtn.addEventListener('wallet-connected', (e) => {
+        console.log('[MintPage] Wallet connection event received');
+        checkTONWalletConnection();
+        // Auto-select TON if user just connected
+        const blockchain = blockchainSelect.value;
+        if (blockchain === 'ton' && tonWalletConnected) {
+          walletSelect.innerHTML = `<option value="ton-connect" selected>${tonWalletConnected.address.slice(0, 10)}...${tonWalletConnected.address.slice(-4)}</option>`;
+          walletSelect.disabled = false;
+        }
+      });
+
+      window.connectBtn.addEventListener('wallet-disconnected', () => {
+        console.log('[MintPage] Wallet disconnected event received');
+        tonWalletConnected = null;
+        if (blockchainSelect.value === 'ton') {
+          walletSelect.innerHTML = '<option value="">Connect TON Wallet First</option>';
+          walletSelect.disabled = true;
+        }
+      });
+    }
 
     if (blockchainSelect) {
       blockchainSelect.addEventListener('change', async (e) => {
@@ -746,6 +791,37 @@
           return;
         }
 
+        // ═════════════════════════════════════════════════════════
+        // TON BLOCKCHAIN - Use TonConnect Wallet
+        // ═════════════════════════════════════════════════════════
+        if (blockchain === 'ton') {
+          if (checkTONWalletConnection()) {
+            // Wallet already connected via wallet.html
+            walletSelect.innerHTML = `<option value="ton-connect" selected>${tonWalletConnected.address.slice(0, 10)}...${tonWalletConnected.address.slice(-4)}</option>`;
+            walletSelect.disabled = false;
+            console.log('[MintPage] Using connected TON wallet for minting');
+          } else {
+            // Need to connect wallet first
+            walletSelect.innerHTML = `
+              <option value="">TON Wallet not connected</option>
+              <option value="ton-connect-btn">→ Open Wallet to Connect</option>
+            `;
+            walletSelect.disabled = false;
+            
+            // When user selects the connect option, redirect or show modal
+            walletSelect.addEventListener('change', (e) => {
+              if (e.target.value === 'ton-connect-btn') {
+                alert('Please go to the Wallet tab to connect your TON wallet first');
+                window.location.href = '/webapp/wallet.html';
+              }
+            }, { once: true });
+          }
+          return;
+        }
+
+        // ═════════════════════════════════════════════════════════
+        // OTHER BLOCKCHAINS - Use Backend Wallet Selection
+        // ═════════════════════════════════════════════════════════
         try {
           const response = await api.get(`/api/v1/wallets?blockchain=${blockchain}`);
           const wallets = response.wallets || [];
@@ -768,9 +844,15 @@
         } catch (error) {
           walletSelect.innerHTML = '<option disabled>Failed to load wallets</option>';
           walletSelect.disabled = true;
+          console.error('[MintPage] Error loading wallets:', error);
         }
       });
     }
+
+    // Check for connected wallet on page load
+    window.addEventListener('load', () => {
+      checkTONWalletConnection();
+    });
 
     window.handleMint = async (event) => {
       event.preventDefault();
@@ -816,7 +898,94 @@
           return;
         }
 
-        // Step 1: Validate wallet
+        // ═══════════════════════════════════════════════════════════════
+        // TON BLOCKCHAIN MINTING - Use TonConnect Wallet
+        // ═══════════════════════════════════════════════════════════════
+        if (formData.blockchain === 'ton') {
+          // Verify TON wallet is connected
+          if (!tonWalletConnected || !tonWalletConnected.isTONConnect) {
+            alert('TON wallet not connected. Please connect your wallet first.');
+            return;
+          }
+
+          try {
+            submitBtn.textContent = 'Preparing TON transaction...';
+            submitBtn.disabled = true;
+
+            // Step 1: Upload media
+            submitBtn.textContent = 'Uploading media...';
+            const uploadFormData = new FormData();
+            uploadFormData.append('file', formState.imageFile);
+            
+            const uploadResponse = await api.upload('/api/v1/images/upload', uploadFormData);
+            if (!uploadResponse.image_id) {
+              throw new Error('Failed to upload media');
+            }
+
+            const imageUrl = uploadResponse.image_url || uploadResponse.image_ref || '';
+            const imageId = uploadResponse.image_id;
+            const mediaType = uploadResponse.mime_type || uploadResponse.type || 'image';
+
+            // Step 2: Create mint request with TON transaction
+            submitBtn.textContent = 'Initiating TON transaction...';
+            
+            const mintPayload = {
+              wallet_address: tonWalletConnected.address,
+              name: formData.name,
+              description: formData.description,
+              image_url: imageUrl,
+              image_id: imageId,
+              royalty_percentage: formData.royalty_percentage,
+              metadata: { 
+                blockchain: 'ton',
+                media_type: mediaType,
+                wallet_type: 'ton-connect'
+              },
+              // Send TON transaction data
+              tonconnect_wallet: {
+                address: tonWalletConnected.address,
+                wallet: tonWalletConnected.wallet
+              }
+            };
+
+            console.log('[MintPage] TON Mint Payload:', mintPayload);
+            
+            submitBtn.textContent = 'Minting NFT on TON...';
+            const mintResponse = await api.post('/api/v1/nfts/mint', mintPayload);
+            
+            console.log('[MintPage] TON Mint Response:', mintResponse);
+            alert(`NFT "${formData.name}" minted on TON!\n\nTransaction: ${mintResponse.transaction_hash || 'Processing...'}\n\nNFT ID: ${mintResponse.id || 'Pending...'}`);
+            
+            // Reset form
+            form.reset();
+            formState.imageFile = null;
+            const preview = document.getElementById('preview');
+            if (preview) {
+              preview.innerHTML = '';
+              const uploadDefault = document.getElementById('upload-default');
+              if (uploadDefault) uploadDefault.style.display = '';
+            }
+            
+            submitBtn.textContent = 'Create NFT';
+            submitBtn.disabled = false;
+            
+            setTimeout(() => {
+              window.location.href = '/webapp/dashboard.html';
+            }, 2000);
+
+          } catch (error) {
+            console.error('[MintPage] TON minting error:', error);
+            alert(`TON minting failed: ${error.message}`);
+          } finally {
+            submitBtn.textContent = 'Create NFT';
+            submitBtn.disabled = false;
+          }
+          return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // OTHER BLOCKCHAINS - Use Backend Wallet Selection
+        // ═══════════════════════════════════════════════════════════════
         submitBtn.textContent = 'Validating wallet...';
         submitBtn.disabled = true;
 
