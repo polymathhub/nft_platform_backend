@@ -24,11 +24,12 @@
   <!-- TON Connect UI -->
   <script src="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <link href="https://cdn.jsdelivr.net/gh/ton-connect/ui@latest/dist/tonconnect-ui.min.css" rel="stylesheet" />
-  <!-- TON Connect System - Global wallet & transaction management -->
-  <script src="js/tonconnect-init.js" type="module"></script>
 
-  <!-- Wallet State Manager - Cross-page wallet detection -->
-  <script src="js/wallet-state-manager.js"></script>
+  <!-- Wallet Manager - Production-grade TON wallet system (SINGLE SOURCE OF TRUTH) -->
+  <script src="js/walletManager.js"></script>
+
+  <!-- Wallet Initialization - Auto-initialize on page load -->
+  <script src="js/walletInit.js"></script>
 
   <style>
     :root {
@@ -482,6 +483,32 @@
       <p class="welcome-text">Welcome back, <span id="user-name"></span></p>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         WALLET CONNECTION CARD - Required for TON minting
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="form-section">
+      <div class="form-card" id="wallet-connect-card" style="background: linear-gradient(135deg, #5856d6 0%, #7c3aed 100%); border: none; padding: 24px; text-align: center;">
+        <div style="color: white;">
+          <div style="font-size: 14px; color: rgba(255,255,255,0.85); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">TON Wallet Status</div>
+          
+          <div id="wallet-status-display" style="margin-bottom: 16px;">
+            <div id="walletAddressMint" class="wallet-address" style="display: none; font-size: 12px; color: rgba(255, 255, 255, 0.85); font-family: 'Courier New', monospace; letter-spacing: 0.3px; word-break: break-all; padding: 8px 12px; background: rgba(255, 255, 255, 0.08); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 8px;"></div>
+            <span id="statusMint" class="connection-status" style="display: none; font-size: 12px; color: #86efac; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;"></span>
+            <span id="errorMint" class="error-status" style="display: none; font-size: 12px; color: #fca5a5; font-weight: 600;"></span>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+            <span id="loadingMint" style="display: none; font-size: 12px; color: rgba(255,255,255,0.8);">Connecting...</span>
+            <button type="button" id="connectBtnMint" class="balance-action" title="Connect TON Wallet" style="background: #1a1a1a; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 200ms;">Connect TON Wallet</button>
+          </div>
+
+          <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 12px; line-height: 1.4;">
+            Connect your TON wallet to mint NFTs
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Form -->
     <form class="form-section" onsubmit="handleMint(event)">
       <!-- Step 1: Upload -->
@@ -881,19 +908,111 @@
     }
     
     // Check initial wallet state
+    // ═══════════════════════════════════════════════════════════════
+    // TON CONNECT BUTTON - Wallet connection on mint page
+    // ═══════════════════════════════════════════════════════════════
+    
+    const connectBtnMint = document.getElementById('connectBtnMint');
+    
+    // Helper functions for wallet UI updates on mint page
+    function setLoadingMint(state) {
+      document.getElementById('loadingMint').style.display = state ? 'inline' : 'none';
+      connectBtnMint.disabled = state;
+    }
+
+    function setErrorMint(msg) {
+      const errorEl = document.getElementById('errorMint');
+      errorEl.innerText = msg;
+      errorEl.style.display = msg ? 'inline' : 'none';
+    }
+
+    function setStatusMint(msg) {
+      const statusEl = document.getElementById('statusMint');
+      statusEl.innerText = msg;
+      statusEl.style.display = msg ? 'inline' : 'none';
+    }
+
+    function setWalletMint(addr) {
+      const walletAddressEl = document.getElementById('walletAddressMint');
+      walletAddressEl.innerText = addr;
+      walletAddressEl.style.display = 'block';
+      connectBtnMint.innerText = 'Disconnect Wallet';
+      connectBtnMint.className = 'balance-action disconnect-btn';
+      setStatusMint('Connected');
+    }
+
+    // Update mint page wallet display when wallet connects
+    function updateWalletDisplayMint(wallet) {
+      if (wallet && wallet.address) {
+        setWalletMint(wallet.formatted || wallet.address);
+        updateTONWalletField();
+      } else {
+        connectBtnMint.innerText = 'Connect TON Wallet';
+        connectBtnMint.className = 'balance-action';
+        document.getElementById('walletAddressMint').style.display = 'none';
+        setStatusMint('');
+        updateTONWalletField();
+      }
+    }
+
+    // Click handler for connect button on mint page
+    if (connectBtnMint) {
+      connectBtnMint.addEventListener('click', async () => {
+        try {
+          setErrorMint('');
+          setStatusMint('');
+          setLoadingMint(true);
+
+          // Get or initialize TON Connect UI
+          if (!window.tonConnectUI) {
+            console.log('[MintPage] TON Connect UI not initialized, initializing now...');
+            window.tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+              manifestUrl: 'https://nftplatformbackend-production-ee5f.up.railway.app/tonconnect-manifest.json'
+            });
+          }
+
+          console.log('[MintPage] Opening TON Connect modal...');
+          await window.tonConnectUI.openModal();
+
+        } catch (err) {
+          setErrorMint('Connection failed');
+          console.error('[MintPage] Connection error:', err);
+        } finally {
+          setLoadingMint(false);
+        }
+      });
+    }
+
+    // Listen for wallet connection updates from wallet.html
+    window.addEventListener('wallet-connected-tonconnect', (e) => {
+      console.log('[MintPage] Wallet connected via event:', e.detail.address);
+      updateWalletDisplayMint(e.detail.wallet);
+    });
+
+    window.addEventListener('wallet-disconnected-tonconnect', () => {
+      console.log('[MintPage] Wallet disconnected via event');
+      updateWalletDisplayMint(null);
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // BLOCKCHAIN & WALLET SELECTION
+    // ═══════════════════════════════════════════════════════════════
+
     window.addEventListener('load', () => {
       console.log('[MintPage] Page loaded, checking for wallet...');
       
-      // Check if TON wallet is already connected
+      // Update wallet display on mint card
       const tonWallet = getTONWallet();
       if (tonWallet && tonWallet.address) {
         console.log('[MintPage] TON wallet found on page load:', tonWallet.address);
+        updateWalletDisplayMint(tonWallet);
         // Auto-select TON blockchain if wallet is connected
         blockchainSelect.value = 'ton';
         console.log('[MintPage] Auto-selecting TON blockchain...');
         blockchainSelect.dispatchEvent(new Event('change'));
       } else {
         console.log('[MintPage] No TON wallet found on page load');
+        updateWalletDisplayMint(null);
         updateTONWalletField();
       }
     });
