@@ -16,6 +16,7 @@ from app.routers.stars_marketplace_router import router as stars_marketplace_rou
 from app.routers.me_v1_router import router as me_v1_router
 from app.routers.auth_profile_router import router as auth_profile_router
 from app.routers.trending_router import router as trending_router
+from app.routers.blockchain_router import router as blockchain_router
 
 __all__ = [
     # legacy auth routers removed
@@ -36,4 +37,5 @@ __all__ = [
     "stars_marketplace_router",
     "auth_profile_router",
     "trending_router",
+    "blockchain_router",
 ]

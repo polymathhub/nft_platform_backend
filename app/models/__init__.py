@@ -1,6 +1,8 @@
 from app.models.user import User, UserRole
 from app.models.wallet import Wallet, BlockchainType, WalletType
 from app.models.ton_wallet import TONWallet, TONWalletStatus, StarTransaction
+from app.models.ton_wallet_session import TONWalletSession
+from app.models.blockchain_transaction import BlockchainTransaction, BlockchainTransactionStatus
 from app.models.nft import NFT, NFTStatus, NFTLockReason, RarityTier
 from app.models.image import Image, ImageType
 from app.models.transaction import Transaction, TransactionType, TransactionStatus
@@ -21,7 +23,10 @@ __all__ = [
     "WalletType",
     "TONWallet",
     "TONWalletStatus",
+    "TONWalletSession",
     "StarTransaction",
+    "BlockchainTransaction",
+    "BlockchainTransactionStatus",
     "NFT",
     "NFTStatus",
     "NFTLockReason",

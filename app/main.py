@@ -33,6 +33,7 @@ from app.routers import (
 from app.routers.telegram_mint_router import router as telegram_mint_router
 from app.routers.walletconnect_router import router as walletconnect_router
 from app.routers.image_router import router as image_router
+from app.routers.blockchain_router import router as blockchain_router
 
 from app.security_middleware import (
     RequestBodyCachingMiddleware,
@@ -40,6 +41,10 @@ from app.security_middleware import (
     RelaxedSecurityHeadersMiddleware,
     StaticFilesNoCacheMiddleware,
 )
+
+# Phase 2: Background jobs and middleware
+from app.jobs import start_background_jobs, stop_background_jobs
+from app.middleware import SessionValidationMiddleware
 logger = logging.getLogger(__name__)
 settings = get_settings()
 try:
@@ -83,9 +88,29 @@ async def lifespan(app: FastAPI):
         raise
     logger.info("[Telegram] Setting up webhook...")
     await setup_telegram_webhook()
+    
+    # Phase 2: Initialize background jobs and services
+    logger.info("[Background Jobs] Starting transaction verification and session cleanup jobs...")
+    try:
+        await start_background_jobs()
+        logger.info("Background jobs started successfully")
+    except Exception as e:
+        logger.warning(f"Failed to start background jobs: {e}")
+        # Don't raise - allow app to continue without background jobs
+    
     logger.info("[Ready] App startup complete")
     yield
+    
+    # Shutdown phase
     logger.info("[Shutdown] Shutting down...")
+    
+    # Phase 2: Stop background jobs
+    try:
+        await stop_background_jobs()
+        logger.info("Background jobs stopped")
+    except Exception as e:
+        logger.warning(f"Error stopping background jobs: {e}")
+    
     await close_db()
     try:
         r = getattr(app.state, "redis", None)
@@ -141,6 +166,9 @@ app.add_middleware(RequestBodyCachingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(StaticFilesNoCacheMiddleware)  # Ensure static files have no-cache headers
+
+# Phase 2: Add session validation middleware for protected endpoints
+app.add_middleware(SessionValidationMiddleware)
 try:
     if getattr(settings, 'environment', '').lower() == 'production':
         app.add_middleware(RelaxedSecurityHeadersMiddleware)
@@ -323,6 +351,11 @@ app.include_router(user_router, prefix="/api/v1")
 app.include_router(payment_router)
 app.include_router(referrals_router, prefix="/api/v1")  # /api/v1/referrals/*
 app.include_router(stars_payment_router)
+
+# ════════════════════════════════════════════════════════════════
+# Web3 Blockchain Operations - Production-Grade TON Integration
+# ════════════════════════════════════════════════════════════════
+app.include_router(blockchain_router)  # /api/v1/blockchain/* endpoints
 
 # Serve dashboard at root; avoid redirect loops by not forcing a redirect here.
 @app.get("/webapp/", include_in_schema=False)
