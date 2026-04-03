@@ -130,6 +130,29 @@ class TelegramWalletIntegrator {
       await tonConnect.init();
       console.log('[TelegramWallet] TON Connect initialized successfully');
       
+      // ✨ RESTORE WALLET STATE FROM SESSIONSTROAGE IF AVAILABLE
+      try {
+        const savedState = sessionStorage.getItem('ton_wallet_state');
+        if (savedState) {
+          const state = JSON.parse(savedState);
+          console.log('[TelegramWallet] Restored wallet state from sessionStorage:', state.address);
+          
+          // Restore to globals for immediate access
+          window.walletConnected = {
+            address: state.address,
+            isTONConnect: true,
+            chain: state.chain,
+            publicKey: state.publicKey,
+            formatted: `${state.address.slice(0, 10)}...${state.address.slice(-10)}`
+          };
+          
+          window.currentMintWalletAddress = state.address;
+          console.log('[TelegramWallet] Wallet restored and available globally');
+        }
+      } catch (e) {
+        console.warn('[TelegramWallet] Could not restore from sessionStorage:', e);
+      }
+      
       // Check current wallet state
       const walletType = tonConnect.getWalletType();
       console.log('[TelegramWallet] Current wallet type:', walletType);
@@ -310,6 +333,49 @@ class TelegramWalletIntegrator {
     
     this.setStatus('Connected to TON');
     this.clearError();
+    
+    // ✨ PERSIST WALLET STATE FOR CROSS-PAGE DETECTION
+    // Store in sessionStorage for page reloads
+    const walletState = {
+      address: address,
+      chain: tonConnect.getAccount()?.chain || '-3',
+      publicKey: tonConnect.getAccount()?.publicKey,
+      timestamp: new Date().toISOString()
+    };
+    
+    try {
+      sessionStorage.setItem('ton_wallet_state', JSON.stringify(walletState));
+      console.log('[TelegramWallet] Wallet state persisted to sessionStorage:', address);
+    } catch (e) {
+      console.error('[TelegramWallet] Failed to persist to sessionStorage:', e);
+    }
+    
+    // Store in window global for immediate access
+    window.walletConnected = {
+      address: address,
+      isTONConnect: true,
+      chain: walletState.chain,
+      publicKey: walletState.publicKey,
+      formatted: `${address.slice(0, 10)}...${address.slice(-10)}`
+    };
+    
+    console.log('[TelegramWallet] Wallet connected and available globally:', window.walletConnected);
+    
+    // ✨ DISPATCH CUSTOM EVENT FOR CROSS-PAGE NOTIFICATION
+    // This allows mint.html and other pages to listen for wallet connection
+    const event = new CustomEvent('wallet-connected-tonconnect', {
+      detail: {
+        address: address,
+        chain: walletState.chain,
+        publicKey: walletState.publicKey,
+        timestamp: walletState.timestamp
+      },
+      bubbles: true,
+      cancelable: true
+    });
+    
+    window.dispatchEvent(event);
+    console.log('[TelegramWallet] Dispatched wallet-connected-tonconnect event');
   }
 
   setDisconnected() {
@@ -325,6 +391,27 @@ class TelegramWalletIntegrator {
     
     this.setStatus('No wallet connected');
     this.clearError();
+    
+    // ✨ CLEAR WALLET STATE
+    try {
+      sessionStorage.removeItem('ton_wallet_state');
+      console.log('[TelegramWallet] Wallet state cleared from sessionStorage');
+    } catch (e) {
+      console.error('[TelegramWallet] Failed to clear sessionStorage:', e);
+    }
+    
+    window.walletConnected = null;
+    window.currentMintWalletAddress = null;
+    console.log('[TelegramWallet] Wallet state cleared from globals');
+    
+    // ✨ DISPATCH DISCONNECT EVENT FOR CROSS-PAGE NOTIFICATION
+    const event = new CustomEvent('wallet-disconnected-tonconnect', {
+      bubbles: true,
+      cancelable: true
+    });
+    
+    window.dispatchEvent(event);
+    console.log('[TelegramWallet] Dispatched wallet-disconnected-tonconnect event');
   }
 
   setLoading(show) {
