@@ -238,8 +238,8 @@ async def prepare_nft_mint(
         metadata_uri = NFTMetadataService.generate_backend_metadata_uri(nft_id)
         
         # 4. Generate mint payload
-        # Use wallet address from request (if provided) or user's stored wallet
-        owner_address = request.wallet_address or current_user.wallet_address
+        # Use wallet address with priority: stored_user_wallet > request_wallet > error
+        owner_address = current_user.wallet_address or request.wallet_address
         if not owner_address:
             logger.warning(f"[PrepareMint] User {current_user.id} has no wallet connected")
             raise HTTPException(
@@ -247,7 +247,8 @@ async def prepare_nft_mint(
                 detail="Wallet not connected. Please connect a TON wallet first."
             )
         
-        logger.info(f"[PrepareMint] Using wallet address: {owner_address} (from_request={bool(request.wallet_address)})")
+        source = "stored_db" if current_user.wallet_address else "request_body"
+        logger.info(f"[PrepareMint] Using wallet address: {owner_address} (source={source})")
         
         backend_payload = NFTContractPayloads.encode_nft_mint_payload(
             owner_address=owner_address,

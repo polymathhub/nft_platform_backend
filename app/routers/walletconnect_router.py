@@ -116,6 +116,14 @@ async def connect_wallet(
                 detail=f"Failed to connect wallet: {error}",
             )
         
+        # ✨ STORE WALLET ADDRESS IN USER MODEL FOR QUICK ACCESS
+        # Update user's wallet_address field so it's available in prepare-mint without extra queries
+        if request.blockchain.lower() == 'ton':
+            user.wallet_address = request.wallet_address
+            db.add(user)
+            await db.commit()
+            logger.info(f"Updated user {user_id} wallet_address: {request.wallet_address}")
+        
         logger.info(f"Wallet connected for user {user_id}: {wallet.blockchain.value} {wallet.address}")
         return {
             "success": True,
