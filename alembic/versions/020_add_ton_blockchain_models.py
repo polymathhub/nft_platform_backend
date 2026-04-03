@@ -8,6 +8,7 @@ Create Date: 2026-04-02 00:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.exc import ProgrammingError
 
 # revision identifiers, used by Alembic.
 revision = '020_ton_blockchain_models'
@@ -19,7 +20,12 @@ depends_on = None
 def upgrade() -> None:
     # Create BlockchainTransactionStatus enum type (only if not exists)
     blockchain_status_enum = postgresql.ENUM('pending', 'in_progress', 'confirmed', 'failed', name='blockchaintransactionstatus')
-    blockchain_status_enum.create(op.get_bind(), checkfirst=True)
+    try:
+        blockchain_status_enum.create(op.get_bind(), checkfirst=True)
+    except ProgrammingError as e:
+        # Enum already exists, ignore the duplicate error
+        if 'already exists' not in str(e):
+            raise
     
     # Create ton_wallet_sessions table
     op.create_table(
