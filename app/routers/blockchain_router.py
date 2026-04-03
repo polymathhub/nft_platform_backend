@@ -50,6 +50,7 @@ class PrepareMintRequest(BaseModel):
     image_url: str = Field(..., description="IPFS or HTTP URL to image")
     collection_address: Optional[str] = Field(None, description="Collection contract address")
     royalty_percent: int = Field(0, ge=0, le=100, description="Royalty percentage 0-100")
+    wallet_address: Optional[str] = Field(None, description="Wallet address for minting (if not using stored wallet)")
     attributes: Optional[list] = Field(None, description="NFT traits/attributes")
 
 
@@ -237,14 +238,16 @@ async def prepare_nft_mint(
         metadata_uri = NFTMetadataService.generate_backend_metadata_uri(nft_id)
         
         # 4. Generate mint payload
-        # Use user's wallet as owner (must be connected)
-        owner_address = current_user.wallet_address
+        # Use wallet address from request (if provided) or user's stored wallet
+        owner_address = request.wallet_address or current_user.wallet_address
         if not owner_address:
             logger.warning(f"[PrepareMint] User {current_user.id} has no wallet connected")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Wallet not connected. Please connect a TON wallet first."
             )
+        
+        logger.info(f"[PrepareMint] Using wallet address: {owner_address} (from_request={bool(request.wallet_address)})")
         
         backend_payload = NFTContractPayloads.encode_nft_mint_payload(
             owner_address=owner_address,

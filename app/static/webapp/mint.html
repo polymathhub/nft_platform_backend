@@ -798,11 +798,21 @@
     // Listen for wallet connection events from wallet.html
     window.addEventListener('wallet-connected-tonconnect', (e) => {
       console.log('[MintPage] TON wallet connected event received:', e.detail.address);
+      
+      // ✨ IMMEDIATELY CAPTURE WALLET ADDRESS FOR MINTING
+      window.currentMintWalletAddress = e.detail.address;
+      console.log('[MintPage] Wallet address captured for mint:', window.currentMintWalletAddress);
+      
       updateTONWalletField();
     });
     
     window.addEventListener('wallet-disconnected-tonconnect', () => {
       console.log('[MintPage] TON wallet disconnected event received');
+      
+      // Clear wallet address when disconnected
+      window.currentMintWalletAddress = null;
+      console.log('[MintPage] Wallet address cleared');
+      
       updateTONWalletField();
     });
 
@@ -902,6 +912,11 @@
       const tonWallet = getTONWallet();
       if (tonWallet && tonWallet.address) {
         console.log('[MintPage] TON wallet found on page load:', tonWallet.address);
+        
+        // ✨ IMMEDIATELY CAPTURE WALLET ADDRESS FOR MINTING
+        window.currentMintWalletAddress = tonWallet.address;
+        console.log('[MintPage] Wallet address captured for mint:', window.currentMintWalletAddress);
+        
         // Auto-select TON blockchain if wallet is connected
         blockchainSelect.value = 'ton';
         console.log('[MintPage] Auto-selecting TON blockchain...');
@@ -1015,6 +1030,7 @@
                   image_url: imageUrl,
                   collection_address: 'EQAA' + 'A'.repeat(46), // Placeholder - use default collection
                   royalty_percent: formData.royalty_percentage,
+                  wallet_address: window.currentMintWalletAddress || getTONWallet()?.address, // ✨ Pass captured wallet address
                   attributes: [{
                     trait_type: 'Created',
                     value: new Date().toISOString().split('T')[0]
