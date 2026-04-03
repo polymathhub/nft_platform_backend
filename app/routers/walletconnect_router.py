@@ -121,8 +121,10 @@ async def connect_wallet(
         if request.blockchain.lower() == 'ton':
             user.wallet_address = request.wallet_address
             db.add(user)
-            await db.commit()
-            logger.info(f"Updated user {user_id} wallet_address: {request.wallet_address}")
+            await db.flush()  # Ensure the insert/update is queued
+            await db.commit()  # Commit the transaction
+            await db.refresh(user)  # ✨ REFRESH to get updated data
+            logger.info(f"✅ Updated user {user_id} wallet_address in DB: {user.wallet_address}")
         
         logger.info(f"Wallet connected for user {user_id}: {wallet.blockchain.value} {wallet.address}")
         return {

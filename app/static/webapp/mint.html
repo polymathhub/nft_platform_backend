@@ -786,10 +786,18 @@
         const { telegramFetch } = await import('./js/telegram-fetch.js');
         const userResponse = await telegramFetch('/api/v1/me');
         
+        console.log('[syncWalletFromBackend] Response status:', userResponse.status, userResponse.ok);
+        
         if (userResponse.ok) {
           const userData = await userResponse.json();
+          console.log('[syncWalletFromBackend] User data received:', {
+            id: userData.id,
+            wallet_address: userData.wallet_address,
+            has_wallet: !!userData.wallet_address
+          });
+          
           if (userData.wallet_address) {
-            console.log('[syncWalletFromBackend] Found wallet:', userData.wallet_address);
+            console.log('[syncWalletFromBackend] ✅ Found wallet in database:', userData.wallet_address);
             
             const wallet = {
               address: userData.wallet_address,
@@ -798,6 +806,8 @@
               publicKey: userData.public_key || null,
               formatted: `${userData.wallet_address.slice(0, 10)}...${userData.wallet_address.slice(-10)}`
             };
+            
+            console.log('[syncWalletFromBackend] ✅ Wallet object created:', wallet);
             
             // Restore to all frontend locations
             window.walletConnected = wallet;
@@ -809,13 +819,20 @@
               timestamp: new Date().toISOString()
             }));
             
+            console.log('[syncWalletFromBackend] ✅ Wallet restored to frontend state');
             return wallet;
+          } else {
+            console.warn('[syncWalletFromBackend] ⚠️  User has no wallet_address in database');
           }
+        } else {
+          const errorText = await userResponse.text();
+          console.warn('[syncWalletFromBackend] ⚠️  Response not ok:', userResponse.status, errorText);
         }
       } catch (error) {
-        console.warn('[syncWalletFromBackend] Failed:', error);
+        console.error('[syncWalletFromBackend] ❌ Error:', error);
       }
       
+      console.warn('[syncWalletFromBackend] ❌ Failed to get wallet from backend, returning null');
       return null;
     }
     
