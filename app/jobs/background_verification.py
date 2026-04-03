@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from app.database.base import async_session
+from app.database.connection import AsyncSessionLocal
 from app.models.blockchain_transaction import BlockchainTransaction, BlockchainTransactionStatus
 from app.services.transaction_verifier import TransactionVerifier
 from app.services.toncenter_client import get_toncenter_client
@@ -58,7 +58,7 @@ class TransactionVerificationJob:
     async def run_verification_cycle(self) -> None:
         """Run a single verification cycle"""
         try:
-            async with async_session() as session:
+            async with AsyncSessionLocal() as session:
                 # Find transactions that need verification
                 transactions_to_verify = await self._get_transactions_to_verify(session)
                 
@@ -250,7 +250,7 @@ class SessionCleanupJob:
         try:
             from app.models.ton_wallet_session import TONWalletSession
             
-            async with async_session() as session:
+            async with AsyncSessionLocal() as session:
                 now = datetime.utcnow()
                 cutoff_time = now - self.SESSION_EXPIRY
                 
