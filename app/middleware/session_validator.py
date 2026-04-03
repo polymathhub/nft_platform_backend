@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.database.base import async_session
+from app.database.connection import AsyncSessionLocal
 from app.models.ton_wallet_session import TONWalletSession
 from app.models import User
 import hashlib
@@ -51,7 +51,7 @@ class SessionValidator:
                 detail="Missing session identifier"
             )
         
-        async with async_session() as session:
+        async with AsyncSessionLocal() as session:
             # Find active session
             query = select(TONWalletSession).where(
                 (TONWalletSession.user_id == user_id) &
@@ -162,7 +162,7 @@ class SessionValidator:
         Returns:
             Number of sessions invalidated
         """
-        async with async_session() as db_session:
+        async with AsyncSessionLocal() as db_session:
             if session_id:
                 query = select(TONWalletSession).where(
                     (TONWalletSession.user_id == user_id) &
@@ -195,7 +195,7 @@ class SessionValidator:
         Returns:
             List of active sessions
         """
-        async with async_session() as session:
+        async with AsyncSessionLocal() as session:
             query = select(TONWalletSession).where(
                 (TONWalletSession.user_id == user_id) &
                 (TONWalletSession.is_active == True) &
