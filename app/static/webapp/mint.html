@@ -776,7 +776,46 @@
         console.error('[getTONWallet] Error reading sessionStorage:', e);
       }
       
-      console.log('[getTONWallet] No wallet found');
+      console.log('[getTONWallet] No wallet found (NOTE: Backend fallback available in blockchain change handler)');
+      return null;
+    }
+    
+    // ✨ HELPER: Fetch wallet from backend if needed
+    async function syncWalletFromBackend() {
+      try {
+        const { telegramFetch } = await import('./js/telegram-fetch.js');
+        const userResponse = await telegramFetch('/api/v1/me');
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.wallet_address) {
+            console.log('[syncWalletFromBackend] Found wallet:', userData.wallet_address);
+            
+            const wallet = {
+              address: userData.wallet_address,
+              isTONConnect: true,
+              chain: userData.chain || '-3',
+              publicKey: userData.public_key || null,
+              formatted: `${userData.wallet_address.slice(0, 10)}...${userData.wallet_address.slice(-10)}`
+            };
+            
+            // Restore to all frontend locations
+            window.walletConnected = wallet;
+            window.currentMintWalletAddress = wallet.address;
+            sessionStorage.setItem('ton_wallet_state', JSON.stringify({
+              address: wallet.address,
+              chain: wallet.chain,
+              publicKey: wallet.publicKey,
+              timestamp: new Date().toISOString()
+            }));
+            
+            return wallet;
+          }
+        }
+      } catch (error) {
+        console.warn('[syncWalletFromBackend] Failed:', error);
+      }
+      
       return null;
     }
     
@@ -849,8 +888,17 @@
         // ═════════════════════════════════════════════════════════
         if (blockchain === 'ton') {
           console.log('[MintPage] TON blockchain selected, checking for wallet...');
-          const tonWallet = getTONWallet();
           
+          // ✨ STEP 1: Try frontend state first (immediate)
+          let tonWallet = getTONWallet();
+          
+          // ✨ STEP 2: If not in frontend, check backend for stored wallet
+          if (!tonWallet || !tonWallet.address) {
+            console.log('[MintPage] Wallet not in frontend state, syncing from backend...');
+            tonWallet = await syncWalletFromBackend();
+          }
+          
+          // ✨ STEP 3: Display result (from frontend or backend)
           if (tonWallet && tonWallet.address) {
             console.log('[MintPage] TON wallet available:', tonWallet.formatted);
             walletSelect.innerHTML = `<option value="ton-connect" selected>${tonWallet.formatted}</option>`;
@@ -905,11 +953,18 @@
     }
     
     // Check initial wallet state
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
       console.log('[MintPage] Page loaded, checking for wallet...');
       
       // Check if TON wallet is already connected
-      const tonWallet = getTONWallet();
+      let tonWallet = getTONWallet();
+      
+      // ✨ If not in frontend state, check backend for stored wallet
+      if (!tonWallet || !tonWallet.address) {
+        console.log('[MintPage] No wallet in frontend state, syncing from backend...');
+        tonWallet = await syncWalletFromBackend();
+      }
+      
       if (tonWallet && tonWallet.address) {
         console.log('[MintPage] TON wallet found on page load:', tonWallet.address);
         
