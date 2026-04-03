@@ -207,6 +207,7 @@ async def prepare_nft_mint(
     4. Generate mint payload (BOC format)
     5. Format as TON Connect transaction
     6. Return ready for signing
+    7.maybe its not fully ready for ton based transactions 
     """
     
     try:
