@@ -1,24 +1,6 @@
-/**
- * AUTHENTICATION SYSTEM - Telegram WebApp + FastAPI
- * ================================================
- * 
- * Production-grade authentication system for Telegram Mini Apps
- * 
- * ARCHITECTURE:
- * 1. Telegram SDK provides immutable initData (identity proof)
- * 2. Every API request includes X-Telegram-Init-Data header
- * 3. Backend verifies signature and returns authenticated user
- * 4. Frontend maintains user in memory (no token storage)
- * 5. localStorage used only for caching (always validated against API)
- * 
- * FEATURES:
- * ✅ No passwords, tokens, or refresh logic
- * ✅ Stateless backend (verify signature on every request)
- * ✅ Persistent state across navigations
- * ✅ Exponential backoff for failed auth attempts
- * ✅ Graceful degradation if auth fails
- * ✅ Single source of truth: Telegram initData
- */
+// Handles all auth with Telegram - no tokens, no passwords
+// Just verify the user with initData on every request
+// Keep user state in memory and cache to localStorage as backup
 
 // Global auth state
 window.AuthSystem = {
@@ -31,16 +13,9 @@ window.AuthSystem = {
   authRetryCount: 0,
   MAX_RETRY_ATTEMPTS: 3,
   
-  // ============================================
-  // TELEGRAM SDK INITIALIZATION
-  // ============================================
+  // Check if Telegram is ready to use
   
-  /**
-   * Wait for Telegram SDK to be available
-   * Resolves when window.Telegram.WebApp.initData is ready
-   * @param {number} timeout - Max wait time in ms (default 10 seconds)
-   * @returns {Promise<boolean>} true if ready, false if timeout
-   */
+  // Wait for Telegram to load (takes a sec sometimes)
   async waitForTelegramSDK(timeout = 10000) {
     const startTime = Date.now();
     
@@ -58,10 +33,7 @@ window.AuthSystem = {
     return false;
   },
   
-  /**
-   * Check if Telegram SDK is fully initialized
-   * @returns {boolean}
-   */
+  // Check if we have all the Telegram info we need
   isTelegramReady() {
     return !!(
       window.Telegram &&
@@ -72,10 +44,7 @@ window.AuthSystem = {
     );
   },
   
-  /**
-   * Get Telegram initData string
-   * @returns {string|null}
-   */
+  // Grab the initData from Telegram
   getTelegramInitData() {
     try {
       return window.Telegram?.WebApp?.initData || null;
@@ -85,11 +54,7 @@ window.AuthSystem = {
     }
   },
   
-  /**
-   * Get Telegram user data directly from SDK
-   * Only use for display; always verify with backend
-   * @returns {object|null}
-   */
+  // Get basic user info from Telegram (display only - still verify on backend)
   getTelegramUser() {
     try {
       return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
@@ -99,14 +64,7 @@ window.AuthSystem = {
     }
   },
   
-  // ============================================
-  // AUTHENTICATION FLOW
-  // ============================================
-  
-  /**
-   * Initialize authentication on app startup
-   * Runs ONCE per app load - called from HTML <script>
-   */
+  // Start authentication when the app loads
   async initialize() {
     // Prevent multiple initializations
     if (this.isInitialized) {
@@ -283,9 +241,9 @@ window.AuthSystem = {
     }
   },
   
-  // ============================================
+  
   // CACHING
-  // ============================================
+  
   
   /**
    * Cache user to localStorage for faster page loads
@@ -345,9 +303,9 @@ window.AuthSystem = {
     }
   },
   
-  // ============================================
+  
   // AUTH REFRESH & MONITORING
-  // ============================================
+  
   
   /**
    * Start monitoring for authentication expiration
@@ -388,9 +346,9 @@ window.AuthSystem = {
     }
   },
   
-  // ============================================
+  
   // USER STATE
-  // ============================================
+  
   
   /**
    * Get current authenticated user
@@ -429,9 +387,9 @@ window.AuthSystem = {
     this.emitEvent('auth:logout', {});
   },
   
-  // ============================================
+  
   // EVENT SYSTEM
-  // ============================================
+  
   
   /**
    * Emit auth event (auth:success, auth:failed, auth:error, auth:logout)
@@ -455,9 +413,9 @@ window.AuthSystem = {
     });
   },
   
-  // ============================================
+  
   // API HELPERS
-  // ============================================
+  
   
   /**
    * Make authenticated API request
@@ -518,3 +476,4 @@ if (document.readyState === 'loading') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = window.AuthSystem;
 }
+

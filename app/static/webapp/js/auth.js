@@ -292,3 +292,4 @@ document.addEventListener('visibilitychange', () => {
 });
 
 export default auth;
+

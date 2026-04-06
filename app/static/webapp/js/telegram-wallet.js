@@ -484,3 +484,4 @@ if (typeof window !== 'undefined') {
   window.TelegramWalletIntegrator = TelegramWalletIntegrator;
 }
 
+

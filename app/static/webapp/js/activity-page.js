@@ -227,3 +227,4 @@ let activityPage;
 document.addEventListener('DOMContentLoaded', () => {
   activityPage = new ActivityPage();
 });
+

@@ -1,22 +1,5 @@
-/**
- * TON CONNECT MANAGER - Global Wallet State & Synchronization
- * ═══════════════════════════════════════════════════════════════
- * 
- * Senior-level implementation providing:
- * ✅ Centralized wallet state management
- * ✅ Cross-page synchronization via Storage events
- * ✅ Automatic reconnection on app resume
- * ✅ Error recovery with retry logic
- * ✅ Wallet balance tracking (native and jetton)
- * ✅ Transaction history
- * ✅ Type-safe address validation
- * ✅ Observable pattern for reactive UI updates
- * 
- * TEP-62 Compliant NFT Operations:
- * - Collection contract interaction
- * - Item contract management
- * - Transfer mechanism support
- */
+// Manages wallet connections and keeps state synced across tabs
+// Handles reconnection when app comes back to focus
 
 class TONConnectManager {
   // Singleton instance
@@ -60,7 +43,7 @@ class TONConnectManager {
     try {
       const stored = localStorage.getItem(this.#STORAGE_KEYS.WALLET_STATE);
       if (stored) {
-        #wallet = JSON.parse(stored);
+        this.#wallet = JSON.parse(stored);
         console.log('[TONConnect Manager] Wallet state restored from storage');
       }
     } catch (error) {
@@ -77,8 +60,8 @@ class TONConnectManager {
     window.addEventListener('storage', (event) => {
       if (event.key === this.#STORAGE_KEYS.WALLET_STATE) {
         try {
-          #wallet = event.newValue ? JSON.parse(event.newValue) : null;
-          this._notifyListeners('wallet-changed', { wallet: #wallet });
+          this.#wallet = event.newValue ? JSON.parse(event.newValue) : null;
+          this._notifyListeners('wallet-changed', { wallet: this.#wallet });
           console.log('[TONConnect Manager] Wallet synced from storage event');
         } catch (error) {
           console.error('[TONConnect Manager] Storage sync error:', error);
@@ -93,7 +76,7 @@ class TONConnectManager {
    */
   _setupVisibilityHandler() {
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && #wallet) {
+      if (!document.hidden && this.#wallet) {
         console.log('[TONConnect Manager] App visible, refreshing wallet state...');
         // Validate wallet is still connected
         if (window.tonWallet) {
@@ -120,7 +103,7 @@ class TONConnectManager {
    * @returns {Promise<void>}
    */
   async initialize(tonWalletInstance) {
-    if (#initialized) {
+    if (this.#initialized) {
       return;
     }
 
@@ -128,10 +111,10 @@ class TONConnectManager {
       throw new Error('TonWallet instance required for initialization');
     }
 
-    if (#isConnecting) {
+    if (this.#isConnecting) {
       return new Promise((resolve) => {
         const checkInit = setInterval(() => {
-          if (#initialized) {
+          if (this.#initialized) {
             clearInterval(checkInit);
             resolve();
           }
@@ -139,7 +122,7 @@ class TONConnectManager {
       });
     }
 
-    #isConnecting = true;
+    this.#isConnecting = true;
 
     try {
       // Wait for TonWallet to initialize
@@ -164,15 +147,15 @@ class TONConnectManager {
         this._notifyListeners('error', { error, type: 'wallet-error' });
       });
 
-      #initialized = true;
+      this.#initialized = true;
       this._notifyListeners('ready', {});
       console.log('[TONConnect Manager] Initialized successfully');
     } catch (error) {
-      #isConnecting = false;
+      this.#isConnecting = false;
       console.error('[TONConnect Manager] Initialization failed:', error);
       throw error;
     } finally {
-      #isConnecting = false;
+      this.#isConnecting = false;
     }
   }
 
@@ -187,7 +170,7 @@ class TONConnectManager {
       throw new Error(`Invalid TON address: ${address}`);
     }
 
-    #wallet = {
+    this.#wallet = {
       address: address,
       formatted: tonWalletInstance.formatAddress(address),
       connected: true,
@@ -198,13 +181,13 @@ class TONConnectManager {
     };
 
     // Persist to localStorage
-    localStorage.setItem(this.#STORAGE_KEYS.WALLET_STATE, JSON.stringify(#wallet));
+    localStorage.setItem(this.#STORAGE_KEYS.WALLET_STATE, JSON.stringify(this.#wallet));
     localStorage.setItem(this.#STORAGE_KEYS.WALLET_ADDRESS, address);
     localStorage.setItem(this.#STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
 
     // Notify all listeners
-    this._notifyListeners('wallet-connected', { wallet: #wallet });
-    this._broadcastToOtherPages('wallet-connected', #wallet);
+    this._notifyListeners('wallet-connected', { wallet: this.#wallet });
+    this._broadcastToOtherPages('wallet-connected', this.#wallet);
 
     // Sync with backend
     await this._syncWithBackend(address);
@@ -217,7 +200,7 @@ class TONConnectManager {
    * @returns {void}
    */
   clearWallet() {
-    #wallet = null;
+    this.#wallet = null;
     localStorage.removeItem(this.#STORAGE_KEYS.WALLET_STATE);
     localStorage.removeItem(this.#STORAGE_KEYS.WALLET_ADDRESS);
 
@@ -232,7 +215,7 @@ class TONConnectManager {
    * @returns {Object|null}
    */
   getWallet() {
-    return #wallet;
+    return this.#wallet;
   }
 
   /**
@@ -240,7 +223,7 @@ class TONConnectManager {
    * @returns {string|null}
    */
   getAddress() {
-    return #wallet?.address || null;
+    return this.#wallet?.address || null;
   }
 
   /**
@@ -248,7 +231,7 @@ class TONConnectManager {
    * @returns {string}
    */
   getFormattedAddress() {
-    return #wallet?.formatted || 'Not connected';
+    return this.#wallet?.formatted || 'Not connected';
   }
 
   /**
@@ -256,7 +239,7 @@ class TONConnectManager {
    * @returns {boolean}
    */
   isConnected() {
-    return !!#wallet?.connected;
+    return !!this.#wallet?.connected;
   }
 
   /**
@@ -446,9 +429,9 @@ class TONConnectManager {
    * Reset manager (for testing/logout)
    */
   reset() {
-    #wallet = null;
-    #initialized = false;
-    #isConnecting = false;
+    this.#wallet = null;
+    this.#initialized = false;
+    this.#isConnecting = false;
     this.#listeners.clear();
     localStorage.removeItem(this.#STORAGE_KEYS.WALLET_STATE);
     localStorage.removeItem(this.#STORAGE_KEYS.WALLET_ADDRESS);
@@ -459,3 +442,4 @@ class TONConnectManager {
 
 // Export singleton
 export default TONConnectManager;
+

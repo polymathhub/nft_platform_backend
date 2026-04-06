@@ -363,3 +363,4 @@ let trendingPage;
 document.addEventListener('DOMContentLoaded', () => {
   trendingPage = new TrendingPage();
 });
+

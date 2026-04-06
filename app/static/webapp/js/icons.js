@@ -115,3 +115,4 @@ export function renderIcon(iconName, size = '24') {
   if (!icon) return '';
   return `<svg class="nav-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon.slice(icon.indexOf('>') + 1, icon.lastIndexOf('<'))}</svg>`;
 }
+

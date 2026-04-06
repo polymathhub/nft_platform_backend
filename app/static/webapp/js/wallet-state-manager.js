@@ -1,23 +1,5 @@
-/**
- * WALLET STATE MANAGER - Cross-Page TON Connect Detection
- * ════════════════════════════════════════════════════════════════
- * 
- * Manages TON wallet connection state across all pages (wallet, mint, profile)
- * Provides real-time detection and synchronization of wallet connections
- * 
- * Features:
- * ✅ Cross-page synchronization via sessionStorage events
- * ✅ Robust connection detection with retry logic
- * ✅ Real-time wallet state updates
- * ✅ Automatic event dispatching when wallet connects/disconnects
- * ✅ Works on all pages without page reload
- * 
- * Usage:
- *   window.WalletStateManager.initialize()
- *   window.addEventListener('wallet-state-changed', (e) => {
- *     console.log('Wallet state:', e.detail);
- *   });
- */
+// Keeps wallet connection state synced across all pages
+// Uses sessionStorage + storage events so other tabs know when you connect
 
 window.WalletStateManager = {
   currentWallet: null,
@@ -88,9 +70,7 @@ window.WalletStateManager = {
     }
   },
 
-  /**
-   * Load wallet state from sessionStorage
-   */
+  // Check if another page saved wallet info
   loadStateFromStorage() {
     try {
       const stored = sessionStorage.getItem('wallet-state');
@@ -380,3 +360,4 @@ if (document.readyState === 'loading') {
 } else {
   window.WalletStateManager.initialize();
 }
+

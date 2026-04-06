@@ -259,3 +259,4 @@ class TonWallet {
 
 // Export as ES6 module
 export default TonWallet;
+

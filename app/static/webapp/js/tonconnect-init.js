@@ -249,3 +249,4 @@ if (document.readyState === 'loading') {
 // Export for testing
 export default tonConnectInit;
 export { TONConnectInitializer };
+

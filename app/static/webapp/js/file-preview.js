@@ -315,3 +315,4 @@ class FilePreviewManager {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = FilePreviewManager;
 }
+

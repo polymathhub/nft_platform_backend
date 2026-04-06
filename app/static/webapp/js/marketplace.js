@@ -192,3 +192,4 @@ class MarketplaceManager {
 }
 
 export const marketplace = new MarketplaceManager();
+

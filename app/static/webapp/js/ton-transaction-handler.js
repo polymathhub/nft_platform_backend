@@ -1,20 +1,5 @@
-/**
- * TON TRANSACTION HANDLER - TEP-62 NFT Operations
- * ═══════════════════════════════════════════════════════════════
- * 
- * Handles all blockchain transactions for:
- * ✅ NFT Minting (via collection contract)
- * ✅ NFT Transfers (item contract to item contract)
- * ✅ Payment Processing & Settlement
- * ✅ Transaction Signing & Broadcasting
- * ✅ Error Recovery & Retry Logic
- * ✅ Gas Estimation & Fee Calculation
- * 
- * TEP-62 Standard Compliance:
- * - Collection contract: mint(), transfer()
- * - Item contract: transfer() with owner update
- * - Distributed architecture with per-NFT accounts
- */
+// Handles all blockchain transactions - minting, transfers, payments
+// Uses TEP-62 standard for NFT contracts on TON 
 
 class TONTransactionHandler {
   // Blockchain constants
@@ -470,3 +455,4 @@ class TONTransactionHandler {
 
 // Export handler
 export default TONTransactionHandler;
+

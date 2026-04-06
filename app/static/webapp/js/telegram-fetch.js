@@ -1,12 +1,4 @@
-/**
- * TELEGRAM INIT DATA FETCH WRAPPER
- * 
- * Automatically adds Telegram WebApp initData header to all API requests.
- * 
- * Usage:
- * const user = await telegramFetch('/api/v1/me');
- * const data = await telegramFetch('/api/v1/nft/list', { method: 'POST', body: {...} });
- */
+// Wraps fetch to automatically add Telegram auth header to every request
 
 /**
  * Get Telegram WebApp initData from window.Telegram.WebApp
@@ -186,3 +178,4 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Export for ES6 modules
 export { telegramFetch, telegramApi };
+

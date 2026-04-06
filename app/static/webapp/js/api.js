@@ -1,17 +1,9 @@
-/**
- * API Wrapper for Telegram WebApp Authentication
- * Re-exports telegramFetch and provides endpoints configuration
- * 
- * Purpose: Maintain compatibility with existing code that expects api.js
- * while using Telegram-based authentication from telegram-fetch.js
- */
+// Quick wrap around telegramFetch to make backwards compatible
+// Just re-exports everything from telegram-fetch.js
 
 import { telegramFetch, telegramApi } from './telegram-fetch.js';
 
-/**
- * API endpoints configuration
- * Used by marketplace, wallet, profile, and mint pages
- */
+// Map of all API endpoints we use
 const endpoints = {
   // V1 API endpoints (Telegram-authenticated)
   me: '/api/v1/me',
@@ -262,3 +254,4 @@ const api = {
 
 // Export both api and endpoints for use in other modules
 export { api, endpoints, telegramFetch, telegramApi };
+

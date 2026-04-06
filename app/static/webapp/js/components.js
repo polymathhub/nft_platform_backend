@@ -534,3 +534,4 @@ export default {
   createBadge,
   createAvatar,
 };
+

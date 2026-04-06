@@ -1,14 +1,4 @@
-/**
- * PAGE INITIALIZER - Universal Page Setup
- * ═══════════════════════════════════════════════════════════════
- * 
- * Handles all page initialization:
- * ✅ Theme setup (dark/light from Telegram WebApp)
- * ✅ Navigation highlighting by current page
- * ✅ Auth system integration and lifecycle
- * ✅ Page visibility handlers for background refresh
- * ✅ Back button and window.navigate() global function
- */
+// Initializes the page - sets theme, highlights navbar, hooks up auth
 
 class PageInitializer {
   constructor() {
@@ -16,9 +6,7 @@ class PageInitializer {
     this.init();
   }
 
-  /**
-   * Initialize theme from Telegram WebApp
-   */
+  // Pull theme from Telegram
   initTheme() {
     try {
       const colorScheme = window.Telegram?.WebApp?.colorScheme;
@@ -182,4 +170,5 @@ if (document.readyState === 'loading') {
 }
 
 export default PageInitializer;
+
 

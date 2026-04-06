@@ -74,3 +74,4 @@ if (document.readyState === 'loading') {
 } else {
   initializeAuthSystem().catch(console.error);
 }
+

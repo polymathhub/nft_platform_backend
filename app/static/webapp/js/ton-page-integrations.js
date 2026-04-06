@@ -596,3 +596,4 @@ if (document.body.id.includes('wallet')) {
 }
 
 export { WalletPageIntegration, MintPageIntegration, ProfilePageIntegration };
+

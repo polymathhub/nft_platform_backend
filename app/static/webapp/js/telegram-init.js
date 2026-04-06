@@ -197,3 +197,4 @@ window._isTelegramContext = isTelegramContext;
 
 // Export for ES6 modules
 export { initTelegram, getTelegramInfo, isTelegramContext };
+
