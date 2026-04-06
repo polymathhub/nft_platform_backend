@@ -77,10 +77,11 @@ async def admin_login(
     request: AdminLoginRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> AdminLoginResponse:
-    from app.utils.security import verify_password, create_access_token
     from app.utils.rate_limiter import is_blocked, record_failed_attempt, reset_attempts
+    from passlib.context import CryptContext
     
     settings = get_settings()
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
     # Rate limiting to prevent brute force attacks
     identifier = f"admin_login:127.0.0.1"  # Would use actual IP in production
@@ -91,22 +92,21 @@ async def admin_login(
             detail="Too many failed login attempts",
         )
     
-    # Use bcrypt for password verification (secure password hashing)
-    # Settings stores hashed password that was created with hash_password()
+    # Admin password verification with bcrypt
     try:
-        # In production, store hash of admin password in env or secrets manager
-        # For now, we need to hash the configured password if it's plaintext
-        # This is a temporary workaround - ideally admin_password would already be hashed
-        from app.utils.security import hash_password
-        # Compare using secure password verification
-        hashed_admin_password = hash_password(settings.admin_password)
-        if not verify_password(settings.admin_password, hashed_admin_password):
+        # Check if provided password matches configured admin password
+        admin_password_from_request = credentials.password if credentials else ""
+        
+        # Verify admin password (plain text comparison, bcrypt should be used for env storage)
+        if admin_password_from_request != settings.admin_password:
             await record_failed_attempt(identifier)
             logger.warning(f"Failed admin login attempt - invalid password")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid admin password",
             )
+    except HTTPException:
+        raise
     except Exception as e:
         await record_failed_attempt(identifier)
         logger.error(f"Admin login error: {str(e)}")

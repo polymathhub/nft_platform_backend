@@ -27,7 +27,3 @@ export async function apiFetch(url, options = {}) {
     headers,
   });
 }
-
-export function getInitDataForDebug() {
-  return TG_INIT_DATA;
-}
