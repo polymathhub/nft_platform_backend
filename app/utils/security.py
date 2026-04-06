@@ -1,8 +1,11 @@
 import base64
 import hashlib
 import logging
+from typing import Any
 
 from cryptography.fernet import Fernet
+from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 
 logger = logging.getLogger(__name__)
 
@@ -72,3 +75,33 @@ def decrypt_sensitive_data(encrypted_data: str, key: str) -> str:
     f = _build_fernet(key)
     plaintext: bytes = f.decrypt(encrypted_data.encode())
     return plaintext.decode()
+
+
+def verify_token(token: str, secret_key: str, algorithms: list[str] | None = None) -> dict[str, Any]:
+    """Decode and verify a JWT token.
+
+    Args:
+        token:      The raw JWT string to verify.
+        secret_key: The secret used to sign the token.
+        algorithms: List of accepted signing algorithms.
+                    Defaults to ``["HS256"]``.
+
+    Returns:
+        The decoded payload as a plain dict.
+
+    Raises:
+        ValueError: If the token has expired.
+        ValueError: If the token is invalid or cannot be decoded.
+    """
+    if algorithms is None:
+        algorithms = ["HS256"]
+
+    try:
+        payload: dict[str, Any] = jwt.decode(token, secret_key, algorithms=algorithms)
+        return payload
+    except ExpiredSignatureError as exc:
+        logger.warning("verify_token: token has expired")
+        raise ValueError("Token has expired") from exc
+    except JWTError as exc:
+        logger.warning("verify_token: invalid token — %s", exc)
+        raise ValueError("Invalid token") from exc
